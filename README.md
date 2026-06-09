@@ -7,10 +7,6 @@
 
 A React + TypeScript visual editor for designing polished App Store and Play Store screenshots, then exporting production-ready PNGs from the browser or CLI.
 
-<!-- TODO: add hero GIF -->
-
-**Live demo:** TODO — add hosted demo link.
-
 ## Features
 
 ### Visual Editing
