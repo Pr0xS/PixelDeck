@@ -11,11 +11,12 @@ on:
 
 jobs:
   # Gitleaks (secrets) + Trivy (dependency CVEs)
+  # Pinned to SHA — update intentionally when Battlellama-actions releases a new version.
   scan:
-    uses: TheLastBattlellama/Battlellama-actions/.github/workflows/security-scan.yml@main
+    uses: TheLastBattlellama/Battlellama-actions/.github/workflows/security-scan.yml@f1b1801b99c67cb5ff0a42fcabed4cc936414df9
 
   # Semgrep SAST for React / TypeScript
   sast:
-    uses: TheLastBattlellama/Battlellama-actions/.github/workflows/sast-javascript.yml@main
+    uses: TheLastBattlellama/Battlellama-actions/.github/workflows/sast-javascript.yml@f1b1801b99c67cb5ff0a42fcabed4cc936414df9
     with:
       framework: react
