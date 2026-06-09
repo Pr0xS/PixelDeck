@@ -1,0 +1,404 @@
+import { describe, it, expect, beforeEach } from 'vitest'
+import { useEditorStore } from './index'
+import type { TextLayer, GroupLayer } from '@/types'
+
+// ─── Helpers ─────────────────────────────────────────────────────────────────
+
+function getActiveGroup() {
+  const { project, activeSlideGroupId } = useEditorStore.getState()
+  return project.slideGroups.find((g) => g.id === activeSlideGroupId)!
+}
+
+// ─── Setup ───────────────────────────────────────────────────────────────────
+
+beforeEach(() => {
+  useEditorStore.getState().resetProject()
+  useEditorStore.setState({
+    editingGroupId: null,
+    selectedLayerIds: [],
+    clipboard: null,
+    pasteCount: 0,
+    selection: null,
+  })
+  useEditorStore.temporal.getState().clear()
+})
+
+// ─── addLayer ─────────────────────────────────────────────────────────────────
+
+describe('addLayer', () => {
+  it('adds a layer to the active slide group', () => {
+    useEditorStore.getState().addText()
+    const layers = getActiveGroup().layers
+    // background + text
+    expect(layers).toHaveLength(2)
+    expect(layers[1].type).toBe('text')
+  })
+
+  it('selects the newly added layer', () => {
+    useEditorStore.getState().addText()
+    const { selection, activeSlideGroupId } = useEditorStore.getState()
+    expect(selection?.slideGroupId).toBe(activeSlideGroupId)
+    expect(selection?.layerId).toBeDefined()
+  })
+})
+
+// ─── updateLayer ──────────────────────────────────────────────────────────────
+
+describe('updateLayer', () => {
+  it('merges a patch into the correct layer', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    expect(textLayer).toBeDefined()
+
+    useEditorStore.getState().updateLayer(textLayer.id, { opacity: 0.42 })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
+    expect(updated.opacity).toBe(0.42)
+  })
+
+  it('does not affect other layers', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    const layers = getActiveGroup().layers
+    const textLayer = layers.find((l) => l.type === 'text')!
+    const shapeLayer = layers.find((l) => l.type === 'shape')!
+
+    useEditorStore.getState().updateLayer(textLayer.id, { opacity: 0.1 })
+
+    const shapeAfter = getActiveGroup().layers.find((l) => l.id === shapeLayer.id)!
+    expect(shapeAfter.opacity).toBe(1) // unchanged
+  })
+})
+
+// ─── removeLayer ──────────────────────────────────────────────────────────────
+
+describe('removeLayer', () => {
+  it('removes the specified layer and leaves others untouched', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+
+    useEditorStore.getState().removeLayer(textLayer.id)
+
+    const layersAfter = getActiveGroup().layers
+    expect(layersAfter.find((l) => l.id === textLayer.id)).toBeUndefined()
+  })
+
+  it('cannot remove the background layer', () => {
+    const bgLayer = getActiveGroup().layers.find((l) => l.type === 'background')!
+    const countBefore = getActiveGroup().layers.length
+
+    useEditorStore.getState().removeLayer(bgLayer.id)
+
+    expect(getActiveGroup().layers).toHaveLength(countBefore)
+    expect(getActiveGroup().layers[0].type).toBe('background')
+  })
+})
+
+// ─── duplicateLayer ───────────────────────────────────────────────────────────
+
+describe('duplicateLayer', () => {
+  it('creates a copy with a new ID', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+
+    useEditorStore.getState().duplicateLayer(textLayer.id)
+
+    const afterLayers = getActiveGroup().layers
+    expect(afterLayers).toHaveLength(3) // background + original + copy
+    const copy = afterLayers.find((l) => l.type === 'text' && l.id !== textLayer.id)
+    expect(copy).toBeDefined()
+    expect(copy!.id).not.toBe(textLayer.id)
+  })
+
+  it('offsets the duplicate by 20px on both axes', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+
+    useEditorStore.getState().duplicateLayer(textLayer.id)
+
+    const copy = getActiveGroup().layers.find((l) => l.type === 'text' && l.id !== textLayer.id)!
+    expect(copy.x).toBe(textLayer.x + 20)
+    expect(copy.y).toBe(textLayer.y + 20)
+  })
+})
+
+// ─── moveLayerUp / moveLayerDown ──────────────────────────────────────────────
+
+describe('moveLayerUp', () => {
+  it('moves a layer toward a lower array index, background stays at 0', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    // layers: [background(0), text(1), shape(2)]
+    const layers = getActiveGroup().layers
+    const textId = layers[1].id
+    const shapeId = layers[2].id
+
+    useEditorStore.getState().moveLayerUp(shapeId)
+
+    // Expected: [background(0), shape(1), text(2)]
+    const after = getActiveGroup().layers
+    expect(after[0].type).toBe('background')
+    expect(after[1].id).toBe(shapeId)
+    expect(after[2].id).toBe(textId)
+  })
+
+  it('does not move a layer at index 1 (would displace background)', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    // layers: [background(0), text(1), shape(2)]
+    const layers = getActiveGroup().layers
+    const textId = layers[1].id
+
+    useEditorStore.getState().moveLayerUp(textId) // index 1 → blocked
+
+    const after = getActiveGroup().layers
+    expect(after[1].id).toBe(textId) // unchanged
+  })
+})
+
+describe('moveLayerDown', () => {
+  it('moves a layer toward a higher array index', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    // layers: [background(0), text(1), shape(2)]
+    const layers = getActiveGroup().layers
+    const textId = layers[1].id
+    const shapeId = layers[2].id
+
+    useEditorStore.getState().moveLayerDown(textId)
+
+    // Expected: [background(0), shape(1), text(2)]
+    const after = getActiveGroup().layers
+    expect(after[1].id).toBe(shapeId)
+    expect(after[2].id).toBe(textId)
+  })
+
+  it('does not move the last layer', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    // layers: [background(0), text(1), shape(2)]
+    const layers = getActiveGroup().layers
+    const shapeId = layers[2].id
+
+    useEditorStore.getState().moveLayerDown(shapeId) // last → blocked
+
+    expect(getActiveGroup().layers[2].id).toBe(shapeId)
+  })
+})
+
+// ─── reorderLayers ────────────────────────────────────────────────────────────
+
+describe('reorderLayers', () => {
+  it('reorders layers to match the provided id order, keeping background at index 0', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    // Current: [background, text, shape]
+    const layers = getActiveGroup().layers
+    const textId = layers[1].id
+    const shapeId = layers[2].id
+
+    // Reverse: shape first, then text
+    useEditorStore.getState().reorderLayers([shapeId, textId])
+
+    const after = getActiveGroup().layers
+    expect(after[0].type).toBe('background')
+    expect(after[1].id).toBe(shapeId)
+    expect(after[2].id).toBe(textId)
+  })
+})
+
+// ─── setLayerVisibility / setLayerLocked ──────────────────────────────────────
+
+describe('setLayerVisibility', () => {
+  it('toggles visibility on the specified layer', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+    expect(textLayer.visible).toBe(true)
+
+    useEditorStore.getState().setLayerVisibility(textLayer.id, false)
+
+    const after = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
+    expect(after.visible).toBe(false)
+  })
+})
+
+describe('setLayerLocked', () => {
+  it('toggles locked on the specified layer', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+    expect(textLayer.locked).toBe(false)
+
+    useEditorStore.getState().setLayerLocked(textLayer.id, true)
+
+    const after = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
+    expect(after.locked).toBe(true)
+  })
+})
+
+// ─── createGroup / dissolveGroup ──────────────────────────────────────────────
+
+describe('createGroup', () => {
+  it('replaces the selected layers with a single GroupLayer', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    const layers = getActiveGroup().layers
+    const textId = layers.find((l) => l.type === 'text')!.id
+    const shapeId = layers.find((l) => l.type === 'shape')!.id
+
+    useEditorStore.getState().createGroup([textId, shapeId])
+
+    const after = getActiveGroup().layers
+    // background + group
+    expect(after).toHaveLength(2)
+    const grp = after.find((l) => l.type === 'group') as GroupLayer
+    expect(grp).toBeDefined()
+    expect(grp.children).toHaveLength(2)
+  })
+
+  it('does not group if fewer than 2 valid layers are selected', () => {
+    useEditorStore.getState().addText()
+    const textId = getActiveGroup().layers.find((l) => l.type === 'text')!.id
+    const countBefore = getActiveGroup().layers.length
+
+    useEditorStore.getState().createGroup([textId])
+
+    expect(getActiveGroup().layers).toHaveLength(countBefore)
+  })
+})
+
+describe('dissolveGroup', () => {
+  it('replaces the GroupLayer with its children at the top level', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    const layers = getActiveGroup().layers
+    const textId = layers.find((l) => l.type === 'text')!.id
+    const shapeId = layers.find((l) => l.type === 'shape')!.id
+    useEditorStore.getState().createGroup([textId, shapeId])
+
+    const grp = getActiveGroup().layers.find((l) => l.type === 'group')!
+
+    useEditorStore.getState().dissolveGroup(grp.id)
+
+    const after = getActiveGroup().layers
+    expect(after.find((l) => l.type === 'group')).toBeUndefined()
+    // background + text + shape = 3
+    expect(after).toHaveLength(3)
+  })
+})
+
+// ─── addSlideGroup / removeSlideGroup ────────────────────────────────────────
+
+describe('addSlideGroup', () => {
+  it('increases the slideGroups count by one', () => {
+    const countBefore = useEditorStore.getState().project.slideGroups.length
+    useEditorStore.getState().addSlideGroup()
+    expect(useEditorStore.getState().project.slideGroups).toHaveLength(countBefore + 1)
+  })
+
+  it('sets the new group as the active slide group', () => {
+    useEditorStore.getState().addSlideGroup()
+    const { project, activeSlideGroupId } = useEditorStore.getState()
+    const last = project.slideGroups[project.slideGroups.length - 1]
+    expect(activeSlideGroupId).toBe(last.id)
+  })
+})
+
+describe('removeSlideGroup', () => {
+  it('decreases the slideGroups count by one', () => {
+    useEditorStore.getState().addSlideGroup()
+    const { project } = useEditorStore.getState()
+    const idToRemove = project.slideGroups[1].id
+
+    useEditorStore.getState().removeSlideGroup(idToRemove)
+
+    expect(useEditorStore.getState().project.slideGroups).toHaveLength(1)
+  })
+})
+
+// ─── undo / redo ──────────────────────────────────────────────────────────────
+
+describe('undo / redo', () => {
+  it('undo restores previous project state after updateLayer', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    const originalOpacity = textLayer.opacity
+
+    useEditorStore.getState().updateLayer(textLayer.id, { opacity: 0.123 })
+    expect(getActiveGroup().layers.find((l) => l.id === textLayer.id)!.opacity).toBe(0.123)
+
+    useEditorStore.temporal.getState().undo()
+
+    const afterUndo = getActiveGroup().layers.find((l) => l.id === textLayer.id)
+    expect(afterUndo?.opacity).toBe(originalOpacity)
+  })
+
+  it('redo re-applies the change after undo', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+
+    useEditorStore.getState().updateLayer(textLayer.id, { opacity: 0.77 })
+    useEditorStore.temporal.getState().undo()
+    useEditorStore.temporal.getState().redo()
+
+    const afterRedo = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
+    expect(afterRedo.opacity).toBe(0.77)
+  })
+})
+
+// ─── copyLayers / pasteLayers ────────────────────────────────────────────────
+
+describe('copyLayers + pasteLayers', () => {
+  it('pasted layer has a new ID and the same type', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+
+    useEditorStore.getState().copyLayers([textLayer.id])
+    useEditorStore.getState().pasteLayers()
+
+    const afterLayers = getActiveGroup().layers
+    expect(afterLayers).toHaveLength(3) // background + original + paste
+    const pasted = afterLayers.find((l) => l.type === 'text' && l.id !== textLayer.id)
+    expect(pasted).toBeDefined()
+    expect(pasted!.type).toBe('text')
+    expect(pasted!.id).not.toBe(textLayer.id)
+  })
+
+  it('pasted layer is offset from the original', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+
+    useEditorStore.getState().copyLayers([textLayer.id])
+    useEditorStore.getState().pasteLayers()
+
+    const pasted = getActiveGroup().layers.find((l) => l.type === 'text' && l.id !== textLayer.id)!
+    expect(pasted.x).toBe(textLayer.x + 20)
+    expect(pasted.y).toBe(textLayer.y + 20)
+  })
+})
+
+// ─── setLocaleOverride / clearLocaleOverride ──────────────────────────────────
+
+describe('setLocaleOverride / clearLocaleOverride', () => {
+  it('setLocaleOverride adds an override on the layer', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+
+    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+
+    const after = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
+    expect(after.localeOverrides?.['es']?.text).toBe('Hola')
+  })
+
+  it('clearLocaleOverride removes the override', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+
+    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+    useEditorStore.getState().clearLocaleOverride(groupId, textLayer.id, 'es')
+
+    const after = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
+    expect(after.localeOverrides?.['es']).toBeUndefined()
+  })
+})

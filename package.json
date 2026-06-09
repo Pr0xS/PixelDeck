@@ -3,7 +3,18 @@
   "version": "0.1.0",
   "private": true,
   "description": "Visual editor for designing polished App Store & Play Store screenshots. Drag-and-drop device mockups, text, shapes, and gradients — export PNGs from the browser or batch-export via CLI.",
-  "keywords": ["app-store", "screenshots", "mockup", "canvas", "konva", "react", "vite", "cli", "playwright", "localization"],
+  "keywords": [
+    "app-store",
+    "screenshots",
+    "mockup",
+    "canvas",
+    "konva",
+    "react",
+    "vite",
+    "cli",
+    "playwright",
+    "localization"
+  ],
   "license": "MIT",
   "author": "PixelDeck contributors",
   "repository": {
@@ -24,7 +35,9 @@
     "typecheck": "tsc -b --noEmit",
     "lint": "eslint .",
     "preview": "vite preview",
-    "cli": "node cli/index.mjs"
+    "cli": "node cli/index.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest"
   },
   "engines": {
     "node": ">=20.19.0"
@@ -59,6 +72,7 @@
     "tailwindcss": "^4.3.0",
     "typescript": "~6.0.2",
     "typescript-eslint": "^8.59.2",
-    "vite": "^8.0.12"
+    "vite": "^8.0.12",
+    "vitest": "^4.1.8"
   }
 }
