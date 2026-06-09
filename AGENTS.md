@@ -189,6 +189,7 @@ Every change — human or AI — must pass this gate before PR. Run and paste ou
 npm run lint       # zero warnings or errors
 npm run typecheck  # zero type errors
 npm run build      # must succeed, output to dist/
+npm test           # 64 tests must pass
 ```
 
 If any command fails, fix it before opening the PR. Do not open a PR with "it mostly works."
