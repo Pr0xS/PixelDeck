@@ -1,0 +1,576 @@
+import { useEffect, useRef, useState } from 'react'
+import type { PointerEvent } from 'react'
+import type { FillValue, GradientStop, LinearGradient, RadialGradient } from '@/types'
+import { fillToCss } from '@/utils/gradients'
+
+const inputCls =
+  'bg-[#0f0f13] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-sm text-[#e8e8f0] w-full focus:outline-none focus:border-[rgba(124,110,246,0.5)]'
+const labelCls = 'text-[11px] text-[#6b6b7a] mb-1 block uppercase tracking-[0.08em]'
+const rowCls = 'flex gap-2 mb-3'
+const fieldCls = 'flex-1 min-w-0'
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function clamp(value: number, min: number, max: number) {
+  return Math.min(max, Math.max(min, value))
+}
+
+// eslint-disable-next-line react-refresh/only-export-components
+export function normalizeHexColor(value: string, fallback = '#ffffff') {
+  const raw = value.trim()
+  const withHash = raw.startsWith('#') ? raw : `#${raw}`
+  if (/^#[0-9a-fA-F]{6}$/.test(withHash)) return withHash.toUpperCase()
+  if (/^#[0-9a-fA-F]{3}$/.test(withHash)) {
+    const [, r, g, b] = withHash
+    return `#${r}${r}${g}${g}${b}${b}`.toUpperCase()
+  }
+  return fallback.toUpperCase()
+}
+
+function hexToRgb(hex: string) {
+  const safe = normalizeHexColor(hex)
+  return {
+    r: Number.parseInt(safe.slice(1, 3), 16),
+    g: Number.parseInt(safe.slice(3, 5), 16),
+    b: Number.parseInt(safe.slice(5, 7), 16),
+  }
+}
+
+function rgbToHex(r: number, g: number, b: number) {
+  return `#${[r, g, b]
+    .map((value) => clamp(Math.round(value), 0, 255).toString(16).padStart(2, '0'))
+    .join('')}`.toUpperCase()
+}
+
+function interpolateHex(from: string, to: string, t: number) {
+  const a = hexToRgb(from)
+  const b = hexToRgb(to)
+  return rgbToHex(
+    a.r + (b.r - a.r) * t,
+    a.g + (b.g - a.g) * t,
+    a.b + (b.b - a.b) * t,
+  )
+}
+
+function sortStops(stops: GradientStop[]) {
+  return [...stops].sort((a, b) => a.offset - b.offset)
+}
+
+function colorAtOffset(stops: GradientStop[], offset: number) {
+  const sorted = sortStops(stops)
+  const safeOffset = clamp(offset, 0, 1)
+  if (safeOffset <= sorted[0].offset) return normalizeHexColor(sorted[0].color)
+  if (safeOffset >= sorted[sorted.length - 1].offset) return normalizeHexColor(sorted[sorted.length - 1].color)
+
+  for (let i = 0; i < sorted.length - 1; i += 1) {
+    const left = sorted[i]
+    const right = sorted[i + 1]
+    if (safeOffset >= left.offset && safeOffset <= right.offset) {
+      const span = right.offset - left.offset || 1
+      const t = (safeOffset - left.offset) / span
+      return interpolateHex(left.color, right.color, t)
+    }
+  }
+
+  return normalizeHexColor(sorted[0].color)
+}
+
+function createLinearGradient(base = '#FFFFFF'): LinearGradient {
+  return {
+    type: 'linear',
+    angle: 135,
+    stops: [
+      { offset: 0, color: normalizeHexColor(base) },
+      { offset: 1, color: '#0F0F13' },
+    ],
+  }
+}
+
+function createRadialGradient(base = '#FFFFFF'): RadialGradient {
+  return {
+    type: 'radial',
+    cx: 0.5,
+    cy: 0.5,
+    radius: 1,
+    stops: [
+      { offset: 0, color: normalizeHexColor(base) },
+      { offset: 1, color: '#0F0F13' },
+    ],
+  }
+}
+
+function setStopOffset(stops: GradientStop[], index: number, nextOffset: number) {
+  const target = { ...stops[index], offset: clamp(nextOffset, 0, 1) }
+  const nextStops = stops.map((stop, stopIndex) => (stopIndex === index ? target : stop))
+  const sorted = sortStops(nextStops)
+  return { stops: sorted, index: sorted.indexOf(target) }
+}
+
+function updateStopColor(stops: GradientStop[], index: number, color: string) {
+  const target = { ...stops[index], color: normalizeHexColor(color, stops[index].color) }
+  const nextStops = stops.map((stop, stopIndex) => (stopIndex === index ? target : stop))
+  const sorted = sortStops(nextStops)
+  return { stops: sorted, index: sorted.indexOf(target) }
+}
+
+export function ColorField({
+  value,
+  onChange,
+  placeholder = '#FFFFFF',
+  onInteractionStart,
+  onInteractionEnd,
+}: {
+  value: string
+  onChange: (value: string) => void
+  placeholder?: string
+  onInteractionStart?: () => void
+  onInteractionEnd?: () => void
+}) {
+  const safeValue = normalizeHexColor(value)
+  const activeRef = useRef(false)
+  const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+
+  const beginInteraction = () => {
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+      timerRef.current = null
+    }
+    if (!activeRef.current) {
+      activeRef.current = true
+      onInteractionStart?.()
+    }
+  }
+
+  const scheduleEnd = () => {
+    if (timerRef.current) clearTimeout(timerRef.current)
+    timerRef.current = setTimeout(() => {
+      timerRef.current = null
+      activeRef.current = false
+      onInteractionEnd?.()
+    }, 600)
+  }
+
+  return (
+    <div className="flex items-center gap-2">
+      <input
+        type="color"
+        value={safeValue}
+        onPointerDown={beginInteraction}
+        onChange={(e) => {
+          beginInteraction()
+          onChange(e.target.value)
+          scheduleEnd()
+        }}
+        className="h-8 w-8 rounded-md cursor-pointer border border-[rgba(255,255,255,0.1)] bg-transparent"
+      />
+      <input
+        type="text"
+        value={value}
+        onFocus={beginInteraction}
+        onBlur={scheduleEnd}
+        onChange={(e) => onChange(e.target.value)}
+        className={`${inputCls} flex-1`}
+        placeholder={placeholder}
+      />
+    </div>
+  )
+}
+
+export function SegmentedButtons<T extends string>({
+  value,
+  options,
+  onChange,
+}: {
+  value: T
+  options: Array<{ value: T; label: string }>
+  onChange: (value: T) => void
+}) {
+  return (
+    <div className="grid grid-cols-3 gap-1 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#121219] p-1">
+      {options.map((option) => (
+        <button
+          key={option.value}
+          type="button"
+          onClick={() => onChange(option.value)}
+          className={`rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors ${
+            value === option.value
+              ? 'bg-[#7c6ef6] text-white shadow-[0_8px_24px_rgba(124,110,246,0.35)]'
+              : 'text-[#6b6b7a] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e8e8f0]'
+          }`}
+        >
+          {option.label}
+        </button>
+      ))}
+    </div>
+  )
+}
+
+export interface GradientEditorProps {
+  fill: FillValue
+  onChange: (f: FillValue) => void
+  onInteractionStart?: () => void
+  onInteractionEnd?: () => void
+}
+
+function isEndStop(stop: GradientStop) {
+  return stop.offset === 0 || stop.offset === 1
+}
+
+function ensureEndStops(stops: GradientStop[]): GradientStop[] {
+  const sorted = sortStops(stops)
+  const result = [...sorted]
+  if (!result.some((s) => s.offset === 0))
+    result.unshift({ offset: 0, color: sorted[0]?.color ?? '#ffffff' })
+  if (!result.some((s) => s.offset === 1))
+    result.push({ offset: 1, color: sorted[sorted.length - 1]?.color ?? '#000000' })
+  return sortStops(result)
+}
+
+export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, onInteractionEnd = () => {} }: GradientEditorProps) {
+  const [selectedStopIndex, setSelectedStopIndex] = useState(0)
+  const containerRef = useRef<HTMLDivElement>(null)
+  const barRef = useRef<HTMLDivElement>(null)
+  const draggingRef = useRef<number | null>(null)
+  const [isDragging, setIsDragging] = useState(false)
+
+  const mode: 'solid' | 'linear' | 'radial' =
+    typeof fill === 'string' ? 'solid' : fill.type === 'radial' ? 'radial' : 'linear'
+  const gradient = typeof fill === 'string' ? null : fill
+
+  const stops = gradient ? ensureEndStops(gradient.stops) : []
+  const safeSelectedIndex = clamp(selectedStopIndex, 0, Math.max(stops.length - 1, 0))
+  const selectedStop = stops[safeSelectedIndex]
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setSelectedStopIndex((cur) => clamp(cur, 0, Math.max(stops.length - 1, 0)))
+  }, [mode, stops.length])
+
+  const commitGradient = (next: LinearGradient | RadialGradient, nextIdx = safeSelectedIndex) => {
+    onChange({ ...next, stops: ensureEndStops(next.stops) })
+    setSelectedStopIndex(nextIdx)
+  }
+
+  const switchMode = (nextMode: 'solid' | 'linear' | 'radial') => {
+    if (nextMode === 'solid') {
+      onChange(normalizeHexColor(typeof fill === 'string' ? fill : fill.stops[0]?.color ?? '#FFFFFF'))
+      return
+    }
+    if (typeof fill === 'string') {
+      onChange(nextMode === 'linear' ? createLinearGradient(fill) : createRadialGradient(fill))
+      setSelectedStopIndex(0)
+      return
+    }
+    if (fill.type === nextMode) return
+    onChange(
+      nextMode === 'linear'
+        ? { type: 'linear', angle: 135, stops: ensureEndStops(fill.stops) }
+        : { type: 'radial', cx: 0.5, cy: 0.5, radius: 1, stops: ensureEndStops(fill.stops) },
+    )
+    setSelectedStopIndex(0)
+  }
+
+  const addStop = () => {
+    if (!gradient) return
+    const offset = 0.5
+    const newStop: GradientStop = { offset, color: colorAtOffset(stops, offset) }
+    const nextStops = ensureEndStops([...stops, newStop])
+    const newIdx = nextStops.findIndex((s) => s === newStop || (s.offset === offset && s.color === newStop.color))
+    commitGradient({ ...gradient, stops: nextStops }, Math.max(0, newIdx))
+  }
+
+  const deleteStop = () => {
+    if (!gradient) return
+    const stop = stops[safeSelectedIndex]
+    if (!stop || isEndStop(stop)) return
+    const nextStops = stops.filter((_, i) => i !== safeSelectedIndex)
+    commitGradient({ ...gradient, stops: nextStops }, clamp(safeSelectedIndex - 1, 0, nextStops.length - 1))
+  }
+
+  const handleMarkerPointerDown = (e: PointerEvent<HTMLDivElement>, index: number) => {
+    const stop = stops[index]
+    if (!stop || isEndStop(stop)) {
+      setSelectedStopIndex(index)
+      return
+    }
+    e.preventDefault()
+    e.stopPropagation()
+    containerRef.current?.setPointerCapture(e.pointerId)
+    setSelectedStopIndex(index)
+    draggingRef.current = index
+    setIsDragging(true)
+    onInteractionStart()
+  }
+
+  const handleContainerPointerMove = (e: PointerEvent<HTMLDivElement>) => {
+    const di = draggingRef.current
+    if (di === null || !barRef.current || !gradient) return
+    const rect = barRef.current.getBoundingClientRect()
+    const offset = clamp((e.clientX - rect.left) / rect.width, 0.005, 0.995)
+    const result = setStopOffset(stops, di, offset)
+    draggingRef.current = result.index
+    commitGradient({ ...gradient, stops: result.stops }, result.index)
+  }
+
+  const handleContainerPointerUp = () => {
+    if (draggingRef.current !== null) {
+      draggingRef.current = null
+      setIsDragging(false)
+      onInteractionEnd()
+    }
+  }
+
+  return (
+    <div className="space-y-3">
+      <SegmentedButtons
+        value={mode}
+        options={[
+          { value: 'solid', label: 'Solid' },
+          { value: 'linear', label: 'Linear' },
+          { value: 'radial', label: 'Radial' },
+        ]}
+        onChange={switchMode}
+      />
+
+      {mode === 'solid' ? (
+        <ColorField
+          value={typeof fill === 'string' ? fill : fill.stops[0]?.color ?? '#FFFFFF'}
+          onChange={(v) => onChange(v)}
+          onInteractionStart={onInteractionStart}
+          onInteractionEnd={onInteractionEnd}
+        />
+      ) : gradient && selectedStop ? (
+        <>
+          <div className="flex items-center justify-between">
+            <span className="text-[11px] text-[#6b6b7a] uppercase tracking-[0.08em]">Stops</span>
+            <button
+              type="button"
+              onClick={addStop}
+              className="text-[11px] text-[#7c6ef6] hover:text-[#9d90f8] transition-colors px-1.5 py-0.5 rounded border border-[rgba(124,110,246,0.3)] hover:border-[rgba(124,110,246,0.6)]"
+            >
+              + Add stop
+            </button>
+          </div>
+
+          <div
+            ref={containerRef}
+            className="relative select-none"
+            style={{ height: 32, cursor: isDragging ? 'grabbing' : 'default' }}
+            onPointerMove={handleContainerPointerMove}
+            onPointerUp={handleContainerPointerUp}
+            onPointerCancel={handleContainerPointerUp}
+          >
+            {stops.map((stop, index) => {
+              const isSelected = index === safeSelectedIndex
+              const fixed = isEndStop(stop)
+              return (
+                <div
+                  key={index}
+                  style={{
+                    position: 'absolute',
+                    top: 0,
+                    // Inset 7px each side (half of 14px marker width) so end markers
+                    // stay fully within the container and aren't clipped by parent overflow.
+                    left: `calc(7px + ${stop.offset} * (100% - 14px))`,
+                    transform: 'translateX(-50%)',
+                    width: 14,
+                    height: 10,
+                    clipPath: 'polygon(0% 0%, 100% 0%, 50% 100%)',
+                    background: isSelected ? '#ffffff' : normalizeHexColor(stop.color),
+                    filter: isSelected
+                      ? 'drop-shadow(0 0 5px rgba(124,110,246,0.9))'
+                      : fixed
+                        ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))'
+                        : 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))',
+                    cursor: fixed ? 'pointer' : isDragging ? 'grabbing' : 'grab',
+                    touchAction: 'none',
+                    zIndex: isSelected ? 3 : fixed ? 2 : 1,
+                    outline: fixed && isSelected ? '1.5px solid rgba(124,110,246,0.7)' : undefined,
+                  }}
+                  onPointerDown={(e) => handleMarkerPointerDown(e, index)}
+                />
+              )
+            })}
+
+            {/* Bar is inset 7px each side to match marker range — barRef drives offset calculation */}
+            <div
+              ref={barRef}
+              className="absolute bottom-0 h-4 rounded-full border border-[rgba(255,255,255,0.12)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
+              style={{ left: 7, right: 7, background: fillToCss(gradient) }}
+            />
+          </div>
+
+          <div className="rounded-xl border border-[rgba(255,255,255,0.08)] bg-[#101017] p-3 space-y-3">
+            <div>
+              <label className={labelCls}>Color</label>
+              <ColorField
+                value={selectedStop.color}
+                onChange={(value) => {
+                  const result = updateStopColor(stops, safeSelectedIndex, value)
+                  commitGradient({ ...gradient, stops: result.stops }, result.index)
+                }}
+                onInteractionStart={onInteractionStart}
+                onInteractionEnd={onInteractionEnd}
+              />
+            </div>
+
+            {!isEndStop(selectedStop) && (
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className={labelCls + ' !mb-0'}>Position</label>
+                  <span className="text-xs text-[#e8e8f0]">{Math.round(selectedStop.offset * 100)}%</span>
+                </div>
+                <input
+                  type="range"
+                  min={1}
+                  max={99}
+                  value={Math.round(selectedStop.offset * 100)}
+                  onChange={(e) => {
+                    const result = setStopOffset(stops, safeSelectedIndex, Number(e.target.value) / 100)
+                    commitGradient({ ...gradient, stops: result.stops }, result.index)
+                  }}
+                  onMouseDown={onInteractionStart}
+                  onMouseUp={onInteractionEnd}
+                  className="w-full accent-[#7c6ef6]"
+                />
+              </div>
+            )}
+
+            {!isEndStop(selectedStop) && (
+              <button
+                type="button"
+                onClick={deleteStop}
+                className="text-xs text-[#f0b4b4] hover:text-[#ffd0d0] transition-colors"
+              >
+                Delete stop ×
+              </button>
+            )}
+
+            {isEndStop(selectedStop) && (
+              <p className="text-[10px] text-[#525261]">Fixed stop — position locked</p>
+            )}
+          </div>
+
+          {gradient.type === 'linear' && (
+            <div>
+              <div className="mb-1 flex items-center justify-between">
+                <label className={labelCls + ' !mb-0'}>Angle</label>
+                <span className="text-xs text-[#e8e8f0]">{Math.round(gradient.angle)}°</span>
+              </div>
+              <input
+                type="range" min={0} max={360} value={gradient.angle}
+                onChange={(e) => commitGradient({ ...gradient, angle: Number(e.target.value) })}
+                onMouseDown={onInteractionStart} onMouseUp={onInteractionEnd}
+                className="w-full accent-[#7c6ef6]"
+              />
+            </div>
+          )}
+
+          {gradient.type === 'radial' && (
+            <div className="space-y-3">
+              <div className={rowCls}>
+                <div className={fieldCls}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className={labelCls + ' !mb-0'}>Center X</label>
+                    <span className="text-xs text-[#e8e8f0]">{Math.round(gradient.cx * 100)}%</span>
+                  </div>
+                  <input type="range" min={0} max={100} value={Math.round(gradient.cx * 100)}
+                    onChange={(e) => commitGradient({ ...gradient, cx: Number(e.target.value) / 100 })}
+                    onMouseDown={onInteractionStart} onMouseUp={onInteractionEnd}
+                    className="w-full accent-[#7c6ef6]" />
+                </div>
+                <div className={fieldCls}>
+                  <div className="mb-1 flex items-center justify-between">
+                    <label className={labelCls + ' !mb-0'}>Center Y</label>
+                    <span className="text-xs text-[#e8e8f0]">{Math.round(gradient.cy * 100)}%</span>
+                  </div>
+                  <input type="range" min={0} max={100} value={Math.round(gradient.cy * 100)}
+                    onChange={(e) => commitGradient({ ...gradient, cy: Number(e.target.value) / 100 })}
+                    onMouseDown={onInteractionStart} onMouseUp={onInteractionEnd}
+                    className="w-full accent-[#7c6ef6]" />
+                </div>
+              </div>
+              <div>
+                <div className="mb-1 flex items-center justify-between">
+                  <label className={labelCls + ' !mb-0'}>Radius</label>
+                  <span className="text-xs text-[#e8e8f0]">{Math.round(gradient.radius * 100)}%</span>
+                </div>
+                <input type="range" min={0} max={200} value={Math.round(gradient.radius * 100)}
+                  onChange={(e) => commitGradient({ ...gradient, radius: Number(e.target.value) / 100 })}
+                  onMouseDown={onInteractionStart} onMouseUp={onInteractionEnd}
+                  className="w-full accent-[#7c6ef6]" />
+              </div>
+            </div>
+          )}
+        </>
+      ) : null}
+    </div>
+  )
+}
+
+export function FillControl(props: GradientEditorProps) {
+  return <GradientEditor {...props} />
+}
+
+export function SliderField({
+  label,
+  value,
+  min,
+  max,
+  step = 1,
+  unit = '',
+  onChange,
+  onInteractionStart,
+  onInteractionEnd,
+  formatDisplay,
+  className = '',
+}: {
+  label: string
+  value: number
+  min: number
+  max: number
+  step?: number
+  unit?: string
+  onChange: (value: number) => void
+  onInteractionStart?: () => void
+  onInteractionEnd?: () => void
+  formatDisplay?: (v: number) => string
+  className?: string
+}) {
+  const display = formatDisplay
+    ? formatDisplay(value)
+    : step >= 1
+      ? String(Math.round(value))
+      : value.toFixed(2)
+
+  return (
+    <div className={`mb-3 ${className}`}>
+      <div className="mb-1 flex items-center justify-between">
+        <label className="text-[11px] text-[#6b6b7a] uppercase tracking-[0.08em]">{label}</label>
+        <span className="text-xs text-[#e8e8f0]">{display}{unit}</span>
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="range"
+          min={min}
+          max={max}
+          step={step}
+          value={clamp(value, min, max)}
+          onChange={(e) => onChange(Number(e.target.value))}
+          onMouseDown={onInteractionStart}
+          onMouseUp={onInteractionEnd}
+          className="flex-1 min-w-0 accent-[#7c6ef6]"
+        />
+        <input
+          type="number"
+          value={step >= 1 ? Math.round(value) : value}
+          step={step}
+          onChange={(e) => {
+            const v = Number(e.target.value)
+            if (!isNaN(v)) onChange(v)
+          }}
+          className="w-14 shrink-0 bg-[#0f0f13] border border-[rgba(255,255,255,0.1)] rounded px-1.5 py-1 text-xs text-[#e8e8f0] text-right focus:outline-none focus:border-[rgba(124,110,246,0.5)] [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+        />
+      </div>
+    </div>
+  )
+}

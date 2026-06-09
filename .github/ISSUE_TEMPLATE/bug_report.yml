@@ -1,0 +1,54 @@
+name: Bug report
+description: Something isn't working correctly
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: "Thanks for taking the time to report a bug! The more detail you provide, the faster it can be fixed."
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Clear description of the bug.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: Expected behaviour
+    validations:
+      required: true
+  - type: textarea
+    id: repro
+    attributes:
+      label: Steps to reproduce
+      placeholder: "1. Open the editor\n2. Add a phone layer\n3. ..."
+    validations:
+      required: true
+  - type: textarea
+    id: project-json
+    attributes:
+      label: Minimal project JSON (most helpful)
+      description: Export your project (Projects panel → Export) and paste the JSON here, trimmed to the minimum that reproduces the issue. This is the fastest path to a fix.
+      render: json
+  - type: dropdown
+    id: path
+    attributes:
+      label: Where does this happen?
+      options:
+        - Browser editor (GUI)
+        - CLI export
+        - Both
+    validations:
+      required: true
+  - type: input
+    id: browser
+    attributes:
+      label: Browser / OS
+      placeholder: "Chrome 124 / macOS 14"
+  - type: textarea
+    id: console
+    attributes:
+      label: Console errors
+      description: Paste any errors from the browser console or terminal.
+      render: shell

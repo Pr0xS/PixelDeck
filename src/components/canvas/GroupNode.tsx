@@ -1,0 +1,131 @@
+import { Group } from 'react-konva'
+import type Konva from 'konva'
+import type { GroupLayer, Layer } from '@/types'
+import { LayerNode } from './LayerNode'
+
+function estimateLayerBox(layer: Layer): { x: number; y: number; w: number; h: number } {
+  if (layer.type === 'phone') {
+    const frame = layer.model.includes('pixel') ? { w: 448, h: 914 } : { w: 430, h: 880 }
+    return { x: layer.x, y: layer.y, w: frame.w * layer.scale, h: frame.h * layer.scale }
+  }
+  if (layer.type === 'image' || layer.type === 'shape') return { x: layer.x, y: layer.y, w: layer.width, h: layer.height }
+  if (layer.type === 'text') return { x: layer.x, y: layer.y, w: layer.width ?? 1000, h: layer.fontSize * layer.lineHeight * Math.max(1, layer.text.split('\n').length) }
+  if (layer.type === 'chips') return { x: layer.x, y: layer.y, w: 800, h: Math.max(1, layer.items.length) * (layer.chipFontSize + 32 + layer.gap) }
+  if (layer.type === 'brand') return { x: layer.x, y: layer.y, w: 360, h: Math.max(layer.logoSize, layer.nameFontSize) }
+  if (layer.type === 'group') return estimateGroupBox(layer)
+  return { x: layer.x, y: layer.y, w: 1, h: 1 }
+}
+
+function estimateGroupBox(layer: GroupLayer): { x: number; y: number; w: number; h: number } {
+  if (layer.children.length === 0) return { x: layer.x, y: layer.y, w: 1, h: 1 }
+  const boxes = layer.children.map(estimateLayerBox)
+  const minX = Math.min(...boxes.map((box) => box.x))
+  const minY = Math.min(...boxes.map((box) => box.y))
+  const maxX = Math.max(...boxes.map((box) => box.x + box.w))
+  const maxY = Math.max(...boxes.map((box) => box.y + box.h))
+  return { x: layer.x + minX, y: layer.y + minY, w: maxX - minX, h: maxY - minY }
+}
+
+interface GroupNodeProps {
+  layer: GroupLayer
+  isSelected: boolean
+  isEditing: boolean
+  selectedChildId: string | null
+  onSelect: () => void
+  onEnterEdit: () => void
+  onSelectChild: (childId: string) => void
+  onDragEnd: (x: number, y: number) => void
+  onChildDragEnd: (childId: string, x: number, y: number) => void
+  onTransformEnd: (attrs: Partial<GroupLayer>) => void
+  onChildTransformEnd: (childId: string, attrs: Partial<Layer>) => void
+}
+
+export function GroupNode({
+  layer,
+  isEditing,
+  selectedChildId,
+  onSelect,
+  onEnterEdit,
+  onSelectChild,
+  onDragEnd,
+  onChildDragEnd,
+  onTransformEnd,
+  onChildTransformEnd,
+}: GroupNodeProps) {
+  const box = estimateGroupBox({ ...layer, x: 0, y: 0 })
+  const centerX = layer.x + box.x + box.w / 2
+  const centerY = layer.y + box.y + box.h / 2
+  const handleClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+    if (layer.locked || isEditing) return
+    e.cancelBubble = true
+    onSelect()
+  }
+
+  const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
+    if (layer.locked || isEditing) return
+    e.cancelBubble = true
+    onEnterEdit()
+    // Walk ancestors to find which child was double-clicked
+    let node: Konva.Node | null = e.target as Konva.Node
+    const groupNode = e.currentTarget as Konva.Node
+    while (node && node !== groupNode) {
+      const nodeId = typeof node.id === 'function' ? node.id() : ''
+      if (nodeId.startsWith('layer-')) {
+        const childId = nodeId.slice(6)
+        if (layer.children.some((c) => c.id === childId)) {
+          onSelectChild(childId)
+          return
+        }
+      }
+      node = node.getParent() as Konva.Node | null
+    }
+  }
+
+  return (
+    <Group
+      id={`layer-${layer.id}`}
+      x={centerX}
+      y={centerY}
+      offsetX={box.x + box.w / 2}
+      offsetY={box.y + box.h / 2}
+      rotation={layer.rotation}
+      opacity={layer.opacity}
+      visible={layer.visible}
+      draggable={!layer.locked && !isEditing}
+      onClick={handleClick}
+      onTap={handleClick}
+      onDblClick={handleDblClick}
+      onDblTap={handleDblClick}
+      onDragStart={() => { if (!layer.locked && !isEditing) onSelect() }}
+      onDragEnd={(e: Konva.KonvaEventObject<DragEvent>) => {
+        if (!isEditing) onDragEnd(e.target.x() - box.x - box.w / 2, e.target.y() - box.y - box.h / 2)
+      }}
+      onTransformEnd={(e: Konva.KonvaEventObject<Event>) => {
+        if (!isEditing) {
+          const node = e.target
+          node.scaleX(1)
+          node.scaleY(1)
+          onTransformEnd({
+            x: node.x() - box.x - box.w / 2,
+            y: node.y() - box.y - box.h / 2,
+            rotation: node.rotation(),
+          } as Partial<GroupLayer>)
+        }
+      }}
+    >
+      {layer.children.map((child) => (
+        <LayerNode
+          key={child.id}
+          layer={child as Layer}
+          // When NOT editing: children are visual-only (not draggable, clicks bubble up to group)
+          // When editing: children are fully interactive
+          forceNotDraggable={!isEditing}
+          isSelected={isEditing && selectedChildId === child.id}
+          onSelect={isEditing ? () => { onSelectChild(child.id) } : () => {}}
+          onDragEnd={isEditing ? (x, y) => onChildDragEnd(child.id, x, y) : () => {}}
+          onTransformEnd={isEditing ? (attrs) => onChildTransformEnd(child.id, attrs) : () => {}}
+        />
+      ))}
+    </Group>
+  )
+}

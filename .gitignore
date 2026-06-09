@@ -1,0 +1,54 @@
+# ─── Dependencies ─────────────────────────────────────────────────────────────
+node_modules/
+
+# ─── Build output ─────────────────────────────────────────────────────────────
+dist/
+dist-ssr/
+*.tsbuildinfo
+
+# ─── Environment variables ────────────────────────────────────────────────────
+.env
+.env.*
+!.env.example
+*.local
+
+# ─── AI agent tooling (never commit) ──────────────────────────────────────────
+.engram/
+.opencode/
+.cursorrules
+.aider*
+
+# ─── User-generated runtime dirs ──────────────────────────────────────────────
+# Local project files and screenshot assets — not part of the source.
+# If you want to share a sample project, put it under public/templates/ instead.
+/projects/*
+!/projects/.gitkeep
+
+/screenshots/*
+!/screenshots/.gitkeep
+
+/output/*
+!/output/.gitkeep
+
+# Local template overrides — use public/templates/ for bundled templates.
+/templates/*
+!/templates/.gitkeep
+
+# ─── Logs ─────────────────────────────────────────────────────────────────────
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+# ─── OS / Editor ──────────────────────────────────────────────────────────────
+.DS_Store
+.idea/
+.vscode/*
+!.vscode/extensions.json
+*.suo
+*.ntvs*
+*.njsproj
+*.sln
+*.sw?

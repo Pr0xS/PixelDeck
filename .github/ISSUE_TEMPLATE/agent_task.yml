@@ -1,0 +1,63 @@
+name: Agent task
+description: A well-scoped task ready for an AI coding agent to implement
+labels: [good-first-agent-task]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Use this template to file tasks that are pre-scoped for AI agent implementation.
+        Good agent tasks are: bounded, testable, don't require design decisions, and reference specific files.
+        See [AGENTS.md](../AGENTS.md) for the codebase map.
+  - type: textarea
+    id: objective
+    attributes:
+      label: Objective
+      description: One clear sentence describing what needs to be done.
+    validations:
+      required: true
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Checklist the agent can self-verify against.
+      placeholder: |
+        - [ ] X works when Y
+        - [ ] npm run lint passes
+        - [ ] npm run typecheck passes
+        - [ ] npm run build succeeds
+    validations:
+      required: true
+  - type: textarea
+    id: files
+    attributes:
+      label: Affected files (from AGENTS.md map)
+      description: List the specific files the agent should read and/or modify.
+      placeholder: |
+        Read: src/types/index.ts, src/store/index.ts
+        Modify: src/components/canvas/PhoneNode.tsx, src/components/panels/PropertiesPanel.tsx
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: Explicitly list what the agent should NOT change.
+      placeholder: "Do not modify the data model. Do not change other layer types."
+    validations:
+      required: true
+  - type: textarea
+    id: context
+    attributes:
+      label: Additional context / constraints
+      description: Non-obvious behaviour, relevant AGENTS.md sections, prior attempts, etc.
+  - type: checkboxes
+    id: self-check
+    attributes:
+      label: Task quality check
+      options:
+        - label: This task can be done without design decisions (those are already made above)
+          required: true
+        - label: The affected files are explicitly listed
+          required: true
+        - label: The acceptance criteria are verifiable by running commands
+          required: true

@@ -1,0 +1,15 @@
+# PixelDeck batch export config
+# Run: pixeldeck export --config=batch.yaml
+
+jobs:
+  - project: ./projects/tabeku-es.json
+    screenshots: ./screenshots/raw/es/light
+    output: ./screenshots/store/es/light
+
+  - project: ./projects/tabeku-en.json
+    screenshots: ./screenshots/raw/en/light
+    output: ./screenshots/store/en/light
+
+  - project: ./projects/tabeku-es.json
+    screenshots: ./screenshots/raw/es/dark
+    output: ./screenshots/store/es/dark
