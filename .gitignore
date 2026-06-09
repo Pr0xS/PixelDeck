@@ -19,20 +19,12 @@ dist-ssr/
 .aider*
 
 # ─── User-generated runtime dirs ──────────────────────────────────────────────
-# Local project files and screenshot assets — not part of the source.
-# If you want to share a sample project, put it under public/templates/ instead.
-/projects/*
-!/projects/.gitkeep
-
-/screenshots/*
-!/screenshots/.gitkeep
-
-/output/*
-!/output/.gitkeep
-
-# Local template overrides — use public/templates/ for bundled templates.
-/templates/*
-!/templates/.gitkeep
+# Local workspace data — not part of the source. The CLI creates these on demand.
+# To share a sample project or template, put it under public/templates/ instead.
+/projects/
+/screenshots/
+/output/
+/templates/
 
 # ─── Logs ─────────────────────────────────────────────────────────────────────
 logs/
