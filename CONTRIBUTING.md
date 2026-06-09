@@ -112,6 +112,6 @@ Anti-hallucination rules:
 
 - CLI export requires `npm run build` before use because it serves the built `dist/` app.
 - Playwright browsers may need to be installed once in a new environment.
-- Use `node cli/index.mjs export --help` to inspect CLI options.
+- Use `node cli/index.mjs --help` to inspect all CLI options.
 - The project uses ESM; CLI files use `.mjs`.
 - The path alias `@/` points to `src/`.

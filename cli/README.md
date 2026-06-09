@@ -42,7 +42,7 @@ See `cli/batch.example.yaml` for the full YAML schema. A batch config lets you e
 ### Help
 
 ```bash
-node cli/index.mjs export --help
+node cli/index.mjs --help
 ```
 
 ## How it works

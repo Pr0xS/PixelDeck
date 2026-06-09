@@ -6,13 +6,16 @@ PixelDeck is pre-1.0. Security fixes are supported for the current `main` branch
 
 ## Reporting a Vulnerability
 
-Please report suspected security vulnerabilities through GitHub's private vulnerability reporting flow:
+Please report suspected security vulnerabilities through GitHub's private vulnerability reporting feature:
 
 1. Open the repository on GitHub.
-2. Go to **Settings → Security → Advisories**.
-3. Create a private vulnerability report.
+2. Click the **Security** tab (visible to all users).
+3. Click **"Report a vulnerability"**.
+4. Fill in the private advisory form.
 
-Do **not** open a public issue for security bugs. Public reports can expose users before a fix is available.
+> If the "Report a vulnerability" button is not visible, private reporting may not yet be enabled. In that case, contact the maintainers by opening a GitHub Discussion tagged **[security]** or via the contact listed in the repository profile — **do not** create a public issue.
+
+Do **not** open a public issue for security bugs. Public disclosure before a fix is ready puts all users at risk.
 
 ## Security Scope
 

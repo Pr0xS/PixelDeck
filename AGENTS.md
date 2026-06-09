@@ -202,7 +202,7 @@ npm run dev       # Vite dev server → http://localhost:5173
 npm run build     # TypeScript + Vite build → dist/
 npm run lint      # ESLint
 npm run preview   # Serve dist/ locally
-node cli/index.mjs export --help   # CLI help
+node cli/index.mjs --help          # CLI help
 ```
 
 > CLI export requires `dist/` to exist. Always `npm run build` before using the CLI.

@@ -68,7 +68,7 @@ Build the web app first — the CLI renders from `dist/`.
 
 ```bash
 npm run build
-node cli/index.mjs export --help
+node cli/index.mjs --help
 ```
 
 Example export:
@@ -77,7 +77,7 @@ Example export:
 node cli/index.mjs export \
   --project=./projects/my-app.json \
   --screenshots=./screenshots/raw \
-  --output=./screenshots/store
+  --output=./output/store
 ```
 
 See [`cli/README.md`](cli/README.md) for full CLI docs and YAML batch configuration.

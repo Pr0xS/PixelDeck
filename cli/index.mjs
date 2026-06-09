@@ -21,6 +21,12 @@ function parseArgs(rawArgs) {
   return opts
 }
 
+// --help / -h anywhere → print help and exit
+if (args.includes('--help') || args.includes('-h') || !command) {
+  printHelp()
+  process.exit(0)
+}
+
 switch (command) {
   case 'export': {
     const opts = parseArgs(args.slice(1))
@@ -44,7 +50,13 @@ switch (command) {
   }
 
   default:
-    console.log(`
+    console.error(`Unknown command: ${command}\n`)
+    printHelp()
+    process.exit(1)
+}
+
+function printHelp() {
+  console.log(`
 PixelDeck CLI
 
 Commands:
@@ -72,10 +84,10 @@ Options for locale-import:
   --output=<path>       Output path for updated project JSON (default: overwrites --project)
 
 Examples:
-  pixeldeck export --project=./project.json --output=./dist
-  pixeldeck export --project=./project.json --output=./dist --locale=es
-  pixeldeck export --project=./project.json --output=./dist --all-locales
-  pixeldeck locale-manifest --project=./project.json --output=./locales.json
-  pixeldeck locale-import --project=./project.json --manifest=./locales.json
+  node cli/index.mjs export --project=./project.json --output=./output
+  node cli/index.mjs export --project=./project.json --output=./output --locale=es
+  node cli/index.mjs export --project=./project.json --output=./output --all-locales
+  node cli/index.mjs locale-manifest --project=./project.json --output=./locales.json
+  node cli/index.mjs locale-import --project=./project.json --manifest=./locales.json
 `)
 }
