@@ -2,7 +2,7 @@
   "name": "pixeldeck",
   "version": "0.1.0",
   "private": true,
-  "description": "Visual editor for designing polished App Store & Play Store screenshots. Drag-and-drop device mockups, text, shapes, and gradients — export PNGs from the browser or batch-export via CLI.",
+  "description": "Visual editor for designing polished App Store & Play Store screenshots. Drag-and-drop device mockups, text, shapes, and gradients, then export PNGs from the browser or batch-export via CLI.",
   "keywords": [
     "app-store",
     "screenshots",

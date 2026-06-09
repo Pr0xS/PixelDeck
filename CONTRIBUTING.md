@@ -104,7 +104,7 @@ Anti-hallucination rules:
 - Do not “simplify” anything in the `AGENTS.md` **DO NOT SIMPLIFY** section.
 - Do not add tests against a framework that is not installed.
 - Do not run formatters across unrelated files.
-- Do not invent store action names — check `src/store/index.ts` first.
+- Do not invent store action names; check `src/store/index.ts` first.
 - Do not mix dependency updates with feature or bug-fix work.
 - Do not commit generated output unless maintainers requested it.
 

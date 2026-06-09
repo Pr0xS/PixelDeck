@@ -6,7 +6,7 @@
 - [ ] AI-assisted (tool: ________)
 - [ ] Mostly AI-generated, human-reviewed
 
-## Verification — paste actual output, don't just check the boxes
+## Verification: paste actual output, don't just check the boxes
 
 <details>
 <summary>Command output</summary>
@@ -24,7 +24,7 @@ $ npm run build
 - [ ] `npm run lint` clean (no errors or warnings)
 - [ ] `npm run typecheck` clean
 - [ ] `npm run build` succeeds
-- [ ] Tested manually in the editor (`npm run dev`) — describe what you exercised below
+- [ ] Tested manually in the editor (`npm run dev`); describe what you exercised below
 - [ ] CLI export path still works if touched (`node cli/index.mjs export ...`)
 
 **Manual test description:**
@@ -40,6 +40,6 @@ $ npm run build
 <!-- Required for any canvas or render change: attach a before/after screenshot or GIF -->
 
 ## AI self-audit *(fill in if AI-assisted)*
-- [ ] Every store action / API I call exists in `src/store/index.ts` — I didn't invent method names
+- [ ] Every store action / API I call exists in `src/store/index.ts`; I didn't invent method names
 - [ ] I followed existing patterns (layer IDs via `nanoid()`, `@/` path alias, FillValue guard, etc.)
 - [ ] I did not add tests against a framework that isn't installed in the project

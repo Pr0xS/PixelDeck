@@ -15,8 +15,8 @@ Read [`AGENTS.md`](../AGENTS.md) first before making changes. It is the canonica
 
 ## Read these docs
 
-- [`AGENTS.md`](../AGENTS.md) — implementation map and conventions.
-- [`CONTRIBUTING.md`](../CONTRIBUTING.md) — contribution, PR, and verification rules.
+- [`AGENTS.md`](../AGENTS.md): implementation map and conventions.
+- [`CONTRIBUTING.md`](../CONTRIBUTING.md): contribution, PR, and verification rules.
 
 ## DO NOT touch
 

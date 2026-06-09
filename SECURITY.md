@@ -13,7 +13,7 @@ Please report suspected security vulnerabilities through GitHub's private vulner
 3. Click **"Report a vulnerability"**.
 4. Fill in the private advisory form.
 
-> If the "Report a vulnerability" button is not visible, private reporting may not yet be enabled. In that case, contact the maintainers by opening a GitHub Discussion tagged **[security]** or via the contact listed in the repository profile — **do not** create a public issue.
+> If the "Report a vulnerability" button is not visible, private reporting may not yet be enabled. In that case, contact the maintainers by opening a GitHub Discussion tagged **[security]** or via the contact listed in the repository profile. **Do not** create a public issue.
 
 Do **not** open a public issue for security bugs. Public disclosure before a fix is ready puts all users at risk.
 

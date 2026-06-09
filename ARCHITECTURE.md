@@ -1,11 +1,11 @@
-# Architecture — PixelDeck
+# PixelDeck Architecture
 
 ## Overview
 
 PixelDeck is a single-page React application that serves two runtime modes:
 
-1. **Editor mode** — interactive GUI for designing App Store screenshot layouts
-2. **Headless export mode** — triggered by the CLI; renders slides and captures PNGs without user interaction
+1. **Editor mode**: interactive GUI for designing App Store screenshot layouts
+2. **Headless export mode**: triggered by the CLI; renders slides and captures PNGs without user interaction
 
 ```
 ┌─────────────────────────────────────────────────────────┐
@@ -60,7 +60,7 @@ Project
         ├── ShapeLayer
         ├── ChipsLayer
         ├── BrandLayer
-        └── GroupLayer (recursive — children: Layer[])
+        └── GroupLayer (recursive; children: Layer[])
 ```
 
 ### Key types
@@ -68,12 +68,12 @@ Project
 | Type | Description |
 |---|---|
 | `Project` | Root document. Contains settings + array of `SlideGroup`. |
-| `SlideGroup` | One canvas shared across 1–N adjacent output slides. Width = `slideWidth × numSlides`. |
+| `SlideGroup` | One canvas shared across 1-N adjacent output slides. Width = `slideWidth × numSlides`. |
 | `Layer` | Union of all layer variant types. Discriminated by `type` field. |
 | `BaseLayer` | Shared fields: `id`, `name`, `x`, `y`, `rotation`, `opacity`, `visible`, `locked`, `blur`, `shadow`. |
 | `BackgroundLayer` | Always `layers[0]`. Holds the slide's `fill` (solid/gradient). Cannot be moved or deleted. |
 | `TextLayer` | Text with optional `spans: TextSpan[]` for rich per-segment styling. |
-| `TextSpan` | `{ text, fill?, fontWeight?, italic? }` — overrides the parent TextLayer defaults per segment. |
+| `TextSpan` | `{ text, fill?, fontWeight?, italic? }`; overrides the parent TextLayer defaults per segment. |
 | `FillValue` | `string` (hex/CSS color) \| `LinearGradient` \| `RadialGradient` |
 | `PhoneModelSpec` | Physical dimensions + screen rect for a device frame (in SVG canvas coordinates). |
 
@@ -122,10 +122,10 @@ Storage keys:
 ```
 
 Key behaviors:
-- **Auto-save** — subscribes to the editor store and debounces saves (1.5 s after last change)
-- **Auto-init** — loads the last active project on app startup
-- **createProject** — saves current first, then resets editor to a blank project
-- **deleteProject** — falls back to another project or creates a blank one
+- **Auto-save**: subscribes to the editor store and debounces saves (1.5 s after last change)
+- **Auto-init**: loads the last active project on app startup
+- **createProject**: saves current first, then resets editor to a blank project
+- **deleteProject**: falls back to another project or creates a blank one
 
 ### Asset store
 
@@ -143,7 +143,7 @@ Separate Zustand store (not tracked by undo) holding `Map<filename, dataURL>` fo
 StageCanvas (src/components/canvas/StageCanvas.tsx)
   └── Konva.Stage
       └── Konva.Layer
-          ├── BackgroundNode  (always first — src/components/canvas/BackgroundNode.tsx)
+          ├── BackgroundNode  (always first; src/components/canvas/BackgroundNode.tsx)
           ├── LayerNode × N   (src/components/canvas/LayerNode.tsx)
           │   ├── PhoneNode      → SVG frame + clipped screenshot image
           │   ├── TextNode       → rich spans renderer + gradient fill support
@@ -178,7 +178,7 @@ StageCanvas (src/components/canvas/StageCanvas.tsx)
 
 | Type | Component | Key props |
 |---|---|---|
-| `background` | `BackgroundNode` | `fill` (FillValue) — always `layers[0]`, locked |
+| `background` | `BackgroundNode` | `fill` (FillValue); always `layers[0]`, locked |
 | `phone` | `PhoneNode` | `model`, `scale`, `screenshotPath`, `screenshotFit`, offsets |
 | `text` | `TextNode` | `text`, `spans[]`, `fontFamily`, `fontSize`, `fill` (FillValue), `align`, `width` |
 | `image` | `ImageNode` | `src` (data URI), `width`, `height`, `cornerRadius` |
@@ -192,9 +192,9 @@ StageCanvas (src/components/canvas/StageCanvas.tsx)
 `TextLayer` supports an optional `spans: TextSpan[]` array for mixed-style text within a single layer. When spans are present, the text is rendered off-screen using `renderSpansToCanvas()` (`src/utils/textRendering.ts`) and composited onto the Konva stage as an image pattern.
 
 Each `TextSpan` can override:
-- `fill` — any `FillValue` (solid color or gradient)
-- `fontWeight` — e.g. `700` for bold within a sentence
-- `italic` — boolean
+- `fill`: any `FillValue` (solid color or gradient)
+- `fontWeight`: e.g. `700` for bold within a sentence
+- `italic`: boolean
 
 If `spans` is empty or absent, `TextNode` falls back to standard Konva text rendering.
 
@@ -251,15 +251,15 @@ Hidden full-canvas renderer for CLI use. Mounts all slide groups simultaneously 
 
 ```
 App
-├── Toolbar          (top bar — add layers, import, export, projects, save/load)
-├── LayersPanel      (left — layer list with dnd-kit sortable, visibility, lock)
-├── StageCanvas      (center — Konva canvas with zoom, grid, seam guides)
-│   └── ContextualToolbar  (floating over canvas — quick-actions for selection)
-├── PropertiesPanel  (right — layer/project inspector)
-└── SlideNavigator   (bottom — slide group tabs with add/delete/rename)
+├── Toolbar          (top bar: add layers, import, export, projects, save/load)
+├── LayersPanel      (left: layer list with dnd-kit sortable, visibility, lock)
+├── StageCanvas      (center: Konva canvas with zoom, grid, seam guides)
+│   └── ContextualToolbar  (floating over canvas: quick-actions for selection)
+├── PropertiesPanel  (right: layer/project inspector)
+└── SlideNavigator   (bottom: slide group tabs with add/delete/rename)
 
 [modal overlay]
-└── ProjectsModal    (triggered from Toolbar — list/create/delete projects)
+└── ProjectsModal    (triggered from Toolbar: list/create/delete projects)
 ```
 
 ### Shared property controls
@@ -270,7 +270,7 @@ All fill/gradient editing uses a single shared component set: `FillControl`, `Gr
 
 ### Panel communication
 
-All panels read from and write to the Zustand store directly — no prop drilling. The store is the single source of truth.
+All panels read from and write to the Zustand store directly; no prop drilling. The store is the single source of truth.
 
 ---
 
@@ -278,11 +278,11 @@ All panels read from and write to the Zustand store directly — no prop drillin
 
 | File | Purpose |
 |---|---|
-| `src/utils/export.ts` | Browser PNG export — crops Konva stage per slide |
+| `src/utils/export.ts` | Browser PNG export; crops Konva stage per slide |
 | `src/utils/gradients.ts` | `FillValue` → Konva fill props / CSS / `CanvasGradient` |
 | `src/utils/svgToImage.ts` | SVG string / File → `HTMLImageElement` |
 | `src/utils/fonts.ts` | `FONT_LIST` registry (23 Google Fonts) + `loadGoogleFonts()` |
-| `src/utils/textRendering.ts` | `renderSpansToCanvas()` — off-screen canvas for rich text spans |
+| `src/utils/textRendering.ts` | `renderSpansToCanvas()`: off-screen canvas for rich text spans |
 
 ---
 
@@ -290,11 +290,11 @@ All panels read from and write to the Zustand store directly — no prop drillin
 
 - **Path alias:** `@/` maps to `src/` (configured in `vite.config.ts` and `tsconfig.app.json`)
 - **Component naming:** PascalCase files matching the component name
-- **Store actions:** camelCase verbs — `addLayer`, `updateLayer`, `removeLayer`
-- **Layer IDs:** `nanoid()` — short random strings
+- **Store actions:** camelCase verbs: `addLayer`, `updateLayer`, `removeLayer`
+- **Layer IDs:** `nanoid()` (short random strings)
 - **FillValue:** always check `typeof fill === 'string'` before treating as gradient
 - **Asset references:** prefer `screenshotPath` (store key) over inline `screenshotDataUrl`
-- **ESM only:** `package.json` has `"type": "module"` — CLI files use `.mjs` extension
+- **ESM only:** `package.json` has `"type": "module"`; CLI files use `.mjs` extension
 - **No CSS modules:** Global Tailwind v4 + `src/index.css` theme vars only
 
 ---
@@ -303,8 +303,8 @@ All panels read from and write to the Zustand store directly — no prop drillin
 
 **Files:** `src/assets/mockups/`
 
-- `specs.ts` — exports `PHONE_SPECS: Record<PhoneModel, PhoneModelSpec>` with frame dimensions and screen rect
-- `iphone-16-pro.ts`, `pixel-9.ts` — export the SVG string as a named constant
+- `specs.ts`: exports `PHONE_SPECS: Record<PhoneModel, PhoneModelSpec>` with frame dimensions and screen rect
+- `iphone-16-pro.ts`, `pixel-9.ts`: export the SVG string as a named constant
 - `PhoneNode` uses `PHONE_SPECS` to position and clip the screenshot inside the frame
 - To add a new device: add a spec entry, add an SVG file, add the model to the `PhoneModel` union type
 
@@ -314,9 +314,9 @@ All panels read from and write to the Zustand store directly — no prop drillin
 
 Groups use PowerPoint-style editing:
 
-1. **Single click on a group** — selects the group as a whole (moves/resizes all children)
-2. **Double-click (or Enter)** — enters group edit mode; individual children become selectable/draggable
-3. **Click outside / Escape** — exits group edit mode
-4. **Ctrl/Cmd+G** — groups selected layers; **Ctrl/Cmd+Shift+G** — ungroups
+1. **Single click on a group**: selects the group as a whole (moves/resizes all children)
+2. **Double-click (or Enter)**: enters group edit mode; individual children become selectable/draggable
+3. **Click outside / Escape**: exits group edit mode
+4. **Ctrl/Cmd+G**: groups selected layers; **Ctrl/Cmd+Shift+G**: ungroups
 
 In group edit mode `selection.layerId` is the child layer's id (not the group id). The group id is tracked via `editingGroupId` in the store. Children of non-edit-mode groups are never draggable independently.

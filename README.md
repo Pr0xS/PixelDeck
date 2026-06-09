@@ -6,9 +6,9 @@
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![AI Agent Friendly](https://img.shields.io/badge/AI%20agents-welcome%20🤖-7c6ef6)](AGENTS.md)
 
-**Design beautiful App Store & Play Store screenshots in your browser — and batch-export them from the CLI.**
+**Design beautiful App Store & Play Store screenshots in your browser, then batch-export them from the CLI.**
 
-PixelDeck is a free, open-source visual editor for store screenshot layouts. Drag device mockups, rich text, shapes, and gradients onto a canvas, then export production-ready PNGs — no design tool subscription, no account, no server.
+PixelDeck is a free, open-source visual editor for store screenshot layouts. Drag device mockups, rich text, shapes, and gradients onto a canvas, then export production-ready PNGs. No design tool subscription, no account, no server.
 
 ### 🚀 [Try the Live Demo →](https://pr0xs.github.io/PixelDeck/)
 
@@ -21,12 +21,12 @@ No install, no sign-up. Everything runs in your browser.
 
 ## Why PixelDeck?
 
-- 🔒 **100% local-first** — no account, no backend, no telemetry. Projects auto-save to localStorage and imported screenshots persist in IndexedDB. Your work never leaves your machine.
-- 🖼️ **Panoramic multi-slide layouts** — design across 2+ store slides on one canvas, so a single phone mockup can span the seam between screenshots for that premium storefront look.
-- 📦 **Reusable templates** — save any project as a template and re-apply it to new apps, or share it as a JSON file.
-- 🌍 **Built-in localization** — per-locale text and image overrides with a locale switcher, so one design covers every language you ship.
-- 🤖 **Headless CLI export** — batch-render every slide, locale, and theme to PNG with Playwright. Perfect for CI pipelines and release automation.
-- 🆓 **Free & MIT-licensed** — own your tooling. Fork it, extend it, ship it.
+- 🔒 **100% local-first**: no account, no backend, no telemetry. Projects auto-save to localStorage and imported screenshots persist in IndexedDB. Your work never leaves your machine.
+- 🖼️ **Panoramic multi-slide layouts**: design across 2+ store slides on one canvas, so a single phone mockup can span the seam between screenshots for that premium storefront look.
+- 📦 **Reusable templates**: save any project as a template and re-apply it to new apps, or share it as a JSON file.
+- 🌍 **Built-in localization**: per-locale text and image overrides with a locale switcher, so one design covers every language you ship.
+- 🤖 **Headless CLI export**: batch-render every slide, locale, and theme to PNG with Playwright. Perfect for CI pipelines and release automation.
+- 🆓 **Free & MIT-licensed**: own your tooling. Fork it, extend it, ship it.
 
 ## Features
 
@@ -36,7 +36,7 @@ No install, no sign-up. Everything runs in your browser.
 |---|---|
 | Canvas editor | Drag, resize, rotate, and group layers with PowerPoint-style group editing |
 | Layer types | Phone mockup, text, image, shape, chips, brand lockup, group |
-| Layers panel | Drag-to-reorder, visibility, lock, rename — plus an always-bottom background layer |
+| Layers panel | Drag-to-reorder, visibility, lock, rename, plus an always-bottom background layer |
 | Inspector | Context-aware properties panel and a floating quick-actions toolbar on canvas |
 
 ### ✍️ Typography, mockups & effects
@@ -60,7 +60,7 @@ No install, no sign-up. Everything runs in your browser.
 
 ## Quick Start
 
-The fastest way to try PixelDeck is the **[live demo](https://pr0xs.github.io/PixelDeck/)** — nothing to install.
+The fastest way to try PixelDeck is the **[live demo](https://pr0xs.github.io/PixelDeck/)**, with nothing to install.
 
 ### Run locally
 
@@ -75,7 +75,7 @@ Open <http://localhost:5173>.
 
 ### CLI batch export
 
-Build the web app first — the CLI renders from `dist/`:
+Build the web app first, since the CLI renders from `dist/`:
 
 ```bash
 npm run build
@@ -114,7 +114,7 @@ See [`ARCHITECTURE.md`](ARCHITECTURE.md) for the full system design, data model,
 
 ## For AI Agents
 
-PixelDeck is designed to be extended by AI coding agents. [`AGENTS.md`](AGENTS.md) maps every file, lists the 6-step recipe for adding a new layer type, documents non-obvious behaviors, and defines a verification contract. Agent contributions are explicitly welcome — see [`CONTRIBUTING.md`](CONTRIBUTING.md).
+PixelDeck is designed to be extended by AI coding agents. [`AGENTS.md`](AGENTS.md) maps every file, lists the 6-step recipe for adding a new layer type, documents non-obvious behaviors, and defines a verification contract. Agent contributions are explicitly welcome; see [`CONTRIBUTING.md`](CONTRIBUTING.md).
 
 ## Contributing
 
