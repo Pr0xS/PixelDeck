@@ -57,13 +57,4 @@ jobs:
   #     - name: Assert output exists
   #       run: test $(find /tmp/pixeldeck-smoke -name "*.png" | wc -l) -gt 0
 
-  secret-scan:
-    name: Secret scan
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # Secret scanning and SAST are handled by security.yml (Battlellama-actions).

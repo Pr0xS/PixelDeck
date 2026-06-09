@@ -1,0 +1,21 @@
+name: Security
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    # Weekly scan every Monday at 03:00 UTC — catches newly published CVEs
+    - cron: '0 3 * * 1'
+
+jobs:
+  # Gitleaks (secrets) + Trivy (dependency CVEs)
+  scan:
+    uses: TheLastBattlellama/Battlellama-actions/.github/workflows/security-scan.yml@main
+
+  # Semgrep SAST for React / TypeScript
+  sast:
+    uses: TheLastBattlellama/Battlellama-actions/.github/workflows/sast-javascript.yml@main
+    with:
+      framework: react
