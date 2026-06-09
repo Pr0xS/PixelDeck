@@ -35,5 +35,5 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Preview modal — full-project filmstrip preview with high-res thumbnail capture
 - Slide navigator — thumbnail-based navigation with per-slide index
 
-[Unreleased]: https://github.com/your-org/pixeldeck/compare/v0.1.0...HEAD
-[0.1.0]: https://github.com/your-org/pixeldeck/releases/tag/v0.1.0
+[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.1.0...HEAD
+[0.1.0]: https://github.com/Pr0xS/PixelDeck/releases/tag/v0.1.0

@@ -1,7 +1,7 @@
 # PixelDeck
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
-[![CI](https://img.shields.io/badge/CI-ready-lightgrey.svg)](https://github.com/your-org/pixeldeck/actions)
+[![CI](https://img.shields.io/badge/CI-ready-lightgrey.svg)](https://github.com/Pr0xS/PixelDeck/actions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
 [![AI Agent Friendly](https://img.shields.io/badge/AI%20agents-welcome%20🤖-7c6ef6)](AGENTS.md)
 
