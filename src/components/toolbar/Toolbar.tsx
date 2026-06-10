@@ -1,9 +1,19 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { useProjectsStore } from '@/store/projects'
 import { downloadDataUrl } from '@/utils/export'
-import { ProjectsModal } from '@/components/panels/ProjectsModal'
-import { TemplatesModal } from '@/components/panels/TemplatesModal'
+import { BrandKitButton } from '@/components/toolbar/BrandKitButton'
+
+// Lazy-load heavy modals — only fetched when the user opens them for the first time.
+const ProjectsModal = lazy(() =>
+  import('@/components/panels/ProjectsModal').then((m) => ({ default: m.ProjectsModal })),
+)
+const TemplatesModal = lazy(() =>
+  import('@/components/panels/TemplatesModal').then((m) => ({ default: m.TemplatesModal })),
+)
+const ApiKeysModal = lazy(() =>
+  import('@/components/panels/ApiKeysModal').then((m) => ({ default: m.ApiKeysModal })),
+)
 
 interface ToolbarProps {
   mode: 'editor' | 'localization'
@@ -30,6 +40,7 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
   const activeProjectMeta = projects.find((p) => p.id === project.id)
   const [projectsOpen, setProjectsOpen] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
+  const [apiSettingsOpen, setApiSettingsOpen] = useState(false)
 
   // Saved indicator — flashes "Saving…" then "Saved" briefly
   const [saveLabel, setSaveLabel] = useState<'saved' | 'saving' | null>(null)
@@ -84,9 +95,12 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
         borderColor: 'rgba(255,255,255,0.08)',
       }}
     >
-      {/* Projects modal */}
-      <ProjectsModal open={projectsOpen} onClose={() => setProjectsOpen(false)} />
-      <TemplatesModal open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
+      {/* Projects / Templates / API modals — lazy loaded on first open */}
+      <Suspense>
+        <ProjectsModal open={projectsOpen} onClose={() => setProjectsOpen(false)} />
+        <TemplatesModal open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
+        <ApiKeysModal open={apiSettingsOpen} onClose={() => setApiSettingsOpen(false)} />
+      </Suspense>
 
       {/* Logo */}
       <div className="text-sm font-semibold text-[#e8e8f0] whitespace-nowrap select-none">
@@ -150,6 +164,8 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
       >
         🗂 Templates
       </button>
+
+      <BrandKitButton />
 
       {/* Save indicator */}
       {saveLabel && (
@@ -250,6 +266,14 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
 
       {/* Right section */}
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => setApiSettingsOpen(true)}
+          title="Configure AI provider and API keys for translation"
+          className="text-xs text-[#e8e8f0] px-3 py-1.5 rounded border border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)] transition-colors"
+        >
+          ⚙ AI Settings
+        </button>
+
         <button
           onClick={() => onSetMode(mode === 'localization' ? 'editor' : 'localization')}
           title="Manage translations inside the editor flow"
