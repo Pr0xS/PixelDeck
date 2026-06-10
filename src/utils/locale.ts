@@ -13,17 +13,59 @@
 
 import type {
   Project, Layer, GroupLayer, SlideGroup,
-  LocaleLayerPatch, TextLayer, PhoneLayer, ImageLayer,
+  LocaleLayerPatch, TextLayer, PhoneLayer, ImageLayer, TextMark, TextSpan,
 } from '@/types'
 
 // ─── Core resolver ────────────────────────────────────────────────────────────
 
+/**
+ * Convert legacy TextSpan[] in a locale patch to TextMark[] (pure, no browser APIs).
+ * The mark offsets are computed over the concatenated span texts.
+ */
+function migrateSpansInPatch(patch: LocaleLayerPatch): LocaleLayerPatch {
+  if (!patch.spans?.length || patch.marks?.length) return patch
+  const spans = patch.spans as TextSpan[]
+  let offset = 0
+  const marks: TextMark[] = []
+  const textParts: string[] = []
+  for (const span of spans) {
+    textParts.push(span.text)
+    const end = offset + span.text.length
+    const hasStyle =
+      span.fill !== undefined || span.fontWeight !== undefined ||
+      span.italic !== undefined || span.underline !== undefined ||
+      span.strikethrough !== undefined
+    if (hasStyle) {
+      marks.push({ start: offset, end, fill: span.fill, fontWeight: span.fontWeight,
+        italic: span.italic, underline: span.underline, strikethrough: span.strikethrough })
+    }
+    offset = end
+  }
+  const migratedText = patch.text ?? textParts.join('')
+  return {
+    ...patch,
+    text: migratedText,
+    marks: marks.length ? marks : undefined,
+    spans: undefined,
+  }
+}
+
 /** Merge localeOverrides[locale] into a single layer (non-mutating, shallow merge). */
 export function resolveLayerLocale<T extends Layer>(layer: T, locale: string): T {
   if (!layer.localeOverrides) return layer
-  const patch = layer.localeOverrides[locale]
-  if (!patch) return layer
-  return { ...layer, ...patch }
+  const rawPatch = layer.localeOverrides[locale]
+  if (!rawPatch) return layer
+  // Migrate legacy spans in locale patch first
+  const patch = rawPatch.spans?.length ? migrateSpansInPatch(rawPatch) : rawPatch
+  const merged = { ...layer, ...patch } as T
+  // When locale overrides text without providing its own marks, the base layer's
+  // marks reference positions in the original text and would style the wrong
+  // characters. Drop them so translated text renders without misplaced styling.
+  if (patch.text !== undefined && patch.marks === undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(merged as any).marks = undefined
+  }
+  return merged
 }
 
 /**
@@ -175,7 +217,7 @@ function collectManifestEntries(
       layer.type === 'text'
         ? {
             text: (layer as TextLayer).text,
-            ...((layer as TextLayer).spans ? { spans: (layer as TextLayer).spans } : {}),
+            ...((layer as TextLayer).marks ? { marks: (layer as TextLayer).marks } : {}),
           }
         : layer.type === 'phone'
           ? { screenshotPath: (layer as PhoneLayer).screenshotPath }
@@ -238,4 +280,41 @@ export function applyLocaleManifest(project: Project, manifest: LocaleManifest):
       layers: g.layers.map(patchLayer),
     })),
   }
+}
+
+// ─── Locale detection from filename ───────────────────────────────────────────
+
+/**
+ * Well-known locale codes for filename-based auto-detection.
+ * Used by detectLocaleFromFilename to validate extracted suffixes.
+ */
+const KNOWN_LOCALES = new Set([
+  'en', 'es', 'fr', 'de', 'it', 'pt', 'pt-br', 'nl', 'pl', 'ru', 'ja', 'ko',
+  'zh', 'zh-hans', 'zh-hant', 'ar', 'tr', 'sv', 'da', 'fi', 'nb', 'cs', 'sk',
+  'hu', 'ro', 'el', 'uk', 'ca', 'hr', 'bg', 'lt', 'lv', 'et', 'sl', 'sr', 'he',
+  'th', 'vi', 'id', 'ms', 'en-us', 'en-gb', 'fr-fr', 'de-de', 'es-es', 'es-mx',
+  'pt-pt', 'zh-tw', 'zh-cn',
+])
+
+/**
+ * Attempts to detect a locale code from a filename suffix.
+ *
+ * Supported patterns (at end of basename, before extension):
+ *   screenshot_es.png      → 'es'
+ *   app-screen-fr.png      → 'fr'
+ *   home_pt-BR.png         → 'pt-br'
+ *   slide_zh-Hans.png      → 'zh-hans'
+ *
+ * Returns the normalised (lowercase, hyphen-separated) locale code,
+ * or `null` if no recognised locale was found.
+ */
+export function detectLocaleFromFilename(filename: string): string | null {
+  // Strip extension
+  const base = filename.replace(/\.[^.]+$/, '')
+  // Match suffix: _xx or -xx optionally followed by _XX or -XX for region/script
+  const match = base.match(/[_-]([a-z]{2,3}(?:[_-][a-zA-Z]{2,4})?)$/i)
+  if (!match) return null
+  // Normalise: lowercase, underscores to hyphens
+  const code = match[1].toLowerCase().replace('_', '-')
+  return KNOWN_LOCALES.has(code) ? code : null
 }

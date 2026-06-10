@@ -151,3 +151,44 @@ export async function saveToDirectory(
     if (!(err instanceof DOMException && err.name === 'AbortError')) throw err
   }
 }
+
+/**
+ * Export all slides in a SlideGroup as a ZIP blob.
+ */
+export async function exportGroupAsZip(
+  stage: Konva.Stage,
+  group: SlideGroup,
+): Promise<Blob> {
+  // Dynamic import keeps JSZip out of the main bundle — it's only loaded when
+  // the user triggers a ZIP export for the first time.
+  const { default: JSZip } = await import('jszip')
+  const zip = new JSZip()
+  const slides = await exportAllSlides(stage, group)
+  for (const { name, dataUrl } of slides) {
+    const filename = name.endsWith('.png') ? name : `${name}.png`
+    const res = await fetch(dataUrl)
+    const blob = await res.blob()
+    zip.file(filename, blob)
+  }
+  return zip.generateAsync({ type: 'blob' })
+}
+
+/**
+ * Export all slides in a SlideGroup and trigger a ZIP download.
+ */
+export async function downloadAsZip(
+  stage: Konva.Stage,
+  group: SlideGroup,
+  zipName?: string,
+): Promise<void> {
+  const name = zipName ?? (group.name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'slides')
+  const blob = await exportGroupAsZip(stage, group)
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = `${name}.zip`
+  a.click()
+  a.remove()
+  // Delay revocation: revoking synchronously can race the browser download.
+  setTimeout(() => URL.revokeObjectURL(url), 10_000)
+}

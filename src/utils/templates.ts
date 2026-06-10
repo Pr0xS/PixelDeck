@@ -101,13 +101,18 @@ export function projectToTemplate(project: Project, opts: ExportTemplateOpts): T
     return { ...rest, layers }
   })
 
-  // Sanitize settings: never include outputPath or brandLogoDataUrl in templates
+  // Sanitize settings: never include outputPath or brandLogoDataUrl in templates.
+  // brandColors ARE included — layers may reference them via {brand:id} tokens,
+  // and without the palette those tokens would dangle after import.
   const settings: Partial<ProjectSettings> = {
     defaultSlideWidth: project.settings.defaultSlideWidth,
     defaultSlideHeight: project.settings.defaultSlideHeight,
     defaultLocale: project.settings.defaultLocale,
     ...(project.settings.locales ? { locales: project.settings.locales } : {}),
     brandName: project.settings.brandName,
+    ...(project.settings.brandColors?.length
+      ? { brandColors: project.settings.brandColors.map((c) => ({ ...c })) }
+      : {}),
   }
 
   return {
