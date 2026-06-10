@@ -95,6 +95,8 @@ function HeadlessCanvas({ group, stageRef }: HeadlessCanvasProps) {
             onSelect={() => {}}
             onDragEnd={(x, y) => handleDragEnd(layer.id, x, y)}
             onTransformEnd={() => {}}
+            canvasWidth={totalWidth}
+            canvasHeight={totalHeight}
           />
         ))}
       </Layer>
@@ -179,8 +181,23 @@ export function ExportApp() {
     const firstId = config.project.slideGroups?.[0]?.id
     if (firstId) setActiveSlideGroup(firstId)
 
-    // Brief settle before rendering
-    setTimeout(() => setPhase('rendering'), 300)
+    // Pre-decode all asset images so use-image resolves from cache during render,
+    // then settle briefly before rendering.
+    const preload = async () => {
+      await Promise.all(
+        Object.values(config.assets ?? {}).map(
+          (dataUrl) =>
+            new Promise<void>((resolve) => {
+              const img = new Image()
+              img.onload = () => resolve()
+              img.onerror = () => resolve()
+              img.src = dataUrl
+            }),
+        ),
+      )
+      setTimeout(() => setPhase('rendering'), 300)
+    }
+    void preload()
   }, []) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Phase 2: Iterate groups, render + capture ────────────────────────────────
@@ -205,6 +222,16 @@ export function ExportApp() {
     // Wait for React + Konva to render the new group (images settle in ~1.5s)
     const captureDelay = currentGroupIndex === 0 ? 2500 : 1500
     const timer = setTimeout(async () => {
+      // Webfonts are only requested once text renders — wait for them, then let
+      // Konva paint two frames before capturing.
+      try {
+        await document.fonts.ready
+      } catch {
+        // FontFaceSet unavailable — proceed with the fixed delay only
+      }
+      await new Promise<void>((resolve) =>
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve())),
+      )
       captureGroup(group)
 
       const next = currentGroupIndex + 1

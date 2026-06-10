@@ -1,0 +1,167 @@
+{
+  "id": "tpl-social-glow",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Social Glow",
+  "description": "Vibrant purple-to-orange gradient with a panoramic phone crossing two slides. Inspired by the biggest photo-sharing apps.",
+  "category": "Social",
+  "author": "PixelDeck",
+  "createdAt": "2026-06-10T00:00:00.000Z",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "Glow"
+  },
+  "slideGroups": [
+    {
+      "name": "Pano Intro",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-01", "slide-02"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              { "offset": 0, "color": "#833AB4" },
+              { "offset": 0.5, "color": "#FD1D1D" },
+              { "offset": 1, "color": "#FCB045" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(255,255,255,0.12)", "cx": 25, "cy": 12, "rx": 700, "ry": 600 },
+            { "color": "rgba(255,255,255,0.10)", "cx": 75, "cy": 90, "rx": 800, "ry": 650 }
+          ]
+        },
+        {
+          "id": "l1",
+          "name": "Headline Slide 1",
+          "type": "text",
+          "x": 100, "y": 300, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Share your\nstory",
+          "fontFamily": "Sora",
+          "fontSize": 120,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -4,
+          "lineHeight": 1.05,
+          "align": "center",
+          "width": 1090
+        },
+        {
+          "id": "l2",
+          "name": "Headline Slide 2",
+          "type": "text",
+          "x": 1390, "y": 300, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Stay close\nto friends",
+          "fontFamily": "Sora",
+          "fontSize": 120,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -4,
+          "lineHeight": 1.05,
+          "align": "center",
+          "width": 1090
+        },
+        {
+          "id": "l3",
+          "name": "Pano Phone",
+          "type": "phone",
+          "x": 783, "y": 720, "rotation": -5, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.6,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000"
+        }
+      ]
+    },
+    {
+      "name": "Create",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-03"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              { "offset": 0, "color": "#FD1D1D" },
+              { "offset": 1, "color": "#833AB4" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(252,176,69,0.25)", "cx": 85, "cy": 10, "rx": 750, "ry": 650 }
+          ]
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 100, "y": 260, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Create.\nPost. Glow.",
+          "fontFamily": "Sora",
+          "fontSize": 120,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -4,
+          "lineHeight": 1.05,
+          "align": "center",
+          "width": 1090
+        },
+        {
+          "id": "l2",
+          "name": "Feature Chips",
+          "type": "chips",
+          "x": 220, "y": 600, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "items": [
+            { "label": "Stories", "primary": true, "variant": "filled" },
+            { "label": "Reels", "primary": false, "variant": "dark" },
+            { "label": "Live", "primary": false, "variant": "outlined" },
+            { "label": "Chat", "primary": false, "variant": "soft" }
+          ],
+          "primaryGradientFrom": "#FCB045",
+          "primaryGradientTo": "#FD1D1D",
+          "primaryTextColor": "#FFFFFF",
+          "defaultBg": "rgba(255,255,255,0.16)",
+          "defaultTextColor": "#FFEBDD",
+          "chipFontSize": 31,
+          "gap": 18,
+          "direction": "row"
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 196, "y": 800, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.3,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000"
+        }
+      ]
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, lazy, Suspense } from 'react'
 import type Konva from 'konva'
 import { Toolbar } from '@/components/toolbar/Toolbar'
 import { LayersPanel } from '@/components/panels/LayersPanel'
@@ -8,8 +8,12 @@ import { SlideNavigator } from '@/components/panels/SlideNavigator'
 import { StageCanvas } from '@/components/canvas/StageCanvas'
 import { ContextualToolbar } from '@/components/canvas/ContextualToolbar'
 import { useThumbnails } from '@/hooks/useThumbnails'
-import { LocalizationView } from '@/pages/LocalizationView'
 import { useEditorStore, useUndoRedo } from '@/store'
+
+// Lazy-load the localization view — it's a separate mode and not needed on initial load.
+const LocalizationView = lazy(() =>
+  import('@/pages/LocalizationView').then((m) => ({ default: m.LocalizationView })),
+)
 
 export default function App() {
   const stageRef = useRef<Konva.Stage>(null)
@@ -27,11 +31,12 @@ export default function App() {
   } = useThumbnails(stageRef)
 
   useEffect(() => {
-    if (!activeSlideGroupId && project.slideGroups.length > 0) {
+    if (project.slideGroups.length === 0) return
+    const groupExists = project.slideGroups.some((g) => g.id === activeSlideGroupId)
+    if (!activeSlideGroupId || !groupExists) {
       setActiveSlideGroup(project.slideGroups[0].id)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [project.slideGroups, activeSlideGroupId, setActiveSlideGroup])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -63,15 +68,23 @@ export default function App() {
         } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
           e.preventDefault()
           redo()
-        } else if (e.key === 'c') {
+        } else if (e.key === 'c' && !e.altKey) {
           e.preventDefault()
           useEditorStore.getState().copyLayers()
         } else if (e.key === 'x') {
           e.preventDefault()
           useEditorStore.getState().cutLayers()
-        } else if (e.key === 'v') {
+        } else if (e.key === 'v' && !e.altKey) {
           e.preventDefault()
           useEditorStore.getState().pasteLayers()
+        } else if (e.key === 'c' && e.altKey) {
+          e.preventDefault()
+          const { selection: sel, copyLayerStyle: cls } = useEditorStore.getState()
+          if (sel?.layerId) cls(sel.layerId)
+        } else if (e.key === 'v' && e.altKey) {
+          e.preventDefault()
+          const { selection: sel, pasteLayerStyle: pls } = useEditorStore.getState()
+          if (sel?.layerId) pls(sel.layerId)
         } else if (e.key === 'd') {
           e.preventDefault()
           const { selection, duplicateLayer } = useEditorStore.getState()
@@ -144,7 +157,9 @@ export default function App() {
       <div className="flex flex-1 overflow-hidden">
         {view === 'localization' ? (
           <main className="flex-1 overflow-hidden bg-[#111118]" style={{ minWidth: 0 }}>
-            <LocalizationView embedded onBack={() => setView('editor')} />
+            <Suspense>
+              <LocalizationView embedded onBack={() => setView('editor')} />
+            </Suspense>
           </main>
         ) : (
           <>

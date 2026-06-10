@@ -14,4 +14,9 @@ export default defineConfig({
       '@': path.resolve(__dirname, './src'),
     },
   },
+  build: {
+    // The main chunk includes Konva + react-konva (~400kB), which is unavoidable
+    // for a canvas editor. All other code-splitting opportunities have been taken.
+    chunkSizeWarningLimit: 800,
+  },
 })

@@ -1,4 +1,40 @@
 {
   "schemaVersion": 1,
-  "templates": []
+  "templates": [
+    {
+      "slug": "bold-beats",
+      "name": "Bold Beats",
+      "description": "8-slide music set: vibrant hero, panoramic 2-slide carousel, four feature slides and a closing CTA. Brand Kit wired.",
+      "category": "Music",
+      "file": "/templates/bold-beats.template.json"
+    },
+    {
+      "slug": "playful-learning",
+      "name": "Playful Learning",
+      "description": "Bright, friendly green layout with playful copy and gold streak chips.",
+      "category": "Education",
+      "file": "/templates/playful-learning.template.json"
+    },
+    {
+      "slug": "mindful-calm",
+      "name": "Mindful Calm",
+      "description": "Soothing twilight gradient with soft glows and serene copy.",
+      "category": "Wellness",
+      "file": "/templates/mindful-calm.template.json"
+    },
+    {
+      "slug": "social-glow",
+      "name": "Social Glow",
+      "description": "Vibrant purple-to-orange gradient with a panoramic phone crossing two slides.",
+      "category": "Social",
+      "file": "/templates/social-glow.template.json"
+    },
+    {
+      "slug": "fintech-night",
+      "name": "Fintech Night",
+      "description": "Sleek midnight navy with violet glows and a tilted device.",
+      "category": "Finance",
+      "file": "/templates/fintech-night.template.json"
+    }
+  ]
 }
