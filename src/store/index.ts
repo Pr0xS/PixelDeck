@@ -5,11 +5,24 @@ import type { TemporalState } from 'zundo'
 import { nanoid } from 'nanoid'
 import type {
   Project, SlideGroup, Layer, Selection,
+  LayerType, BrandColor,
   PhoneLayer, TextLayer, ImageLayer, ShapeLayer, ChipsLayer, BrandLayer, GroupLayer,
   BackgroundLayer, BackgroundAccent, CanvasBackground, ProjectSettings, LocaleLayerPatch,
   Template,
 } from '@/types'
 import { projectToTemplate, applyTemplate } from '@/utils/templates'
+import { spansToMarks } from '@/utils/textRendering'
+
+// ─── Slide Size Presets ───────────────────────────────────────────────────────
+
+export const SLIDE_SIZE_PRESETS = [
+  { id: 'iphone-69', label: 'iPhone 6.9"', width: 1320, height: 2868 },
+  { id: 'iphone-67', label: 'iPhone 6.7"', width: 1290, height: 2796 },
+  { id: 'iphone-65', label: 'iPhone 6.5"', width: 1242, height: 2688 },
+  { id: 'iphone-55', label: 'iPhone 5.5"', width: 1242, height: 2208 },
+  { id: 'ipad-13',   label: 'iPad 13"',   width: 2064, height: 2752 },
+  { id: 'ipad-11',   label: 'iPad 11"',   width: 1668, height: 2388 },
+] as const
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -46,6 +59,53 @@ function patchLayerLocale(
   return layer
 }
 
+/**
+ * Bake a group's uniform scale into a child layer's own properties.
+ * Used when dissolving / flattening a scaled group so the visual result is unchanged.
+ */
+function bakeLayerScale(layer: Layer, s: number): Layer {
+  if (s === 1) return layer
+  const scaled: Layer = { ...layer, x: layer.x * s, y: layer.y * s }
+  if (scaled.shadow) {
+    scaled.shadow = { ...scaled.shadow, blur: scaled.shadow.blur * s, offsetX: scaled.shadow.offsetX * s, offsetY: scaled.shadow.offsetY * s }
+  }
+  if (scaled.blur != null) scaled.blur = scaled.blur * s
+  switch (scaled.type) {
+    case 'phone':
+      scaled.scale *= s
+      break
+    case 'image':
+      scaled.width *= s
+      scaled.height *= s
+      scaled.cornerRadius *= s
+      break
+    case 'shape':
+      scaled.width *= s
+      scaled.height *= s
+      scaled.cornerRadius *= s
+      if (scaled.strokeWidth != null) scaled.strokeWidth *= s
+      break
+    case 'text':
+      scaled.fontSize *= s
+      scaled.letterSpacing *= s
+      if (scaled.width != null) scaled.width *= s
+      break
+    case 'chips':
+      scaled.chipFontSize *= s
+      scaled.gap *= s
+      break
+    case 'brand':
+      scaled.logoSize *= s
+      scaled.nameFontSize *= s
+      scaled.gap *= s
+      break
+    case 'group':
+      scaled.scale = (scaled.scale ?? 1) * s
+      break
+  }
+  return scaled
+}
+
 /** Deep-clone a layer and assign fresh ids to it and all group children */
 function cloneWithNewIds(layer: Layer): Layer {
   const clone = JSON.parse(JSON.stringify(layer)) as Layer
@@ -54,6 +114,17 @@ function cloneWithNewIds(layer: Layer): Layer {
     (clone as GroupLayer).children = (clone as GroupLayer).children.map(cloneWithNewIds)
   }
   return clone
+}
+
+const STYLE_KEYS: Partial<Record<LayerType, string[]>> = {
+  background: ['fill', 'accents', 'imageDataUrl', 'imageFit', 'imageBlur', 'imageOverlayColor', 'imageOverlayOpacity', 'noise', 'blur', 'shadow', 'opacity'],
+  text: ['fill', 'fontFamily', 'fontSize', 'fontWeight', 'italic', 'underline', 'strikethrough', 'letterSpacing', 'lineHeight', 'align', 'width', 'blur', 'shadow', 'opacity'],
+  shape: ['fill', 'stroke', 'strokeWidth', 'cornerRadius', 'shapeType', 'width', 'height', 'blur', 'shadow', 'opacity'],
+  chips: ['primaryGradientFrom', 'primaryGradientTo', 'primaryTextColor', 'defaultBg', 'defaultTextColor', 'chipFontSize', 'gap', 'direction', 'blur', 'shadow', 'opacity'],
+  brand: ['nameColor', 'nameFontSize', 'nameFontFamily', 'nameFontWeight', 'logoSize', 'direction', 'gap', 'blur', 'shadow', 'opacity'],
+  image: ['cornerRadius', 'blur', 'shadow', 'opacity'],
+  phone: ['model', 'scale', 'screenshotFit', 'screenshotOffsetX', 'screenshotOffsetY', 'showStatusBar', 'statusBarTheme', 'statusBarBg', 'statusBarColor', 'border', 'blur', 'shadow', 'opacity'],
+  group: ['blur', 'shadow', 'opacity'],
 }
 
 export function defaultAccents(): BackgroundAccent[] {
@@ -90,6 +161,41 @@ function bgFromLegacy(bg: CanvasBackground): BackgroundLayer {
     fill: bg.fill,
     accents: (bg.accents ?? []).map((a) => ({ ...a })),
   })
+}
+
+/** Recursively migrate legacy TextLayer.spans → marks in a layer tree. */
+function migrateLayerSpans(layer: Layer): Layer {
+  if (layer.type === 'group') {
+    return { ...layer, children: layer.children.map(migrateLayerSpans) }
+  }
+  if (layer.type === 'text') {
+    let result: Layer = layer
+    // Migrate base spans
+    if ((layer.spans?.length ?? 0) > 0 && !layer.marks?.length) {
+      const { text, marks } = spansToMarks(layer.spans!)
+      result = { ...result, text, marks: marks.length ? marks : undefined, spans: undefined } as Layer
+    }
+    // Migrate localeOverrides patches that still carry legacy spans
+    if (result.localeOverrides) {
+      const migratedOverrides: Record<string, LocaleLayerPatch> = {}
+      for (const [locale, patch] of Object.entries(result.localeOverrides)) {
+        if (patch.spans?.length && !patch.marks?.length) {
+          const { text, marks } = spansToMarks(patch.spans)
+          migratedOverrides[locale] = {
+            ...patch,
+            text: patch.text ?? text,
+            marks: marks.length ? marks : undefined,
+            spans: undefined,
+          }
+        } else {
+          migratedOverrides[locale] = patch
+        }
+      }
+      result = { ...result, localeOverrides: migratedOverrides }
+    }
+    return result
+  }
+  return layer
 }
 
 function newSlideGroup(overrides?: Partial<SlideGroup>): SlideGroup {
@@ -152,6 +258,18 @@ export interface EditorStore {
   // ─ Clipboard (not undoable — lives outside zundo partialize)
   clipboard: Layer[] | null
   pasteCount: number
+
+  // ─ Style clipboard (not undoable)
+  styleClipboard: { layerType: LayerType; style: Record<string, unknown> } | null
+
+  // ─ Style clipboard actions
+  copyLayerStyle: (layerId: string) => void
+  pasteLayerStyle: (layerId: string) => void
+
+  // ─ Brand color actions
+  addBrandColor: (name: string, value: string) => void
+  updateBrandColor: (id: string, patch: { name?: string; value?: string }) => void
+  removeBrandColor: (id: string) => void
 
   // ─ Locale state (transient — not in undo history)
   activeLocale: string
@@ -279,6 +397,7 @@ export const useEditorStore = create<EditorStore>()(
     selectedLayerIds: [],
     clipboard: null,
     pasteCount: 0,
+    styleClipboard: null,
     activeLocale: 'en',
 
     // ─ Init activeSlideGroupId after project creation
@@ -418,9 +537,18 @@ export const useEditorStore = create<EditorStore>()(
         project: {
           ...s.project,
           updatedAt: new Date().toISOString(),
-          slideGroups: s.project.slideGroups.map((g) =>
-            g.id === id ? { ...g, ...patch } : g,
-          ),
+          slideGroups: s.project.slideGroups.map((g) => {
+            if (g.id !== id) return g
+            const next = { ...g, ...patch }
+            // Keep slideNames in sync with numSlides (pad with defaults, trim extras)
+            if (next.slideNames.length !== next.numSlides) {
+              next.slideNames = Array.from(
+                { length: next.numSlides },
+                (_, i) => next.slideNames[i] ?? `slide-${String(i + 1).padStart(2, '0')}`,
+              )
+            }
+            return next
+          }),
         },
       }))
     },
@@ -467,7 +595,11 @@ export const useEditorStore = create<EditorStore>()(
           (l) => l.id === editingGroupId && l.type === 'group',
         ) as GroupLayer | undefined
         if (grp) {
-          const localLayer: Layer = { ...layer, x: layer.x - grp.x, y: layer.y - grp.y }
+          // Inverse-bake the group's scale so the new layer appears at its natural size/position
+          const localLayer: Layer = bakeLayerScale(
+            { ...layer, x: layer.x - grp.x, y: layer.y - grp.y },
+            1 / (grp.scale ?? 1),
+          )
           get().addToGroup(editingGroupId, localLayer)
           set({ selection: { slideGroupId: activeSlideGroupId, layerId: localLayer.id } })
           return
@@ -617,8 +749,10 @@ export const useEditorStore = create<EditorStore>()(
       for (const l of toGroup) {
         if (l.type === 'group') {
           const grp = l as GroupLayer
+          const grpScale = grp.scale ?? 1
           for (const child of grp.children) {
-            flatLayers.push({ ...child, x: child.x + grp.x, y: child.y + grp.y } as Layer)
+            const baked = bakeLayerScale(child, grpScale)
+            flatLayers.push({ ...baked, x: baked.x + grp.x, y: baked.y + grp.y } as Layer)
           }
         } else {
           flatLayers.push(l)
@@ -663,11 +797,11 @@ export const useEditorStore = create<EditorStore>()(
       const grp = group.layers.find((l) => l.id === groupId) as GroupLayer | undefined
       if (!grp || grp.type !== 'group') return
 
-      const children = grp.children.map((c) => ({
-        ...c,
-        x: c.x + grp.x,
-        y: c.y + grp.y,
-      }))
+      const grpScale = grp.scale ?? 1
+      const children = grp.children.map((c) => {
+        const baked = bakeLayerScale(c, grpScale)
+        return { ...baked, x: baked.x + grp.x, y: baked.y + grp.y }
+      })
 
       mutateActiveGroup((g) => ({
         ...g,
@@ -718,7 +852,10 @@ export const useEditorStore = create<EditorStore>()(
         const grp = g.layers.find((l) => l.id === groupId) as GroupLayer | undefined
         // Don't allow nesting groups inside groups, or background layers
         if (!layer || !grp || layer.type === 'background' || layer.type === 'group') return g
-        const relLayer = { ...layer, x: layer.x - grp.x, y: layer.y - grp.y }
+        const relLayer = bakeLayerScale(
+          { ...layer, x: layer.x - grp.x, y: layer.y - grp.y },
+          1 / (grp.scale ?? 1),
+        )
         const children = [...grp.children]
         const idx = insertBeforeChildId ? children.findIndex((c) => c.id === insertBeforeChildId) : -1
         if (idx >= 0) children.splice(idx, 0, relLayer)
@@ -738,8 +875,9 @@ export const useEditorStore = create<EditorStore>()(
         if (!grp) return g
         const child = grp.children.find((c) => c.id === childId)
         if (!child) return g
-        // Absolute coords
-        const absChild: Layer = { ...child, x: child.x + grp.x, y: child.y + grp.y } as Layer
+        // Absolute coords (bake the group's scale so visual size is preserved)
+        const baked = bakeLayerScale(child as Layer, grp.scale ?? 1)
+        const absChild: Layer = { ...baked, x: baked.x + grp.x, y: baked.y + grp.y } as Layer
         const updatedGrp = { ...grp, children: grp.children.filter((c) => c.id !== childId) }
         const newLayers = g.layers.map((l) => (l.id === groupId ? updatedGrp : l))
         const bg = newLayers.find((l) => l.type === 'background')
@@ -759,10 +897,12 @@ export const useEditorStore = create<EditorStore>()(
         if (!fromGrp || !toGrp) return g
         const child = fromGrp.children.find((c) => c.id === childId)
         if (!child) return g
-        // Convert through absolute → relative to target group
-        const absX = child.x + fromGrp.x
-        const absY = child.y + fromGrp.y
-        const relChild: Layer = { ...child, x: absX - toGrp.x, y: absY - toGrp.y } as Layer
+        // Convert through absolute → relative to target group (bake/unbake group scales)
+        const abs = bakeLayerScale(child as Layer, fromGrp.scale ?? 1)
+        const relChild: Layer = bakeLayerScale(
+          { ...abs, x: abs.x + fromGrp.x - toGrp.x, y: abs.y + fromGrp.y - toGrp.y } as Layer,
+          1 / (toGrp.scale ?? 1),
+        )
         const newFromChildren = fromGrp.children.filter((c) => c.id !== childId)
         const newToChildren = [...toGrp.children]
         const idx = insertBeforeChildId ? newToChildren.findIndex((c) => c.id === insertBeforeChildId) : -1
@@ -898,6 +1038,83 @@ export const useEditorStore = create<EditorStore>()(
           ? { selection: { slideGroupId: activeSlideGroupId, layerId: clones[0].id }, selectedLayerIds: [] }
           : { selectedLayerIds: clones.map((c) => c.id), selection: null }),
       })
+    },
+
+    // ─ Style clipboard actions
+    copyLayerStyle: (layerId) => {
+      const { editingGroupId } = get()
+      const group = getActiveGroup()
+      if (!group) return
+      let layer: Layer | undefined = group.layers.find((l) => l.id === layerId)
+      if (!layer && editingGroupId) {
+        const grp = group.layers.find((l) => l.id === editingGroupId && l.type === 'group') as GroupLayer | undefined
+        layer = grp?.children.find((c) => c.id === layerId)
+      }
+      if (!layer) return
+      const keys = STYLE_KEYS[layer.type] ?? []
+      const style: Record<string, unknown> = {}
+      for (const key of keys) {
+        const v = (layer as unknown as Record<string, unknown>)[key]
+        if (v !== undefined) style[key] = JSON.parse(JSON.stringify(v))
+      }
+      set({ styleClipboard: { layerType: layer.type, style } })
+    },
+
+    pasteLayerStyle: (layerId) => {
+      const { styleClipboard, editingGroupId } = get()
+      if (!styleClipboard) return
+      const group = getActiveGroup()
+      if (!group) return
+      let layer: Layer | undefined = group.layers.find((l) => l.id === layerId)
+      if (!layer && editingGroupId) {
+        const grp = group.layers.find((l) => l.id === editingGroupId && l.type === 'group') as GroupLayer | undefined
+        layer = grp?.children.find((c) => c.id === layerId)
+      }
+      if (!layer || layer.type !== styleClipboard.layerType) return
+      get().updateLayer(layerId, styleClipboard.style as Partial<Layer>)
+    },
+
+    // ─ Brand color actions
+    addBrandColor: (name, value) => {
+      const color: BrandColor = { id: newId(), name, value }
+      set((s) => ({
+        project: {
+          ...s.project,
+          updatedAt: new Date().toISOString(),
+          settings: {
+            ...s.project.settings,
+            brandColors: [...(s.project.settings.brandColors ?? []), color],
+          },
+        },
+      }))
+    },
+
+    updateBrandColor: (id, patch) => {
+      set((s) => ({
+        project: {
+          ...s.project,
+          updatedAt: new Date().toISOString(),
+          settings: {
+            ...s.project.settings,
+            brandColors: (s.project.settings.brandColors ?? []).map((c) =>
+              c.id === id ? { ...c, ...patch } : c,
+            ),
+          },
+        },
+      }))
+    },
+
+    removeBrandColor: (id) => {
+      set((s) => ({
+        project: {
+          ...s.project,
+          updatedAt: new Date().toISOString(),
+          settings: {
+            ...s.project.settings,
+            brandColors: (s.project.settings.brandColors ?? []).filter((c) => c.id !== id),
+          },
+        },
+      }))
     },
 
     // ─ Layer factories
@@ -1094,19 +1311,33 @@ export const useEditorStore = create<EditorStore>()(
           const migrated = sg.background ? bgFromLegacy(sg.background) : createBackgroundLayer()
           sg.layers = [migrated, ...sg.layers]
         }
+        // Migrate: convert legacy TextLayer.spans to marks
+        sg.layers = sg.layers.map(migrateLayerSpans)
       }
       set({
         project,
         activeSlideGroupId: project.slideGroups[0]?.id ?? '',
         selection: null,
         editingGroupId: null,
+        selectedLayerIds: [],
         activeLocale: project.settings.defaultLocale ?? 'en',
       })
+      // Clear undo history — undo must not cross project boundaries
+      useEditorStore.temporal.getState().clear()
     },
 
     resetProject: () => {
       const project = newProject()
-      set({ project, activeSlideGroupId: project.slideGroups[0].id, selection: null, activeLocale: 'en' })
+      set({
+        project,
+        activeSlideGroupId: project.slideGroups[0].id,
+        selection: null,
+        editingGroupId: null,
+        selectedLayerIds: [],
+        activeLocale: 'en',
+      })
+      // Clear undo history — new project starts fresh
+      useEditorStore.temporal.getState().clear()
     },
 
     exportActiveAsTemplate: (opts) => {
@@ -1138,15 +1369,26 @@ export const useEditorStore = create<EditorStore>()(
     },
 
     addTemplateSlideGroups: (tpl) => {
-      const { slideGroups } = applyTemplate(tpl)
-      set((s) => ({
-        project: {
-          ...s.project,
-          updatedAt: new Date().toISOString(),
-          slideGroups: [...s.project.slideGroups, ...slideGroups],
-        },
-        activeSlideGroupId: slideGroups[0]?.id ?? s.activeSlideGroupId,
-      }))
+      const { slideGroups, settings } = applyTemplate(tpl)
+      set((s) => {
+        // Merge template brand colors into the current palette so {brand:id}
+        // tokens in the appended layers resolve. Existing ids win (never
+        // overwrite the user's palette); only missing entries are added.
+        const existing = s.project.settings.brandColors ?? []
+        const existingIds = new Set(existing.map((c) => c.id))
+        const incoming = (settings?.brandColors ?? []).filter((c) => !existingIds.has(c.id))
+        return {
+          project: {
+            ...s.project,
+            updatedAt: new Date().toISOString(),
+            settings: incoming.length > 0
+              ? { ...s.project.settings, brandColors: [...existing, ...incoming] }
+              : s.project.settings,
+            slideGroups: [...s.project.slideGroups, ...slideGroups],
+          },
+          activeSlideGroupId: slideGroups[0]?.id ?? s.activeSlideGroupId,
+        }
+      })
     },
   }
     },
