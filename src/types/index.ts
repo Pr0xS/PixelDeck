@@ -28,6 +28,12 @@ export interface ShadowConfig {
   opacity: number;
 }
 
+export interface BrandColor {
+  id: string      // nanoid(10) key
+  name: string    // display name e.g. 'Primary'
+  value: string   // hex color e.g. '#FF5A5F'
+}
+
 // ─── Phone Models ────────────────────────────────────────────────────────────
 
 export type PhoneModel = 'iphone-16-pro' | 'iphone-16-pro-plain' | 'pixel-9' | 'pixel-9-plain';
@@ -74,6 +80,8 @@ export interface PhoneModelSpec {
 export interface LocaleLayerPatch {
   // TextLayer
   text?: string;
+  marks?: TextMark[];
+  /** @deprecated Legacy. Kept for reading old project files. */
   spans?: TextSpan[];
   // PhoneLayer
   screenshotPath?: string;
@@ -117,9 +125,27 @@ export interface BackgroundLayer extends BaseLayer {
   type: 'background';
   fill: FillValue;
   accents: BackgroundAccent[];
+  /** Inline data URL for image background mode */
+  imageDataUrl?: string;
+  /** How to fit the image within the canvas */
+  imageFit?: 'cover' | 'contain' | 'fill';
+  /** Blur radius in px applied to the background image */
+  imageBlur?: number;
+  /** Hex color of the overlay tint placed above the image */
+  imageOverlayColor?: string;
+  /** Opacity of the overlay tint (0–1) */
+  imageOverlayOpacity?: number;
+  /** Noise texture opacity (0–1). 0 = off. */
+  noise?: number;
 }
 
 // ─── Layer Variants ───────────────────────────────────────────────────────────
+
+export interface PhoneBorder {
+  color: string;    // hex
+  width: number;    // px at 1x scale
+  opacity: number;  // 0–1
+}
 
 export interface PhoneLayer extends BaseLayer {
   type: 'phone';
@@ -140,11 +166,14 @@ export interface PhoneLayer extends BaseLayer {
   statusBarBg?: 'transparent' | 'solid';
   /** Solid background colour (hex). Only used when statusBarBg === 'solid'. Defaults to '#000000'. */
   statusBarColor?: string;
+  /** Optional border drawn inside the screen area (above the screenshot, below the frame). */
+  border?: PhoneBorder;
 }
 
 /**
  * A styled text segment within a TextLayer.
  * Fields are optional overrides of the parent layer's values.
+ * @deprecated Use TextMark instead. Kept only for reading legacy project files.
  */
 export interface TextSpan {
   text: string;
@@ -154,6 +183,30 @@ export interface TextSpan {
   fontWeight?: number;
   /** Override italic. Undefined = inherit layer.italic */
   italic?: boolean;
+  /** Override underline. Undefined = inherit layer.underline */
+  underline?: boolean;
+  /** Override strikethrough. Undefined = inherit layer.strikethrough */
+  strikethrough?: boolean;
+}
+
+/**
+ * A styled range over layer.text.
+ * start is inclusive, end is exclusive (like String.slice).
+ * All style fields are optional overrides of the parent layer's values.
+ */
+export interface TextMark {
+  start: number;
+  end: number;
+  /** Override fill for this range. Undefined = inherit layer.fill */
+  fill?: FillValue;
+  /** Override font weight. Undefined = inherit layer.fontWeight */
+  fontWeight?: number;
+  /** Override italic. Undefined = inherit layer.italic */
+  italic?: boolean;
+  /** Override underline. Undefined = inherit layer.underline */
+  underline?: boolean;
+  /** Override strikethrough. Undefined = inherit layer.strikethrough */
+  strikethrough?: boolean;
 }
 
 export interface TextLayer extends BaseLayer {
@@ -163,15 +216,22 @@ export interface TextLayer extends BaseLayer {
   fontSize: number;
   fontWeight: number;
   italic?: boolean;
+  underline?: boolean;
+  strikethrough?: boolean;
   fill: FillValue;
   letterSpacing: number;
   lineHeight: number;
   align: 'left' | 'center' | 'right';
   width?: number;   // wrapping width; undefined = auto
   /**
-   * Rich text mode: array of styled spans.
-   * When defined (non-empty), overrides `text` for rendering.
-   * Use \n within span.text for explicit line breaks.
+   * Rich text marks: styled ranges over `text` (preferred system).
+   * start/end are char offsets into `text` (end exclusive, like String.slice).
+   * When defined, enables rich-text rendering; `text` remains the single source of truth.
+   */
+  marks?: TextMark[];
+  /**
+   * @deprecated Legacy rich text spans. Kept for reading old project files only.
+   * Automatically migrated to `marks` on import. Do not write.
    */
   spans?: TextSpan[];
 }
@@ -244,6 +304,8 @@ export interface BrandLayer extends BaseLayer {
 export interface GroupLayer extends BaseLayer {
   type: 'group'
   children: Layer[]
+  /** Uniform scale applied to all children. Undefined = 1 (backwards compat with old project files). */
+  scale?: number
 }
 
 export type Layer = BackgroundLayer | PhoneLayer | TextLayer | ImageLayer | ShapeLayer | ChipsLayer | BrandLayer | GroupLayer;
@@ -291,6 +353,7 @@ export interface ProjectSettings {
   locales?: string[];
   brandName: string;
   brandLogoDataUrl?: string;
+  brandColors?: BrandColor[];
   outputPath?: string;  // last used output dir (File System Access API handle)
 }
 
