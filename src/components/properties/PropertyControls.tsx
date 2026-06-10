@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent } from 'react'
 import type { FillValue, GradientStop, LinearGradient, RadialGradient } from '@/types'
+import { useEditorStore } from '@/store'
+import { isBrandToken, parseBrandToken, resolveBrandColor, toBrandToken } from '@/utils/brandColors'
 import { fillToCss } from '@/utils/gradients'
 
 const inputCls =
@@ -106,7 +108,9 @@ function setStopOffset(stops: GradientStop[], index: number, nextOffset: number)
 }
 
 function updateStopColor(stops: GradientStop[], index: number, color: string) {
-  const target = { ...stops[index], color: normalizeHexColor(color, stops[index].color) }
+  // Preserve brand tokens as-is — only normalize plain hex/color strings
+  const resolved = isBrandToken(color) ? color : normalizeHexColor(color, stops[index].color)
+  const target = { ...stops[index], color: resolved }
   const nextStops = stops.map((stop, stopIndex) => (stopIndex === index ? target : stop))
   const sorted = sortStops(nextStops)
   return { stops: sorted, index: sorted.indexOf(target) }
@@ -125,7 +129,10 @@ export function ColorField({
   onInteractionStart?: () => void
   onInteractionEnd?: () => void
 }) {
-  const safeValue = normalizeHexColor(value)
+  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const resolvedValue = resolveBrandColor(value, brandColors)
+  const safeValue = normalizeHexColor(resolvedValue)
+  const activeBrand = isBrandToken(value) ? brandColors.find((c) => c.id === (parseBrandToken(value) ?? '')) : undefined
   const activeRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -150,27 +157,57 @@ export function ColorField({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <input
-        type="color"
-        value={safeValue}
-        onPointerDown={beginInteraction}
-        onChange={(e) => {
-          beginInteraction()
-          onChange(e.target.value)
-          scheduleEnd()
-        }}
-        className="h-8 w-8 rounded-md cursor-pointer border border-[rgba(255,255,255,0.1)] bg-transparent"
-      />
-      <input
-        type="text"
-        value={value}
-        onFocus={beginInteraction}
-        onBlur={scheduleEnd}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${inputCls} flex-1`}
-        placeholder={placeholder}
-      />
+    <div>
+      {brandColors.length > 0 && (
+        <div className="flex flex-wrap gap-1.5 mb-2">
+          {brandColors.map((bc) => (
+            <button
+              key={bc.id}
+              type="button"
+              title={bc.name}
+              onClick={() => onChange(toBrandToken(bc.id))}
+              className={`w-6 h-6 rounded-full border-2 transition-all ${
+                activeBrand?.id === bc.id
+                  ? 'border-[#7c6ef6] scale-110'
+                  : 'border-[rgba(255,255,255,0.2)] hover:border-[rgba(255,255,255,0.5)]'
+              }`}
+              style={{ background: bc.value }}
+            />
+          ))}
+          {activeBrand && (
+            <button
+              type="button"
+              title="Clear brand binding"
+              onClick={() => onChange(safeValue)}
+              className="text-[10px] px-1.5 py-0.5 rounded border border-[rgba(124,110,246,0.4)] text-[#9d90f8] hover:text-white hover:border-[#7c6ef6] transition-colors"
+            >
+              ✕ {activeBrand.name}
+            </button>
+          )}
+        </div>
+      )}
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={safeValue}
+          onPointerDown={beginInteraction}
+          onChange={(e) => {
+            beginInteraction()
+            onChange(e.target.value)
+            scheduleEnd()
+          }}
+          className="h-8 w-8 rounded-md cursor-pointer border border-[rgba(255,255,255,0.1)] bg-transparent"
+        />
+        <input
+          type="text"
+          value={activeBrand ? safeValue : value}
+          onFocus={beginInteraction}
+          onBlur={scheduleEnd}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${inputCls} flex-1`}
+          placeholder={placeholder}
+        />
+      </div>
     </div>
   )
 }
@@ -225,7 +262,25 @@ function ensureEndStops(stops: GradientStop[]): GradientStop[] {
   return sortStops(result)
 }
 
+// ─── Gradient Presets ─────────────────────────────────────────────────────────
+
+const GRADIENT_PRESETS: Array<{ label: string; fill: LinearGradient }> = [
+  { label: 'Midnight', fill: { type: 'linear', angle: 160, stops: [{ offset: 0, color: '#12101E' }, { offset: 1, color: '#1a1240' }] } },
+  { label: 'Nordic',   fill: { type: 'linear', angle: 160, stops: [{ offset: 0, color: '#1c1c2e' }, { offset: 0.5, color: '#2d3561' }, { offset: 1, color: '#0d0d1a' }] } },
+  { label: 'Ocean',    fill: { type: 'linear', angle: 160, stops: [{ offset: 0, color: '#0052D4' }, { offset: 1, color: '#0D324D' }] } },
+  { label: 'Aurora',   fill: { type: 'linear', angle: 130, stops: [{ offset: 0, color: '#00C9FF' }, { offset: 0.5, color: '#005A8E' }, { offset: 1, color: '#7B2FBE' }] } },
+  { label: 'Candy',    fill: { type: 'linear', angle: 135, stops: [{ offset: 0, color: '#FF9A9E' }, { offset: 1, color: '#A18CD1' }] } },
+  { label: 'Sunset',   fill: { type: 'linear', angle: 135, stops: [{ offset: 0, color: '#FF6B6B' }, { offset: 0.5, color: '#FF8E53' }, { offset: 1, color: '#C850C0' }] } },
+  { label: 'Fire',     fill: { type: 'linear', angle: 45,  stops: [{ offset: 0, color: '#F83600' }, { offset: 1, color: '#F9D423' }] } },
+  { label: 'Forest',   fill: { type: 'linear', angle: 160, stops: [{ offset: 0, color: '#093028' }, { offset: 1, color: '#237A57' }] } },
+  { label: 'Peach',    fill: { type: 'linear', angle: 135, stops: [{ offset: 0, color: '#FFECD2' }, { offset: 1, color: '#FCB69F' }] } },
+  { label: 'Royal',    fill: { type: 'linear', angle: 160, stops: [{ offset: 0, color: '#141E30' }, { offset: 1, color: '#243B55' }] } },
+  { label: 'Lavender', fill: { type: 'linear', angle: 135, stops: [{ offset: 0, color: '#E0C3FC' }, { offset: 1, color: '#8EC5FC' }] } },
+  { label: 'Neon',     fill: { type: 'linear', angle: 135, stops: [{ offset: 0, color: '#00DBDE' }, { offset: 1, color: '#FC00FF' }] } },
+]
+
 export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, onInteractionEnd = () => {} }: GradientEditorProps) {
+  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
   const [selectedStopIndex, setSelectedStopIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
@@ -252,7 +307,9 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
 
   const switchMode = (nextMode: 'solid' | 'linear' | 'radial') => {
     if (nextMode === 'solid') {
-      onChange(normalizeHexColor(typeof fill === 'string' ? fill : fill.stops[0]?.color ?? '#FFFFFF'))
+      // Preserve brand tokens; only normalize plain hex strings
+      const stopColor = typeof fill === 'string' ? fill : fill.stops[0]?.color ?? '#FFFFFF'
+      onChange(isBrandToken(stopColor) ? stopColor : normalizeHexColor(stopColor))
       return
     }
     if (typeof fill === 'string') {
@@ -331,6 +388,24 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
         onChange={switchMode}
       />
 
+      {mode !== 'solid' && (
+        <div>
+          <span className={labelCls}>Presets</span>
+          <div className="flex flex-wrap gap-1">
+            {GRADIENT_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                title={p.label}
+                onClick={() => onChange(p.fill)}
+                className="h-5 w-9 rounded border border-[rgba(255,255,255,0.12)] hover:border-[rgba(124,110,246,0.6)] transition-all hover:scale-105"
+                style={{ background: fillToCss(p.fill) }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {mode === 'solid' ? (
         <ColorField
           value={typeof fill === 'string' ? fill : fill.stops[0]?.color ?? '#FFFFFF'}
@@ -375,16 +450,18 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
                     width: 14,
                     height: 10,
                     clipPath: 'polygon(0% 0%, 100% 0%, 50% 100%)',
-                    background: isSelected ? '#ffffff' : normalizeHexColor(stop.color),
+                    // Always show the actual stop color — selection is communicated
+                    // via drop-shadow only, never by overriding the fill color.
+                    background: normalizeHexColor(resolveBrandColor(stop.color, brandColors)),
+                    // drop-shadow follows clip-path shape, so it acts as a border.
+                    // Unselected: dark outline so the triangle is visible on any bg.
+                    // Selected:   white ring + purple glow without touching the fill.
                     filter: isSelected
-                      ? 'drop-shadow(0 0 5px rgba(124,110,246,0.9))'
-                      : fixed
-                        ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))'
-                        : 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))',
+                      ? 'drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 5px rgba(124,110,246,1))'
+                      : 'drop-shadow(0 0 1.5px rgba(0,0,0,0.95)) drop-shadow(0 1px 3px rgba(0,0,0,0.6))',
                     cursor: fixed ? 'pointer' : isDragging ? 'grabbing' : 'grab',
                     touchAction: 'none',
                     zIndex: isSelected ? 3 : fixed ? 2 : 1,
-                    outline: fixed && isSelected ? '1.5px solid rgba(124,110,246,0.7)' : undefined,
                   }}
                   onPointerDown={(e) => handleMarkerPointerDown(e, index)}
                 />
@@ -395,7 +472,10 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
             <div
               ref={barRef}
               className="absolute bottom-0 h-4 rounded-full border border-[rgba(255,255,255,0.12)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-              style={{ left: 7, right: 7, background: fillToCss(gradient) }}
+              style={{ left: 7, right: 7, background: fillToCss({
+                ...gradient,
+                stops: gradient.stops.map((s) => ({ ...s, color: resolveBrandColor(s.color, brandColors) })),
+              }) }}
             />
           </div>
 

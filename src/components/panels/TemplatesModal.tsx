@@ -3,6 +3,7 @@ import { useTemplatesStore } from '@/store/templates'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { looksLikeTemplate } from '@/utils/templates'
 import { downloadDataUrl } from '@/utils/export'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import type { Template } from '@/types'
 
 interface TemplatesModalProps {
@@ -125,15 +126,6 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
     e.target.value = ''
   }
 
-  const btnBase: React.CSSProperties = {
-    border: 'none',
-    borderRadius: 6,
-    cursor: 'pointer',
-    fontSize: 12,
-    fontWeight: 600,
-    padding: '5px 14px',
-  }
-
   return (
     <>
       {/* Backdrop */}
@@ -142,59 +134,19 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
         style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', zIndex: 200 }}
       />
 
-      {/* Confirm dialog */}
-      {confirmTemplate && (
-        <div
-          style={{
-            position: 'fixed',
-            inset: 0,
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            zIndex: 210,
-          }}
-        >
-          <div
-            style={{
-              background: '#1c1c27',
-              border: '1px solid rgba(255,255,255,0.12)',
-              borderRadius: 10,
-              padding: 24,
-              width: 400,
-              boxShadow: '0 20px 60px rgba(0,0,0,0.7)',
-            }}
-          >
-            <h3 style={{ margin: '0 0 10px', fontSize: 15, fontWeight: 600, color: '#e8e8f0' }}>
-              Replace current project?
-            </h3>
-            <p style={{ margin: '0 0 20px', fontSize: 13, color: '#a0a0b0', lineHeight: 1.5 }}>
-              This will replace the current project with the template{' '}
-              <strong style={{ color: '#e8e8f0' }}>"{confirmTemplate.name}"</strong>. Your current
-              work will be cleared — you can undo with{' '}
-              <strong style={{ color: '#e8e8f0' }}>Ctrl+Z</strong> but only within this session.
-            </p>
-            <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button
-                onClick={() => setConfirmTemplate(null)}
-                style={{
-                  ...btnBase,
-                  background: 'none',
-                  border: '1px solid rgba(255,255,255,0.12)',
-                  color: '#a0a0b0',
-                }}
-              >
-                Cancel
-              </button>
-              <button
-                onClick={() => { doApplyNew(confirmTemplate); setConfirmTemplate(null) }}
-                style={{ ...btnBase, background: '#7c6ef6', color: '#fff' }}
-              >
-                Apply Template
-              </button>
-            </div>
-          </div>
-        </div>
-      )}
+      <ConfirmDialog
+        open={confirmTemplate !== null}
+        title="Replace current project with this template?"
+        message={`Your current project will be overwritten by "${confirmTemplate?.name ?? 'this template'}". You can undo with Ctrl+Z only within this session.`}
+        confirmLabel="Replace Project"
+        danger
+        onConfirm={() => {
+          if (!confirmTemplate) return
+          doApplyNew(confirmTemplate)
+          setConfirmTemplate(null)
+        }}
+        onCancel={() => setConfirmTemplate(null)}
+      />
 
       {/* Main modal */}
       <div

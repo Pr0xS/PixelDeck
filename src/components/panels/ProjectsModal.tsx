@@ -1,6 +1,7 @@
 import { useState, useEffect, useRef } from 'react'
 import { useProjectsStore } from '@/store/projects'
 import { useEditorStore } from '@/store'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 
 interface ProjectsModalProps {
   open: boolean
@@ -26,6 +27,7 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
 
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const renameInputRef = useRef<HTMLInputElement>(null)
 
   // Focus rename input when it appears
@@ -37,11 +39,12 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
+      if (deleteId) return
       if (e.key === 'Escape') onClose()
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, onClose, deleteId])
 
   if (!open) return null
 
@@ -73,10 +76,14 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-    const p = projects.find((p) => p.id === id)
-    if (!confirm(`Delete "${p?.name ?? 'this project'}"? This cannot be undone.`)) return
-    deleteProject(id)
-    if (id === activeProjectId) onClose()
+    setDeleteId(id)
+  }
+
+  const confirmDelete = () => {
+    if (!deleteId) return
+    deleteProject(deleteId)
+    if (deleteId === activeProjectId) onClose()
+    setDeleteId(null)
   }
 
   // Sort: active first, then by most recently updated
@@ -88,6 +95,16 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
 
   return (
     <>
+      <ConfirmDialog
+        open={deleteId !== null}
+        title={`Delete project "${projects.find((p) => p.id === deleteId)?.name ?? 'this project'}"?`}
+        message="This cannot be undone."
+        confirmLabel="Delete Project"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
+      />
+
       {/* Backdrop */}
       <div
         onClick={onClose}

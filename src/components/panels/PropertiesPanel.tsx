@@ -7,7 +7,7 @@ import type {
   BackgroundLayer,
   PhoneLayer,
   TextLayer,
-  TextSpan,
+  TextMark,
   ImageLayer,
   ShapeLayer,
   ChipsLayer,
@@ -21,7 +21,10 @@ import type {
 import { fileToDataUrl } from '@/utils/svgToImage'
 import { ColorField, FillControl, SliderField } from '@/components/properties/PropertyControls'
 import { FONT_LIST, getFontWeights } from '@/utils/fonts'
-import { PHONE_MODELS } from '@/assets/mockups/specs'
+import { PHONE_MODELS, getPhoneSpec } from '@/assets/mockups/specs'
+import { useApiKeysStore } from '@/store/apiKeys'
+import { translateText } from '@/utils/translate'
+import { spansToMarks } from '@/utils/textRendering'
 
 const pauseTemporal = () => useEditorStore.temporal.getState().pause()
 const resumeTemporal = () => useEditorStore.temporal.getState().resume()
@@ -40,16 +43,189 @@ type PanelTab = 'layout' | 'style' | 'content'
 function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
   const { updateLayer } = useEditorStore()
   const upd = (patch: Partial<BackgroundLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
+  const bgImageInputRef = useRef<HTMLInputElement>(null)
+
+  const hasImage = !!layer.imageDataUrl
+
+  const handleImageFile = async (file: File) => {
+    const dataUrl = await fileToDataUrl(file)
+    upd({ imageDataUrl: dataUrl })
+  }
 
   return (
-    <div className="mb-3">
-      <label className={labelCls}>Fill</label>
-      <FillControl
-        key={layer.id}
-        fill={layer.fill}
-        onChange={(fill) => upd({ fill })}
-        onInteractionStart={pauseTemporal}
-        onInteractionEnd={resumeTemporal}
+    <div className="space-y-4">
+      {/* Background type toggle */}
+      <div>
+        <label className={labelCls}>Background Type</label>
+        <div className="grid grid-cols-2 gap-2">
+          {(['gradient', 'image'] as const).map((mode) => (
+            <button
+              key={mode}
+              type="button"
+              onClick={() => {
+                if (mode === 'image') bgImageInputRef.current?.click()
+                else upd({ imageDataUrl: undefined })
+              }}
+              className={`rounded-lg border px-3 py-2 text-xs transition-colors ${
+                (mode === 'image') === hasImage
+                  ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white'
+                  : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)]'
+              }`}
+            >
+              {mode === 'gradient' ? '🎨 Gradient' : '🖼 Image'}
+            </button>
+          ))}
+        </div>
+      </div>
+
+      {/* Gradient fill — shown when no image */}
+      {!hasImage && (
+        <div>
+          <FillControl
+            key={layer.id}
+            fill={layer.fill}
+            onChange={(fill) => upd({ fill })}
+            onInteractionStart={pauseTemporal}
+            onInteractionEnd={resumeTemporal}
+          />
+        </div>
+      )}
+
+      {/* Image controls — shown when image is set */}
+      {hasImage && (
+        <div className="space-y-3">
+          <div
+            className="relative rounded-xl border border-[rgba(255,255,255,0.1)] overflow-hidden cursor-pointer group"
+            style={{ height: 80 }}
+            onClick={() => bgImageInputRef.current?.click()}
+          >
+            <img
+              src={layer.imageDataUrl}
+              alt="Background"
+              className="w-full h-full object-cover"
+            />
+            <div className="absolute inset-0 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity bg-[rgba(0,0,0,0.5)]">
+              <span className="text-xs text-white">Change image</span>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => upd({ imageDataUrl: undefined })}
+            className="text-xs text-[#f87171] hover:text-[#fca5a5] transition-colors"
+          >
+            Remove image ×
+          </button>
+
+          <div>
+            <label className={labelCls}>Fit</label>
+            <div className="grid grid-cols-3 gap-2">
+              {(['cover', 'contain', 'fill'] as const).map((fit) => (
+                <button
+                  key={fit}
+                  type="button"
+                  onClick={() => upd({ imageFit: fit })}
+                  className={`rounded-lg border px-2 py-1.5 text-xs transition-colors ${
+                    (layer.imageFit ?? 'cover') === fit
+                      ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white'
+                      : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
+                  }`}
+                >
+                  {fit.charAt(0).toUpperCase() + fit.slice(1)}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <SliderField
+            label="Blur"
+            value={layer.imageBlur ?? 0}
+            min={0}
+            max={50}
+            unit="px"
+            onChange={(v) => upd({ imageBlur: v || undefined })}
+            onInteractionStart={pauseTemporal}
+            onInteractionEnd={resumeTemporal}
+            className="!mb-0"
+          />
+
+          <div>
+            <div className="flex items-center justify-between mb-2">
+              <label className={labelCls + ' !mb-0'}>Color Overlay</label>
+              <button
+                type="button"
+                onClick={() => upd({ imageOverlayOpacity: (layer.imageOverlayOpacity ?? 0) > 0 ? 0 : 0.4 })}
+                className={`relative h-5 w-9 rounded-full transition-colors ${
+                  (layer.imageOverlayOpacity ?? 0) > 0 ? 'bg-[#7c6ef6]' : 'bg-[rgba(255,255,255,0.12)]'
+                }`}
+              >
+                <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+                  (layer.imageOverlayOpacity ?? 0) > 0 ? 'translate-x-4' : 'translate-x-0.5'
+                }`} />
+              </button>
+            </div>
+            {(layer.imageOverlayOpacity ?? 0) > 0 && (
+              <div className="space-y-2">
+                <ColorField
+                  value={layer.imageOverlayColor ?? '#000000'}
+                  onChange={(v) => upd({ imageOverlayColor: v })}
+                  onInteractionStart={pauseTemporal}
+                  onInteractionEnd={resumeTemporal}
+                />
+                <SliderField
+                  label="Opacity"
+                  value={Math.round((layer.imageOverlayOpacity ?? 0) * 100)}
+                  min={0} max={100} unit="%"
+                  onChange={(v) => upd({ imageOverlayOpacity: v / 100 })}
+                  onInteractionStart={pauseTemporal}
+                  onInteractionEnd={resumeTemporal}
+                  className="!mb-0"
+                />
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+
+      {/* Noise texture — always visible */}
+      <div>
+        <div className="flex items-center justify-between mb-1">
+          <label className={labelCls + ' !mb-0'}>Noise Texture</label>
+          <button
+            type="button"
+            onClick={() => upd({ noise: (layer.noise ?? 0) > 0 ? 0 : 0.05 })}
+            className={`relative h-5 w-9 rounded-full transition-colors ${
+              (layer.noise ?? 0) > 0 ? 'bg-[#7c6ef6]' : 'bg-[rgba(255,255,255,0.12)]'
+            }`}
+          >
+            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+              (layer.noise ?? 0) > 0 ? 'translate-x-4' : 'translate-x-0.5'
+            }`} />
+          </button>
+        </div>
+        {(layer.noise ?? 0) > 0 && (
+          <SliderField
+            label="Intensity"
+            value={Math.round((layer.noise ?? 0) * 100)}
+            min={1} max={30} unit="%"
+            onChange={(v) => upd({ noise: v / 100 })}
+            onInteractionStart={pauseTemporal}
+            onInteractionEnd={resumeTemporal}
+            className="!mb-0"
+          />
+        )}
+      </div>
+
+      <input
+        ref={bgImageInputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0]
+          if (!file) return
+          await handleImageFile(file)
+          e.target.value = ''
+        }}
       />
     </div>
   )
@@ -227,8 +403,68 @@ function StyleTab({ layer }: { layer: Layer }) {
   )
 }
 
+// ─── Locale Screenshot Row ────────────────────────────────────────────────────
+
+function LocaleScreenshotRow({
+  locale,
+  previewSrc,
+  onUpload,
+  onClear,
+}: {
+  locale: string
+  previewSrc?: string
+  onUpload: (file: File) => Promise<void>
+  onClear: () => void
+}) {
+  const inputRef = useRef<HTMLInputElement>(null)
+  return (
+    <div className="flex items-center gap-2">
+      <span className="text-[10px] text-[#6b6b7a] uppercase w-8 shrink-0 font-mono">{locale}</span>
+      {previewSrc ? (
+        <>
+          <img src={previewSrc} alt={locale} className="h-8 w-5 rounded object-cover border border-[rgba(255,255,255,0.12)] shrink-0" />
+          <button
+            type="button"
+            onClick={() => inputRef.current?.click()}
+            className="flex-1 text-left text-[10px] text-[#7c6ef6] hover:text-[#9d90f8] transition-colors"
+          >
+            Change
+          </button>
+          <button
+            type="button"
+            onClick={onClear}
+            className="text-[10px] text-[#f87171] hover:text-[#fca5a5] transition-colors shrink-0"
+          >
+            ✕
+          </button>
+        </>
+      ) : (
+        <button
+          type="button"
+          onClick={() => inputRef.current?.click()}
+          className="flex-1 text-left text-[10px] text-[#6b6b7a] hover:text-[#e8e8f0] border border-dashed border-[rgba(255,255,255,0.1)] rounded px-2 py-1 transition-colors hover:border-[rgba(124,110,246,0.4)]"
+        >
+          + Upload for {locale}
+        </button>
+      )}
+      <input
+        ref={inputRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0]
+          if (!file) return
+          await onUpload(file)
+          e.target.value = ''
+        }}
+      />
+    </div>
+  )
+}
+
 function PhoneContent({ layer }: { layer: PhoneLayer }) {
-  const { updateLayer } = useEditorStore()
+  const { updateLayer, project, activeSlideGroupId, setLocaleOverride, clearLocaleOverride } = useEditorStore()
   const upd = (patch: Partial<PhoneLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
   const screenshotInputRef = useRef<HTMLInputElement>(null)
   const addAsset = useAssetStore((s) => s.addAsset)
@@ -253,6 +489,43 @@ function PhoneContent({ layer }: { layer: PhoneLayer }) {
           ))}
         </select>
       </div>
+
+      {/* Position presets */}
+      {(() => {
+        const activeGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+        const slideWidth = activeGroup?.slideWidth ?? 1290
+        const slideHeight = activeGroup?.slideHeight ?? 2796
+        const spec = getPhoneSpec(layer.model)
+        const fw = spec.frameWidth * layer.scale
+        const fh = spec.frameHeight * layer.scale
+        const cx = (slideWidth - fw) / 2
+
+        const presets = [
+          { label: 'Center',   patch: { x: cx, y: (slideHeight - fh) / 2, rotation: 0 } },
+          { label: 'Hero',     patch: { x: cx, y: Math.round(slideHeight * 0.05), rotation: 0 } },
+          { label: 'Bleed',    patch: { x: cx, y: Math.round(slideHeight * 0.38), rotation: 0 } },
+          { label: '↺ Tilt',  patch: { x: cx, y: Math.round(slideHeight * 0.18), rotation: -10 } },
+          { label: 'Tilt ↻',  patch: { x: cx, y: Math.round(slideHeight * 0.18), rotation: 10 } },
+        ]
+
+        return (
+          <div className={panelSectionCls}>
+            <label className={labelCls}>Position Preset</label>
+            <div className="grid grid-cols-5 gap-1">
+              {presets.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => upd(preset.patch as Partial<PhoneLayer>)}
+                  className="rounded border border-[rgba(255,255,255,0.1)] px-1 py-1.5 text-[10px] text-[#8f90a3] hover:border-[rgba(124,110,246,0.5)] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.04)] transition-colors leading-tight text-center"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      })()}
 
       <div className={panelSectionCls}>
         {/* Status bar toggle */}
@@ -287,7 +560,7 @@ function PhoneContent({ layer }: { layer: PhoneLayer }) {
             </div>
 
             {/* Colour picker — only for solid */}
-            {(layer.statusBarBg ?? 'gradient') === 'solid' && (
+            {(layer.statusBarBg ?? 'transparent') === 'solid' && (
               <div>
                 <label className={labelCls}>Color</label>
                 <ColorField
@@ -377,125 +650,186 @@ function PhoneContent({ layer }: { layer: PhoneLayer }) {
         <SliderField label="Offset X" value={layer.screenshotOffsetX} min={-500} max={500} unit="px" onChange={(v) => upd({ screenshotOffsetX: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
         <SliderField label="Offset Y" value={layer.screenshotOffsetY} min={-500} max={500} unit="px" onChange={(v) => upd({ screenshotOffsetY: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} className="!mb-0" />
       </div>
-    </div>
-  )
-}
 
-// ─── Span Fill Toggle (compact inline fill picker for spans) ─────────────────
-
-function SpanFillEditor({
-  span,
-  layerFill,
-  onChange,
-}: {
-  span: TextSpan
-  layerFill: FillValue
-  onChange: (patch: Partial<TextSpan>) => void
-}) {
-  const [open, setOpen] = useState(false)
-  const hasCustomFill = span.fill !== undefined
-
-  return (
-    <div>
-      <div className="flex items-center gap-2 mb-1">
-        <label className={labelCls + ' !mb-0'}>Fill</label>
-        <button
-          type="button"
-          onClick={() => {
-            if (hasCustomFill) {
-              onChange({ fill: undefined })
-              setOpen(false)
-            } else {
-              onChange({ fill: layerFill })
-              setOpen(true)
-            }
-          }}
-          className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-            hasCustomFill
-              ? 'border-[#7c6ef6] text-[#9d90f8] bg-[rgba(124,110,246,0.12)]'
-              : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
-          }`}
-        >
-          {hasCustomFill ? '✦ Custom' : '○ Inherit'}
-        </button>
-        {hasCustomFill && (
+      {/* Screenshot border */}
+      <div className={panelSectionCls}>
+        <div className="mb-3 flex items-center justify-between">
+          <label className={labelCls + ' !mb-0'}>Border</label>
           <button
             type="button"
-            onClick={() => setOpen((v) => !v)}
-            className="text-[10px] text-[#6b6b7a] hover:text-[#e8e8f0] transition-colors"
+            onClick={() => upd({ border: layer.border ? undefined : { color: '#FFFFFF', width: 2, opacity: 0.5 } })}
+            className={`relative h-5 w-9 rounded-full transition-colors ${layer.border ? 'bg-[#7c6ef6]' : 'bg-[rgba(255,255,255,0.12)]'}`}
           >
-            {open ? '▲' : '▼'}
+            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${layer.border ? 'translate-x-4' : 'translate-x-0.5'}`} />
           </button>
+        </div>
+        {layer.border && (
+          <div className="space-y-3">
+            <ColorField
+              value={layer.border.color}
+              onChange={(v) => upd({ border: { ...layer.border!, color: v } })}
+              onInteractionStart={pauseTemporal}
+              onInteractionEnd={resumeTemporal}
+            />
+            <SliderField label="Width" value={layer.border.width} min={1} max={30} unit="px"
+              onChange={(v) => upd({ border: { ...layer.border!, width: v } })}
+              onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
+            <SliderField label="Opacity" value={Math.round(layer.border.opacity * 100)} min={0} max={100} unit="%"
+              onChange={(v) => upd({ border: { ...layer.border!, opacity: v / 100 } })}
+              onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} className="!mb-0" />
+          </div>
         )}
       </div>
-      {hasCustomFill && open && (
-        <FillControl
-          key={typeof span.fill === 'string' ? 'solid' : (span.fill?.type ?? 'solid')}
-          fill={span.fill!}
-          onChange={(fill) => onChange({ fill })}
-          onInteractionStart={pauseTemporal}
-          onInteractionEnd={resumeTemporal}
-        />
-      )}
+
+      {/* Per-locale screenshots */}
+      {(() => {
+        const locales = project.settings.locales ?? [project.settings.defaultLocale]
+        const nonDefaultLocales = locales.filter((l) => l !== project.settings.defaultLocale)
+        if (nonDefaultLocales.length === 0) return null
+        return (
+          <div className={panelSectionCls}>
+            <label className={labelCls}>Localized Screenshots</label>
+            <div className="space-y-2">
+              {nonDefaultLocales.map((locale) => {
+                const override = layer.localeOverrides?.[locale]
+                const path = override?.screenshotPath
+                const previewSrc = path ? assets[path]?.dataUrl : undefined
+                return (
+                  <LocaleScreenshotRow
+                    key={locale}
+                    locale={locale}
+                    previewSrc={previewSrc}
+                    onUpload={async (file) => {
+                      const dataUrl = await fileToDataUrl(file)
+                      addAsset(file.name, dataUrl)
+                      setLocaleOverride(activeSlideGroupId, layer.id, locale, { screenshotPath: file.name })
+                    }}
+                    onClear={() => clearLocaleOverride(activeSlideGroupId, layer.id, locale)}
+                  />
+                )
+              })}
+            </div>
+          </div>
+        )
+      })()}
     </div>
   )
 }
 
-// ─── Span Row ──────────────────────────────────────────────────────────────────
+// ─── Mark Row (rich text formatting range) ────────────────────────────────────
 
-function SpanRow({
-  span,
+function MarkRow({
+  mark,
+  layerText,
   layerFill,
   availableWeights,
   onChange,
   onRemove,
 }: {
-  span: TextSpan
+  mark: TextMark
+  layerText: string
   layerFill: FillValue
   availableWeights: number[]
-  onChange: (patch: Partial<TextSpan>) => void
+  onChange: (patch: Partial<TextMark>) => void
   onRemove: () => void
 }) {
+  const [fillOpen, setFillOpen] = useState(false)
+  const hasCustomFill = mark.fill !== undefined
+  const preview = layerText.slice(mark.start, mark.end)
+
   return (
     <div className="rounded-lg border border-[rgba(255,255,255,0.07)] bg-[#0d0d12] p-2.5 space-y-2.5">
-      {/* Text + delete */}
-      <div className="flex gap-2 items-start">
-        <textarea
-          value={span.text}
-          onChange={(e) => onChange({ text: e.target.value })}
-          rows={2}
-          placeholder="Texto del tramo…"
-          className={`${inputCls} resize-none flex-1 text-[13px]`}
+      {/* Range header */}
+      <div className="flex items-center gap-2">
+        <span className="text-[10px] text-[#6b6b7a] font-mono shrink-0">chars</span>
+        <input
+          type="number"
+          value={mark.start}
+          min={0}
+          max={mark.end - 1}
+          onChange={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v)) onChange({ start: Math.max(0, Math.min(v, mark.end - 1)) }) }}
+          className={inputCls + ' !py-0.5 !text-xs w-16 text-center'}
         />
+        <span className="text-[#6b6b7a]">–</span>
+        <input
+          type="number"
+          value={mark.end}
+          min={mark.start + 1}
+          max={layerText.length}
+          onChange={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v)) onChange({ end: Math.max(mark.start + 1, Math.min(v, layerText.length)) }) }}
+          className={inputCls + ' !py-0.5 !text-xs w-16 text-center'}
+        />
+        <span className="text-[10px] text-[#4a4a5a] flex-1 truncate font-mono">"{preview}"</span>
         <button
           type="button"
           onClick={onRemove}
-          className="mt-1 text-xs text-[#f87171] hover:text-[#fca5a5] transition-colors shrink-0"
+          className="text-xs text-[#f87171] hover:text-[#fca5a5] transition-colors shrink-0"
         >
           ✕
         </button>
       </div>
 
       {/* Fill override */}
-      <SpanFillEditor span={span} layerFill={layerFill} onChange={onChange} />
+      <div>
+        <div className="flex items-center gap-2 mb-1">
+          <label className={labelCls + ' !mb-0'}>Fill</label>
+          <button
+            type="button"
+            onClick={() => {
+              if (hasCustomFill) {
+                onChange({ fill: undefined })
+                setFillOpen(false)
+              } else {
+                onChange({ fill: layerFill })
+                setFillOpen(true)
+              }
+            }}
+            className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+              hasCustomFill
+                ? 'border-[#7c6ef6] text-[#9d90f8] bg-[rgba(124,110,246,0.12)]'
+                : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
+            }`}
+          >
+            {hasCustomFill ? '✦ Custom' : '○ Inherit'}
+          </button>
+          {hasCustomFill && (
+            <button
+              type="button"
+              onClick={() => setFillOpen((v) => !v)}
+              className="text-[10px] text-[#6b6b7a] hover:text-[#e8e8f0] transition-colors"
+            >
+              {fillOpen ? '▲' : '▼'}
+            </button>
+          )}
+        </div>
+        {hasCustomFill && fillOpen && (
+          <FillControl
+            key={typeof mark.fill === 'string' ? 'solid' : (mark.fill?.type ?? 'solid')}
+            fill={mark.fill!}
+            onChange={(fill) => onChange({ fill })}
+            onInteractionStart={pauseTemporal}
+            onInteractionEnd={resumeTemporal}
+          />
+        )}
+      </div>
 
-      {/* Weight override (optional) */}
+      {/* Weight override */}
       <div className="flex items-center gap-2">
-        <label className={labelCls + ' !mb-0'}>Peso</label>
+        <label className={labelCls + ' !mb-0'}>Weight</label>
         <button
           type="button"
-          onClick={() => onChange({ fontWeight: span.fontWeight !== undefined ? undefined : 700 })}
+          onClick={() => onChange({ fontWeight: mark.fontWeight !== undefined ? undefined : 700 })}
           className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-            span.fontWeight !== undefined
+            mark.fontWeight !== undefined
               ? 'border-[#7c6ef6] text-[#9d90f8] bg-[rgba(124,110,246,0.12)]'
               : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
           }`}
         >
-          {span.fontWeight !== undefined ? '✦ Custom' : '○ Inherit'}
+          {mark.fontWeight !== undefined ? '✦ Custom' : '○ Inherit'}
         </button>
-        {span.fontWeight !== undefined && (
+        {mark.fontWeight !== undefined && (
           <select
-            value={span.fontWeight}
+            value={mark.fontWeight}
             onChange={(e) => onChange({ fontWeight: Number(e.target.value) })}
             className={inputCls + ' !py-0.5 !text-xs flex-1'}
           >
@@ -508,29 +842,29 @@ function SpanRow({
 
       {/* Italic override */}
       <div className="flex items-center gap-2">
-        <label className={labelCls + ' !mb-0'}>Itálica</label>
+        <label className={labelCls + ' !mb-0'}>Italic</label>
         <button
           type="button"
-          onClick={() => onChange({ italic: span.italic !== undefined ? undefined : true })}
+          onClick={() => onChange({ italic: mark.italic !== undefined ? undefined : true })}
           className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-            span.italic !== undefined
+            mark.italic !== undefined
               ? 'border-[#7c6ef6] text-[#9d90f8] bg-[rgba(124,110,246,0.12)]'
               : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
           }`}
         >
-          {span.italic !== undefined ? '✦ Custom' : '○ Inherit'}
+          {mark.italic !== undefined ? '✦ Custom' : '○ Inherit'}
         </button>
-        {span.italic !== undefined && (
+        {mark.italic !== undefined && (
           <button
             type="button"
-            onClick={() => onChange({ italic: !span.italic })}
+            onClick={() => onChange({ italic: !mark.italic })}
             className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-              span.italic
+              mark.italic
                 ? 'border-[#7c6ef6] text-[#9d90f8] bg-[rgba(124,110,246,0.12)]'
                 : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a]'
             }`}
           >
-            {span.italic ? 'On' : 'Off'}
+            {mark.italic ? 'On' : 'Off'}
           </button>
         )}
       </div>
@@ -538,40 +872,139 @@ function SpanRow({
   )
 }
 
+// ─── AI Translation Section ────────────────────────────────────────────────────
+
+function TranslateSection({
+  layer,
+  nonDefaultLocales,
+  slideGroupId,
+}: {
+  layer: TextLayer
+  nonDefaultLocales: string[]
+  slideGroupId: string
+}) {
+  const { setLocaleOverride } = useEditorStore()
+  const { provider, getActiveKey } = useApiKeysStore()
+  const [status, setStatus] = useState<Record<string, 'idle' | 'translating' | 'ok' | 'error'>>({})
+  const [isRunning, setIsRunning] = useState(false)
+  const [translateError, setTranslateError] = useState<string | null>(null)
+
+  const handleTranslateAll = async () => {
+    const key = getActiveKey()
+    if (!key) {
+      setTranslateError('No API key configured. Add one in AI Settings.')
+      return
+    }
+    setTranslateError(null)
+    setIsRunning(true)
+    const next: Record<string, 'idle' | 'translating' | 'ok' | 'error'> = {}
+    try {
+      for (const locale of nonDefaultLocales) {
+        next[locale] = 'translating'
+        setStatus({ ...next })
+        try {
+          const translated = await translateText(layer.text, locale, provider, key)
+          setLocaleOverride(slideGroupId, layer.id, locale, { text: translated })
+          next[locale] = 'ok'
+        } catch (error) {
+          next[locale] = 'error'
+          setTranslateError(error instanceof Error ? error.message : `Translation failed for ${locale}.`)
+        }
+        setStatus({ ...next })
+      }
+    } catch (error) {
+      setTranslateError(error instanceof Error ? error.message : 'Translation failed. Try again.')
+    } finally {
+      setIsRunning(false)
+    }
+  }
+
+  return (
+    <div className={panelSectionCls}>
+      <div className="flex items-center justify-between mb-2">
+        <label className={labelCls + ' !mb-0'}>AI Translation</label>
+        <span className="text-[10px] text-[#6b6b7a] uppercase tracking-wider">{provider}</span>
+      </div>
+      <div className="flex flex-wrap gap-1.5 mb-2">
+        {nonDefaultLocales.map((locale) => {
+          const s = status[locale] ?? 'idle'
+          return (
+            <span
+              key={locale}
+              className={`text-[10px] px-2 py-0.5 rounded border ${
+                s === 'ok'          ? 'border-[#6ee7b7] text-[#6ee7b7] bg-[rgba(110,231,183,0.08)]' :
+                s === 'error'       ? 'border-[#f87171] text-[#f87171] bg-[rgba(248,113,113,0.08)]' :
+                s === 'translating' ? 'border-[#7c6ef6] text-[#9d90f8]' :
+                                      'border-[rgba(255,255,255,0.1)] text-[#6b6b7a]'
+              }`}
+            >
+              {locale}
+              {s === 'ok' ? ' ✓' : s === 'error' ? ' ✕' : s === 'translating' ? ' …' : ''}
+            </span>
+          )
+        })}
+      </div>
+      <button
+        type="button"
+        disabled={isRunning}
+        onClick={handleTranslateAll}
+        className="w-full text-xs py-2 rounded-lg border transition-colors disabled:opacity-40 disabled:cursor-not-allowed border-[rgba(124,110,246,0.4)] text-[#9d90f8] hover:bg-[rgba(124,110,246,0.08)] hover:text-[#c4b5fd]"
+      >
+        {isRunning ? '⏳ Translating…' : '🌐 Translate to all locales'}
+      </button>
+      {translateError && <p className="mt-1 text-xs text-[#f87171]">{translateError}</p>}
+    </div>
+  )
+}
+
 // ─── Text Content ────────────────────────────────────────────────────────────
 
 function TextContent({ layer }: { layer: TextLayer }) {
-  const { updateLayer } = useEditorStore()
+  const { updateLayer, project, activeSlideGroupId } = useEditorStore()
   const upd = (patch: Partial<TextLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
 
-  const hasSpans = (layer.spans?.length ?? 0) > 0
   const availableWeights = getFontWeights(layer.fontFamily)
+  const [fontSearch, setFontSearch] = useState('')
+  const filteredFonts = FONT_LIST.filter(
+    (f) => !fontSearch || f.label.toLowerCase().includes(fontSearch.toLowerCase()) || f.family === layer.fontFamily,
+  )
 
-  const updateSpan = (index: number, patch: Partial<TextSpan>) => {
-    const spans = [...(layer.spans ?? [])]
-    spans[index] = { ...spans[index], ...patch }
-    upd({ spans })
+  // Canonical marks — prefer layer.marks, auto-migrate legacy spans on first access
+  const marks: TextMark[] = layer.marks ?? (
+    (layer.spans?.length ?? 0) > 0 ? spansToMarks(layer.spans!).marks : []
+  )
+
+  const updateMark = (index: number, patch: Partial<TextMark>) => {
+    const next = [...marks]
+    next[index] = { ...next[index], ...patch }
+    upd({ marks: next, spans: undefined })
   }
 
-  const removeSpan = (index: number) => {
-    const spans = (layer.spans ?? []).filter((_, i) => i !== index)
-    upd({ spans: spans.length ? spans : undefined })
+  const removeMark = (index: number) => {
+    const next = marks.filter((_, i) => i !== index)
+    upd({ marks: next.length ? next : undefined, spans: undefined })
   }
 
-  const addSpan = () => {
-    const newSpan: TextSpan = { text: 'nuevo tramo' }
-    upd({ spans: [...(layer.spans ?? []), newSpan] })
+  const addMark = () => {
+    // Default: cover the whole text
+    const newMark: TextMark = { start: 0, end: layer.text.length, fill: layer.fill }
+    upd({ marks: [...marks, newMark], spans: undefined })
   }
 
-  const switchToRich = () => {
-    // Convert current plain text to a single span
-    upd({ spans: [{ text: layer.text }] })
-  }
-
-  const switchToSimple = () => {
-    // Join all span texts into plain text, discard per-span styles
-    const combined = (layer.spans ?? []).map((s) => s.text).join('')
-    upd({ spans: undefined, text: combined || layer.text })
+  const handleTextChange = (newText: string) => {
+    // Clamp existing marks to the new text length
+    const clampedMarks = marks
+      .map((m) => ({
+        ...m,
+        start: Math.min(m.start, newText.length),
+        end: Math.min(m.end, newText.length),
+      }))
+      .filter((m) => m.start < m.end)
+    upd({
+      text: newText,
+      marks: clampedMarks.length ? clampedMarks : undefined,
+      spans: undefined,
+    })
   }
 
   return (
@@ -579,7 +1012,14 @@ function TextContent({ layer }: { layer: TextLayer }) {
 
       {/* ── Font ── */}
       <div className={panelSectionCls}>
-        <label className={labelCls}>Fuente</label>
+        <label className={labelCls}>Font</label>
+        <input
+          type="search"
+          value={fontSearch}
+          onChange={(e) => setFontSearch(e.target.value)}
+          placeholder="Search fonts…"
+          className={`${inputCls} mb-2 text-xs`}
+        />
         <select
           value={layer.fontFamily}
           onChange={(e) => {
@@ -596,7 +1036,7 @@ function TextContent({ layer }: { layer: TextLayer }) {
           className={inputCls}
           style={{ fontFamily: layer.fontFamily }}
         >
-          {FONT_LIST.map((f) => (
+          {filteredFonts.map((f) => (
             <option key={f.family} value={f.family} style={{ fontFamily: f.family }}>
               {f.label}
             </option>
@@ -605,9 +1045,9 @@ function TextContent({ layer }: { layer: TextLayer }) {
 
         {/* Size + Weight */}
         <div className="mt-3">
-          <SliderField label="Tamaño" value={layer.fontSize} min={6} max={300} unit="px" onChange={(v) => upd({ fontSize: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
+          <SliderField label="Size" value={layer.fontSize} min={6} max={300} unit="px" onChange={(v) => upd({ fontSize: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
           <div className={fieldCls}>
-            <label className={labelCls}>Peso</label>
+            <label className={labelCls}>Weight</label>
             <select
               value={layer.fontWeight}
               onChange={(e) => upd({ fontWeight: Number(e.target.value) })}
@@ -620,35 +1060,73 @@ function TextContent({ layer }: { layer: TextLayer }) {
           </div>
         </div>
 
-        {/* Italic toggle */}
+        {/* Italic / underline / strikethrough toggles */}
         <div className="mb-3">
-          <label className={labelCls}>Estilo</label>
-          <button
-            type="button"
-            onClick={() => upd({ italic: !layer.italic })}
-            className={`text-xs px-3 py-1.5 rounded-lg border transition-colors italic font-medium ${
-              layer.italic
-                ? 'border-[#7c6ef6] bg-[rgba(124,110,246,0.18)] text-[#c4b5fd]'
-                : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
-            }`}
-          >
-            I  Itálica
-          </button>
+          <label className={labelCls}>Style</label>
+          <div className="flex gap-2 flex-wrap">
+            <button
+              type="button"
+              onClick={() => upd({ italic: !layer.italic })}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors italic font-medium ${
+                layer.italic
+                  ? 'border-[#7c6ef6] bg-[rgba(124,110,246,0.18)] text-[#c4b5fd]'
+                  : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
+              }`}
+            >
+              I  Italic
+            </button>
+            <button
+              type="button"
+              onClick={() => upd({ underline: !layer.underline })}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors underline font-medium ${
+                layer.underline
+                  ? 'border-[#7c6ef6] bg-[rgba(124,110,246,0.18)] text-[#c4b5fd]'
+                  : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
+              }`}
+            >
+              U  Underline
+            </button>
+            <button
+              type="button"
+              onClick={() => upd({ strikethrough: !layer.strikethrough })}
+              className={`text-xs px-3 py-1.5 rounded-lg border transition-colors line-through font-medium ${
+                layer.strikethrough
+                  ? 'border-[#7c6ef6] bg-[rgba(124,110,246,0.18)] text-[#c4b5fd]'
+                  : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
+              }`}
+            >
+              S  Strike
+            </button>
+          </div>
         </div>
 
         {/* Spacing */}
-        <SliderField label="Interletraje" value={layer.letterSpacing} min={-20} max={100} step={1} onChange={(v) => upd({ letterSpacing: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
-        <SliderField label="Interlineado" value={layer.lineHeight} min={0.5} max={4} step={0.05} unit="×" onChange={(v) => upd({ lineHeight: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} className="!mb-0" />
+        <SliderField label="Letter Spacing" value={layer.letterSpacing} min={-20} max={100} step={1} onChange={(v) => upd({ letterSpacing: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
+        <SliderField label="Line Height" value={layer.lineHeight} min={0.5} max={4} step={0.05} unit="×" onChange={(v) => upd({ lineHeight: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} className="!mb-0" />
       </div>
+
+      {/* ── AI Translation ── */}
+      {(() => {
+        const locales = project.settings.locales ?? [project.settings.defaultLocale]
+        const nonDefaultLocales = locales.filter((l) => l !== project.settings.defaultLocale)
+        if (nonDefaultLocales.length === 0) return null
+        return (
+          <TranslateSection
+            layer={layer}
+            nonDefaultLocales={nonDefaultLocales}
+            slideGroupId={activeSlideGroupId}
+          />
+        )
+      })()}
 
       {/* ── Align ── */}
       <div className={panelSectionCls}>
-        <label className={labelCls}>Alineación</label>
+        <label className={labelCls}>Alignment</label>
         <div className="grid grid-cols-3 gap-2">
           {([
-            { value: 'left',   label: '⬱ Izq' },
-            { value: 'center', label: '≡ Cen' },
-            { value: 'right',  label: '⬲ Der' },
+            { value: 'left',   label: '⬱ Left' },
+            { value: 'center', label: '≡ Center' },
+            { value: 'right',  label: '⬲ Right' },
           ] as const).map((item) => (
             <button
               key={item.value}
@@ -666,72 +1144,49 @@ function TextContent({ layer }: { layer: TextLayer }) {
         </div>
       </div>
 
-      {/* ── Text / Spans ── */}
+      {/* ── Content ── */}
       <div className={panelSectionCls}>
-        {/* Mode toggle */}
-        <div className="flex items-center justify-between mb-3">
-          <label className={labelCls + ' !mb-0'}>Contenido</label>
-          <div className="flex gap-1">
-            <button
-              type="button"
-              onClick={switchToSimple}
-              className={`text-[10px] px-2 py-0.5 rounded-l border transition-colors ${
-                !hasSpans
-                  ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white'
-                  : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
-              }`}
-            >
-              Simple
-            </button>
-            <button
-              type="button"
-              onClick={switchToRich}
-              className={`text-[10px] px-2 py-0.5 rounded-r border-y border-r transition-colors ${
-                hasSpans
-                  ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white'
-                  : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
-              }`}
-            >
-              ✦ Rich
-            </button>
-          </div>
+        <label className={labelCls}>Content</label>
+        {/* Single source-of-truth textarea */}
+        <textarea
+          value={layer.text}
+          onChange={(e) => handleTextChange(e.target.value)}
+          rows={4}
+          className={`${inputCls} resize-none`}
+        />
+      </div>
+
+      {/* ── Text Formatting (marks) ── */}
+      <div className={panelSectionCls}>
+        <div className="flex items-center justify-between mb-2">
+          <label className={labelCls + ' !mb-0'}>Text Formatting</label>
+          <span className="text-[10px] text-[#4a4a5a]">{marks.length > 0 ? `${marks.length} range${marks.length > 1 ? 's' : ''}` : 'none'}</span>
         </div>
-
-        {/* Simple mode */}
-        {!hasSpans && (
-          <textarea
-            value={layer.text}
-            onChange={(e) => upd({ text: e.target.value })}
-            rows={4}
-            className={`${inputCls} resize-none`}
-          />
+        {marks.length > 0 && (
+          <p className="text-[10px] text-[#4a4a5a] mb-2 leading-relaxed">
+            Style specific character ranges. Ranges reference positions in the text above.
+          </p>
         )}
-
-        {/* Rich text mode — spans editor */}
-        {hasSpans && (
-          <div className="space-y-2">
-            <p className="text-[10px] text-[#4a4a5a] mb-2 leading-relaxed">
-              Cada tramo puede tener color/gradiente propio. Usa <code className="text-[#9d90f8]">\n</code> para saltos de línea.
-            </p>
-            {(layer.spans ?? []).map((span, i) => (
-              <SpanRow
-                key={i}
-                span={span}
-                layerFill={layer.fill}
-                availableWeights={availableWeights}
-                onChange={(patch) => updateSpan(i, patch)}
-                onRemove={() => removeSpan(i)}
-              />
-            ))}
-            <button
-              type="button"
-              onClick={addSpan}
-              className={`${subtleButtonCls} w-full text-center text-[#7c6ef6] border-dashed hover:border-[#7c6ef6]`}
-            >
-              ＋ Añadir tramo
-            </button>
-          </div>
-        )}
+        <div className="space-y-2">
+          {marks.map((mark, i) => (
+            <MarkRow
+              key={i}
+              mark={mark}
+              layerText={layer.text}
+              layerFill={layer.fill}
+              availableWeights={availableWeights}
+              onChange={(patch) => updateMark(i, patch)}
+              onRemove={() => removeMark(i)}
+            />
+          ))}
+          <button
+            type="button"
+            onClick={addMark}
+            className={`${subtleButtonCls} w-full text-center text-[#7c6ef6] border-dashed hover:border-[#7c6ef6]`}
+          >
+            ＋ Add formatting range
+          </button>
+        </div>
       </div>
 
     </div>
@@ -985,20 +1440,32 @@ const LAYER_TYPE_ICON: Record<string, string> = {
 }
 
 function GroupContent({ layer }: { layer: GroupLayer }) {
+  const { updateLayer } = useEditorStore()
+  const upd = (patch: Partial<GroupLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
+  const scale = layer.scale ?? 1
   return (
     <div className="space-y-4">
       {/* Enter hint */}
       <div className="rounded-xl border border-[rgba(124,110,246,0.25)] bg-[rgba(124,110,246,0.08)] p-3">
-        <p className="text-xs font-semibold text-[#c4b5fd] mb-1">Grupo seleccionado</p>
+        <p className="text-xs font-semibold text-[#c4b5fd] mb-1">Group selected</p>
         <p className="text-xs text-[#9d90f8]">
-          Haz <strong>doble clic</strong> en el canvas para entrar y editar las capas internas.
+          <strong>Double-click</strong> the canvas to enter and edit inner layers.
         </p>
+      </div>
+
+      {/* Scale */}
+      <div className={panelSectionCls}>
+        <div className="mb-1 flex items-center justify-between">
+          <label className={labelCls + ' !mb-0'}>Scale</label>
+          <span className="text-xs text-[#e8e8f0]">{scale.toFixed(2)}×</span>
+        </div>
+        <input type="range" min={0.1} max={4} step={0.05} value={scale} onChange={(e) => upd({ scale: Number(e.target.value) })} onMouseDown={pauseTemporal} onMouseUp={resumeTemporal} className="w-full accent-[#7c6ef6]" />
       </div>
 
       {/* Children list */}
       {layer.children.length > 0 && (
         <div className={panelSectionCls}>
-          <label className={labelCls}>Capas internas ({layer.children.length})</label>
+          <label className={labelCls}>Inner layers ({layer.children.length})</label>
           <div className="space-y-1">
             {layer.children.map((child) => (
               <div
@@ -1041,7 +1508,16 @@ function ContentTab({ layer }: { layer: Layer }) {
 }
 
 export function PropertiesPanel() {
-  const { project, activeSlideGroupId, selection, updateSlideGroup, editingGroupId } = useEditorStore()
+  const {
+    project,
+    activeSlideGroupId,
+    selection,
+    updateSlideGroup,
+    editingGroupId,
+    copyLayerStyle,
+    pasteLayerStyle,
+    styleClipboard,
+  } = useEditorStore()
   const [activeTab, setActiveTab] = useState<PanelTab>('layout')
 
   const activeGroup: SlideGroup | undefined = project.slideGroups.find((group) => group.id === activeSlideGroupId)
@@ -1088,6 +1564,39 @@ export function PropertiesPanel() {
       <div className="shrink-0 border-b px-3 py-2" style={{ borderColor }}>
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-[#6b6b7a]">Properties</span>
+          {selectedLayer && (
+            <div className="flex gap-1">
+              <button
+                type="button"
+                title="Copy style (Ctrl+Alt+C)"
+                onClick={() => copyLayerStyle(selectedLayer.id)}
+                className="text-[10px] px-2 py-1 rounded border border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0] hover:border-[rgba(255,255,255,0.2)] transition-colors"
+              >
+                Copy Style
+              </button>
+              {styleClipboard && (
+                <button
+                  type="button"
+                  title={
+                    styleClipboard.layerType === selectedLayer.type
+                      ? 'Paste style (Ctrl+Alt+V)'
+                      : `Paste style — copied from ${styleClipboard.layerType}, select a ${styleClipboard.layerType} layer`
+                  }
+                  onClick={() => {
+                    if (styleClipboard.layerType === selectedLayer.type) pasteLayerStyle(selectedLayer.id)
+                  }}
+                  disabled={styleClipboard.layerType !== selectedLayer.type}
+                  className={`text-[10px] px-2 py-1 rounded border transition-colors ${
+                    styleClipboard.layerType === selectedLayer.type
+                      ? 'border-[rgba(124,110,246,0.4)] text-[#9d90f8] hover:text-white hover:border-[#7c6ef6] hover:bg-[rgba(124,110,246,0.15)]'
+                      : 'border-[rgba(255,255,255,0.06)] text-[#3a3a4a] cursor-not-allowed'
+                  }`}
+                >
+                  Paste Style
+                </button>
+              )}
+            </div>
+          )}
         </div>
 
         {selectedLayer && (

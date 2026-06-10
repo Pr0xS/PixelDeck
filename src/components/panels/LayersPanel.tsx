@@ -48,12 +48,22 @@ interface SortableLayerProps {
   onVisibilityToggle: (id: string, visible: boolean) => void
   onLockToggle: (id: string, locked: boolean) => void
   onMenuOpen: (e: React.MouseEvent, id: string) => void
+  onRename: (name: string) => void
 }
 
 function SortableLayer({
   layer, isSelected, isMultiSelected,
-  onSelect, onCtrlSelect, onContextMenu, onVisibilityToggle, onLockToggle, onMenuOpen,
+  onSelect, onCtrlSelect, onContextMenu, onVisibilityToggle, onLockToggle, onMenuOpen, onRename,
 }: SortableLayerProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  const commit = () => {
+    const v = draft.trim()
+    if (v) onRename(v)
+    setEditing(false)
+    setDraft('')
+  }
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: layer.id,
     data: { container: 'root' } satisfies ItemData,
@@ -75,12 +85,14 @@ function SortableLayer({
     >
       <button
         {...attributes} {...listeners}
+        aria-label={`Drag ${layer.name}`}
         style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none', color: '#6b6b7a' }}
         className="w-4 h-5 flex items-center justify-center text-xs rounded hover:bg-[rgba(255,255,255,0.08)] shrink-0 opacity-0 group-hover:opacity-100"
         onClick={(e) => e.stopPropagation()}
       >⠿</button>
 
       <button
+        aria-label={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
         onClick={(e) => { e.stopPropagation(); onVisibilityToggle(layer.id, !layer.visible) }}
         className="w-5 h-5 flex items-center justify-center text-xs rounded hover:bg-[rgba(255,255,255,0.08)] shrink-0"
         style={{ color: layer.visible ? '#e8e8f0' : '#3a3a4a' }}
@@ -88,17 +100,41 @@ function SortableLayer({
 
       <span className="text-xs shrink-0" style={{ color: '#6b6b7a' }}>{LAYER_ICON[layer.type]}</span>
 
-      <span className="flex-1 text-xs truncate" style={{ color: isSelected ? '#e8e8f0' : '#b0b0c4' }}>
-        {layer.name}
-      </span>
+      {editing ? (
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          autoFocus
+          onFocus={(e) => e.target.select()}
+          onClick={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit()
+            if (e.key === 'Escape') { setEditing(false); setDraft('') }
+          }}
+          className="flex-1 text-xs px-1 rounded border border-[#7c6ef6] bg-[#0f0f13] text-[#e8e8f0] focus:outline-none min-w-0"
+        />
+      ) : (
+        <span
+          className="flex-1 text-xs truncate"
+          style={{ color: isSelected ? '#e8e8f0' : '#b0b0c4', cursor: 'text' }}
+          onDoubleClick={(e) => { e.stopPropagation(); setDraft(layer.name); setEditing(true) }}
+        >
+          {layer.name}
+        </span>
+      )}
 
       <button
+        aria-label={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
         onClick={(e) => { e.stopPropagation(); onLockToggle(layer.id, !layer.locked) }}
         className="w-5 h-5 flex items-center justify-center text-xs rounded hover:bg-[rgba(255,255,255,0.08)] shrink-0 opacity-0 group-hover:opacity-100"
         style={{ color: layer.locked ? '#e8e8f0' : '#6b6b7a' }}
       >{layer.locked ? '🔒' : '🔓'}</button>
 
       <button
+        aria-label={`Open ${layer.name} layer menu`}
         onClick={(e) => { e.stopPropagation(); onMenuOpen(e, layer.id) }}
         className="w-5 h-5 flex items-center justify-center text-xs rounded hover:bg-[rgba(255,255,255,0.08)] shrink-0 opacity-0 group-hover:opacity-100 text-[#6b6b7a] hover:text-[#e8e8f0]"
       >⋮</button>
@@ -113,9 +149,19 @@ interface SortableChildProps {
   groupId: string
   isSelected: boolean
   onSelect: () => void
+  onRename: (name: string) => void
 }
 
-function SortableChild({ child, groupId, isSelected, onSelect }: SortableChildProps) {
+function SortableChild({ child, groupId, isSelected, onSelect, onRename }: SortableChildProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  const commit = () => {
+    const v = draft.trim()
+    if (v) onRename(v)
+    setEditing(false)
+    setDraft('')
+  }
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: child.id,
     data: { container: 'group', groupId } satisfies ItemData,
@@ -136,6 +182,7 @@ function SortableChild({ child, groupId, isSelected, onSelect }: SortableChildPr
       {/* Drag handle */}
       <button
         {...attributes} {...listeners}
+        aria-label={`Drag ${child.name}`}
         style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none', color: '#6b6b7a' }}
         className="w-3 h-4 flex items-center justify-center text-[10px] opacity-0 group-hover/child:opacity-100 shrink-0 ml-0.5 rounded hover:bg-[rgba(255,255,255,0.08)]"
         onClick={(e) => e.stopPropagation()}
@@ -144,9 +191,31 @@ function SortableChild({ child, groupId, isSelected, onSelect }: SortableChildPr
       <span className="text-xs shrink-0 w-4 text-center text-[#7d7898]">
         {LAYER_ICON[child.type] ?? '◯'}
       </span>
-      <span className="flex-1 text-xs truncate" style={{ color: isSelected ? '#e8e8f0' : '#6b6b7a' }}>
-        {child.name}
-      </span>
+      {editing ? (
+        <input
+          value={draft}
+          onChange={(e) => setDraft(e.target.value)}
+          autoFocus
+          onFocus={(e) => e.target.select()}
+          onClick={(e) => e.stopPropagation()}
+          onDoubleClick={(e) => e.stopPropagation()}
+          onPointerDown={(e) => e.stopPropagation()}
+          onBlur={commit}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commit()
+            if (e.key === 'Escape') { setEditing(false); setDraft('') }
+          }}
+          className="flex-1 text-xs px-1 rounded border border-[#7c6ef6] bg-[#0f0f13] text-[#e8e8f0] focus:outline-none min-w-0"
+        />
+      ) : (
+        <span
+          className="flex-1 text-xs truncate"
+          style={{ color: isSelected ? '#e8e8f0' : '#6b6b7a', cursor: 'text' }}
+          onDoubleClick={(e) => { e.stopPropagation(); setDraft(child.name); setEditing(true) }}
+        >
+          {child.name}
+        </span>
+      )}
     </div>
   )
 }
@@ -168,6 +237,8 @@ interface SortableGroupProps {
   onLockToggle: (id: string, locked: boolean) => void
   onMenuOpen: (e: React.MouseEvent, id: string) => void
   onSelectChild: (childId: string) => void
+  onRename: (name: string) => void
+  onRenameChild: (childId: string, name: string) => void
 }
 
 function SortableGroup({
@@ -175,7 +246,17 @@ function SortableGroup({
   isEditingThisGroup, selectedChildId,
   onToggleCollapse, onSelect, onCtrlSelect, onContextMenu,
   onVisibilityToggle, onLockToggle, onMenuOpen, onSelectChild,
+  onRename, onRenameChild,
 }: SortableGroupProps) {
+  const [editing, setEditing] = useState(false)
+  const [draft, setDraft] = useState('')
+
+  const commit = () => {
+    const v = draft.trim()
+    if (v) onRename(v)
+    setEditing(false)
+    setDraft('')
+  }
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: layer.id,
     data: { container: 'root', isGroup: true } satisfies ItemData,
@@ -205,18 +286,21 @@ function SortableGroup({
       >
         <button
           {...attributes} {...listeners}
+          aria-label={`Drag ${layer.name}`}
           style={{ cursor: isDragging ? 'grabbing' : 'grab', touchAction: 'none', color: '#8d84f8' }}
           className="w-4 h-5 flex items-center justify-center text-xs rounded hover:bg-[rgba(255,255,255,0.08)] shrink-0 opacity-0 group-hover:opacity-100"
           onClick={(e) => e.stopPropagation()}
         >⠿</button>
 
         <button
+          aria-label={layer.visible ? `Hide ${layer.name}` : `Show ${layer.name}`}
           onClick={(e) => { e.stopPropagation(); onVisibilityToggle(layer.id, !layer.visible) }}
           className="w-5 h-5 flex items-center justify-center text-xs rounded hover:bg-[rgba(255,255,255,0.08)] shrink-0"
           style={{ color: layer.visible ? '#e8e8f0' : '#3a3a4a' }}
         >{layer.visible ? '◉' : '○'}</button>
 
         <button
+          aria-label={isCollapsed ? `Expand ${layer.name}` : `Collapse ${layer.name}`}
           onClick={(e) => { e.stopPropagation(); onToggleCollapse() }}
           title={isCollapsed ? 'Expand group' : 'Collapse group'}
           className="w-5 h-5 flex items-center justify-center text-[10px] rounded hover:bg-[rgba(255,255,255,0.08)] shrink-0 text-[#d8d2ff]"
@@ -225,21 +309,45 @@ function SortableGroup({
 
         <span className="text-xs shrink-0 text-[#b6adff]">▥</span>
 
-        <span className="flex-1 text-xs truncate font-semibold" style={{ color: isSelected ? '#e8e8f0' : '#d8d2ff' }}>
-          {layer.name}
-        </span>
+        {editing ? (
+          <input
+            value={draft}
+            onChange={(e) => setDraft(e.target.value)}
+            autoFocus
+            onFocus={(e) => e.target.select()}
+            onClick={(e) => e.stopPropagation()}
+            onDoubleClick={(e) => e.stopPropagation()}
+            onPointerDown={(e) => e.stopPropagation()}
+            onBlur={commit}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commit()
+              if (e.key === 'Escape') { setEditing(false); setDraft('') }
+            }}
+            className="flex-1 text-xs px-1 rounded border border-[#7c6ef6] bg-[#0f0f13] text-[#e8e8f0] focus:outline-none min-w-0"
+          />
+        ) : (
+          <span
+            className="flex-1 text-xs truncate font-semibold"
+            style={{ color: isSelected ? '#e8e8f0' : '#d8d2ff', cursor: 'text' }}
+            onDoubleClick={(e) => { e.stopPropagation(); setDraft(layer.name); setEditing(true) }}
+          >
+            {layer.name}
+          </span>
+        )}
 
         <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] leading-none border border-[rgba(124,110,246,0.28)] bg-[rgba(124,110,246,0.12)] text-[#b6adff]">
           {layer.children.length}
         </span>
 
         <button
+          aria-label={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
           onClick={(e) => { e.stopPropagation(); onLockToggle(layer.id, !layer.locked) }}
           className="w-5 h-5 flex items-center justify-center text-xs rounded hover:bg-[rgba(255,255,255,0.08)] shrink-0 opacity-0 group-hover:opacity-100"
           style={{ color: layer.locked ? '#e8e8f0' : '#8a84b6' }}
         >{layer.locked ? '🔒' : '🔓'}</button>
 
         <button
+          aria-label={`Open ${layer.name} layer menu`}
           onClick={(e) => { e.stopPropagation(); onMenuOpen(e, layer.id) }}
           className="w-5 h-5 flex items-center justify-center text-xs rounded hover:bg-[rgba(255,255,255,0.08)] shrink-0 opacity-0 group-hover:opacity-100 text-[#8a84b6] hover:text-[#e8e8f0]"
         >⋮</button>
@@ -262,6 +370,7 @@ function SortableGroup({
                     // Single click always enters group edit mode for this child
                     onSelectChild(child.id)
                   }}
+                  onRename={(name) => onRenameChild(child.id, name)}
                 />
               ))}
             </div>
@@ -295,6 +404,7 @@ export function LayersPanel() {
     selectedLayerIds, toggleLayerSelection, setMultiSelection, clearMultiSelection,
     editingGroupId, copyLayers, cutLayers, pasteLayers, clipboard,
     reorderGroupChildren, moveLayerIntoGroup, moveChildToTopLevel, moveChildBetweenGroups,
+    updateChildLayer,
   } = useEditorStore()
   const addAsset = useAssetStore((s) => s.addAsset)
   const loadFolder = useAssetStore((s) => s.loadFolder)
@@ -423,6 +533,7 @@ export function LayersPanel() {
         <button
           type="button"
           draggable
+          aria-label={`${primaryAction}: ${asset.filename}`}
           onDragStart={(event) => handleAssetDragStart(event, asset.filename)}
           onClick={() => { void handleUseAssetForSelection(asset.filename, asset.dataUrl) }}
           className="block w-full"
@@ -445,6 +556,7 @@ export function LayersPanel() {
           <span className={`min-w-0 flex-1 truncate text-[#9b9bad] ${large ? 'text-xs' : 'text-[9px]'}`}>{asset.filename}</span>
           <button
             type="button"
+            aria-label={`Add ${asset.filename} to canvas`}
             onClick={() => { void addAssetToCanvas(asset.filename, asset.dataUrl) }}
             className="rounded px-1 text-[10px] text-[#a89cf6] hover:bg-[rgba(124,110,246,0.16)] hover:text-white"
             title="Add image to canvas"
@@ -453,6 +565,7 @@ export function LayersPanel() {
           </button>
           <button
             type="button"
+            aria-label={`Remove ${asset.filename}`}
             onClick={() => removeAsset(asset.filename)}
             className="rounded px-1 text-[10px] text-[#7f8094] hover:bg-[rgba(248,113,113,0.16)] hover:text-[#f87171]"
             title="Remove asset"
@@ -695,6 +808,7 @@ export function LayersPanel() {
           <div className="mb-2 flex items-center justify-between gap-2">
             <button
               type="button"
+              aria-label={assetsCollapsed ? 'Show assets' : 'Minimize assets'}
               onClick={() => setAssetsCollapsed((value) => !value)}
               className="flex items-center gap-1 text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6b6b7a] hover:text-[#e8e8f0]"
               title={assetsCollapsed ? 'Show assets' : 'Minimize assets'}
@@ -706,6 +820,7 @@ export function LayersPanel() {
               <span className="rounded-full bg-[rgba(124,110,246,0.16)] px-2 py-0.5 text-[10px] text-[#a89cf6]">{assetCount}</span>
               <button
                 type="button"
+                aria-label="Open large asset browser"
                 onClick={() => setAssetsModalOpen(true)}
                 disabled={assetEntries.length === 0}
                 className="rounded px-1.5 py-0.5 text-[10px] text-[#8f90a3] hover:bg-[rgba(255,255,255,0.06)] hover:text-white disabled:opacity-35 disabled:cursor-not-allowed"
@@ -720,6 +835,7 @@ export function LayersPanel() {
           <div className="grid grid-cols-2 gap-2">
             <button
               type="button"
+              aria-label="Import screenshot files"
               onClick={() => screenshotsInputRef.current?.click()}
               className="rounded-lg border border-[rgba(255,255,255,0.08)] px-2 py-1.5 text-[10px] text-[#b0b0c4] transition-colors hover:border-[rgba(124,110,246,0.35)] hover:bg-[rgba(124,110,246,0.12)] hover:text-[#e8e8f0]"
               title="Import screenshot files into the asset library"
@@ -728,6 +844,7 @@ export function LayersPanel() {
             </button>
             <button
               type="button"
+              aria-label="Import screenshot folder"
               onClick={handleImportScreenshotFolder}
               className="rounded-lg border border-[rgba(255,255,255,0.08)] px-2 py-1.5 text-[10px] text-[#b0b0c4] transition-colors hover:border-[rgba(124,110,246,0.35)] hover:bg-[rgba(124,110,246,0.12)] hover:text-[#e8e8f0]"
               title="Import a screenshots folder when the browser supports it; falls back to file import"
@@ -793,6 +910,8 @@ export function LayersPanel() {
                     store.enterGroupEdit(layer.id)
                     store.selectChild(layer.id, childId)
                   }}
+                  onRename={(name) => updateLayer(layer.id, { name })}
+                  onRenameChild={(childId, name) => updateChildLayer(layer.id, childId, { name })}
                 />
               ) : (
                 <SortableLayer
@@ -806,6 +925,7 @@ export function LayersPanel() {
                   onVisibilityToggle={setLayerVisibility}
                   onLockToggle={setLayerLocked}
                   onMenuOpen={handleMenuOpen}
+                  onRename={(name) => updateLayer(layer.id, { name })}
                 />
               )
             )}
@@ -830,6 +950,7 @@ export function LayersPanel() {
           >
             <div className="w-4 h-5 shrink-0" />
             <button
+              aria-label={backgroundLayer.visible ? 'Hide Background' : 'Show Background'}
               onClick={(e) => { e.stopPropagation(); setLayerVisibility(backgroundLayer.id, !backgroundLayer.visible) }}
               className="w-5 h-5 flex items-center justify-center text-xs rounded hover:bg-[rgba(255,255,255,0.08)] shrink-0"
               style={{ color: backgroundLayer.visible ? '#e8e8f0' : '#3a3a4a' }}
@@ -887,6 +1008,7 @@ export function LayersPanel() {
             </div>
             <button
               type="button"
+              aria-label="Close asset browser"
               onClick={() => setAssetsModalOpen(false)}
               className="shrink-0 rounded-full border border-white/10 px-2.5 py-1 text-xs text-[#d7d7e3] hover:border-[#7c6ef6]/50 hover:bg-[#7c6ef6]/10 hover:text-white"
             >
