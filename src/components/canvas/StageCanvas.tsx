@@ -86,6 +86,21 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   const viewProject = useMemo(() => applyLocale(project, activeLocale), [project, activeLocale])
   const group = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
 
+  // keepRatio=false for text layers: corner handles should resize the box independently
+  // (not force aspect-ratio scaling which causes scaleY artifacts on a text node).
+  const selectedLayerIsText = useMemo(() => {
+    const layerId = selection?.layerId
+    if (!group || !layerId) return false
+    for (const l of group.layers) {
+      if (l.id === layerId) return l.type === 'text'
+      if (l.type === 'group') {
+        const child = l.children.find((c) => c.id === layerId)
+        if (child) return child.type === 'text'
+      }
+    }
+    return false
+  }, [group, selection?.layerId])
+
   // ─── Container ResizeObserver ──────────────────────────────────────────────
 
   useEffect(() => {
@@ -720,6 +735,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
               )}
               <Transformer
                 ref={transformerRef}
+                keepRatio={!selectedLayerIsText}
                 boundBoxFunc={(oldBox, newBox) => {
                   if (newBox.width < 20 || newBox.height < 20) return oldBox
                   return newBox
