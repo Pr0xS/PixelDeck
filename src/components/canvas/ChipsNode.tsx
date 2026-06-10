@@ -1,6 +1,10 @@
+import { useRef } from 'react'
 import { Group, Rect, Text } from 'react-konva'
 import type Konva from 'konva'
+import { useEditorStore } from '@/store'
 import type { ChipsLayer, ChipItem, ChipVariant } from '@/types'
+import { resolveBrandColor } from '@/utils/brandColors'
+import { getShadowProps, useKonvaBlur } from './effects'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -84,6 +88,7 @@ function layoutChips(
 interface ChipRenderProps {
   variant: ChipVariant
   layer: ChipsLayer
+  shadowProps: ReturnType<typeof getShadowProps>
   x: number
   y: number
   width: number
@@ -93,7 +98,7 @@ interface ChipRenderProps {
   label: string
 }
 
-function ChipShape({ variant, layer, x, y, width, chipHeight, textX, textY, label }: ChipRenderProps) {
+function ChipShape({ variant, layer, shadowProps, x, y, width, chipHeight, textX, textY, label }: ChipRenderProps) {
   const r = chipHeight / 2
 
   switch (variant) {
@@ -106,6 +111,7 @@ function ChipShape({ variant, layer, x, y, width, chipHeight, textX, textY, labe
             fillLinearGradientStartPoint={{ x: 0, y: 0 }}
             fillLinearGradientEndPoint={{ x: width, y: 0 }}
             fillLinearGradientColorStops={[0, layer.primaryGradientFrom, 1, layer.primaryGradientTo]}
+            {...shadowProps}
           />
           <Text x={textX} y={textY} text={label} fontSize={layer.chipFontSize} fill={layer.primaryTextColor} fontStyle="600" />
         </Group>
@@ -120,6 +126,7 @@ function ChipShape({ variant, layer, x, y, width, chipHeight, textX, textY, labe
             fill="transparent"
             stroke={layer.primaryGradientFrom}
             strokeWidth={2}
+            {...shadowProps}
           />
           <Text x={textX} y={textY} text={label} fontSize={layer.chipFontSize} fill={layer.primaryGradientFrom} fontStyle="600" />
         </Group>
@@ -132,6 +139,7 @@ function ChipShape({ variant, layer, x, y, width, chipHeight, textX, textY, labe
             x={x} y={y} width={width} height={chipHeight}
             cornerRadius={r}
             fill={hexToRgba(layer.primaryGradientFrom, 0.18)}
+            {...shadowProps}
           />
           <Text x={textX} y={textY} text={label} fontSize={layer.chipFontSize} fill={layer.primaryGradientFrom} fontStyle="600" />
         </Group>
@@ -144,6 +152,7 @@ function ChipShape({ variant, layer, x, y, width, chipHeight, textX, textY, labe
             x={x} y={y} width={width} height={chipHeight}
             cornerRadius={r}
             fill="rgba(0,0,0,0.42)"
+            {...shadowProps}
           />
           <Text x={textX} y={textY} text={label} fontSize={layer.chipFontSize} fill="#ffffff" fontStyle="600" />
         </Group>
@@ -157,6 +166,7 @@ function ChipShape({ variant, layer, x, y, width, chipHeight, textX, textY, labe
             x={x} y={y} width={width} height={chipHeight}
             cornerRadius={r}
             fill={layer.defaultBg}
+            {...shadowProps}
           />
           <Text x={textX} y={textY} text={label} fontSize={layer.chipFontSize} fill={layer.defaultTextColor} fontStyle="600" />
         </Group>
@@ -167,13 +177,26 @@ function ChipShape({ variant, layer, x, y, width, chipHeight, textX, textY, labe
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function ChipsNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: ChipsNodeProps) {
-  const layouts = layoutChips(layer.items, layer.chipFontSize, layer.gap, layer.direction)
+  const groupRef = useRef<Konva.Group>(null)
+  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const resolvedLayer: ChipsLayer = {
+    ...layer,
+    primaryGradientFrom: resolveBrandColor(layer.primaryGradientFrom, brandColors),
+    primaryGradientTo: resolveBrandColor(layer.primaryGradientTo, brandColors),
+    primaryTextColor: resolveBrandColor(layer.primaryTextColor, brandColors),
+    defaultBg: resolveBrandColor(layer.defaultBg, brandColors),
+    defaultTextColor: resolveBrandColor(layer.defaultTextColor, brandColors),
+  }
+  const layouts = layoutChips(resolvedLayer.items, resolvedLayer.chipFontSize, resolvedLayer.gap, resolvedLayer.direction)
   const chipHeight = layer.chipFontSize + CHIP_PADDING_V * 2
   const width = Math.max(1, ...layouts.map((item) => item.x + item.width))
   const height = Math.max(1, ...layouts.map((item) => item.y + item.height))
+  useKonvaBlur(groupRef, layer.blur, `${JSON.stringify(resolvedLayer.items)}:${resolvedLayer.chipFontSize}:${resolvedLayer.gap}:${resolvedLayer.direction}:${resolvedLayer.primaryGradientFrom}:${resolvedLayer.primaryGradientTo}:${resolvedLayer.defaultBg}`)
+  const shadowProps = getShadowProps(layer.shadow)
 
   return (
     <Group
+      ref={groupRef}
       id={`layer-${layer.id}`}
       x={layer.x + width / 2}
       y={layer.y + height / 2}
@@ -201,7 +224,8 @@ export function ChipsNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
         <ChipShape
           key={item.label + x + y}
           variant={effectiveVariant(item)}
-          layer={layer}
+          layer={resolvedLayer}
+          shadowProps={shadowProps}
           x={x} y={y}
           width={width}
           chipHeight={chipHeight}

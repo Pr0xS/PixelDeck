@@ -1,5 +1,6 @@
-import { useMemo } from 'react'
+import { useMemo, useRef } from 'react'
 import { Group, Rect, Image } from 'react-konva'
+import type Konva from 'konva'
 import useImage from 'use-image'
 import type { PhoneLayer } from '@/types'
 import { getPhoneSpec } from '@/assets/mockups/specs'
@@ -7,8 +8,11 @@ import { IPHONE_16_PRO_SVG } from '@/assets/mockups/iphone-16-pro'
 import { IPHONE_16_PRO_PLAIN_SVG } from '@/assets/mockups/iphone-16-pro-plain'
 import { PIXEL_9_SVG } from '@/assets/mockups/pixel-9'
 import { PIXEL_9_PLAIN_SVG } from '@/assets/mockups/pixel-9-plain'
+import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
+import { resolveBrandColor } from '@/utils/brandColors'
 import { PhoneStatusBar } from './PhoneStatusBar'
+import { getShadowProps, useKonvaBlur } from './effects'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -81,6 +85,8 @@ function drawRoundedRectClip(
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: PhoneNodeProps) {
+  const groupRef = useRef<Konva.Group>(null)
+  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
   const spec = getPhoneSpec(layer.model)
   const scale = layer.scale
 
@@ -134,19 +140,14 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
     )
   }, [screenshotImage, sw, shotClipH, layer.screenshotFit, layer.screenshotOffsetX, layer.screenshotOffsetY])
 
+  useKonvaBlur(groupRef, layer.blur, `${layer.model}:${scale}:${screenshotSrc}:${layer.screenshotFit}:${layer.screenshotOffsetX}:${layer.screenshotOffsetY}:${layer.border?.width ?? 0}:${layer.showStatusBar}`)
+
   // Shadow props
-  const shadowProps = layer.shadow
-    ? {
-        shadowColor: layer.shadow.color,
-        shadowBlur: layer.shadow.blur,
-        shadowOffsetX: layer.shadow.offsetX,
-        shadowOffsetY: layer.shadow.offsetY,
-        shadowOpacity: layer.shadow.opacity,
-      }
-    : {}
+  const shadowProps = getShadowProps(layer.shadow)
 
   return (
     <Group
+      ref={groupRef}
       id={`layer-${layer.id}`}
       x={layer.x + fw / 2}
       y={layer.y + fh / 2}
@@ -214,6 +215,22 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
         </Group>
       )}
 
+      {/* Screenshot border — drawn above screenshot, below status bar and frame */}
+      {layer.border && layer.border.width > 0 && (
+        <Rect
+          x={sx}
+          y={sy}
+          width={sw}
+          height={sh}
+          cornerRadius={sr}
+          fill="transparent"
+          stroke={resolveBrandColor(layer.border.color, brandColors)}
+          strokeWidth={layer.border.width * scale}
+          opacity={layer.border.opacity}
+          listening={false}
+        />
+      )}
+
       {/* Status bar overlay (above screenshot, below frame) */}
       {layer.showStatusBar !== false && (
         <Group x={sx} y={sy}>
@@ -224,7 +241,7 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
             screenCornerRadius={spec.screen.cornerRadius}
             theme={layer.statusBarTheme ?? 'dark'}
             bg={layer.statusBarBg ?? 'transparent'}
-            bgColor={layer.statusBarColor ?? '#000000'}
+            bgColor={resolveBrandColor(layer.statusBarColor ?? '#000000', brandColors)}
           />
         </Group>
       )}
