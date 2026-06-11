@@ -4,7 +4,7 @@ import type Konva from 'konva'
 import type { TextLayer } from '@/types'
 import { resolveFill } from '@/utils/brandColors'
 import { fillToKonvaProps } from '@/utils/gradients'
-import { renderSpansToCanvas, spansRenderKey, spansToMarks } from '@/utils/textRendering'
+import { renderSpansToCanvas, spansRenderKey } from '@/utils/textRendering'
 import { useEditorStore } from '@/store'
 import { getShadowProps, useKonvaBlur } from './effects'
 
@@ -40,9 +40,10 @@ function getActiveAnchor(node: Konva.Node): string | null {
 
 /**
  * Classify a transform tick into:
- * - 'side'     → only X changes (middle-left / middle-right) → resize width only
- * - 'vertical' → only Y changes (top-center / bottom-center) → resize fontSize only
- * - 'corner'   → uniform (corner anchor)                     → resize both
+ * - 'side'     → only X changes (middle-left / middle-right) → resize box width only
+ * - 'vertical' → only Y changes (top-center / bottom-center) → resize box height only
+ * - 'corner'   → uniform (corner anchor)                     → resize box width + height
+ * Font size is NEVER scaled by the transformer — only the wrapping box changes.
  */
 function classifyAnchor(
   anchor: string | null,
@@ -67,11 +68,15 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
   const imageRef = useRef<Konva.Image>(null)
   // True once a side/corner handle has established an explicit width on an auto-width text.
   const widthEstablished = useRef(false)
+  // True once a vertical/corner handle has established an explicit height on an auto-height text.
+  const heightEstablished = useRef(false)
   // Snapshot of y/offsetY taken at transform start; used to restore the vertical
   // position when only width changes (prevents y-jump from Transformer's scaleY adjustment).
   const transformStartRef = useRef<{ y: number; offsetY: number } | null>(null)
 
   const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  // Hide the node while the in-canvas overlay editor is open for this layer
+  const isTextEditing = useEditorStore((s) => s.editingTextId === layer.id)
   const resolvedLayer: TextLayer = {
     ...layer,
     fill: resolveFill(layer.fill, brandColors),
@@ -88,16 +93,22 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
   // Reset flags when a different layer is mounted
   useEffect(() => {
     widthEstablished.current = false
+    heightEstablished.current = false
     transformStartRef.current = null
   }, [layer.id])
 
   // Rich text mode when the layer has marks (new) or legacy spans
   const hasRichText = (layer.marks?.length ?? 0) > 0 || (layer.spans?.length ?? 0) > 0
+  // Visual box height: explicit layer.height wins; otherwise the content height.
+  // (In rich mode the offscreen canvas is already sized to layer.height when set.)
   const estimateTextHeight = () => {
     if (spanCanvas) return spanCanvas.height
+    if (layer.height != null) return layer.height
     const lines = (layer.text || '').split('\n').length || 1
     return lines * layer.fontSize * layer.lineHeight
   }
+  // Minimum box height = one line of text
+  const minBoxHeight = () => Math.max(8, layer.fontSize * layer.lineHeight)
 
   // Render rich text to an offscreen canvas — recomputed only when rendering-relevant
   // props change (via stable cache key).
@@ -108,99 +119,18 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
   useKonvaBlur(textRef, hasRichText ? 0 : layer.blur, renderKey)
   useKonvaBlur(imageRef, hasRichText ? layer.blur : 0, renderKey)
 
-  // ── Double-click inline text editor (plain and rich text) ───────────────
+  // ── Double-click → in-canvas WYSIWYG editor (overlay mounted by StageCanvas)
   const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (layer.locked) return
-    e.cancelBubble = true
-
-    // In rich-text mode the KonvaImage (imageRef) is mounted; textRef is null.
-    const node = hasRichText ? imageRef.current : textRef.current
-    const stage = node?.getStage()
-    if (!node || !stage) return
-
-    const container = stage.container()
-    const containerRect = container.getBoundingClientRect()
-    const absPos = node.absolutePosition()
-    const zoom = useEditorStore.getState().zoom
-
-    // absPos is already in canvas-pixel space (Stage applies scaleX=zoom + x=viewportX).
-    // Correct formula: subtract the visual half-width (in screen px), not the canvas half-width.
-    const screenX = containerRect.left + absPos.x - (layer.width ?? 1000) / 2 * zoom
-    const screenY = containerRect.top  + absPos.y - estimateTextHeight() / 2 * zoom
-
-    node.hide()
-    stage.batchDraw()
-
-    const textarea = document.createElement('textarea')
-    document.body.appendChild(textarea)
-
-    const w = (layer.width ?? 1000) * zoom
-    const fontSize = layer.fontSize * zoom
-
-    Object.assign(textarea.style, {
-      position: 'fixed',
-      top: `${screenY}px`,
-      left: `${screenX}px`,
-      width: `${w}px`,
-      minHeight: `${fontSize * 1.5}px`,
-      fontSize: `${fontSize}px`,
-      fontFamily: layer.fontFamily,
-      fontWeight: String(layer.fontWeight),
-      fontStyle: layer.italic ? 'italic' : 'normal',
-      lineHeight: String(layer.lineHeight),
-      letterSpacing: `${layer.letterSpacing * zoom}px`,
-      color: typeof resolvedLayer.fill === 'string' ? resolvedLayer.fill : '#ffffff',
-      background: 'rgba(0,0,0,0.6)',
-      border: '2px solid rgba(124,110,246,0.8)',
-      borderRadius: '4px',
-      padding: '2px 4px',
-      outline: 'none',
-      resize: 'none',
-      zIndex: '9999',
-      overflow: 'hidden',
-      transformOrigin: 'top left',
-    })
-    // For legacy spans-only layers, text field may be empty — seed from spans.
-    textarea.value = layer.text || (layer.spans?.length ? spansToMarks(layer.spans).text : '')
-    textarea.select()
-
-    const cleanup = () => {
-      const newText = textarea.value
-      // Derive base marks — prefer layer.marks; fall back to migrating legacy spans.
-      const baseMarks = layer.marks ?? (layer.spans?.length ? spansToMarks(layer.spans).marks : [])
-      // Clamp marks to new text length and drop any that collapsed to zero-width.
-      const clampedMarks = baseMarks
-        .map((m) => ({
-          ...m,
-          start: Math.min(m.start, newText.length),
-          end: Math.min(m.end, newText.length),
-        }))
-        .filter((m) => m.start < m.end)
-      onTransformEnd({
-        text: newText,
-        marks: clampedMarks.length ? clampedMarks : undefined,
-        spans: undefined,   // always clear legacy spans on commit
-      })
-      node.show()
-      stage.batchDraw()
-      if (document.body.contains(textarea)) document.body.removeChild(textarea)
-      textarea.removeEventListener('blur', cleanup)
+    if (forceNotDraggable) {
+      // Inside a non-editing group: let the event bubble so GroupNode enters
+      // group-edit mode and selects this child, then the overlay opens.
+      useEditorStore.getState().startTextEdit(layer.id)
+      return
     }
-
-    textarea.addEventListener('blur', cleanup)
-    textarea.addEventListener('keydown', (ke) => {
-      if (ke.key === 'Escape') {
-        // Remove blur listener BEFORE removing from DOM — otherwise blur fires
-        // synchronously during removeChild and cleanup() tries a second removeChild.
-        textarea.removeEventListener('blur', cleanup)
-        node.show()
-        stage.batchDraw()
-        if (document.body.contains(textarea)) document.body.removeChild(textarea)
-      }
-      ke.stopPropagation()
-    })
-
-    setTimeout(() => textarea.focus(), 0)
+    e.cancelBubble = true
+    onSelect()
+    useEditorStore.getState().startTextEdit(layer.id)
   }
 
   // ── Rich text mode: render offscreen canvas as Konva Image ─────────────
@@ -218,7 +148,7 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
         height={spanCanvas.height}
         rotation={layer.rotation}
         opacity={layer.opacity}
-        visible={layer.visible}
+        visible={layer.visible && !isTextEditing}
         draggable={!forceNotDraggable && !layer.locked}
         {...shadowProps}
         onClick={() => { if (!layer.locked) onSelect() }}
@@ -243,27 +173,33 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
           node.scaleX(1)
           node.scaleY(1)
           const kind = classifyAnchor(getActiveAnchor(node), sx, sy)
-          if (kind === 'side' || kind === 'corner') {
-            const newW = Math.max(80, node.width() * sx)
-            // Re-raster the rich text canvas at the new width to avoid bitmap stretch.
-            const newCanvas = renderSpansToCanvas({ ...resolvedLayer, width: newW })
-            node.image(newCanvas)
-            node.width(newW)
-            node.height(newCanvas.height)
-            node.offsetX(newW / 2)
-            // Pin the top edge: text grows downward as lines reflow.
+
+          // New box dimensions — font size never changes, only the box.
+          let newW = node.width()
+          let newH: number | undefined =
+            layer.height != null || heightEstablished.current ? node.height() : undefined
+          if (kind !== 'vertical') newW = Math.max(80, node.width() * sx)
+          if (kind !== 'side') {
+            newH = Math.max(minBoxHeight(), node.height() * sy)
+            heightEstablished.current = true
+          }
+
+          // Re-raster the rich text canvas at the new box size to avoid bitmap stretch.
+          const newCanvas = renderSpansToCanvas({ ...resolvedLayer, width: newW, height: newH })
+          node.image(newCanvas)
+          node.width(newW)
+          node.height(newCanvas.height)
+          node.offsetX(newW / 2)
+          node.offsetY(newCanvas.height / 2)
+
+          if (kind === 'side') {
+            // Auto-height reflow: pin the top edge so text grows downward.
             const topEdge = transformStartRef.current
               ? transformStartRef.current.y - transformStartRef.current.offsetY
               : node.y() - node.height() / 2
-            node.offsetY(newCanvas.height / 2)
             node.y(topEdge + newCanvas.height / 2)
-          } else {
-            // Vertical handle: no-op — restore y to prevent Transformer-induced jump.
-            if (transformStartRef.current) {
-              node.y(transformStartRef.current.y)
-              node.offsetY(transformStartRef.current.offsetY)
-            }
           }
+          // vertical/corner: the Transformer already positioned the node for the new size.
         }}
         onTransformEnd={() => {
           const node = imageRef.current
@@ -277,6 +213,10 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
             x: node.x() - w / 2,
             y: node.y() - node.height() / 2,
           }
+          if (layer.height != null || heightEstablished.current) {
+            patch.height = Math.round(node.height())
+          }
+          heightEstablished.current = false
           onTransformEnd(patch)
         }}
       />
@@ -310,9 +250,11 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
       lineHeight={layer.lineHeight}
       align={layer.align}
       width={layer.width}
+      height={layer.height}
+      verticalAlign={layer.verticalAlign ?? 'top'}
       rotation={layer.rotation}
       opacity={layer.opacity}
-      visible={layer.visible}
+      visible={layer.visible && !isTextEditing}
       draggable={!forceNotDraggable && !layer.locked}
       {...fillProps}
       {...shadowProps}
@@ -337,21 +279,28 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
         const sy = node.scaleY()
         node.scaleX(1)
         node.scaleY(1)
-        // Always restore Y: we never change height for plain text.
-        // Without this, the Transformer's scaleY adjustment causes a vertical position jump.
-        if (transformStartRef.current) {
-          node.y(transformStartRef.current.y)
-          node.offsetY(transformStartRef.current.offsetY)
-        }
         const kind = classifyAnchor(getActiveAnchor(node), sx, sy)
-        if (kind === 'side' || kind === 'corner') {
-          // Resize width only — text reflows at fixed fontSize.
+        if (kind === 'side') {
+          // Width-only drag: restore Y so the auto-height reflow doesn't cause
+          // a vertical position jump from the Transformer's scaleY adjustment.
+          if (transformStartRef.current) {
+            node.y(transformStartRef.current.y)
+            node.offsetY(transformStartRef.current.offsetY)
+          }
+        } else {
+          // Vertical / corner drag: resize the box height (font size unchanged).
+          const h = Math.max(minBoxHeight(), node.height() * sy)
+          node.height(h)
+          node.offsetY(h / 2)
+          heightEstablished.current = true
+        }
+        if (kind !== 'vertical') {
+          // Resize box width — text reflows at fixed fontSize.
           const w = Math.max(80, node.width() * sx)
           node.width(w)
           node.offsetX(w / 2)
           widthEstablished.current = true
         }
-        // Vertical handle: y already restored, nothing else to do.
       }}
       onTransformEnd={() => {
         const node = textRef.current
@@ -359,19 +308,19 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
         node.scaleX(1)
         node.scaleY(1)
         const w = node.width()
-        // Pin the top-left corner: layer.y is the top edge, so use the snapshot
-        // top (y - offsetY) rather than the node center. This ensures that when
-        // text reflows to more/fewer lines the box grows downward, not from center.
-        const topY = transformStartRef.current
-          ? transformStartRef.current.y - transformStartRef.current.offsetY
-          : node.y() - node.height() / 2
+        // layer.x / layer.y are the top-left corner of the box. offsetX/offsetY
+        // hold the current half-size, so node position minus offset = top-left.
+        // For width-only drags Y was restored to the gesture-start snapshot,
+        // which keeps the top edge pinned while text reflows downward.
         const patch: Partial<TextLayer> = {
           rotation: node.rotation(),
-          x: node.x() - w / 2,
-          y: topY,
+          x: node.x() - node.offsetX(),
+          y: node.y() - node.offsetY(),
         }
         if (layer.width != null || widthEstablished.current) patch.width = w
+        if (layer.height != null || heightEstablished.current) patch.height = Math.round(node.height())
         widthEstablished.current = false
+        heightEstablished.current = false
         onTransformEnd(patch)
       }}
       onDblClick={handleDblClick}

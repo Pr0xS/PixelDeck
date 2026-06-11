@@ -1,6 +1,6 @@
 import { useEditorStore } from '@/store'
 import type {
-  PhoneLayer, TextLayer, ShapeLayer, ChipsLayer, Layer, GroupLayer,
+  PhoneLayer, ShapeLayer, ChipsLayer, Layer, GroupLayer,
 } from '@/types'
 import { PHONE_MODELS } from '@/assets/mockups/specs'
 
@@ -59,6 +59,11 @@ export function ContextualToolbar() {
       })()
     : (group.layers.find((l) => l.id === selection.layerId) ?? null)
   if (!layer) return null
+
+  // Text layers: no contextual toolbar. Editing happens in-canvas (dblclick)
+  // and all controls live in the properties panel — this bar added nothing
+  // and its plain color input clashed with rich text fills/gradients.
+  if (layer.type === 'text') return null
 
   const layerId = layer.id
 
@@ -121,49 +126,6 @@ export function ContextualToolbar() {
           }}
           style={inputStyle}
         />
-      </>
-    )
-  } else if (layer.type === 'text') {
-    const text = layer as TextLayer
-    const fillColor = typeof text.fill === 'string' ? text.fill : '#ffffff'
-    typeControls = (
-      <>
-        <Separator />
-        <span style={labelStyle}>Size</span>
-        <input
-          type="number"
-          step={1}
-          min={1}
-          value={text.fontSize}
-          onChange={(e) => {
-            const v = parseInt(e.target.value, 10)
-            if (!isNaN(v) && v > 0) updateLayer(layerId, { fontSize: v } as Partial<Layer>)
-          }}
-          style={inputStyle}
-        />
-        <Separator />
-        <span style={labelStyle}>Color</span>
-        <input
-          type="color"
-          value={fillColor}
-          onChange={(e) => updateLayer(layerId, { fill: e.target.value } as Partial<Layer>)}
-          style={colorInputStyle}
-        />
-        <Separator />
-        <button
-          onClick={() => updateLayer(layerId, { fontWeight: text.fontWeight >= 700 ? 400 : 800 } as Partial<Layer>)}
-          style={{
-            background: text.fontWeight >= 700 ? 'rgba(124,110,246,0.25)' : 'rgba(255,255,255,0.07)',
-            border: '1px solid rgba(255,255,255,0.12)',
-            borderRadius: 4,
-            color: '#e8e8f0',
-            cursor: 'pointer',
-            fontWeight: 700,
-            fontSize: 12,
-            padding: '1px 6px',
-          }}
-          title="Bold"
-        >B</button>
       </>
     )
   } else if (layer.type === 'shape') {

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent } from 'react'
+import type { PointerEvent, ReactNode } from 'react'
 import type { FillValue, GradientStop, LinearGradient, RadialGradient } from '@/types'
 import { useEditorStore } from '@/store'
 import { isBrandToken, parseBrandToken, resolveBrandColor, toBrandToken } from '@/utils/brandColors'
@@ -603,6 +603,7 @@ export function SliderField({
   onInteractionEnd,
   formatDisplay,
   className = '',
+  labelAddon,
 }: {
   label: string
   value: number
@@ -615,6 +616,7 @@ export function SliderField({
   onInteractionEnd?: () => void
   formatDisplay?: (v: number) => string
   className?: string
+  labelAddon?: ReactNode
 }) {
   const display = formatDisplay
     ? formatDisplay(value)
@@ -625,7 +627,10 @@ export function SliderField({
   return (
     <div className={`mb-3 ${className}`}>
       <div className="mb-1 flex items-center justify-between">
-        <label className="text-[11px] text-[#6b6b7a] uppercase tracking-[0.08em]">{label}</label>
+        <div className="flex items-center">
+          <label className="text-[11px] text-[#6b6b7a] uppercase tracking-[0.08em]">{label}</label>
+          {labelAddon}
+        </div>
         <span className="text-xs text-[#e8e8f0]">{display}{unit}</span>
       </div>
       <div className="flex items-center gap-2">

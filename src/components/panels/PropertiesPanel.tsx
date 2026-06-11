@@ -7,7 +7,6 @@ import type {
   BackgroundLayer,
   PhoneLayer,
   TextLayer,
-  TextMark,
   ImageLayer,
   ShapeLayer,
   ChipsLayer,
@@ -24,7 +23,21 @@ import { FONT_LIST, getFontWeights } from '@/utils/fonts'
 import { PHONE_MODELS, getPhoneSpec } from '@/assets/mockups/specs'
 import { useApiKeysStore } from '@/store/apiKeys'
 import { translateText } from '@/utils/translate'
-import { spansToMarks } from '@/utils/textRendering'
+import { applyCanvasFormat, getCanvasFormat, getFormatCanvasDims, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
+import type { CanvasFormatId } from '@/types'
+import { OverrideDot } from '@/components/properties/OverrideDot'
+
+function shortFormatLabel(id: CanvasFormatId): string {
+  const map: Record<CanvasFormatId, string> = {
+    'base': 'Base',
+    'iphone-69': 'iPhone',
+    'android-phone': 'Android',
+    'ipad-13': 'iPad',
+    'android-tablet': 'Android Tab',
+  }
+  return map[id] ?? id
+}
+
 
 const pauseTemporal = () => useEditorStore.temporal.getState().pause()
 const resumeTemporal = () => useEditorStore.temporal.getState().resume()
@@ -232,19 +245,37 @@ function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
 }
 
 function LayoutTab({ layer }: { layer: Layer }) {
-  const { updateLayer, project, activeSlideGroupId } = useEditorStore()
+  const { updateLayer, project, activeSlideGroupId, activeCanvasFormat, editingGroupId, setLayerFormatVisibility } = useEditorStore()
   const upd = (patch: Partial<Layer>) => updateLayer(layer.id, patch)
   const isBackground = layer.type === 'background'
   const sizeLayer = layer.type === 'shape' || layer.type === 'image' ? layer : null
 
-  // Dynamic ranges based on actual canvas dimensions
+  // Dynamic ranges based on the active format's canvas dimensions
   const activeGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
-  const canvasW = activeGroup ? activeGroup.slideWidth * activeGroup.numSlides : 1080
-  const canvasH = activeGroup ? activeGroup.slideHeight : 1920
+  const formatDims = activeGroup
+    ? getFormatCanvasDims(activeGroup, activeCanvasFormat, getProjectBaseFormat(project))
+    : { width: 1080, height: 1920 }
+  const canvasW = formatDims.width * (activeGroup?.numSlides ?? 1)
+  const canvasH = formatDims.height
   const xMin = -Math.round(canvasW * 0.25)
   const xMax = Math.round(canvasW * 1.25)
   const yMin = -Math.round(canvasH * 0.25)
   const yMax = Math.round(canvasH * 1.25)
+
+  // Raw layer (unresolved) for format overrides and visibility
+  const rawGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+  let rawLayer: Layer | null = null
+  if (rawGroup) {
+    if (editingGroupId) {
+      const parentGroup = rawGroup.layers.find((l) => l.id === editingGroupId && l.type === 'group') as GroupLayer | undefined
+      rawLayer = parentGroup?.children.find((c) => c.id === layer.id) ?? null
+    } else {
+      rawLayer = rawGroup.layers.find((l) => l.id === layer.id) ?? null
+    }
+  }
+
+  // Active formats for platform visibility chips
+  const activeFormats: CanvasFormatId[] = getProjectActiveFormats(project)
 
   return (
     <div className="space-y-4">
@@ -291,19 +322,73 @@ function LayoutTab({ layer }: { layer: Layer }) {
         </div>
       </div>
 
+      {/* Platform visibility — only shown when multiple formats are active and layer is not format-owned */}
+      {!isBackground && activeFormats.length > 1 && !rawLayer?.ownerFormat && (
+        <div className={panelSectionCls}>
+          <label className={labelCls}>Visible in</label>
+          <div className="flex flex-wrap gap-1.5">
+            {activeFormats.map((fmtId) => {
+              const vis = rawLayer?.formatVisibility?.[fmtId]
+              // undefined = visible (default), true = explicitly visible, false = hidden
+              const isVisible = vis !== false
+              return (
+                <button
+                  key={fmtId}
+                  type="button"
+                  onClick={() => setLayerFormatVisibility(layer.id, fmtId, isVisible ? false : undefined)}
+                  className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                    isVisible
+                      ? 'border-[rgba(255,255,255,0.15)] text-[#e8e8f0] bg-[rgba(255,255,255,0.06)]'
+                      : 'border-[rgba(255,255,255,0.06)] text-[#555665] line-through'
+                  }`}
+                >
+                  {shortFormatLabel(fmtId)}
+                </button>
+              )
+            })}
+          </div>
+          <p className="mt-1.5 text-[10px] text-[#6b6b7a]">Click to hide/show this layer in a format</p>
+        </div>
+      )}
+
       {/* Position / Size / Rotation — not applicable for background */}
       <div className={panelSectionCls}>
         {!isBackground && (
           <>
-            <SliderField label="X" value={layer.x} min={xMin} max={xMax} unit="px" onChange={(v) => upd({ x: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
-            <SliderField label="Y" value={layer.y} min={yMin} max={yMax} unit="px" onChange={(v) => upd({ y: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
+            <SliderField label="X" value={layer.x} min={xMin} max={xMax} unit="px" onChange={(v) => upd({ x: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} labelAddon={<OverrideDot layerId={layer.id} propKey="x" />} />
+            <SliderField label="Y" value={layer.y} min={yMin} max={yMax} unit="px" onChange={(v) => upd({ y: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} labelAddon={<OverrideDot layerId={layer.id} propKey="y" />} />
             {sizeLayer && (
               <>
-                <SliderField label="W" value={sizeLayer.width} min={1} max={canvasW} unit="px" onChange={(v) => upd({ width: v } as Partial<Layer>)} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
-                <SliderField label="H" value={sizeLayer.height} min={1} max={canvasH} unit="px" onChange={(v) => upd({ height: v } as Partial<Layer>)} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
+                <SliderField label="W" value={sizeLayer.width} min={1} max={canvasW} unit="px" onChange={(v) => upd({ width: v } as Partial<Layer>)} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} labelAddon={<OverrideDot layerId={layer.id} propKey="width" />} />
+                <SliderField label="H" value={sizeLayer.height} min={1} max={canvasH} unit="px" onChange={(v) => upd({ height: v } as Partial<Layer>)} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} labelAddon={<OverrideDot layerId={layer.id} propKey="height" />} />
               </>
             )}
-            <SliderField label="Rotation" value={layer.rotation} min={-180} max={180} unit="°" onChange={(v) => upd({ rotation: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
+            {layer.type === 'text' && (
+              <>
+                <SliderField label="W" value={Math.round(layer.width ?? 1000)} min={40} max={canvasW} unit="px" onChange={(v) => upd({ width: v } as Partial<Layer>)} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} labelAddon={<OverrideDot layerId={layer.id} propKey="width" />} />
+                <div className="mb-3">
+                  <div className="flex items-center justify-between">
+                    <label className={labelCls + ' !mb-0'}>H</label>
+                    <button
+                      type="button"
+                      title={layer.height != null ? 'Switch to automatic height (box grows with content)' : 'Box height is automatic'}
+                      onClick={() => upd({ height: undefined } as Partial<Layer>)}
+                      className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
+                        layer.height == null
+                          ? 'border-[#7c6ef6] text-[#9d90f8] bg-[rgba(124,110,246,0.12)] cursor-default'
+                          : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
+                      }`}
+                    >
+                      {layer.height == null ? '✓ Auto' : 'Auto'}
+                    </button>
+                  </div>
+                  {layer.height != null && (
+                    <SliderField label="" value={Math.round(layer.height)} min={Math.round(layer.fontSize * layer.lineHeight)} max={canvasH} unit="px" onChange={(v) => upd({ height: v } as Partial<Layer>)} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} className="!mb-0 mt-1" />
+                  )}
+                </div>
+              </>
+            )}
+            <SliderField label="Rotation" value={layer.rotation} min={-180} max={180} unit="°" onChange={(v) => upd({ rotation: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} labelAddon={<OverrideDot layerId={layer.id} propKey="rotation" />} />
           </>
         )}
         <SliderField label="Opacity" value={Math.round(layer.opacity * 100)} min={0} max={100} unit="%" onChange={(v) => upd({ opacity: v / 100 })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} className="!mb-0" />
@@ -482,7 +567,10 @@ function PhoneContent({ layer }: { layer: PhoneLayer }) {
   return (
     <div className="space-y-4">
       <div className={panelSectionCls}>
-        <label className={labelCls}>Phone Model</label>
+        <div className="flex items-center mb-1">
+          <label className={labelCls + ' !mb-0'}>Phone Model</label>
+          <OverrideDot layerId={layer.id} propKey="model" />
+        </div>
         <select value={layer.model} onChange={(e) => upd({ model: e.target.value as PhoneLayer['model'] })} className={inputCls}>
           {PHONE_MODELS.map((m) => (
             <option key={m.id} value={m.id}>{m.label}</option>
@@ -716,158 +804,47 @@ function PhoneContent({ layer }: { layer: PhoneLayer }) {
   )
 }
 
-// ─── Mark Row (rich text formatting range) ────────────────────────────────────
+// ─── Text Content preview → opens the in-canvas editor ───────────────────────
+// There is ONE text editor: the contextual WYSIWYG on the canvas. This is just
+// a preview + entry point so the panel doesn't duplicate the editing UI.
 
-function MarkRow({
-  mark,
-  layerText,
-  layerFill,
-  availableWeights,
-  onChange,
-  onRemove,
-}: {
-  mark: TextMark
-  layerText: string
-  layerFill: FillValue
-  availableWeights: number[]
-  onChange: (patch: Partial<TextMark>) => void
-  onRemove: () => void
-}) {
-  const [fillOpen, setFillOpen] = useState(false)
-  const hasCustomFill = mark.fill !== undefined
-  const preview = layerText.slice(mark.start, mark.end)
+function TextContentPreview({ layer }: { layer: TextLayer }) {
+  const startTextEdit = useEditorStore((s) => s.startTextEdit)
+  const isEditing = useEditorStore((s) => s.editingTextId === layer.id)
 
   return (
-    <div className="rounded-lg border border-[rgba(255,255,255,0.07)] bg-[#0d0d12] p-2.5 space-y-2.5">
-      {/* Range header */}
-      <div className="flex items-center gap-2">
-        <span className="text-[10px] text-[#6b6b7a] font-mono shrink-0">chars</span>
-        <input
-          type="number"
-          value={mark.start}
-          min={0}
-          max={mark.end - 1}
-          onChange={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v)) onChange({ start: Math.max(0, Math.min(v, mark.end - 1)) }) }}
-          className={inputCls + ' !py-0.5 !text-xs w-16 text-center'}
-        />
-        <span className="text-[#6b6b7a]">–</span>
-        <input
-          type="number"
-          value={mark.end}
-          min={mark.start + 1}
-          max={layerText.length}
-          onChange={(e) => { const v = Number(e.target.value); if (!Number.isNaN(v)) onChange({ end: Math.max(mark.start + 1, Math.min(v, layerText.length)) }) }}
-          className={inputCls + ' !py-0.5 !text-xs w-16 text-center'}
-        />
-        <span className="text-[10px] text-[#4a4a5a] flex-1 truncate font-mono">"{preview}"</span>
-        <button
-          type="button"
-          onClick={onRemove}
-          className="text-xs text-[#f87171] hover:text-[#fca5a5] transition-colors shrink-0"
-        >
-          ✕
-        </button>
-      </div>
-
-      {/* Fill override */}
-      <div>
-        <div className="flex items-center gap-2 mb-1">
-          <label className={labelCls + ' !mb-0'}>Fill</label>
-          <button
-            type="button"
-            onClick={() => {
-              if (hasCustomFill) {
-                onChange({ fill: undefined })
-                setFillOpen(false)
-              } else {
-                onChange({ fill: layerFill })
-                setFillOpen(true)
-              }
-            }}
-            className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-              hasCustomFill
-                ? 'border-[#7c6ef6] text-[#9d90f8] bg-[rgba(124,110,246,0.12)]'
-                : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
-            }`}
-          >
-            {hasCustomFill ? '✦ Custom' : '○ Inherit'}
-          </button>
-          {hasCustomFill && (
-            <button
-              type="button"
-              onClick={() => setFillOpen((v) => !v)}
-              className="text-[10px] text-[#6b6b7a] hover:text-[#e8e8f0] transition-colors"
-            >
-              {fillOpen ? '▲' : '▼'}
-            </button>
-          )}
-        </div>
-        {hasCustomFill && fillOpen && (
-          <FillControl
-            key={typeof mark.fill === 'string' ? 'solid' : (mark.fill?.type ?? 'solid')}
-            fill={mark.fill!}
-            onChange={(fill) => onChange({ fill })}
-            onInteractionStart={pauseTemporal}
-            onInteractionEnd={resumeTemporal}
-          />
-        )}
-      </div>
-
-      {/* Weight override */}
-      <div className="flex items-center gap-2">
-        <label className={labelCls + ' !mb-0'}>Weight</label>
-        <button
-          type="button"
-          onClick={() => onChange({ fontWeight: mark.fontWeight !== undefined ? undefined : 700 })}
-          className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-            mark.fontWeight !== undefined
-              ? 'border-[#7c6ef6] text-[#9d90f8] bg-[rgba(124,110,246,0.12)]'
-              : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
-          }`}
-        >
-          {mark.fontWeight !== undefined ? '✦ Custom' : '○ Inherit'}
-        </button>
-        {mark.fontWeight !== undefined && (
-          <select
-            value={mark.fontWeight}
-            onChange={(e) => onChange({ fontWeight: Number(e.target.value) })}
-            className={inputCls + ' !py-0.5 !text-xs flex-1'}
-          >
-            {availableWeights.map((w) => (
-              <option key={w} value={w}>{w}</option>
-            ))}
-          </select>
-        )}
-      </div>
-
-      {/* Italic override */}
-      <div className="flex items-center gap-2">
-        <label className={labelCls + ' !mb-0'}>Italic</label>
-        <button
-          type="button"
-          onClick={() => onChange({ italic: mark.italic !== undefined ? undefined : true })}
-          className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-            mark.italic !== undefined
-              ? 'border-[#7c6ef6] text-[#9d90f8] bg-[rgba(124,110,246,0.12)]'
-              : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0]'
-          }`}
-        >
-          {mark.italic !== undefined ? '✦ Custom' : '○ Inherit'}
-        </button>
-        {mark.italic !== undefined && (
-          <button
-            type="button"
-            onClick={() => onChange({ italic: !mark.italic })}
-            className={`text-[10px] px-2 py-0.5 rounded border transition-colors ${
-              mark.italic
-                ? 'border-[#7c6ef6] text-[#9d90f8] bg-[rgba(124,110,246,0.12)]'
-                : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a]'
-            }`}
-          >
-            {mark.italic ? 'On' : 'Off'}
-          </button>
-        )}
-      </div>
+    <div>
+      <button
+        type="button"
+        onClick={() => startTextEdit(layer.id)}
+        className={`${inputCls} block w-full text-left min-h-[72px] cursor-text transition-colors hover:border-[rgba(124,110,246,0.5)] ${
+          isEditing ? '!border-[#7c6ef6]' : ''
+        }`}
+        style={{
+          whiteSpace: 'pre-wrap',
+          wordBreak: 'break-word',
+          fontFamily: layer.fontFamily,
+          fontWeight: layer.fontWeight,
+          fontStyle: layer.italic ? 'italic' : 'normal',
+          color: typeof layer.fill === 'string' ? layer.fill : undefined,
+        }}
+      >
+        <span className="line-clamp-4 text-[13px] leading-relaxed">
+          {layer.text || <span className="text-[#4a4a5a]">Empty text</span>}
+        </span>
+      </button>
+      <button
+        type="button"
+        onClick={() => startTextEdit(layer.id)}
+        className={`${subtleButtonCls} mt-2 w-full text-center text-[#9d90f8] hover:border-[#7c6ef6]`}
+      >
+        ✏️ {isEditing ? 'Editing on canvas…' : 'Edit text on canvas'}
+      </button>
+      <p className="mt-1.5 text-[10px] text-[#4a4a5a] leading-relaxed">
+        Double-click the text on the canvas (or use this button) to edit in place.
+        Select text there and style it with the floating toolbar.
+        <br />Enter confirms · Ctrl+Enter inserts a new line.
+      </p>
     </div>
   )
 }
@@ -884,13 +861,14 @@ function TranslateSection({
   slideGroupId: string
 }) {
   const { setLocaleOverride } = useEditorStore()
-  const { provider, getActiveKey } = useApiKeysStore()
+  const { provider, getActiveKey, getActiveModel } = useApiKeysStore()
   const [status, setStatus] = useState<Record<string, 'idle' | 'translating' | 'ok' | 'error'>>({})
   const [isRunning, setIsRunning] = useState(false)
   const [translateError, setTranslateError] = useState<string | null>(null)
 
   const handleTranslateAll = async () => {
     const key = getActiveKey()
+    const model = getActiveModel()
     if (!key) {
       setTranslateError('No API key configured. Add one in AI Settings.')
       return
@@ -903,7 +881,7 @@ function TranslateSection({
         next[locale] = 'translating'
         setStatus({ ...next })
         try {
-          const translated = await translateText(layer.text, locale, provider, key)
+          const translated = await translateText(layer.text, locale, provider, key, model)
           setLocaleOverride(slideGroupId, layer.id, locale, { text: translated })
           next[locale] = 'ok'
         } catch (error) {
@@ -923,7 +901,9 @@ function TranslateSection({
     <div className={panelSectionCls}>
       <div className="flex items-center justify-between mb-2">
         <label className={labelCls + ' !mb-0'}>AI Translation</label>
-        <span className="text-[10px] text-[#6b6b7a] uppercase tracking-wider">{provider}</span>
+        <span className="text-[10px] text-[#6b6b7a] text-right max-w-[150px] truncate" title={getActiveModel()}>
+          {provider} · {getActiveModel()}
+        </span>
       </div>
       <div className="flex flex-wrap gap-1.5 mb-2">
         {nonDefaultLocales.map((locale) => {
@@ -962,6 +942,7 @@ function TranslateSection({
 function TextContent({ layer }: { layer: TextLayer }) {
   const { updateLayer, project, activeSlideGroupId } = useEditorStore()
   const upd = (patch: Partial<TextLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
+  const editingThis = useEditorStore((s) => s.editingTextId === layer.id)
 
   const availableWeights = getFontWeights(layer.fontFamily)
   const [fontSearch, setFontSearch] = useState('')
@@ -969,46 +950,19 @@ function TextContent({ layer }: { layer: TextLayer }) {
     (f) => !fontSearch || f.label.toLowerCase().includes(fontSearch.toLowerCase()) || f.family === layer.fontFamily,
   )
 
-  // Canonical marks — prefer layer.marks, auto-migrate legacy spans on first access
-  const marks: TextMark[] = layer.marks ?? (
-    (layer.spans?.length ?? 0) > 0 ? spansToMarks(layer.spans!).marks : []
-  )
-
-  const updateMark = (index: number, patch: Partial<TextMark>) => {
-    const next = [...marks]
-    next[index] = { ...next[index], ...patch }
-    upd({ marks: next, spans: undefined })
-  }
-
-  const removeMark = (index: number) => {
-    const next = marks.filter((_, i) => i !== index)
-    upd({ marks: next.length ? next : undefined, spans: undefined })
-  }
-
-  const addMark = () => {
-    // Default: cover the whole text
-    const newMark: TextMark = { start: 0, end: layer.text.length, fill: layer.fill }
-    upd({ marks: [...marks, newMark], spans: undefined })
-  }
-
-  const handleTextChange = (newText: string) => {
-    // Clamp existing marks to the new text length
-    const clampedMarks = marks
-      .map((m) => ({
-        ...m,
-        start: Math.min(m.start, newText.length),
-        end: Math.min(m.end, newText.length),
-      }))
-      .filter((m) => m.start < m.end)
-    upd({
-      text: newText,
-      marks: clampedMarks.length ? clampedMarks : undefined,
-      spans: undefined,
-    })
-  }
-
   return (
     <div className="space-y-4">
+
+      {/* ── Text styling toolbar (docked here while editing on canvas) ── */}
+      {/* CanvasTextEditor portals its RichTextToolbar into this slot, so the
+          styling controls always live in the same place with room for the
+          gradient editor. */}
+      {editingThis && (
+        <div className={`${panelSectionCls} !border-[rgba(124,110,246,0.35)]`}>
+          <label className={labelCls}>✏️ Text Styling</label>
+          <div id="rich-text-toolbar-slot" />
+        </div>
+      )}
 
       {/* ── Font ── */}
       <div className={panelSectionCls}>
@@ -1142,51 +1096,39 @@ function TextContent({ layer }: { layer: TextLayer }) {
             </button>
           ))}
         </div>
+
+        {/* Vertical alignment — meaningful when the box has an explicit height */}
+        {layer.height != null && (
+          <div className="mt-3">
+            <label className={labelCls}>Vertical Align</label>
+            <div className="grid grid-cols-3 gap-2">
+              {([
+                { value: 'top',    label: '⤒ Top' },
+                { value: 'middle', label: '☰ Middle' },
+                { value: 'bottom', label: '⤓ Bottom' },
+              ] as const).map((item) => (
+                <button
+                  key={item.value}
+                  type="button"
+                  onClick={() => upd({ verticalAlign: item.value })}
+                  className={`rounded-lg border px-2 py-2 text-xs transition-colors ${
+                    (layer.verticalAlign ?? 'top') === item.value
+                      ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white'
+                      : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e8e8f0]'
+                  }`}
+                >
+                  {item.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
-      {/* ── Content ── */}
+      {/* ── Content (WYSIWYG rich text) ── */}
       <div className={panelSectionCls}>
         <label className={labelCls}>Content</label>
-        {/* Single source-of-truth textarea */}
-        <textarea
-          value={layer.text}
-          onChange={(e) => handleTextChange(e.target.value)}
-          rows={4}
-          className={`${inputCls} resize-none`}
-        />
-      </div>
-
-      {/* ── Text Formatting (marks) ── */}
-      <div className={panelSectionCls}>
-        <div className="flex items-center justify-between mb-2">
-          <label className={labelCls + ' !mb-0'}>Text Formatting</label>
-          <span className="text-[10px] text-[#4a4a5a]">{marks.length > 0 ? `${marks.length} range${marks.length > 1 ? 's' : ''}` : 'none'}</span>
-        </div>
-        {marks.length > 0 && (
-          <p className="text-[10px] text-[#4a4a5a] mb-2 leading-relaxed">
-            Style specific character ranges. Ranges reference positions in the text above.
-          </p>
-        )}
-        <div className="space-y-2">
-          {marks.map((mark, i) => (
-            <MarkRow
-              key={i}
-              mark={mark}
-              layerText={layer.text}
-              layerFill={layer.fill}
-              availableWeights={availableWeights}
-              onChange={(patch) => updateMark(i, patch)}
-              onRemove={() => removeMark(i)}
-            />
-          ))}
-          <button
-            type="button"
-            onClick={addMark}
-            className={`${subtleButtonCls} w-full text-center text-[#7c6ef6] border-dashed hover:border-[#7c6ef6]`}
-          >
-            ＋ Add formatting range
-          </button>
-        </div>
+        <TextContentPreview layer={layer} />
       </div>
 
     </div>
@@ -1512,32 +1454,50 @@ export function PropertiesPanel() {
     project,
     activeSlideGroupId,
     selection,
-    updateSlideGroup,
     editingGroupId,
+    activeCanvasFormat,
+    clearLayerFormatOverride,
+    syncLayerFormatToShared,
+    makeLayerShared,
     copyLayerStyle,
     pasteLayerStyle,
     styleClipboard,
   } = useEditorStore()
   const [activeTab, setActiveTab] = useState<PanelTab>('layout')
 
-  const activeGroup: SlideGroup | undefined = project.slideGroups.find((group) => group.id === activeSlideGroupId)
-  const backgroundLayer = activeGroup?.layers.find((layer) => layer.type === 'background') as Extract<Layer, { type: 'background' }> | undefined
+  const viewProject = applyCanvasFormat(project, activeCanvasFormat)
+  const activeGroup: SlideGroup | undefined = viewProject.slideGroups.find((group) => group.id === activeSlideGroupId)
+  const rawActiveGroup: SlideGroup | undefined = project.slideGroups.find((group) => group.id === activeSlideGroupId)
 
   let selectedLayer: Layer | null = null
+  let rawSelectedLayer: Layer | null = null
   if (selection?.layerId && activeGroup) {
     if (editingGroupId) {
       // selection.layerId IS the child id in group edit mode
       const parentGroup = activeGroup.layers.find((l) => l.id === editingGroupId && l.type === 'group') as GroupLayer | undefined
       selectedLayer = parentGroup?.children.find((child) => child.id === selection.layerId) ?? null
+      const rawParentGroup = rawActiveGroup?.layers.find((l) => l.id === editingGroupId && l.type === 'group') as GroupLayer | undefined
+      rawSelectedLayer = rawParentGroup?.children.find((child) => child.id === selection.layerId) ?? null
     } else {
       selectedLayer = activeGroup.layers.find((layer) => layer.id === selection.layerId) ?? null
+      rawSelectedLayer = rawActiveGroup?.layers.find((layer) => layer.id === selection.layerId) ?? null
     }
   }
+  if (!selectedLayer && rawSelectedLayer) selectedLayer = rawSelectedLayer
 
   useEffect(() => {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveTab('layout')
   }, [selectedLayer?.id])
+
+  // In-canvas text editing started → jump to the Content tab so the docked
+  // styling toolbar and font/size controls are at hand.
+  const editingTextId = useEditorStore((s) => s.editingTextId)
+  useEffect(() => {
+    if (!editingTextId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveTab('content')
+  }, [editingTextId])
 
   const handlePanelFocus = (e: FocusEvent<HTMLDivElement>) => {
     const el = e.target as HTMLElement
@@ -1555,12 +1515,18 @@ export function PropertiesPanel() {
     resumeTemporal()
   }
 
+  const baseCanvasFormat = getProjectBaseFormat(project)
+  const activeFormatInfo = getCanvasFormat(activeCanvasFormat)
+  const isBaseFormat = activeCanvasFormat === baseCanvasFormat
+  const selectedHasFormatOverride = Boolean(rawSelectedLayer?.formatOverrides?.[activeCanvasFormat])
+  const isBackgroundSelected = selectedLayer?.type === 'background'
+
 
 
   const borderColor = 'rgba(255,255,255,0.06)'
 
   return (
-    <aside className="w-72 h-full flex flex-col overflow-hidden shrink-0" style={{ background: '#18181f', borderLeft: `1px solid ${borderColor}` }}>
+    <aside data-properties-panel className="w-72 h-full flex flex-col overflow-hidden shrink-0" style={{ background: '#18181f', borderLeft: `1px solid ${borderColor}` }}>
       <div className="shrink-0 border-b px-3 py-2" style={{ borderColor }}>
         <div className="flex items-center justify-between">
           <span className="text-xs font-semibold uppercase tracking-wider text-[#6b6b7a]">Properties</span>
@@ -1599,7 +1565,7 @@ export function PropertiesPanel() {
           )}
         </div>
 
-        {selectedLayer && (
+        {selectedLayer && !isBackgroundSelected && (
           <div className="mt-3 flex gap-4 border-b border-[rgba(255,255,255,0.06)]">
             {([
               ['layout', 'Layout'],
@@ -1621,27 +1587,7 @@ export function PropertiesPanel() {
 
       <div className="flex-1 overflow-y-auto px-3 py-3" onFocusCapture={handlePanelFocus} onBlurCapture={handlePanelBlur}>
         {!selectedLayer ? (
-          activeGroup ? (
-            <div className="space-y-4">
-              <div className="rounded-xl border border-[rgba(255,255,255,0.06)] bg-[rgba(255,255,255,0.02)] p-3">
-                <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#6b6b7a]">Slide Background</div>
-                {backgroundLayer ? (
-                  <BackgroundProperties layer={backgroundLayer} />
-                ) : (
-                  <FillControl
-                    fill={activeGroup.background?.fill ?? '#12101E'}
-                    onChange={(fill) => {
-                      updateSlideGroup(activeSlideGroupId, { background: { fill, accents: activeGroup.background?.accents } })
-                    }}
-                    onInteractionStart={pauseTemporal}
-                    onInteractionEnd={resumeTemporal}
-                  />
-                )}
-              </div>
-            </div>
-          ) : (
-            <p className="mt-8 px-4 text-center text-xs text-[#6b6b7a]">Select a layer to edit properties</p>
-          )
+          null
         ) : (
           <>
             {editingGroupId && selection?.layerId && (
@@ -1650,9 +1596,48 @@ export function PropertiesPanel() {
               </div>
             )}
 
-            {activeTab === 'layout' && <LayoutTab layer={selectedLayer} />}
-            {activeTab === 'style' && <StyleTab layer={selectedLayer} />}
-            {activeTab === 'content' && <ContentTab layer={selectedLayer} />}
+            {rawSelectedLayer && !isBaseFormat && rawSelectedLayer.ownerFormat === activeCanvasFormat && (
+              <div className="mb-3 rounded-lg border border-[rgba(124,110,246,0.3)] bg-[rgba(124,110,246,0.08)] px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-[#c4b5fd]">
+                    Only in {activeFormatInfo.label} · Added specifically for this format
+                  </span>
+                  <button
+                    onClick={() => makeLayerShared(rawSelectedLayer.id)}
+                    className="text-[10px] text-[#c4b5fd] hover:text-white underline shrink-0"
+                  >
+                    Make shared
+                  </button>
+                </div>
+              </div>
+            )}
+
+            {rawSelectedLayer && !isBaseFormat && !rawSelectedLayer.ownerFormat && selectedHasFormatOverride && (
+              <div className="mb-3 rounded-lg border border-[rgba(245,158,11,0.25)] bg-[rgba(245,158,11,0.06)] px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-[#fbbf24]">
+                    {Object.keys(rawSelectedLayer.formatOverrides?.[activeCanvasFormat] ?? {}).length} layout adjustments for {activeFormatInfo.label}
+                  </span>
+                  <div className="flex gap-1.5">
+                    <button onClick={() => clearLayerFormatOverride(rawSelectedLayer.id)} className="text-[10px] text-[#fbbf24] hover:text-white underline">Reset</button>
+                    <button onClick={() => syncLayerFormatToShared(rawSelectedLayer.id)} className="text-[10px] text-[#fbbf24] hover:text-white underline">Share</button>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {isBackgroundSelected ? (
+              <div className={panelSectionCls}>
+                <div className="mb-3 text-xs font-semibold uppercase tracking-wider text-[#6b6b7a]">Background</div>
+                <BackgroundProperties layer={selectedLayer as BackgroundLayer} />
+              </div>
+            ) : (
+              <>
+                {activeTab === 'layout' && <LayoutTab layer={selectedLayer} />}
+                {activeTab === 'style' && <StyleTab layer={selectedLayer} />}
+                {activeTab === 'content' && <ContentTab layer={selectedLayer} />}
+              </>
+            )}
           </>
         )}
       </div>

@@ -1,9 +1,11 @@
 import { Fragment, useState, useEffect, useRef } from 'react'
 import type Konva from 'konva'
-import { SLIDE_SIZE_PRESETS, useEditorStore } from '@/store'
+import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
-import { downloadAsZip, downloadSlide, downloadSlideGroup, saveToDirectory } from '@/utils/export'
-import type { BackgroundLayer } from '@/types'
+import { downloadDataUrl, downloadSlide, downloadSlideGroup, saveToDirectory, exportGroupAsZip } from '@/utils/export'
+import { applyCanvasFormat, CANVAS_FORMAT_PRESETS, countFormatAdjustments, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { exportAllFormats } from '@/utils/multiFormatExport'
+import type { BackgroundLayer, CanvasFormatId } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
 
 interface ContextMenu {
@@ -33,6 +35,7 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
     removeSlideGroup,
     duplicateSlideGroup,
     updateSlideGroup,
+    activeCanvasFormat,
   } = useEditorStore()
 
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null)
@@ -41,10 +44,28 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   const [stageReady, setStageReady] = useState(false)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [isExporting, setIsExporting] = useState(false)
+  const [selectedExportFormats, setSelectedExportFormats] = useState<CanvasFormatId[]>([])
   const renameInputRef = useRef<HTMLInputElement>(null)
   const exportRef = useRef<HTMLDivElement>(null)
 
-  const activeGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+  const viewProject = applyCanvasFormat(project, activeCanvasFormat)
+  const activeGroup = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
+
+  // The formats currently active for this project
+  const baseFormat = getProjectBaseFormat(project)
+  const activeFormats: CanvasFormatId[] = getProjectActiveFormats(project)
+  // Non-base (exportable) formats — these are the ones shown in the export checklist
+  const exportableFormats = activeFormats.filter((f) => f !== baseFormat)
+
+  // Initialize selectedExportFormats when export menu opens (adjust-state-during-render pattern)
+  const [lastExportOpen, setLastExportOpen] = useState(false)
+  if (exportOpen && !lastExportOpen) {
+    setLastExportOpen(true)
+    setSelectedExportFormats(exportableFormats)
+  } else if (!exportOpen && lastExportOpen) {
+    setLastExportOpen(false)
+  }
 
   // Close context menu on outside click
   useEffect(() => {
@@ -111,68 +132,198 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
     }
   }
 
-  const getExportContext = () => {
+  const getStage = () => {
     if (!stageRef.current || !activeGroup) {
       setExportError('Export unavailable. Try again.')
       return null
     }
-    return { stage: stageRef.current, group: activeGroup }
+    return stageRef.current
   }
 
+  const toggleExportFormat = (formatId: CanvasFormatId) => {
+    setSelectedExportFormats((prev) => {
+      if (prev.includes(formatId)) {
+        // Can't uncheck the last selected format
+        if (prev.length <= 1) return prev
+        return prev.filter((f) => f !== formatId)
+      }
+      return [...prev, formatId]
+    })
+  }
+
+  // ─── Export handlers ──────────────────────────────────────────────────────
+
   const handleExportCurrent = async () => {
-    const ctx = getExportContext()
-    if (!ctx) return
+    const stage = getStage()
+    if (!stage || !activeGroup) return
+
     try {
-      await downloadSlide(ctx.stage, 0, ctx.group)
+      setIsExporting(true)
+
+      if (selectedExportFormats.length <= 1) {
+        // Single format — legacy path
+        await downloadSlide(stage, 0, activeGroup)
+      } else {
+        // Multi-format: export slide 0 from each selected format
+        const results = await exportAllFormats(stage, selectedExportFormats)
+        for (const result of results) {
+          const slide = result.slides[0]
+          if (slide) {
+            downloadDataUrl(slide.dataUrl, slide.name)
+            await new Promise((r) => setTimeout(r, 80))
+          }
+        }
+      }
       setExportOpen(false)
     } catch {
       setExportError('Export failed. Try again.')
+    } finally {
+      setIsExporting(false)
     }
   }
 
   const handleExportAll = async () => {
-    const ctx = getExportContext()
-    if (!ctx) return
+    const stage = getStage()
+    if (!stage || !activeGroup) return
+
     try {
-      await downloadSlideGroup(ctx.stage, ctx.group)
+      setIsExporting(true)
+
+      if (selectedExportFormats.length <= 1) {
+        // Single format — legacy path
+        await downloadSlideGroup(stage, activeGroup)
+      } else {
+        const results = await exportAllFormats(stage, selectedExportFormats)
+        for (const result of results) {
+          for (const slide of result.slides) {
+            downloadDataUrl(slide.dataUrl, slide.name)
+            await new Promise((r) => setTimeout(r, 80))
+          }
+        }
+      }
       setExportOpen(false)
     } catch {
       setExportError('Export failed. Try again.')
+    } finally {
+      setIsExporting(false)
     }
   }
 
   const handleExportFolder = async () => {
-    const ctx = getExportContext()
-    if (!ctx) return
+    const stage = getStage()
+    if (!stage || !activeGroup) return
+
     try {
-      await saveToDirectory(ctx.stage, ctx.group)
+      setIsExporting(true)
+
+      if (selectedExportFormats.length <= 1) {
+        // Single format — legacy path
+        await saveToDirectory(stage, activeGroup)
+      } else {
+        const results = await exportAllFormats(stage, selectedExportFormats)
+
+        if (!window.showDirectoryPicker) {
+          // Fallback: download individually with format prefix
+          for (const result of results) {
+            for (const slide of result.slides) {
+              downloadDataUrl(slide.dataUrl, slide.name)
+              await new Promise((r) => setTimeout(r, 80))
+            }
+          }
+        } else {
+          try {
+            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' })
+            for (const result of results) {
+              // Create a subfolder per format
+              const subDir = await (dirHandle as unknown as {
+                getDirectoryHandle(name: string, options?: { create?: boolean }): Promise<typeof dirHandle>
+              }).getDirectoryHandle(result.formatId, { create: true })
+              for (const slide of result.slides) {
+                const filename = slide.name.endsWith('.png') ? slide.name : `${slide.name}.png`
+                const fileHandle = await subDir.getFileHandle(filename, { create: true })
+                const writable = await fileHandle.createWritable()
+                const res = await fetch(slide.dataUrl)
+                const blob = await res.blob()
+                await writable.write(blob)
+                await writable.close()
+              }
+            }
+          } catch (err: unknown) {
+            if (!(err instanceof DOMException && err.name === 'AbortError')) throw err
+          }
+        }
+      }
       setExportOpen(false)
     } catch {
       setExportError('Export failed. Try again.')
+    } finally {
+      setIsExporting(false)
     }
   }
 
   const handleExportZip = async () => {
-    const ctx = getExportContext()
-    if (!ctx) return
+    const stage = getStage()
+    if (!stage || !activeGroup) return
+
     try {
-      await downloadAsZip(ctx.stage, ctx.group)
+      setIsExporting(true)
+
+      if (selectedExportFormats.length <= 1) {
+        // Single format — legacy path
+        const blob = await exportGroupAsZip(stage, activeGroup)
+        const url = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = url
+        const zipName = activeGroup.name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'slides'
+        a.download = `${zipName}.zip`
+        a.click()
+        a.remove()
+        setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      } else {
+        const { default: JSZip } = await import('jszip')
+        const results = await exportAllFormats(stage, selectedExportFormats)
+        const zip = new JSZip()
+
+        for (const result of results) {
+          // Create a subfolder per format in the ZIP
+          const folder = zip.folder(result.formatId)
+          if (!folder) continue
+          for (const slide of result.slides) {
+            const filename = slide.name.endsWith('.png') ? slide.name : `${slide.name}.png`
+            const res = await fetch(slide.dataUrl)
+            const blob = await res.blob()
+            folder.file(filename, blob)
+          }
+        }
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' })
+        const url = URL.createObjectURL(zipBlob)
+        const a = document.createElement('a')
+        a.href = url
+        const zipName = activeGroup.name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'slides'
+        a.download = `${zipName}-multi.zip`
+        a.click()
+        a.remove()
+        setTimeout(() => URL.revokeObjectURL(url), 10_000)
+      }
       setExportOpen(false)
     } catch {
       setExportError('Export failed. Try again.')
+    } finally {
+      setIsExporting(false)
     }
   }
 
   // Build flat slide list with global sequential numbers
   type FlatSlide = {
-    group: (typeof project.slideGroups)[number]
+    group: (typeof viewProject.slideGroups)[number]
     slideIdx: number
     globalNum: number
     bgCss: string
   }
   const flatSlides: FlatSlide[] = []
   let globalNum = 0
-  for (const group of project.slideGroups) {
+  for (const group of viewProject.slideGroups) {
     const bgLayer = group.layers.find((l) => l.type === 'background') as BackgroundLayer | undefined
     const bgFill = bgLayer?.fill ?? group.background?.fill
     const bgCss = bgFill ? fillToCss(bgFill) : '#1a1a2e'
@@ -184,41 +335,23 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
 
   const THUMB_H = 44
   const borderColor = 'rgba(255,255,255,0.06)'
-  const exportReady = Boolean(stageReady && activeGroup)
+  const exportReady = Boolean(stageReady && activeGroup) && !isExporting
   const exportItemClass = `w-full text-left px-3 py-2 text-sm transition-colors ${
     exportReady
       ? 'text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)]'
       : 'text-[#6b6b7a] cursor-not-allowed opacity-50'
   }`
 
+  // Raw (unresolved) active group for countFormatAdjustments
+  const rawActiveGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+
   return (
     <footer
       className="h-20 flex items-center gap-3 px-3 shrink-0 border-t"
       style={{ background: '#18181f', borderColor }}
     >
-      <div className="flex min-w-[210px] flex-col gap-1.5 shrink-0 pr-3 border-r border-[rgba(255,255,255,0.06)]">
-        <div className="flex items-center justify-between">
-          <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6b6b7a]">Slides</div>
-          {activeGroup && (
-            <select
-              value={SLIDE_SIZE_PRESETS.find(
-                (p) => p.width === activeGroup.slideWidth && p.height === activeGroup.slideHeight,
-              )?.id ?? 'custom'}
-              onChange={(e) => {
-                const preset = SLIDE_SIZE_PRESETS.find((p) => p.id === e.target.value)
-                if (preset) updateSlideGroup(activeGroup.id, { slideWidth: preset.width, slideHeight: preset.height })
-              }}
-              className="text-[10px] bg-[#0f0f13] border border-[rgba(255,255,255,0.1)] rounded px-1.5 py-0.5 text-[#e8e8f0] focus:outline-none focus:border-[rgba(124,110,246,0.5)] max-w-[110px]"
-            >
-              {SLIDE_SIZE_PRESETS.map((p) => (
-                <option key={p.id} value={p.id}>{p.label}</option>
-              ))}
-              {!SLIDE_SIZE_PRESETS.some(
-                (p) => p.width === activeGroup.slideWidth && p.height === activeGroup.slideHeight,
-              ) && <option value="custom">Custom</option>}
-            </select>
-          )}
-        </div>
+      <div className="flex flex-col gap-1.5 shrink-0 pr-3 border-r border-[rgba(255,255,255,0.06)]">
+        <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6b6b7a]">Slides</div>
         {activeGroup && (
           <div className="flex items-center gap-1.5">
             {NUM_SLIDES_OPTIONS.map(({ value, label }) => (
@@ -372,29 +505,93 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
         <div className="relative" ref={exportRef}>
           <button
             onClick={() => setExportOpen((o) => !o)}
-            disabled={!exportReady}
+            disabled={!exportReady && !isExporting}
             className="text-xs text-white px-3 py-2 rounded bg-[#7c6ef6] hover:bg-[#6c5ed6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
           >
-            Export PNG
+            {isExporting ? 'Exporting…' : 'Export PNG'}
           </button>
           {exportOpen && (
             <div
-              className="absolute bottom-full right-0 mb-2 rounded shadow-2xl z-50 min-w-[210px] py-1 border"
+              className="absolute bottom-full right-0 mb-2 rounded shadow-2xl z-50 min-w-[280px] border"
               style={{ background: '#18181f', borderColor: 'rgba(255,255,255,0.08)' }}
             >
-              <button disabled={!exportReady} className={exportItemClass} onClick={handleExportCurrent}>
-                Export current slide
-              </button>
-              <button disabled={!exportReady} className={exportItemClass} onClick={handleExportAll}>
-                Export all slides in group
-              </button>
-              <button disabled={!exportReady} className={exportItemClass} onClick={handleExportFolder}>
-                Export PNGs to folder
-              </button>
-              <div className="h-px mx-2 my-1 bg-[rgba(255,255,255,0.06)]" />
-              <button disabled={!exportReady} className={exportItemClass} onClick={handleExportZip}>
-                Export all slides as ZIP
-              </button>
+              {/* ── Section 1: Format checklist ── */}
+              <div className="px-3 pt-3 pb-2 border-b border-[rgba(255,255,255,0.06)]">
+                {exportableFormats.length === 0 ? (
+                  <p className="text-[10px] leading-snug text-[#6b6b7a]">
+                    No export formats added yet. Use the{' '}
+                    <span className="text-[#bdb7f6]">[+]</span> button above the canvas to add iPhone or Android.
+                  </p>
+                ) : (
+                  <>
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#6b6b7a] mb-2">
+                      Export formats
+                    </p>
+                    <div className="flex flex-col gap-1">
+                      {exportableFormats.map((formatId) => {
+                        const preset = CANVAS_FORMAT_PRESETS.find((p) => p.id === formatId)
+                        if (!preset) return null
+                        const isChecked = selectedExportFormats.includes(formatId)
+                        const adjustments = rawActiveGroup
+                          ? countFormatAdjustments(rawActiveGroup, formatId, baseFormat)
+                          : 0
+
+                        return (
+                          <label
+                            key={formatId}
+                            className="flex items-center gap-2 px-1 py-0.5 rounded cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.04)]"
+                            onClick={(e) => {
+                              e.preventDefault()
+                              toggleExportFormat(formatId)
+                            }}
+                          >
+                            <input
+                              type="checkbox"
+                              checked={isChecked}
+                              onChange={() => toggleExportFormat(formatId)}
+                              className="accent-[#7c6ef6] w-3 h-3 shrink-0"
+                            />
+                            <span className="text-[11px] text-[#e8e8f0] flex-1 truncate">
+                              {preset.label}
+                            </span>
+                            <span className="text-[10px] text-[#6b6b7a] shrink-0">
+                              {preset.width}×{preset.height}
+                            </span>
+                            {adjustments > 0 ? (
+                              <span className="text-[9px] text-[#f59e0b] bg-[rgba(245,158,11,0.1)] rounded px-1 py-px shrink-0">
+                                adjusted ({adjustments})
+                              </span>
+                            ) : (
+                              <span className="text-[9px] text-[#6b6b7a] bg-[rgba(255,255,255,0.05)] rounded px-1 py-px shrink-0">
+                                auto
+                              </span>
+                            )}
+                          </label>
+                        )
+                      })}
+                    </div>
+                    <p className="text-[10px] leading-snug text-[#6b6b7a] mt-2">
+                      Exports the selected formats. Switch format tabs above the canvas to preview each one.
+                    </p>
+                  </>
+                )}
+              </div>
+
+              <div className="py-1">
+                <button disabled={!exportReady} className={exportItemClass} onClick={handleExportCurrent}>
+                  Export current slide
+                </button>
+                <button disabled={!exportReady} className={exportItemClass} onClick={handleExportAll}>
+                  Export all slides in group
+                </button>
+                <button disabled={!exportReady} className={exportItemClass} onClick={handleExportFolder}>
+                  Export PNGs to folder
+                </button>
+                <div className="h-px mx-2 my-1 bg-[rgba(255,255,255,0.06)]" />
+                <button disabled={!exportReady} className={exportItemClass} onClick={handleExportZip}>
+                  Export all slides as ZIP
+                </button>
+              </div>
             </div>
           )}
           {exportError && (

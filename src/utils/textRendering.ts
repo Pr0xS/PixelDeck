@@ -167,6 +167,98 @@ function marksToLines(
   return lines
 }
 
+// ─── Word wrapping ────────────────────────────────────────────────────────────
+
+function isWhitespace(s: string): boolean {
+  return /^\s+$/.test(s)
+}
+
+function sameFragStyle(a: { text: string }, b: { text: string }): boolean {
+  const ka = { ...a, text: '' }
+  const kb = { ...b, text: '' }
+  return JSON.stringify(ka) === JSON.stringify(kb)
+}
+
+/**
+ * Word-wrap styled fragment lines to fit maxWidth.
+ * Pure: measurement is injected, so this is unit-testable without a DOM.
+ * - Breaks at whitespace; words longer than maxWidth are hard-broken by character.
+ * - Leading whitespace on wrapped lines and trailing whitespace before a break
+ *   are dropped (keeps center/right alignment correct).
+ * - Adjacent pieces with the same style are merged back together.
+ */
+export function wrapFragmentLines<T extends { text: string }>(
+  lines: T[][],
+  maxWidth: number,
+  measure: (text: string, frag: T) => number,
+): T[][] {
+  const out: T[][] = []
+
+  for (const line of lines) {
+    let current: T[] = []
+    let currentW = 0
+    let wrapped = false // true when `current` is a continuation line
+
+    const append = (frag: T, text: string) => {
+      const last = current[current.length - 1]
+      if (last && sameFragStyle(last, frag)) last.text += text
+      else current.push({ ...frag, text })
+    }
+
+    const pushLine = () => {
+      // Trim trailing whitespace pieces
+      while (current.length > 0) {
+        const last = current[current.length - 1]
+        const trimmed = last.text.replace(/\s+$/, '')
+        if (trimmed === last.text) break
+        if (trimmed.length === 0) current.pop()
+        else { last.text = trimmed; break }
+      }
+      out.push(current)
+      current = []
+      currentW = 0
+      wrapped = true
+    }
+
+    for (const frag of line) {
+      const tokens = frag.text.match(/\S+|\s+/g) ?? []
+      for (const token of tokens) {
+        if (isWhitespace(token)) {
+          // Skip leading whitespace on continuation lines
+          if (wrapped && current.length === 0) continue
+          append(frag, token)
+          currentW += measure(token, frag)
+          continue
+        }
+
+        const w = measure(token, frag)
+        if (currentW + w > maxWidth && current.length > 0) pushLine()
+
+        if (w > maxWidth) {
+          // Hard-break an overlong word character by character
+          let rest = token
+          while (rest.length > 1 && measure(rest, frag) > maxWidth) {
+            let n = rest.length - 1
+            while (n > 1 && measure(rest.slice(0, n), frag) > maxWidth) n--
+            append(frag, rest.slice(0, n))
+            pushLine()
+            rest = rest.slice(n)
+          }
+          append(frag, rest)
+          currentW = measure(rest, frag)
+          continue
+        }
+
+        append(frag, token)
+        currentW += w
+      }
+    }
+    out.push(current)
+  }
+
+  return out
+}
+
 // ─── Main export ──────────────────────────────────────────────────────────────
 
 /**
@@ -179,11 +271,16 @@ export function renderSpansToCanvas(layer: TextLayer): HTMLCanvasElement {
   const canvasWidth = Math.max(1, layer.width ?? 1000)
   const lineHeightPx = fontSize * lineHeight
 
-  const lines = layerToLines(layer)
-
-  // ── Measure fragments ─────────────────────────────────────────────────────
+  // ── Measure setup ─────────────────────────────────────────────────────────
   const measureCanvas = document.createElement('canvas')
   const mc = measureCanvas.getContext('2d')!
+  const measureFrag = (text: string, frag: ResolvedFragment) => {
+    mc.font = buildFontString(frag.weight, frag.italic, fontSize, fontFamily)
+    return measureWidth(mc, text, letterSpacing)
+  }
+
+  // ── Resolve lines and word-wrap them to the box width ─────────────────────
+  const lines = wrapFragmentLines(layerToLines(layer), canvasWidth, measureFrag)
 
   const layoutLines: LayoutLine[] = lines.map((lineFragments) => {
     let x = 0
@@ -198,16 +295,26 @@ export function renderSpansToCanvas(layer: TextLayer): HTMLCanvasElement {
   })
 
   // ── Size render canvas ────────────────────────────────────────────────────
-  const totalHeight = Math.ceil(lineHeightPx * layoutLines.length + fontSize * 0.25)
+  const contentHeight = Math.ceil(lineHeightPx * layoutLines.length + fontSize * 0.25)
+  const totalHeight = Math.round(layer.height ?? contentHeight)
   const canvas = document.createElement('canvas')
   canvas.width = canvasWidth
   canvas.height = Math.max(1, totalHeight)
   const ctx = canvas.getContext('2d')!
   ctx.textBaseline = 'alphabetic'
 
+  // Vertical alignment inside an explicit-height box (top = no offset).
+  // When content is taller than the box it stays top-anchored and clips.
+  let yOffset = 0
+  if (layer.height != null) {
+    const va = layer.verticalAlign ?? 'top'
+    if (va === 'middle') yOffset = Math.max(0, (totalHeight - contentHeight) / 2)
+    else if (va === 'bottom') yOffset = Math.max(0, totalHeight - contentHeight)
+  }
+
   // ── Render each line ──────────────────────────────────────────────────────
   layoutLines.forEach((line, lineIndex) => {
-    const baseline = lineIndex * lineHeightPx + fontSize * 0.9
+    const baseline = yOffset + lineIndex * lineHeightPx + fontSize * 0.9
 
     let lineStartX = 0
     if (align === 'center') lineStartX = (canvasWidth - line.totalWidth) / 2
@@ -215,7 +322,7 @@ export function renderSpansToCanvas(layer: TextLayer): HTMLCanvasElement {
 
     line.fragments.forEach((frag) => {
       const fragX = lineStartX + frag.x
-      const fragY = lineIndex * lineHeightPx
+      const fragY = yOffset + lineIndex * lineHeightPx
 
       ctx.font = buildFontString(frag.weight, frag.italic, fontSize, fontFamily)
 
@@ -293,6 +400,8 @@ export function spansRenderKey(layer: TextLayer): string {
     layer.lineHeight,
     layer.letterSpacing,
     layer.width ?? 1000,
+    layer.height ?? 'auto',
+    layer.verticalAlign ?? 'top',
     layer.align,
     layer.italic ?? false,
     layer.underline ?? false,

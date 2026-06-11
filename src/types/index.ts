@@ -38,6 +38,10 @@ export interface BrandColor {
 
 export type PhoneModel = 'iphone-16-pro' | 'iphone-16-pro-plain' | 'pixel-9' | 'pixel-9-plain';
 
+// ─── Canvas Formats ──────────────────────────────────────────────────────────
+
+export type CanvasFormatId = 'base' | 'iphone-69' | 'android-phone' | 'ipad-13' | 'android-tablet';
+
 /** Screen area within the mockup frame (all in "phone canvas" pixels) */
 export interface PhoneScreenRect {
   x: number;
@@ -90,6 +94,12 @@ export interface LocaleLayerPatch {
   src?: string;
 }
 
+/**
+ * Per-format visual overrides. These are shallow-merged on top of the shared
+ * base layer when previewing/exporting a specific canvas format.
+ */
+export type FormatLayerPatch = Partial<Omit<Layer, 'id' | 'type' | 'formatOverrides' | 'formatVisibility'>>;
+
 // ─── Layer Base ───────────────────────────────────────────────────────────────
 
 export interface BaseLayer {
@@ -109,6 +119,16 @@ export interface BaseLayer {
    * Merged at render / export time by applyLocale(). Never affects undo history shape.
    */
   localeOverrides?: Record<string, LocaleLayerPatch>;
+  /** Per-format visual/layout overrides. Base layer remains the shared source. */
+  formatOverrides?: Partial<Record<CanvasFormatId, FormatLayerPatch>>;
+  /** Optional per-format visibility. Undefined = follows `visible`. */
+  formatVisibility?: Partial<Record<CanvasFormatId, boolean>>;
+  /**
+   * If set, this layer belongs exclusively to one format and is invisible in all others.
+   * Set automatically when a layer is added while viewing a non-base format.
+   * Cleared when the user explicitly "Makes shared".
+   */
+  ownerFormat?: CanvasFormatId;
 }
 
 export type LayerType = 'background' | 'phone' | 'text' | 'image' | 'shape' | 'chips' | 'brand' | 'group';
@@ -223,6 +243,13 @@ export interface TextLayer extends BaseLayer {
   lineHeight: number;
   align: 'left' | 'center' | 'right';
   width?: number;   // wrapping width; undefined = auto
+  /**
+   * Explicit box height. undefined = auto (box grows with content).
+   * When set, the text box has a fixed height; content is clipped if taller.
+   */
+  height?: number;
+  /** Vertical anchoring of the text inside the box. Only meaningful when height is set. Defaults to 'top'. */
+  verticalAlign?: 'top' | 'middle' | 'bottom';
   /**
    * Rich text marks: styled ranges over `text` (preferred system).
    * start/end are char offsets into `text` (end exclusive, like String.slice).
@@ -355,6 +382,10 @@ export interface ProjectSettings {
   brandLogoDataUrl?: string;
   brandColors?: BrandColor[];
   outputPath?: string;  // last used output dir (File System Access API handle)
+  /** Non-exported authoring canvas sentinel. Defaults to base. */
+  baseCanvasFormat?: CanvasFormatId;
+  /** Exportable platform formats the user has opted into. Default = iPhone + Android. */
+  activeFormats?: CanvasFormatId[];
 }
 
 export interface Project {

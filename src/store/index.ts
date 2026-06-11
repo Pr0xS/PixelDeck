@@ -8,21 +8,25 @@ import type {
   LayerType, BrandColor,
   PhoneLayer, TextLayer, ImageLayer, ShapeLayer, ChipsLayer, BrandLayer, GroupLayer,
   BackgroundLayer, BackgroundAccent, CanvasBackground, ProjectSettings, LocaleLayerPatch,
+  CanvasFormatId, FormatLayerPatch,
   Template,
 } from '@/types'
 import { projectToTemplate, applyTemplate } from '@/utils/templates'
 import { spansToMarks } from '@/utils/textRendering'
+import {
+  BASE_CANVAS_FORMAT,
+  CANVAS_FORMAT_PRESETS,
+  FORMAT_LAYOUT_KEYS,
+  FORMAT_FORK_KEYS,
+  getProjectActiveFormats,
+  getProjectBaseFormat,
+  mapLayerToAuthoringSpace,
+  normalizeProjectFormats,
+} from '@/utils/canvasFormats'
 
 // ─── Slide Size Presets ───────────────────────────────────────────────────────
 
-export const SLIDE_SIZE_PRESETS = [
-  { id: 'iphone-69', label: 'iPhone 6.9"', width: 1320, height: 2868 },
-  { id: 'iphone-67', label: 'iPhone 6.7"', width: 1290, height: 2796 },
-  { id: 'iphone-65', label: 'iPhone 6.5"', width: 1242, height: 2688 },
-  { id: 'iphone-55', label: 'iPhone 5.5"', width: 1242, height: 2208 },
-  { id: 'ipad-13',   label: 'iPad 13"',   width: 2064, height: 2752 },
-  { id: 'ipad-11',   label: 'iPad 11"',   width: 1668, height: 2388 },
-] as const
+export const SLIDE_SIZE_PRESETS = CANVAS_FORMAT_PRESETS
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -89,6 +93,7 @@ function bakeLayerScale(layer: Layer, s: number): Layer {
       scaled.fontSize *= s
       scaled.letterSpacing *= s
       if (scaled.width != null) scaled.width *= s
+      if (scaled.height != null) scaled.height *= s
       break
     case 'chips':
       scaled.chipFontSize *= s
@@ -118,7 +123,7 @@ function cloneWithNewIds(layer: Layer): Layer {
 
 const STYLE_KEYS: Partial<Record<LayerType, string[]>> = {
   background: ['fill', 'accents', 'imageDataUrl', 'imageFit', 'imageBlur', 'imageOverlayColor', 'imageOverlayOpacity', 'noise', 'blur', 'shadow', 'opacity'],
-  text: ['fill', 'fontFamily', 'fontSize', 'fontWeight', 'italic', 'underline', 'strikethrough', 'letterSpacing', 'lineHeight', 'align', 'width', 'blur', 'shadow', 'opacity'],
+  text: ['fill', 'fontFamily', 'fontSize', 'fontWeight', 'italic', 'underline', 'strikethrough', 'letterSpacing', 'lineHeight', 'align', 'width', 'height', 'verticalAlign', 'blur', 'shadow', 'opacity'],
   shape: ['fill', 'stroke', 'strokeWidth', 'cornerRadius', 'shapeType', 'width', 'height', 'blur', 'shadow', 'opacity'],
   chips: ['primaryGradientFrom', 'primaryGradientTo', 'primaryTextColor', 'defaultBg', 'defaultTextColor', 'chipFontSize', 'gap', 'direction', 'blur', 'shadow', 'opacity'],
   brand: ['nameColor', 'nameFontSize', 'nameFontFamily', 'nameFontWeight', 'logoSize', 'direction', 'gap', 'blur', 'shadow', 'opacity'],
@@ -231,6 +236,8 @@ function newProject(): Project {
       defaultSlideHeight: 2796,
       defaultLocale: 'en',
       brandName: 'My App',
+      baseCanvasFormat: BASE_CANVAS_FORMAT,
+      activeFormats: ['iphone-69', 'android-phone'],
     },
     slideGroups: [newSlideGroup({ name: 'Slide 1' })],
   }
@@ -266,6 +273,13 @@ export interface EditorStore {
   copyLayerStyle: (layerId: string) => void
   pasteLayerStyle: (layerId: string) => void
 
+  // ─ In-canvas text editing (transient — not undoable). Set by canvas dblclick;
+  //   StageCanvas mounts a WYSIWYG overlay over the layer and TextNode hides
+  //   the Konva node while editing.
+  editingTextId: string | null
+  startTextEdit: (layerId: string) => void
+  stopTextEdit: () => void
+
   // ─ Brand color actions
   addBrandColor: (name: string, value: string) => void
   updateBrandColor: (id: string, patch: { name?: string; value?: string }) => void
@@ -274,12 +288,27 @@ export interface EditorStore {
   // ─ Locale state (transient — not in undo history)
   activeLocale: string
 
+  // ─ Canvas format state (transient preview/export context)
+  activeCanvasFormat: CanvasFormatId
+
   // ─ Locale actions
   setActiveLocale: (locale: string) => void
   addLocale: (locale: string) => void
   removeLocale: (locale: string) => void
   setLocaleOverride: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
   clearLocaleOverride: (slideGroupId: string, layerId: string, locale: string) => void
+
+  // ─ Canvas format actions
+  setActiveCanvasFormat: (format: CanvasFormatId) => void
+  makeLayerShared: (layerId: string) => void
+  clearLayerFormatOverride: (layerId: string, format?: CanvasFormatId) => void
+  syncLayerFormatToShared: (layerId: string, format?: CanvasFormatId) => void
+  setLayerFormatVisibility: (layerId: string, format: CanvasFormatId, visible: boolean | undefined) => void
+  setLayerOnlyInFormat: (layerId: string, format?: CanvasFormatId) => void
+  clearLayerFormatVisibility: (layerId: string) => void
+  toggleActiveFormat: (format: CanvasFormatId) => void
+  clearLayerFormatOverrideKey: (layerId: string, key: string, format?: CanvasFormatId) => void
+  applyLayerFormatKeyToShared: (layerId: string, key: string, format?: CanvasFormatId) => void
 
   // ─ Project actions
   setProjectName: (name: string) => void
@@ -383,6 +412,62 @@ export const useEditorStore = create<EditorStore>()(
     }))
   }
 
+  const mapLayerById = (layers: Layer[], layerId: string, fn: (layer: Layer) => Layer): Layer[] =>
+    layers.map((layer) => {
+      if (layer.id === layerId) return fn(layer)
+      if (layer.type === 'group') {
+        return { ...layer, children: mapLayerById((layer as GroupLayer).children, layerId, fn) } as Layer
+      }
+      return layer
+    })
+
+  /**
+   * Split a layer patch into layout keys (stored per-format) and content keys
+   * (always written to the shared base layer). Content stays shared across
+   * formats by design — only positioning/sizing forks.
+   */
+  const splitFormatPatch = (patch: Partial<Layer>): { layout: FormatLayerPatch; content: Partial<Layer> } => {
+    const layout: Record<string, unknown> = {}
+    const content: Record<string, unknown> = {}
+    for (const [key, value] of Object.entries(patch)) {
+      if ((FORMAT_FORK_KEYS as readonly string[]).includes(key)) layout[key] = value
+      else content[key] = value
+    }
+    return { layout: layout as FormatLayerPatch, content: content as Partial<Layer> }
+  }
+
+  /** Apply a patch to a layer respecting the active format: content → base, layout → override. */
+  const patchLayerForFormat = (
+    layer: Layer,
+    patch: Partial<Layer>,
+    activeFormat: CanvasFormatId,
+    baseFormat: CanvasFormatId,
+  ): Layer => {
+    if (activeFormat === baseFormat) return { ...layer, ...patch } as Layer
+    const { layout, content } = splitFormatPatch(patch)
+    let next = Object.keys(content).length ? ({ ...layer, ...content } as Layer) : layer
+    if (Object.keys(layout).length) next = withFormatOverride(next, activeFormat, layout)
+    return next
+  }
+
+  const withFormatOverride = (layer: Layer, format: CanvasFormatId, patch: FormatLayerPatch): Layer => ({
+    ...layer,
+    formatOverrides: {
+      ...(layer.formatOverrides ?? {}),
+      [format]: {
+        ...(layer.formatOverrides?.[format] ?? {}),
+        ...patch,
+      },
+    },
+  } as Layer)
+
+  const withoutFormatOverride = (layer: Layer, format: CanvasFormatId): Layer => {
+    if (!layer.formatOverrides?.[format]) return layer
+    const { [format]: _removed, ...rest } = layer.formatOverrides
+    void _removed
+    return { ...layer, formatOverrides: Object.keys(rest).length ? rest : undefined } as Layer
+  }
+
   return {
     // ─ Initial state
     project: newProject(),
@@ -398,7 +483,12 @@ export const useEditorStore = create<EditorStore>()(
     clipboard: null,
     pasteCount: 0,
     styleClipboard: null,
+    editingTextId: null,
     activeLocale: 'en',
+    activeCanvasFormat: BASE_CANVAS_FORMAT,
+
+    startTextEdit: (layerId) => set({ editingTextId: layerId }),
+    stopTextEdit: () => set({ editingTextId: null }),
 
     // ─ Init activeSlideGroupId after project creation
     // (called once in App.tsx on mount)
@@ -482,6 +572,160 @@ export const useEditorStore = create<EditorStore>()(
             return { ...g, layers: g.layers.map((l) => patchLayerLocale(l, layerId, locale, null)) }
           }),
         },
+      }))
+    },
+
+    // ─ Canvas format actions
+    setActiveCanvasFormat: (format) => set({ activeCanvasFormat: format, selection: null, editingGroupId: null, selectedLayerIds: [] }),
+
+    clearLayerFormatOverride: (layerId, format) => {
+      const targetFormat = format ?? get().activeCanvasFormat
+      mutateActiveGroup((g) => ({ ...g, layers: mapLayerById(g.layers, layerId, (l) => withoutFormatOverride(l, targetFormat)) }))
+    },
+
+    syncLayerFormatToShared: (layerId, format) => {
+      const targetFormat = format ?? get().activeCanvasFormat
+      const baseFormat = getProjectBaseFormat(get().project)
+      if (targetFormat === baseFormat) return
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: mapLayerById(g.layers, layerId, (layer) => {
+          const patch = layer.formatOverrides?.[targetFormat]
+          if (!patch) return layer
+          // Override values live in the target format's coordinate space.
+          // Map them back to the group's authoring space before merging into
+          // the shared base, otherwise the layer jumps in every other format.
+          const inTargetSpace = { ...layer, ...patch, id: layer.id, type: layer.type } as Layer
+          const mapped = mapLayerToAuthoringSpace(
+            inTargetSpace, targetFormat, baseFormat, g.slideWidth, g.slideHeight,
+          ) as unknown as Record<string, unknown>
+          const sharedPatch: Record<string, unknown> = {}
+          for (const key of Object.keys(patch)) sharedPatch[key] = mapped[key]
+          return withoutFormatOverride({ ...layer, ...sharedPatch } as Layer, targetFormat)
+        }),
+      }))
+    },
+
+    setLayerFormatVisibility: (layerId, format, visible) => {
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: mapLayerById(g.layers, layerId, (layer) => {
+          const next = { ...(layer.formatVisibility ?? {}) }
+          if (visible === undefined) delete next[format]
+          else next[format] = visible
+          return { ...layer, formatVisibility: Object.keys(next).length ? next : undefined } as Layer
+        }),
+      }))
+    },
+
+    setLayerOnlyInFormat: (layerId, format) => {
+      const targetFormat = format ?? get().activeCanvasFormat
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: mapLayerById(g.layers, layerId, (layer) => ({
+          ...layer,
+          formatVisibility: Object.fromEntries(
+            CANVAS_FORMAT_PRESETS.map((preset) => [preset.id, preset.id === targetFormat]),
+          ),
+        } as Layer)),
+      }))
+    },
+
+    clearLayerFormatVisibility: (layerId) => {
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: mapLayerById(g.layers, layerId, (layer) => ({ ...layer, formatVisibility: undefined } as Layer)),
+      }))
+    },
+
+    makeLayerShared: (layerId) => {
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: mapLayerById(g.layers, layerId, (layer) => {
+          if (!layer.ownerFormat) return layer
+          const format = layer.ownerFormat
+          // Clear ownerFormat so the layer becomes shared
+          const next = { ...layer, ownerFormat: undefined } as Layer
+          // Also clear formatVisibility entry for this format if present
+          if (next.formatVisibility?.[format] !== undefined) {
+            const { [format]: _removed, ...restVis } = next.formatVisibility!
+            void _removed
+            ;(next as { formatVisibility?: Partial<Record<string, boolean>> }).formatVisibility =
+              Object.keys(restVis).length ? restVis as typeof next.formatVisibility : undefined
+          }
+          return next
+        }),
+      }))
+    },
+
+    toggleActiveFormat: (format) => {
+      const { project, activeCanvasFormat } = get()
+      const baseFormat = getProjectBaseFormat(project)
+      if (format === 'base' || format === baseFormat) return // can't remove base
+      const currentFormats = getProjectActiveFormats(project)
+      let newList: CanvasFormatId[]
+      if (currentFormats.includes(format)) {
+        newList = currentFormats.filter((f) => f !== format)
+        if (activeCanvasFormat === format) set({ activeCanvasFormat: baseFormat })
+      } else {
+        newList = [...currentFormats, format]
+      }
+      get().updateSettings({ baseCanvasFormat: BASE_CANVAS_FORMAT, activeFormats: newList })
+    },
+
+    clearLayerFormatOverrideKey: (layerId, key, format) => {
+      const targetFormat = format ?? get().activeCanvasFormat
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: mapLayerById(g.layers, layerId, (layer) => {
+          const existing = layer.formatOverrides?.[targetFormat] as Record<string, unknown> | undefined
+          if (!existing || !(key in existing)) return layer
+          const { [key]: _removed, ...restPatch } = existing
+          void _removed
+          const newPatch = Object.keys(restPatch).length > 0 ? restPatch : undefined
+          const { [targetFormat]: _old, ...otherOverrides } = layer.formatOverrides ?? {}
+          void _old
+          const newFormatOverrides = newPatch
+            ? { ...otherOverrides, [targetFormat]: newPatch }
+            : (Object.keys(otherOverrides).length > 0 ? otherOverrides : undefined)
+          return { ...layer, formatOverrides: newFormatOverrides } as Layer
+        }),
+      }))
+    },
+
+    applyLayerFormatKeyToShared: (layerId, key, format) => {
+      const targetFormat = format ?? get().activeCanvasFormat
+      const { project } = get()
+      const baseFormat = getProjectBaseFormat(project)
+      if (targetFormat === baseFormat) return
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: mapLayerById(g.layers, layerId, (layer) => {
+          const existing = layer.formatOverrides?.[targetFormat] as Record<string, unknown> | undefined
+          if (!existing || !(key in existing)) return layer
+          const overrideValue = existing[key]
+          // If it's a spatial key, scale from target format coords to authoring coords
+          let sharedValue = overrideValue
+          if ((FORMAT_LAYOUT_KEYS as readonly string[]).includes(key)) {
+            const dummy = { ...layer, [key]: overrideValue } as Layer
+            const mapped = mapLayerToAuthoringSpace(
+              dummy, targetFormat, baseFormat, g.slideWidth, g.slideHeight,
+            ) as unknown as Record<string, unknown>
+            sharedValue = mapped[key]
+          }
+          // Apply value to base layer
+          const updated = { ...layer, [key]: sharedValue } as Layer
+          // Remove key from format override
+          const { [key]: _removed, ...restPatch } = existing
+          void _removed
+          const newPatch = Object.keys(restPatch).length > 0 ? restPatch : undefined
+          const { [targetFormat]: _old, ...otherOverrides } = layer.formatOverrides ?? {}
+          void _old
+          const newFormatOverrides = newPatch
+            ? { ...otherOverrides, [targetFormat]: newPatch }
+            : (Object.keys(otherOverrides).length > 0 ? otherOverrides : undefined)
+          return { ...updated, formatOverrides: newFormatOverrides } as Layer
+        }),
       }))
     },
 
@@ -588,7 +832,15 @@ export const useEditorStore = create<EditorStore>()(
 
     // ─ Layer actions
     addLayer: (layer) => {
-      const { editingGroupId, activeSlideGroupId } = get()
+      const { editingGroupId, activeSlideGroupId, project, activeCanvasFormat } = get()
+      const baseFormat = getProjectBaseFormat(project)
+      const activeGroupForAdd = getActiveGroup()
+      let layerToAdd = layer
+      if (activeCanvasFormat !== baseFormat && activeGroupForAdd) {
+        // Layer is owned by this format — store as-is with ownerFormat tag.
+        // No coordinate mapping needed: owned layers only render in their format.
+        layerToAdd = { ...layer, ownerFormat: activeCanvasFormat } as Layer
+      }
       if (editingGroupId) {
         // Inside group edit mode: add the layer into the group with group-local coords
         const grp = getActiveGroup()?.layers.find(
@@ -597,7 +849,7 @@ export const useEditorStore = create<EditorStore>()(
         if (grp) {
           // Inverse-bake the group's scale so the new layer appears at its natural size/position
           const localLayer: Layer = bakeLayerScale(
-            { ...layer, x: layer.x - grp.x, y: layer.y - grp.y },
+            { ...layerToAdd, x: layerToAdd.x - grp.x, y: layerToAdd.y - grp.y },
             1 / (grp.scale ?? 1),
           )
           get().addToGroup(editingGroupId, localLayer)
@@ -605,8 +857,8 @@ export const useEditorStore = create<EditorStore>()(
           return
         }
       }
-      mutateActiveGroup((g) => ({ ...g, layers: [...g.layers, layer] }))
-      set({ selection: { slideGroupId: get().activeSlideGroupId, layerId: layer.id } })
+      mutateActiveGroup((g) => ({ ...g, layers: [...g.layers, layerToAdd] }))
+      set({ selection: { slideGroupId: get().activeSlideGroupId, layerId: layerToAdd.id } })
     },
 
     removeLayer: (layerId) => {
@@ -635,7 +887,8 @@ export const useEditorStore = create<EditorStore>()(
 
     updateLayer: (layerId, patch) => {
       // When in group-edit mode, transparently route to the child if the ID matches
-      const { editingGroupId } = get()
+      const { editingGroupId, project, activeCanvasFormat } = get()
+      const baseFormat = getProjectBaseFormat(project)
       if (editingGroupId) {
         const slideGroup = getActiveGroup()
         const groupLayer = slideGroup?.layers.find(
@@ -648,7 +901,9 @@ export const useEditorStore = create<EditorStore>()(
       }
       mutateActiveGroup((g) => ({
         ...g,
-        layers: g.layers.map((l) => (l.id === layerId ? ({ ...l, ...patch } as Layer) : l)),
+        layers: g.layers.map((l) =>
+          l.id === layerId ? patchLayerForFormat(l, patch, activeCanvasFormat, baseFormat) : l,
+        ),
       }))
     },
 
@@ -920,6 +1175,8 @@ export const useEditorStore = create<EditorStore>()(
     },
 
     updateChildLayer: (groupId, childId, patch) => {
+      const { project, activeCanvasFormat } = get()
+      const baseFormat = getProjectBaseFormat(project)
       mutateActiveGroup((g) => ({
         ...g,
         layers: g.layers.map((l) => {
@@ -928,7 +1185,7 @@ export const useEditorStore = create<EditorStore>()(
           return {
             ...grp,
             children: grp.children.map((c) =>
-              c.id === childId ? ({ ...c, ...patch } as Layer) : c
+              c.id === childId ? patchLayerForFormat(c, patch, activeCanvasFormat, baseFormat) : c
             ),
           }
         }),
@@ -1304,7 +1561,7 @@ export const useEditorStore = create<EditorStore>()(
     },
 
     importProject: (json) => {
-      const project = JSON.parse(json) as Project
+      const project = normalizeProjectFormats(JSON.parse(json) as Project)
       // Migrate: ensure every slide group has a BackgroundLayer as first layer
       for (const sg of project.slideGroups) {
         if (!sg.layers.some((l) => l.type === 'background')) {
@@ -1321,6 +1578,7 @@ export const useEditorStore = create<EditorStore>()(
         editingGroupId: null,
         selectedLayerIds: [],
         activeLocale: project.settings.defaultLocale ?? 'en',
+        activeCanvasFormat: BASE_CANVAS_FORMAT,
       })
       // Clear undo history — undo must not cross project boundaries
       useEditorStore.temporal.getState().clear()
@@ -1335,6 +1593,7 @@ export const useEditorStore = create<EditorStore>()(
         editingGroupId: null,
         selectedLayerIds: [],
         activeLocale: 'en',
+        activeCanvasFormat: BASE_CANVAS_FORMAT,
       })
       // Clear undo history — new project starts fresh
       useEditorStore.temporal.getState().clear()
@@ -1348,14 +1607,14 @@ export const useEditorStore = create<EditorStore>()(
       const { slideGroups, settings } = applyTemplate(tpl)
       const now = new Date().toISOString()
       const base = newProject()
-      const project: Project = {
+      const project: Project = normalizeProjectFormats({
         id: newId(),
         name: tpl.name,
         createdAt: now,
         updatedAt: now,
         settings: { ...base.settings, ...settings },
         slideGroups,
-      }
+      })
       set({
         project,
         activeSlideGroupId: slideGroups[0]?.id ?? '',
@@ -1363,6 +1622,7 @@ export const useEditorStore = create<EditorStore>()(
         editingGroupId: null,
         selectedLayerIds: [],
         activeLocale: project.settings.defaultLocale ?? 'en',
+        activeCanvasFormat: BASE_CANVAS_FORMAT,
       })
       // Clear undo history — new project starts fresh
       useEditorStore.temporal.getState().clear()
@@ -1415,7 +1675,12 @@ const PROJECT_STORAGE_KEY = 'pixeldeck-project'
       activeSlideGroupId: string
     }
     if (project) {
-      useEditorStore.setState({ project, activeSlideGroupId: activeSlideGroupId ?? '' })
+      const normalizedProject = normalizeProjectFormats(project)
+      useEditorStore.setState({
+        project: normalizedProject,
+        activeSlideGroupId: activeSlideGroupId ?? '',
+        activeCanvasFormat: BASE_CANVAS_FORMAT,
+      })
       // Don't let the initial hydration pollute the undo history
       useEditorStore.temporal.getState().clear()
     }

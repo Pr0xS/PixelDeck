@@ -7,8 +7,10 @@ import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SlideNavigator } from '@/components/panels/SlideNavigator'
 import { StageCanvas } from '@/components/canvas/StageCanvas'
 import { ContextualToolbar } from '@/components/canvas/ContextualToolbar'
+import { FormatTabs } from '@/components/canvas/FormatTabs'
 import { useThumbnails } from '@/hooks/useThumbnails'
 import { useEditorStore, useUndoRedo } from '@/store'
+import { applyCanvasFormat } from '@/utils/canvasFormats'
 
 // Lazy-load the localization view — it's a separate mode and not needed on initial load.
 const LocalizationView = lazy(() =>
@@ -40,9 +42,9 @@ export default function App() {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't fire when user is typing in an input
-      const tag = (document.activeElement as HTMLElement | null)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      // Don't fire when user is typing in an input or rich text editor
+      const active = document.activeElement as HTMLElement | null
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return
 
       if (e.key === 'Escape') {
         if (editingGroupId) {
@@ -92,8 +94,9 @@ export default function App() {
         } else if (e.key === '0') {
           // Ctrl+0: fit — delegate to canvas by resetting centering flag
           e.preventDefault()
-          const { project: p, activeSlideGroupId: gid, setZoom: sz, setViewportPosition: svp } = useEditorStore.getState()
-          const grp = p.slideGroups.find((g) => g.id === gid)
+          const { project: p, activeSlideGroupId: gid, activeCanvasFormat, setZoom: sz, setViewportPosition: svp } = useEditorStore.getState()
+          const viewProject = applyCanvasFormat(p, activeCanvasFormat)
+          const grp = viewProject.slideGroups.find((g) => g.id === gid)
           if (grp) {
             const availW = window.innerWidth - 224 - 288 - 64
             const availH = window.innerHeight - 140
@@ -173,6 +176,9 @@ export default function App() {
         >
           {/* Contextual toolbar — only shows when element selected */}
           <ContextualToolbar />
+
+          {/* Format tabs — switch between platform preview formats */}
+          <FormatTabs />
 
           {/* Canvas fills remaining height — StageCanvas takes full space */}
           <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>

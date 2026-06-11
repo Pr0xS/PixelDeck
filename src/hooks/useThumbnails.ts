@@ -1,6 +1,7 @@
 import { useRef, useState, useCallback, useEffect, type RefObject } from 'react'
 import type Konva from 'konva'
 import { useEditorStore } from '@/store'
+import { getFormatCanvasDims, getProjectBaseFormat } from '@/utils/canvasFormats'
 
 export type ThumbnailMap = Record<string, string[]>
 
@@ -43,14 +44,18 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>) {
 
     if (!stage || !group || targetGroupId !== activeSlideGroupId) return
 
-    const smallRatio = 88 / group.slideHeight
+    const activeCanvasFormat = useEditorStore.getState().activeCanvasFormat
+    const baseFormat = getProjectBaseFormat(project)
+    const dims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat)
+
+    const smallRatio = 88 / dims.height
     const nextThumbs = withIdentityTransform(stage, () =>
       Array.from({ length: group.numSlides }, (_, i) =>
         stage.toDataURL({
-          x: i * group.slideWidth,
+          x: i * dims.width,
           y: 0,
-          width: group.slideWidth,
-          height: group.slideHeight,
+          width: dims.width,
+          height: dims.height,
           pixelRatio: smallRatio,
           mimeType: 'image/jpeg',
           quality: 0.85,
@@ -62,7 +67,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>) {
       ...prev,
       [group.id]: nextThumbs,
     }))
-  }, [activeSlideGroupId, project.slideGroups, stageRef])
+  }, [activeSlideGroupId, project, stageRef])
 
   useEffect(() => {
     if (!activeSlideGroupId) return
@@ -88,8 +93,9 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>) {
     const stage = stageRef.current
     if (!stage) return
 
-    const { project, activeSlideGroupId: originalGroupId, setActiveSlideGroup } =
+    const { project, activeSlideGroupId: originalGroupId, setActiveSlideGroup, activeCanvasFormat } =
       useEditorStore.getState()
+    const baseFormat = getProjectBaseFormat(project)
 
     captureAbortRef.current = false
     isCapturingRef.current = true
@@ -106,13 +112,14 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>) {
 
         if (captureAbortRef.current) break
 
+        const groupDims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat)
         const thumbs = withIdentityTransform(stage, () =>
           Array.from({ length: group.numSlides }, (_, i) =>
             stage.toDataURL({
-              x: i * group.slideWidth,
+              x: i * groupDims.width,
               y: 0,
-              width: group.slideWidth,
-              height: group.slideHeight,
+              width: groupDims.width,
+              height: groupDims.height,
               pixelRatio: 1,
               mimeType: 'image/jpeg',
               quality: 0.92,

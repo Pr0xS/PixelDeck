@@ -4,7 +4,9 @@ import type Konva from 'konva'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
 import { applyLocale } from '@/utils/locale'
+import { applyCanvasFormat } from '@/utils/canvasFormats'
 import { LayerNode } from './LayerNode'
+import { CanvasTextEditor } from './CanvasTextEditor'
 import type { Layer as AppLayer } from '@/types'
 
 function useCtrlKey() {
@@ -79,11 +81,16 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     selectedLayerIds,
     setMultiSelection,
     activeLocale,
+    activeCanvasFormat,
+    editingTextId,
   } = useEditorStore()
   const ctrlRef = useCtrlKey()
   const assets = useAssetStore((s) => s.assets)
 
-  const viewProject = useMemo(() => applyLocale(project, activeLocale), [project, activeLocale])
+  const viewProject = useMemo(
+    () => applyCanvasFormat(applyLocale(project, activeLocale), activeCanvasFormat),
+    [project, activeLocale, activeCanvasFormat],
+  )
   const group = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
 
   // keepRatio=false for text layers: corner handles should resize the box independently
@@ -156,6 +163,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
 
     if (selectedLayerIds.length > 0) {
       const nodes = selectedLayerIds
+        .filter((id) => id !== editingTextId)
         .map((id) => stage.findOne(`#layer-${id}`) as Konva.Node | undefined)
         .filter((n): n is Konva.Node => Boolean(n))
       tr.nodes(nodes)
@@ -163,7 +171,8 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
       return
     }
 
-    if (!selection?.layerId) {
+    // Hide the transformer while the in-canvas text editor covers the node
+    if (!selection?.layerId || selection.layerId === editingTextId) {
       tr.nodes([])
       tr.getLayer()?.batchDraw()
       return
@@ -176,7 +185,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
       tr.nodes(node ? [node] : [])
     }
     tr.getLayer()?.batchDraw()
-  }, [selection, editingGroupId, stageRef, selectedLayerIds])
+  }, [selection, editingGroupId, stageRef, selectedLayerIds, editingTextId])
 
   // ─── Wheel: Ctrl+scroll = zoom-to-cursor; scroll = pan ────────────────────
 
@@ -756,6 +765,9 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
               />
             </Layer>
           </Stage>
+
+          {/* In-canvas WYSIWYG text editor overlay */}
+          {editingTextId && <CanvasTextEditor stageRef={stageRef} />}
 
           {/* Per-slide card frames for pano groups */}
           {group.numSlides > 1 && Array.from({ length: group.numSlides }, (_, i) => {

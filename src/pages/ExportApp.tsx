@@ -16,6 +16,7 @@ import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
 import { fillToKonvaProps } from '@/utils/gradients'
 import { applyLocale } from '@/utils/locale'
+import { applyCanvasFormat, getProjectBaseFormat } from '@/utils/canvasFormats'
 import { LayerNode } from '@/components/canvas/LayerNode'
 import type { Layer as AppLayer, Project, SlideGroup } from '@/types'
 
@@ -117,8 +118,11 @@ export function ExportApp() {
   const { addAsset } = useAssetStore()
   // useMemo prevents a new object reference on every render, which would cause
   // the Phase 2 effect to re-run in an infinite loop for non-default locales.
+  // Apply locale + base format projection. The base format pass is a no-op for
+  // scaling but filters layers hidden in the base format ("only Android" etc.),
+  // keeping CLI output consistent with the editor's base view.
   const localizedProject = useMemo(
-    () => applyLocale(project, activeLocale),
+    () => applyCanvasFormat(applyLocale(project, activeLocale), getProjectBaseFormat(project)),
     [project, activeLocale],
   )
 
