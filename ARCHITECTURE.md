@@ -72,8 +72,8 @@ Project
 | `Layer` | Union of all layer variant types. Discriminated by `type` field. |
 | `BaseLayer` | Shared fields: `id`, `name`, `x`, `y`, `rotation`, `opacity`, `visible`, `locked`, `blur`, `shadow`. |
 | `BackgroundLayer` | Always `layers[0]`. Holds the slide's `fill` (solid/gradient). Cannot be moved or deleted. |
-| `TextLayer` | Text with optional `spans: TextSpan[]` for rich per-segment styling. |
-| `TextSpan` | `{ text, fill?, fontWeight?, italic? }`; overrides the parent TextLayer defaults per segment. |
+| `TextLayer` | Text with optional `marks: TextMark[]` for rich per-range styling. |
+| `TextMark` | `{ start, end, fill?, fontWeight?, italic?, underline?, strikethrough? }`; styled range over `text` (char offsets, end exclusive). |
 | `FillValue` | `string` (hex/CSS color) \| `LinearGradient` \| `RadialGradient` |
 | `PhoneModelSpec` | Physical dimensions + screen rect for a device frame (in SVG canvas coordinates). |
 
@@ -94,7 +94,7 @@ Uses **Zustand 5** with **zundo** for temporal undo/redo.
 ```ts
 {
   project: Project,
-  currentSlideGroupId: string,
+  activeSlideGroupId: string,
   selection: Selection,         // { slideGroupId, layerId | null }
   editingGroupId: string | null,
 
@@ -152,8 +152,7 @@ StageCanvas (src/components/canvas/StageCanvas.tsx)
           │   ├── ChipsNode      → Konva.Group with chip rectangles + labels
           │   ├── BrandNode      → logo + app name lockup
           │   └── GroupNode      → recursive LayerNode children
-          ├── Transformer        → selection handles (resize/rotate)
-          └── ContextualToolbar  → floating quick-actions above selection
+          └── Transformer        → selection handles (resize/rotate)
 ```
 
 ### Coordinate system
@@ -180,23 +179,27 @@ StageCanvas (src/components/canvas/StageCanvas.tsx)
 |---|---|---|
 | `background` | `BackgroundNode` | `fill` (FillValue); always `layers[0]`, locked |
 | `phone` | `PhoneNode` | `model`, `scale`, `screenshotPath`, `screenshotFit`, offsets |
-| `text` | `TextNode` | `text`, `spans[]`, `fontFamily`, `fontSize`, `fill` (FillValue), `align`, `width` |
+| `text` | `TextNode` | `text`, `marks[]`, `fontFamily`, `fontSize`, `fill` (FillValue), `align`, `width` |
 | `image` | `ImageNode` | `src` (data URI), `width`, `height`, `cornerRadius` |
 | `shape` | `ShapeNode` | `shapeType` (rect/ellipse/line), `fill`, `stroke`, `cornerRadius` |
 | `chips` | `ChipsNode` | `items[]` with `label`+`primary`, gradient config, `direction` |
 | `brand` | `BrandNode` | `appName`, `logoDataUrl`, sizes, colors, `direction` |
 | `group` | `GroupNode` | `children: Layer[]` |
 
-### Rich text (TextSpan)
+### Rich text (TextMark)
 
-`TextLayer` supports an optional `spans: TextSpan[]` array for mixed-style text within a single layer. When spans are present, the text is rendered off-screen using `renderSpansToCanvas()` (`src/utils/textRendering.ts`) and composited onto the Konva stage as an image pattern.
+`TextLayer` supports an optional `marks: TextMark[]` array for mixed-style text within a single layer. Each mark is a range over the layer's `text` string (start/end char offsets, end exclusive — same semantics as `String.slice`). When marks are present, the text is rendered off-screen using `renderSpansToCanvas()` (`src/utils/textRendering.ts`) and composited onto the Konva stage as an image pattern.
 
-Each `TextSpan` can override:
+Each `TextMark` can override:
 - `fill`: any `FillValue` (solid color or gradient)
 - `fontWeight`: e.g. `700` for bold within a sentence
 - `italic`: boolean
+- `underline`: boolean
+- `strikethrough`: boolean
 
-If `spans` is empty or absent, `TextNode` falls back to standard Konva text rendering.
+If `marks` is empty or absent, `TextNode` falls back to standard Konva text rendering.
+
+> **Legacy:** `spans: TextSpan[]` (segment-based, each span carries its own `text` string) is still read for backwards compatibility with old project files and is automatically migrated to `marks` on import. Do not write `spans` in new code.
 
 ### Adding a new layer type
 
@@ -254,7 +257,6 @@ App
 ├── Toolbar          (top bar: add layers, import, export, projects, save/load)
 ├── LayersPanel      (left: layer list with dnd-kit sortable, visibility, lock)
 ├── StageCanvas      (center: Konva canvas with zoom, grid, seam guides)
-│   └── ContextualToolbar  (floating over canvas: quick-actions for selection)
 ├── PropertiesPanel  (right: layer/project inspector)
 └── SlideNavigator   (bottom: slide group tabs with add/delete/rename)
 
@@ -266,7 +268,7 @@ App
 
 **File:** `src/components/properties/PropertyControls.tsx`
 
-All fill/gradient editing uses a single shared component set: `FillControl`, `GradientEditor`, `ColorStopEditor`. This ensures consistent behavior across background, shape, text, and brand layer fill editors in `PropertiesPanel.tsx`.
+All fill/gradient editing uses a single shared component set: `FillControl`, `GradientEditor`, `ColorField`, `SliderField`. This ensures consistent behavior across background, shape, text, and brand layer fill editors in `PropertiesPanel.tsx`.
 
 ### Panel communication
 
@@ -281,7 +283,7 @@ All panels read from and write to the Zustand store directly; no prop drilling. 
 | `src/utils/export.ts` | Browser PNG export; crops Konva stage per slide |
 | `src/utils/gradients.ts` | `FillValue` → Konva fill props / CSS / `CanvasGradient` |
 | `src/utils/svgToImage.ts` | SVG string / File → `HTMLImageElement` |
-| `src/utils/fonts.ts` | `FONT_LIST` registry (23 Google Fonts) + `loadGoogleFonts()` |
+| `src/utils/fonts.ts` | `FONT_LIST` registry (80+ Google Fonts) + `loadGoogleFonts()` |
 | `src/utils/textRendering.ts` | `renderSpansToCanvas()`: off-screen canvas for rich text spans |
 
 ---

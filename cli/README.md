@@ -57,6 +57,57 @@ node cli/index.mjs --help
 
 Save your project from the GUI using the **Save** button (or the Projects panel). The resulting `.json` file is the input for `--project`.
 
+## Locale export
+
+Export a single locale:
+
+```bash
+node cli/index.mjs export \
+  --project=./projects/my-app.json \
+  --screenshots=./screenshots/raw \
+  --output=./output/store \
+  --locale=es
+```
+
+Export all locales defined in the project (each written to its own subfolder):
+
+```bash
+node cli/index.mjs export \
+  --project=./projects/my-app.json \
+  --screenshots=./screenshots/raw \
+  --output=./output/store \
+  --all-locales
+```
+
+## Locale manifest workflow
+
+Generate a JSON manifest of all translatable strings in a project:
+
+```bash
+node cli/index.mjs locale-manifest \
+  --project=./projects/my-app.json \
+  --output=./locales/manifest.json
+```
+
+Import translated strings back into the project:
+
+```bash
+node cli/index.mjs locale-import \
+  --project=./projects/my-app.json \
+  --manifest=./locales/manifest.es.json \
+  --locale=es \
+  --output=./projects/my-app-es.json
+```
+
+## Optional flags
+
+| Flag | Description |
+|---|---|
+| `--port` | Port for the local static server (default: 4321) |
+| `--timeout` | Max milliseconds to wait for export completion (default: 60000) |
+
 ## Screenshots folder
 
 The `--screenshots` folder should contain PNG files whose filenames match the `screenshotPath` values in the project layers (e.g. `01-dashboard.png`, `02-settings.png`). Filenames are matched case-sensitively.
+
+Locale-specific screenshots can be named with a locale prefix (e.g. `es-01-dashboard.png`) and are auto-detected when exporting with `--locale`.
