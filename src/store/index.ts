@@ -8,6 +8,7 @@ import type {
   LayerType, BrandColor,
   PhoneLayer, TextLayer, ImageLayer, ShapeLayer, ChipsLayer, BrandLayer, GroupLayer,
   BackgroundLayer, BackgroundAccent, CanvasBackground, ProjectSettings, LocaleLayerPatch,
+  LocaleOverrideBatchEntry,
   CanvasFormatId, FormatLayerPatch,
   Template,
 } from '@/types'
@@ -20,8 +21,12 @@ import {
   FORMAT_FORK_KEYS,
   getProjectActiveFormats,
   getProjectBaseFormat,
+  makeOwnedFormatLayersSharedInLayerTree,
   mapLayerToAuthoringSpace,
   normalizeProjectFormats,
+  promoteFormatOverridesToSharedInLayerTree,
+  resetFormatOverridesInLayerTree,
+  resetFormatVisibilityInLayerTree,
 } from '@/utils/canvasFormats'
 
 // ─── Slide Size Presets ───────────────────────────────────────────────────────
@@ -59,6 +64,16 @@ function patchLayerLocale(
       ...grp,
       children: grp.children.map((c) => patchLayerLocale(c, layerId, locale, patch)),
     } as Layer
+  }
+  return layer
+}
+
+/** Patch a layer in a known slide group without applying canvas-format indirection. */
+function patchLayerBase(layer: Layer, layerId: string, patch: Partial<Layer>): Layer {
+  if (layer.id === layerId) return { ...layer, ...patch } as Layer
+  if (layer.type === 'group') {
+    const grp = layer as GroupLayer
+    return { ...grp, children: grp.children.map((c) => patchLayerBase(c, layerId, patch)) } as Layer
   }
   return layer
 }
@@ -295,8 +310,12 @@ export interface EditorStore {
   setActiveLocale: (locale: string) => void
   addLocale: (locale: string) => void
   removeLocale: (locale: string) => void
+  renameDefaultLocale: (locale: string) => void
+  updateLayerInSlideGroup: (slideGroupId: string, layerId: string, patch: Partial<Layer>) => void
   setLocaleOverride: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
   clearLocaleOverride: (slideGroupId: string, layerId: string, locale: string) => void
+  /** Commit multiple locale overrides in a single undo step. Use for bulk AI translate. */
+  setLocaleOverridesBatch: (entries: LocaleOverrideBatchEntry[]) => void
 
   // ─ Canvas format actions
   setActiveCanvasFormat: (format: CanvasFormatId) => void
@@ -309,6 +328,10 @@ export interface EditorStore {
   toggleActiveFormat: (format: CanvasFormatId) => void
   clearLayerFormatOverrideKey: (layerId: string, key: string, format?: CanvasFormatId) => void
   applyLayerFormatKeyToShared: (layerId: string, key: string, format?: CanvasFormatId) => void
+  resetActiveFormatLayout: (format?: CanvasFormatId) => void
+  shareActiveFormatOwnedLayers: (format?: CanvasFormatId) => void
+  resetActiveFormatVisibility: (format?: CanvasFormatId) => void
+  promoteActiveFormatLayoutToShared: (format?: CanvasFormatId) => void
 
   // ─ Project actions
   setProjectName: (name: string) => void
@@ -549,6 +572,47 @@ export const useEditorStore = create<EditorStore>()(
       }))
     },
 
+    renameDefaultLocale: (locale) => {
+      const nextLocale = locale.trim().toLowerCase().replace('_', '-')
+      if (!nextLocale) return
+      const { project, activeLocale } = get()
+      const oldDefault = project.settings.defaultLocale
+      if (nextLocale === oldDefault) return
+
+      const existing = project.settings.locales ?? [oldDefault]
+      // Keep the model simple: changing the base language is only a relabel of
+      // the source content, not a promotion of an existing translated locale.
+      if (existing.some((l) => l !== oldDefault && l === nextLocale)) return
+
+      const rest = existing.filter((l) => l !== oldDefault)
+      const locales = [nextLocale, ...rest]
+      set((s) => ({
+        project: {
+          ...s.project,
+          updatedAt: new Date().toISOString(),
+          settings: {
+            ...s.project.settings,
+            defaultLocale: nextLocale,
+            locales,
+          },
+        },
+        activeLocale: activeLocale === oldDefault ? nextLocale : activeLocale,
+      }))
+    },
+
+    updateLayerInSlideGroup: (slideGroupId, layerId, patch) => {
+      set((s) => ({
+        project: {
+          ...s.project,
+          updatedAt: new Date().toISOString(),
+          slideGroups: s.project.slideGroups.map((g) => {
+            if (g.id !== slideGroupId) return g
+            return { ...g, layers: g.layers.map((l) => patchLayerBase(l, layerId, patch)) }
+          }),
+        },
+      }))
+    },
+
     setLocaleOverride: (slideGroupId, layerId, locale, patch) => {
       set((s) => ({
         project: {
@@ -570,6 +634,40 @@ export const useEditorStore = create<EditorStore>()(
           slideGroups: s.project.slideGroups.map((g) => {
             if (g.id !== slideGroupId) return g
             return { ...g, layers: g.layers.map((l) => patchLayerLocale(l, layerId, locale, null)) }
+          }),
+        },
+      }))
+    },
+
+    setLocaleOverridesBatch: (entries) => {
+      if (entries.length === 0) return
+      const byGroup = new Map<string, Map<string, Map<string, LocaleLayerPatch>>>()
+      for (const e of entries) {
+        const layers = byGroup.get(e.slideGroupId) ?? new Map<string, Map<string, LocaleLayerPatch>>()
+        const locales = layers.get(e.layerId) ?? new Map<string, LocaleLayerPatch>()
+        locales.set(e.locale, e.patch)
+        layers.set(e.layerId, locales)
+        byGroup.set(e.slideGroupId, layers)
+      }
+      set((s) => ({
+        project: {
+          ...s.project,
+          updatedAt: new Date().toISOString(),
+          slideGroups: s.project.slideGroups.map((g) => {
+            const layerMap = byGroup.get(g.id)
+            if (!layerMap) return g
+            return {
+              ...g,
+              layers: g.layers.map((l) => {
+                const localeMap = layerMap.get(l.id)
+                if (!localeMap) return l
+                let next = l
+                for (const [locale, patch] of localeMap) {
+                  next = patchLayerLocale(next, l.id, locale, patch)
+                }
+                return next
+              }),
+            }
           }),
         },
       }))
@@ -644,16 +742,13 @@ export const useEditorStore = create<EditorStore>()(
         layers: mapLayerById(g.layers, layerId, (layer) => {
           if (!layer.ownerFormat) return layer
           const format = layer.ownerFormat
-          // Clear ownerFormat so the layer becomes shared
-          const next = { ...layer, ownerFormat: undefined } as Layer
-          // Also clear formatVisibility entry for this format if present
-          if (next.formatVisibility?.[format] !== undefined) {
-            const { [format]: _removed, ...restVis } = next.formatVisibility!
-            void _removed
-            ;(next as { formatVisibility?: Partial<Record<string, boolean>> }).formatVisibility =
-              Object.keys(restVis).length ? restVis as typeof next.formatVisibility : undefined
-          }
-          return next
+          return makeOwnedFormatLayersSharedInLayerTree(
+            [layer],
+            format,
+            getProjectBaseFormat(get().project),
+            g.slideWidth,
+            g.slideHeight,
+          )[0]
         }),
       }))
     },
@@ -726,6 +821,58 @@ export const useEditorStore = create<EditorStore>()(
             : (Object.keys(otherOverrides).length > 0 ? otherOverrides : undefined)
           return { ...updated, formatOverrides: newFormatOverrides } as Layer
         }),
+      }))
+    },
+
+    resetActiveFormatLayout: (format) => {
+      const targetFormat = format ?? get().activeCanvasFormat
+      const baseFormat = getProjectBaseFormat(get().project)
+      if (targetFormat === baseFormat) return
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: resetFormatOverridesInLayerTree(g.layers, targetFormat),
+      }))
+    },
+
+    shareActiveFormatOwnedLayers: (format) => {
+      const targetFormat = format ?? get().activeCanvasFormat
+      const baseFormat = getProjectBaseFormat(get().project)
+      if (targetFormat === baseFormat) return
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: makeOwnedFormatLayersSharedInLayerTree(
+          g.layers,
+          targetFormat,
+          baseFormat,
+          g.slideWidth,
+          g.slideHeight,
+        ),
+      }))
+    },
+
+    resetActiveFormatVisibility: (format) => {
+      const targetFormat = format ?? get().activeCanvasFormat
+      const baseFormat = getProjectBaseFormat(get().project)
+      if (targetFormat === baseFormat) return
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: resetFormatVisibilityInLayerTree(g.layers, targetFormat),
+      }))
+    },
+
+    promoteActiveFormatLayoutToShared: (format) => {
+      const targetFormat = format ?? get().activeCanvasFormat
+      const baseFormat = getProjectBaseFormat(get().project)
+      if (targetFormat === baseFormat) return
+      mutateActiveGroup((g) => ({
+        ...g,
+        layers: promoteFormatOverridesToSharedInLayerTree(
+          g.layers,
+          targetFormat,
+          baseFormat,
+          g.slideWidth,
+          g.slideHeight,
+        ),
       }))
     },
 

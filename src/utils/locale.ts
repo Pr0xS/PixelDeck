@@ -13,7 +13,7 @@
 
 import type {
   Project, Layer, GroupLayer, SlideGroup,
-  LocaleLayerPatch, TextLayer, PhoneLayer, ImageLayer, TextMark, TextSpan,
+  LocaleLayerPatch, LocalizationMode, TextLayer, PhoneLayer, ImageLayer, TextMark, TextSpan,
 } from '@/types'
 
 // ─── Core resolver ────────────────────────────────────────────────────────────
@@ -124,6 +124,19 @@ export function getLocalizableLayers(project: Project): LocalizableLayerRef[] {
   return result
 }
 
+/**
+ * Resolve a layer's effective localization mode.
+ * Text layers default to 'auto'. Image/phone layers can never be 'auto'
+ * (no AI image pipeline yet) — they are capped at 'manual'.
+ */
+export function effectiveLocalizationMode(layer: Layer): LocalizationMode {
+  const explicit = layer.localizationMode
+  if (layer.type === 'image' || layer.type === 'phone') {
+    return explicit === 'skip' ? 'skip' : 'manual'
+  }
+  return explicit ?? 'auto'
+}
+
 function collectFromLayers(
   layers: Layer[],
   groupId: string,
@@ -167,6 +180,8 @@ export interface LocaleManifestEntry {
   id: string
   name: string
   type: 'text' | 'phone' | 'image'
+  /** Effective localization mode — CLI must NOT translate 'skip' layers. */
+  mode: LocalizationMode
   /** Default (base-locale) values */
   default: LocaleLayerPatch
   /** Per-locale overrides; null means "not yet translated" */
@@ -233,6 +248,7 @@ function collectManifestEntries(
       id: layer.id,
       name: layer.name,
       type: layer.type,
+      mode: effectiveLocalizationMode(layer),
       default: defaultPatch,
       overrides,
     })
@@ -284,17 +300,71 @@ export function applyLocaleManifest(project: Project, manifest: LocaleManifest):
 
 // ─── Locale detection from filename ───────────────────────────────────────────
 
-/**
- * Well-known locale codes for filename-based auto-detection.
- * Used by detectLocaleFromFilename to validate extracted suffixes.
- */
-const KNOWN_LOCALES = new Set([
-  'en', 'es', 'fr', 'de', 'it', 'pt', 'pt-br', 'nl', 'pl', 'ru', 'ja', 'ko',
-  'zh', 'zh-hans', 'zh-hant', 'ar', 'tr', 'sv', 'da', 'fi', 'nb', 'cs', 'sk',
-  'hu', 'ro', 'el', 'uk', 'ca', 'hr', 'bg', 'lt', 'lv', 'et', 'sl', 'sr', 'he',
-  'th', 'vi', 'id', 'ms', 'en-us', 'en-gb', 'fr-fr', 'de-de', 'es-es', 'es-mx',
-  'pt-pt', 'zh-tw', 'zh-cn',
-])
+export interface LanguageOption {
+  code: string;   // normalized, lowercase, hyphenated: 'pt-br'
+  name: string;   // human-readable: 'Portuguese (Brazil)'
+}
+
+/** Full list of supported languages for the locale combobox. */
+export const LANGUAGES: LanguageOption[] = [
+  { code: 'en',      name: 'English' },
+  { code: 'en-us',   name: 'English (US)' },
+  { code: 'en-gb',   name: 'English (UK)' },
+  { code: 'es',      name: 'Spanish' },
+  { code: 'es-es',   name: 'Spanish (Spain)' },
+  { code: 'es-mx',   name: 'Spanish (Mexico)' },
+  { code: 'fr',      name: 'French' },
+  { code: 'fr-fr',   name: 'French (France)' },
+  { code: 'de',      name: 'German' },
+  { code: 'de-de',   name: 'German (Germany)' },
+  { code: 'it',      name: 'Italian' },
+  { code: 'pt',      name: 'Portuguese' },
+  { code: 'pt-br',   name: 'Portuguese (Brazil)' },
+  { code: 'pt-pt',   name: 'Portuguese (Portugal)' },
+  { code: 'nl',      name: 'Dutch' },
+  { code: 'pl',      name: 'Polish' },
+  { code: 'ru',      name: 'Russian' },
+  { code: 'ja',      name: 'Japanese' },
+  { code: 'ko',      name: 'Korean' },
+  { code: 'zh',      name: 'Chinese' },
+  { code: 'zh-hans', name: 'Chinese (Simplified)' },
+  { code: 'zh-hant', name: 'Chinese (Traditional)' },
+  { code: 'zh-cn',   name: 'Chinese (China)' },
+  { code: 'zh-tw',   name: 'Chinese (Taiwan)' },
+  { code: 'ar',      name: 'Arabic' },
+  { code: 'tr',      name: 'Turkish' },
+  { code: 'sv',      name: 'Swedish' },
+  { code: 'da',      name: 'Danish' },
+  { code: 'fi',      name: 'Finnish' },
+  { code: 'nb',      name: 'Norwegian (Bokmål)' },
+  { code: 'cs',      name: 'Czech' },
+  { code: 'sk',      name: 'Slovak' },
+  { code: 'hu',      name: 'Hungarian' },
+  { code: 'ro',      name: 'Romanian' },
+  { code: 'el',      name: 'Greek' },
+  { code: 'uk',      name: 'Ukrainian' },
+  { code: 'ca',      name: 'Catalan' },
+  { code: 'hr',      name: 'Croatian' },
+  { code: 'bg',      name: 'Bulgarian' },
+  { code: 'lt',      name: 'Lithuanian' },
+  { code: 'lv',      name: 'Latvian' },
+  { code: 'et',      name: 'Estonian' },
+  { code: 'sl',      name: 'Slovenian' },
+  { code: 'sr',      name: 'Serbian' },
+  { code: 'he',      name: 'Hebrew' },
+  { code: 'th',      name: 'Thai' },
+  { code: 'vi',      name: 'Vietnamese' },
+  { code: 'id',      name: 'Indonesian' },
+  { code: 'ms',      name: 'Malay' },
+]
+
+/** Human-readable language name for a locale code (falls back to the uppercased code). */
+export function getLanguageName(code: string): string {
+  return LANGUAGES.find((l) => l.code === code)?.name ?? code.toUpperCase()
+}
+
+/** Derived set for filename-based locale detection. */
+const KNOWN_LOCALE_CODES = new Set(LANGUAGES.map((l) => l.code))
 
 /**
  * Attempts to detect a locale code from a filename suffix.
@@ -316,5 +386,5 @@ export function detectLocaleFromFilename(filename: string): string | null {
   if (!match) return null
   // Normalise: lowercase, underscores to hyphens
   const code = match[1].toLowerCase().replace('_', '-')
-  return KNOWN_LOCALES.has(code) ? code : null
+  return KNOWN_LOCALE_CODES.has(code) ? code : null
 }
