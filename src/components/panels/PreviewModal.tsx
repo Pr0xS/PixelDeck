@@ -1,7 +1,9 @@
-import { Fragment, useEffect } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
-import type { BackgroundLayer } from '@/types'
+import { getLanguageName } from '@/utils/locale'
+import { BASE_CANVAS_FORMAT, CANVAS_FORMAT_PRESETS, getFormatCanvasDims, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
+import type { BackgroundLayer, CanvasFormatId } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
 
 interface PreviewModalProps {
@@ -12,6 +14,8 @@ interface PreviewModalProps {
   isCapturingPreview: boolean
   captureAllHighRes: () => void
   cancelCapture: () => void
+  /** Locale to preview when the modal opens (defaults to the current editor locale). */
+  initialLocale?: string
 }
 
 export function PreviewModal({
@@ -22,16 +26,23 @@ export function PreviewModal({
   isCapturingPreview,
   captureAllHighRes,
   cancelCapture,
+  initialLocale,
 }: PreviewModalProps) {
   const project = useEditorStore((s) => s.project)
   const activeSlideGroupId = useEditorStore((s) => s.activeSlideGroupId)
   const activeLocale = useEditorStore((s) => s.activeLocale)
-  const setActiveLocale = useEditorStore((s) => s.setActiveLocale)
+  const activeCanvasFormat = useEditorStore((s) => s.activeCanvasFormat)
   const setActiveSlideGroup = useEditorStore((s) => s.setActiveSlideGroup)
 
   const locales = project.settings.locales ?? [project.settings.defaultLocale]
+  // Preview shows export targets only — 'base' is the shared authoring canvas.
+  const platformFormats = getProjectActiveFormats(project).filter((f) => f !== BASE_CANVAS_FORMAT)
 
   const totalSlides = project.slideGroups.reduce((n, g) => n + g.numSlides, 0)
+
+  // Snapshot of the editor state at open time, restored on close — the preview
+  // is ephemeral and must never leave the editor in a non-base locale/format.
+  const restoreRef = useRef<{ locale: string; format: CanvasFormatId } | null>(null)
 
   useEffect(() => {
     if (!open) return
@@ -41,9 +52,38 @@ export function PreviewModal({
   }, [open, onClose])
 
   useEffect(() => {
-    if (open) captureAllHighRes()
-    else cancelCapture()
+    if (open) {
+      const s = useEditorStore.getState()
+      restoreRef.current = { locale: s.activeLocale, format: s.activeCanvasFormat }
+      if (initialLocale) s.setActiveLocale(initialLocale)
+      // Ensure a platform (export) format is active — the editor may be on Base.
+      const formats = getProjectActiveFormats(s.project).filter((f) => f !== BASE_CANVAS_FORMAT)
+      if (!formats.includes(s.activeCanvasFormat) && formats.length > 0) {
+        s.setActiveCanvasFormat(formats[0])
+      }
+      captureAllHighRes()
+    } else {
+      cancelCapture()
+      if (restoreRef.current) {
+        const s = useEditorStore.getState()
+        s.setActiveLocale(restoreRef.current.locale)
+        s.setActiveCanvasFormat(restoreRef.current.format)
+        restoreRef.current = null
+      }
+    }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectLocale = (locale: string) => {
+    if (locale === activeLocale) return
+    useEditorStore.getState().setActiveLocale(locale)
+    captureAllHighRes()
+  }
+
+  const selectFormat = (format: CanvasFormatId) => {
+    if (format === activeCanvasFormat) return
+    useEditorStore.getState().setActiveCanvasFormat(format)
+    captureAllHighRes()
+  }
 
   if (!open) return null
 
@@ -102,23 +142,51 @@ export function PreviewModal({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Platform selector */}
+            {platformFormats.length > 1 && (
+              <div className="flex items-center gap-0.5 rounded-lg border border-[rgba(255,255,255,0.1)] p-1">
+                {platformFormats.map((format) => {
+                  const preset = CANVAS_FORMAT_PRESETS.find((f) => f.id === format)
+                  const selected = activeCanvasFormat === format
+                  return (
+                    <button
+                      key={format}
+                      onClick={() => selectFormat(format)}
+                      className="rounded-md px-2.5 py-1 text-[11px] transition-colors"
+                      style={{
+                        background: selected ? 'rgba(124,110,246,0.26)' : 'transparent',
+                        color: selected ? '#cbbfff' : '#7d7a90',
+                        fontWeight: selected ? 700 : 500,
+                      }}
+                    >
+                      {preset?.label ?? format}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
             {/* Locale selector */}
             {locales.length > 1 && (
               <div className="flex items-center gap-0.5 rounded-lg border border-[rgba(255,255,255,0.1)] p-1">
-                {locales.map((locale) => (
-                  <button
-                    key={locale}
-                    onClick={() => setActiveLocale(locale)}
-                    className="rounded-md px-2.5 py-1 text-[11px] uppercase transition-colors"
-                    style={{
-                      background: activeLocale === locale ? 'rgba(124,110,246,0.26)' : 'transparent',
-                      color: activeLocale === locale ? '#cbbfff' : '#7d7a90',
-                      fontWeight: activeLocale === locale ? 700 : 500,
-                    }}
-                  >
-                    {locale}
-                  </button>
-                ))}
+                {locales.map((locale) => {
+                  const selected = activeLocale === locale
+                  return (
+                    <button
+                      key={locale}
+                      onClick={() => selectLocale(locale)}
+                      title={getLanguageName(locale)}
+                      className="rounded-md px-2.5 py-1 text-[11px] transition-colors"
+                      style={{
+                        background: selected ? 'rgba(124,110,246,0.26)' : 'transparent',
+                        color: selected ? '#cbbfff' : '#7d7a90',
+                        fontWeight: selected ? 700 : 500,
+                      }}
+                    >
+                      {getLanguageName(locale)}
+                    </button>
+                  )
+                })}
               </div>
             )}
 
@@ -140,7 +208,10 @@ export function PreviewModal({
                 const isActiveGroup = group.id === activeSlideGroupId
                 const bgLayer = group.layers.find((l) => l.type === 'background') as BackgroundLayer | undefined
                 const fallbackFill = fillToCss(bgLayer?.fill ?? group.background?.fill ?? '#171724')
-                const slideW = Math.round((group.slideWidth / group.slideHeight) * SLIDE_H)
+                // Use format-specific dims so the container aspect ratio matches the captured image.
+                const baseFormat = getProjectBaseFormat(project)
+                const dims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat)
+                const slideW = Math.round((dims.width / dims.height) * SLIDE_H)
                 const highResThumb = previewThumbs[group.id]?.[slideIdx]
                 const navThumb = thumbnails[group.id]?.[slideIdx]
 
