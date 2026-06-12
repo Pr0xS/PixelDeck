@@ -215,6 +215,106 @@ export function mapLayerToAuthoringSpace<T extends Layer>(
   return scaleLayer(layer, active.width, active.height, groupW, groupH) as T
 }
 
+function withoutFormatOverride(layer: Layer, format: CanvasFormatId): Layer {
+  if (!layer.formatOverrides?.[format]) return layer
+  const { [format]: _removed, ...rest } = layer.formatOverrides
+  void _removed
+  return { ...layer, formatOverrides: Object.keys(rest).length ? rest : undefined } as Layer
+}
+
+function withoutFormatVisibility(layer: Layer, format: CanvasFormatId): Layer {
+  if (layer.formatVisibility?.[format] === undefined) return layer
+  const { [format]: _removed, ...rest } = layer.formatVisibility
+  void _removed
+  return { ...layer, formatVisibility: Object.keys(rest).length ? rest : undefined } as Layer
+}
+
+function mapLayerTree(layers: Layer[], fn: (layer: Layer) => Layer): Layer[] {
+  return layers.map((layer) => {
+    const withChildren = layer.type === 'group'
+      ? ({ ...layer, children: mapLayerTree((layer as GroupLayer).children, fn) } as Layer)
+      : layer
+    return fn(withChildren)
+  })
+}
+
+/** Remove every layout/model override for a format in one slide group. */
+export function resetFormatOverridesInLayerTree(layers: Layer[], format: CanvasFormatId): Layer[] {
+  return mapLayerTree(layers, (layer) => withoutFormatOverride(layer, format))
+}
+
+/** Remove every explicit visibility entry for a format in one slide group. */
+export function resetFormatVisibilityInLayerTree(layers: Layer[], format: CanvasFormatId): Layer[] {
+  return mapLayerTree(layers, (layer) => withoutFormatVisibility(layer, format))
+}
+
+/**
+ * Promote all per-format override keys in a slide group back to the shared
+ * authoring layer, then remove those overrides. Content remains shared by
+ * design; this only consumes values already present in formatOverrides.
+ */
+export function promoteFormatOverridesToSharedInLayerTree(
+  layers: Layer[],
+  format: CanvasFormatId,
+  baseFormat: CanvasFormatId,
+  groupW: number,
+  groupH: number,
+): Layer[] {
+  if (format === baseFormat) return layers
+
+  return mapLayerTree(layers, (layer) => {
+    const patch = layer.formatOverrides?.[format]
+    if (!patch) return layer
+
+    // Override values are stored in the target format's coordinate space.
+    // Map a temporary layer back to authoring space, then copy only the keys
+    // that were actually overridden. Group children may be scaled in the temp
+    // value, but they are intentionally not copied unless they are patch keys.
+    const inTargetSpace = { ...layer, ...patch, id: layer.id, type: layer.type } as Layer
+    const mapped = mapLayerToAuthoringSpace(
+      inTargetSpace,
+      format,
+      baseFormat,
+      groupW,
+      groupH,
+    ) as unknown as Record<string, unknown>
+    const sharedPatch: Record<string, unknown> = {}
+    for (const key of Object.keys(patch)) sharedPatch[key] = mapped[key]
+
+    return withoutFormatOverride({ ...layer, ...sharedPatch } as Layer, format)
+  })
+}
+
+/**
+ * Convert all layers owned by `format` into shared layers for the active slide.
+ * Owned subtrees are mapped back to authoring coordinates as a whole so their
+ * appearance in the source platform stays as close as possible after sharing.
+ */
+export function makeOwnedFormatLayersSharedInLayerTree(
+  layers: Layer[],
+  format: CanvasFormatId,
+  baseFormat: CanvasFormatId,
+  groupW: number,
+  groupH: number,
+): Layer[] {
+  function makeShared(layer: Layer): Layer {
+    const mapped = format === baseFormat
+      ? layer
+      : mapLayerToAuthoringSpace(layer, format, baseFormat, groupW, groupH)
+    return withoutFormatVisibility({ ...mapped, ownerFormat: undefined } as Layer, format)
+  }
+
+  function visit(layer: Layer): Layer {
+    if (layer.ownerFormat === format) return makeShared(layer)
+    if (layer.type === 'group') {
+      return { ...layer, children: (layer as GroupLayer).children.map(visit) } as Layer
+    }
+    return layer
+  }
+
+  return layers.map(visit)
+}
+
 /**
  * Count how many layers (including group children) in a slide group have
  * format-specific customisations for the given format:

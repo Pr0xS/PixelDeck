@@ -95,6 +95,22 @@ export interface LocaleLayerPatch {
 }
 
 /**
+ * Controls how a layer participates in localization / bulk AI translation.
+ *  - 'auto'   : eligible for bulk AI translate (default; undefined === 'auto')
+ *  - 'manual' : human-entered overrides only; bulk translate SKIPS it
+ *  - 'skip'   : not localized at all; excluded from manifest + progress denominator
+ */
+export type LocalizationMode = 'auto' | 'manual' | 'skip';
+
+/** A single entry in a batch locale override commit. */
+export interface LocaleOverrideBatchEntry {
+  slideGroupId: string;
+  layerId: string;
+  locale: string;
+  patch: LocaleLayerPatch;
+}
+
+/**
  * Per-format visual overrides. These are shallow-merged on top of the shared
  * base layer when previewing/exporting a specific canvas format.
  */
@@ -129,6 +145,12 @@ export interface BaseLayer {
    * Cleared when the user explicitly "Makes shared".
    */
   ownerFormat?: CanvasFormatId;
+  /**
+   * Localization participation mode. Undefined === 'auto'.
+   * Co-located with localeOverrides because it is layer-scoped, undoable,
+   * and travels with copy/paste + manifest.
+   */
+  localizationMode?: LocalizationMode;
 }
 
 export type LayerType = 'background' | 'phone' | 'text' | 'image' | 'shape' | 'chips' | 'brand' | 'group';

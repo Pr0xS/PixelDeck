@@ -3,6 +3,7 @@ import { Stage, Layer, Rect, Line, Transformer } from 'react-konva'
 import type Konva from 'konva'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
+import { fileToDataUrl } from '@/utils/svgToImage'
 import { applyLocale } from '@/utils/locale'
 import { applyCanvasFormat } from '@/utils/canvasFormats'
 import { LayerNode } from './LayerNode'
@@ -86,6 +87,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   } = useEditorStore()
   const ctrlRef = useCtrlKey()
   const assets = useAssetStore((s) => s.assets)
+  const addAsset = useAssetStore((s) => s.addAsset)
 
   const viewProject = useMemo(
     () => applyCanvasFormat(applyLocale(project, activeLocale), activeCanvasFormat),
@@ -533,21 +535,13 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
       img.src = dataUrl
     })
 
-  const handleAssetDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    const filename = e.dataTransfer.getData('application/x-pixeldeck-asset') || e.dataTransfer.getData('text/plain')
-    if (!filename || !stageRef.current || !group) return
-
-    const asset = assets[filename]
-    if (!asset) return
-
-    e.preventDefault()
-    e.stopPropagation()
-    setAssetDropHighlight(null)
-
+  /** Resolve the stage pointer + the phone/image layer (if any) targeted by a DOM drag event. */
+  const resolveDropTarget = (e: React.DragEvent<HTMLDivElement>) => {
     const stage = stageRef.current
+    if (!stage || !group) return null
     stage.setPointersPositions(e.nativeEvent)
     const pointer = stage.getPointerPosition()
-    if (!pointer) return
+    if (!pointer) return null
 
     const hitLayer = findLayerById(getLayerIdFromNode(stage.getIntersection(pointer)))
     const selectedLayer = findLayerById(selection?.layerId)
@@ -557,41 +551,79 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
         ? selectedLayer
         : null
 
+    return { stage, pointer, targetLayer }
+  }
+
+  /** Apply a dropped asset: replace phone screenshot / image src, or create a new image layer. */
+  const applyAssetToTarget = async (
+    filename: string,
+    dataUrl: string,
+    targetLayer: AppLayer | null,
+    pointer: { x: number; y: number },
+    cascade = 0,
+  ) => {
     if (targetLayer?.type === 'phone') {
       updateLayer(targetLayer.id, { screenshotPath: filename, screenshotDataUrl: undefined } as Partial<AppLayer>)
       return
     }
 
-    const { width, height } = await getImageSize(asset.dataUrl)
+    const { width, height } = await getImageSize(dataUrl)
 
     if (targetLayer?.type === 'image') {
       updateLayer(targetLayer.id, { src: filename, width, height } as Partial<AppLayer>)
       return
     }
 
-    const x = (pointer.x - viewportX) / zoom - width / 2
-    const y = (pointer.y - viewportY) / zoom - height / 2
+    const x = (pointer.x - viewportX) / zoom - width / 2 + cascade
+    const y = (pointer.y - viewportY) / zoom - height / 2 + cascade
     addImageAt(filename, width, height, x, y)
   }
 
-  const handleAssetDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!e.dataTransfer.types.includes('application/x-pixeldeck-asset')) return
+  const handleAssetDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    const target = resolveDropTarget(e)
+    if (!target) return
+
+    // Internal drag from the assets panel
+    const internalName = e.dataTransfer.getData('application/x-pixeldeck-asset') || e.dataTransfer.getData('text/plain')
+    const internalAsset = internalName ? assets[internalName] : undefined
+
+    if (internalAsset) {
+      e.preventDefault()
+      e.stopPropagation()
+      setAssetDropHighlight(null)
+      await applyAssetToTarget(internalName, internalAsset.dataUrl, target.targetLayer, target.pointer)
+      return
+    }
+
+    // External OS file drop
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
+    if (files.length === 0) {
+      setAssetDropHighlight(null)
+      return
+    }
+
     e.preventDefault()
-    if (!stageRef.current || !group) return
+    e.stopPropagation()
+    setAssetDropHighlight(null)
 
-    const stage = stageRef.current
-    stage.setPointersPositions(e.nativeEvent)
-    const pointer = stage.getPointerPosition()
-    if (!pointer) return
+    for (const [i, file] of files.entries()) {
+      const dataUrl = await fileToDataUrl(file)
+      addAsset(file.name, dataUrl)
+      // Only the first file may replace the targeted layer; the rest cascade as new image layers.
+      await applyAssetToTarget(file.name, dataUrl, i === 0 ? target.targetLayer : null, target.pointer, i * 48)
+    }
+  }
 
-    const hitNode = stage.getIntersection(pointer)
-    const hitLayer = findLayerById(getLayerIdFromNode(hitNode))
-    const selectedLayer = findLayerById(selection?.layerId)
-    const targetLayer = hitLayer?.type === 'phone' || hitLayer?.type === 'image'
-      ? hitLayer
-      : selectedLayer?.type === 'phone' || selectedLayer?.type === 'image'
-        ? selectedLayer
-        : null
+  const handleAssetDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    const isInternal = e.dataTransfer.types.includes('application/x-pixeldeck-asset')
+    const isFiles = e.dataTransfer.types.includes('Files')
+    if (!isInternal && !isFiles) return
+    e.preventDefault()
+    if (isFiles && !isInternal) e.dataTransfer.dropEffect = 'copy'
+
+    const target = resolveDropTarget(e)
+    if (!target) return
+    const { stage, pointer, targetLayer } = target
 
     if (targetLayer) {
       const node = stage.findOne(`#layer-${targetLayer.id}`)

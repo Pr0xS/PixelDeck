@@ -22,7 +22,7 @@ import { ColorField, FillControl, SliderField } from '@/components/properties/Pr
 import { FONT_LIST, getFontWeights } from '@/utils/fonts'
 import { PHONE_MODELS, getPhoneSpec } from '@/assets/mockups/specs'
 import { useApiKeysStore } from '@/store/apiKeys'
-import { translateText } from '@/utils/translate'
+import { translateLayerText } from '@/ai/features/translateText'
 import { applyCanvasFormat, getCanvasFormat, getFormatCanvasDims, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
 import type { CanvasFormatId } from '@/types'
 import { OverrideDot } from '@/components/properties/OverrideDot'
@@ -860,7 +860,7 @@ function TranslateSection({
   nonDefaultLocales: string[]
   slideGroupId: string
 }) {
-  const { setLocaleOverride } = useEditorStore()
+  const { setLocaleOverride, project } = useEditorStore()
   const { provider, getActiveKey, getActiveModel } = useApiKeysStore()
   const [status, setStatus] = useState<Record<string, 'idle' | 'translating' | 'ok' | 'error'>>({})
   const [isRunning, setIsRunning] = useState(false)
@@ -873,6 +873,8 @@ function TranslateSection({
       setTranslateError('No API key configured. Add one in AI Settings.')
       return
     }
+    const slideGroup = project.slideGroups.find((g) => g.id === slideGroupId)
+    if (!slideGroup) return
     setTranslateError(null)
     setIsRunning(true)
     const next: Record<string, 'idle' | 'translating' | 'ok' | 'error'> = {}
@@ -881,8 +883,19 @@ function TranslateSection({
         next[locale] = 'translating'
         setStatus({ ...next })
         try {
-          const translated = await translateText(layer.text, locale, provider, key, model)
-          setLocaleOverride(slideGroupId, layer.id, locale, { text: translated })
+          const result = await translateLayerText({
+            auth: { provider, apiKey: key, model },
+            project,
+            slideGroup,
+            layerId: layer.id,
+            text: layer.text,
+            marks: layer.marks,
+            targetLocale: locale,
+          })
+          setLocaleOverride(slideGroupId, layer.id, locale, { text: result.text, marks: result.marks })
+          if (result.formattingLost) {
+            setTranslateError(`Formatting could not be preserved for some locales — review them in the Localization view.`)
+          }
           next[locale] = 'ok'
         } catch (error) {
           next[locale] = 'error'
@@ -1124,6 +1137,54 @@ function TextContent({ layer }: { layer: TextLayer }) {
           </div>
         )}
       </div>
+
+      {/* ── Placement presets ── */}
+      {(() => {
+        const activeGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+        if (!activeGroup) return null
+        const { slideWidth, slideHeight, numSlides } = activeGroup
+
+        // Approximate rendered block height: good enough for placement.
+        const lineCount = layer.text.split('\n').length
+        const blockHeight = layer.height ?? lineCount * layer.fontSize * layer.lineHeight
+
+        // Pano-aware: keep the layer inside the slide it currently occupies.
+        const centerX = layer.x + (layer.width ?? 0) / 2
+        const slideIndex = Math.min(Math.max(Math.floor(centerX / slideWidth), 0), numSlides - 1)
+        const slideOffsetX = slideIndex * slideWidth
+
+        const margin = Math.round(slideHeight * 0.06)
+        const xPatch = layer.width != null
+          ? { x: slideOffsetX + (slideWidth - layer.width) / 2 }
+          : {}
+
+        const presets = [
+          { label: '⤒ Top',    patch: { ...xPatch, y: margin } },
+          { label: '☰ Middle', patch: { ...xPatch, y: Math.round((slideHeight - blockHeight) / 2) } },
+          { label: '⤓ Bottom', patch: { ...xPatch, y: Math.round(slideHeight - margin - blockHeight) } },
+        ]
+
+        return (
+          <div className={panelSectionCls}>
+            <label className={labelCls}>Placement</label>
+            <div className="grid grid-cols-3 gap-2">
+              {presets.map((preset) => (
+                <button
+                  key={preset.label}
+                  type="button"
+                  onClick={() => upd(preset.patch as Partial<TextLayer>)}
+                  className="rounded-lg border border-[rgba(255,255,255,0.1)] px-2 py-2 text-xs text-[#6b6b7a] hover:border-[rgba(124,110,246,0.5)] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.04)] transition-colors"
+                >
+                  {preset.label}
+                </button>
+              ))}
+            </div>
+            {layer.width == null && (
+              <p className="mt-2 text-[10px] text-[#525261]">Auto-width text: presets adjust vertical position only.</p>
+            )}
+          </div>
+        )
+      })()}
 
       {/* ── Content (WYSIWYG rich text) ── */}
       <div className={panelSectionCls}>

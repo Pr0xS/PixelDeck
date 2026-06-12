@@ -10,6 +10,10 @@ import {
   getProjectActiveFormats,
   getProjectBaseFormat,
   normalizeProjectFormats,
+  makeOwnedFormatLayersSharedInLayerTree,
+  promoteFormatOverridesToSharedInLayerTree,
+  resetFormatOverridesInLayerTree,
+  resetFormatVisibilityInLayerTree,
 } from './canvasFormats'
 import type { Layer, PhoneLayer, Project, SlideGroup, TextLayer, ShapeLayer } from '@/types'
 
@@ -298,5 +302,74 @@ describe('ownerFormat — resolveLayerFormat', () => {
     expect(applyCanvasFormatToGroup(group, BASE_CANVAS_FORMAT, BASE_CANVAS_FORMAT).layers).toHaveLength(1)
     expect(applyCanvasFormatToGroup(group, 'android-phone', BASE_CANVAS_FORMAT).layers).toHaveLength(1)
     expect(applyCanvasFormatToGroup(group, 'iphone-69', BASE_CANVAS_FORMAT).layers).toHaveLength(1)
+  })
+})
+
+describe('global format slide actions', () => {
+  it('resets all overrides for one format without touching other formats', () => {
+    const text = makeText({
+      formatOverrides: {
+        'android-phone': { x: 10 },
+        'ipad-13': { y: 20 },
+      },
+    })
+    const groupLayer: Layer = {
+      id: 'grp', name: 'Group', type: 'group',
+      x: 0, y: 0, rotation: 0, opacity: 1, visible: true, locked: false,
+      children: [makeShape({ id: 'child', formatOverrides: { 'android-phone': { width: 99 } as never } })],
+    } as Layer
+
+    const [nextText, nextGroup] = resetFormatOverridesInLayerTree([text, groupLayer], 'android-phone')
+
+    expect(nextText.formatOverrides).toEqual({ 'ipad-13': { y: 20 } })
+    expect(((nextGroup as { children: Layer[] }).children[0]).formatOverrides).toBeUndefined()
+  })
+
+  it('resets all visibility entries for one format only', () => {
+    const shape = makeShape({
+      formatVisibility: { 'android-phone': false, 'ipad-13': true },
+    })
+
+    const [next] = resetFormatVisibilityInLayerTree([shape], 'android-phone')
+
+    expect(next.formatVisibility).toEqual({ 'ipad-13': true })
+  })
+
+  it('promotes format overrides to shared authoring coordinates', () => {
+    const shape = makeShape({
+      x: 100,
+      width: 300,
+      formatOverrides: { 'android-phone': { x: 540, width: 216 } as never },
+    })
+
+    const [next] = promoteFormatOverridesToSharedInLayerTree(
+      [shape],
+      'android-phone',
+      BASE_CANVAS_FORMAT,
+      1320,
+      2868,
+    ) as ShapeLayer[]
+
+    expect(next.formatOverrides).toBeUndefined()
+    expect(next.x).toBeCloseTo(660) // 540 * 1320/1080
+    expect(next.width).toBeCloseTo(264) // 216 * 1320/1080
+  })
+
+  it('makes platform-owned layers shared and maps them back to authoring space', () => {
+    const shape = makeShape({ ownerFormat: 'android-phone', x: 540, y: 960, width: 216, height: 192 })
+
+    const [next] = makeOwnedFormatLayersSharedInLayerTree(
+      [shape],
+      'android-phone',
+      BASE_CANVAS_FORMAT,
+      1320,
+      2868,
+    ) as ShapeLayer[]
+
+    expect(next.ownerFormat).toBeUndefined()
+    expect(next.x).toBeCloseTo(660)
+    expect(next.y).toBeCloseTo(1434)
+    expect(next.width).toBeCloseTo(264)
+    expect(next.height).toBeCloseTo(286.8)
   })
 })
