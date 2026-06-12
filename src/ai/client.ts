@@ -1,9 +1,30 @@
 import { getDefaultModel, getProviderConfig } from '@/ai/providers'
 import type { AiProvider } from '@/ai/providers'
 
+/** A multimodal content part: plain text or an image as a data URL. */
+export type AiContentPart =
+  | { type: 'text'; text: string }
+  | { type: 'image'; dataUrl: string }
+
 export interface AiChatMessage {
   role: 'system' | 'user' | 'assistant'
-  content: string
+  content: string | AiContentPart[]
+}
+
+/** Flatten message content to plain text (drops images). */
+function contentToText(content: string | AiContentPart[]): string {
+  if (typeof content === 'string') return content
+  return content
+    .filter((p): p is Extract<AiContentPart, { type: 'text' }> => p.type === 'text')
+    .map((p) => p.text)
+    .join('\n')
+}
+
+/** Split a data URL into media type + base64 payload (for Anthropic/Google). */
+function splitDataUrl(dataUrl: string): { mediaType: string; data: string } {
+  const match = /^data:([^;,]+);base64,(.*)$/s.exec(dataUrl)
+  if (!match) throw new Error('Image must be a base64 data URL (data:image/…;base64,…).')
+  return { mediaType: match[1], data: match[2] }
 }
 
 export interface AiChatOptions {
@@ -55,12 +76,25 @@ async function chatWithOpenAiCompatible(
     headers['X-OpenRouter-Title'] = 'PixelDeck'
   }
 
+  // Map multimodal parts to the OpenAI content schema; strings pass through.
+  const apiMessages = messages.map((m) => ({
+    role: m.role,
+    content:
+      typeof m.content === 'string'
+        ? m.content
+        : m.content.map((part) =>
+            part.type === 'text'
+              ? { type: 'text' as const, text: part.text }
+              : { type: 'image_url' as const, image_url: { url: part.dataUrl } },
+          ),
+  }))
+
   const res = await fetch(`${baseUrl}/chat/completions`, {
     method: 'POST',
     headers,
     body: JSON.stringify({
       model,
-      messages,
+      messages: apiMessages,
       ...(maxTokens ? { max_tokens: maxTokens } : {}),
     }),
   })
@@ -81,11 +115,21 @@ async function chatWithAnthropic(
 ): Promise<string> {
   const system = messages
     .filter((m) => m.role === 'system')
-    .map((m) => m.content)
+    .map((m) => contentToText(m.content))
     .join('\n\n')
   const anthropicMessages = messages
     .filter((m) => m.role !== 'system')
-    .map((m) => ({ role: m.role, content: m.content }))
+    .map((m) => ({
+      role: m.role,
+      content:
+        typeof m.content === 'string'
+          ? m.content
+          : m.content.map((part) => {
+              if (part.type === 'text') return { type: 'text' as const, text: part.text }
+              const { mediaType, data } = splitDataUrl(part.dataUrl)
+              return { type: 'image' as const, source: { type: 'base64' as const, media_type: mediaType, data } }
+            }),
+    }))
 
   const res = await fetch(`${baseUrl}/messages`, {
     method: 'POST',
@@ -117,11 +161,28 @@ async function chatWithGoogle(
   model: string,
   messages: AiChatMessage[],
 ): Promise<string> {
-  const prompt = messages.map((m) => `${m.role.toUpperCase()}: ${m.content}`).join('\n\n')
+  // Google expects a parts array; text messages are flattened with role
+  // prefixes, image parts become inline_data blocks.
+  const parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }> = []
+  for (const m of messages) {
+    if (typeof m.content === 'string') {
+      parts.push({ text: `${m.role.toUpperCase()}: ${m.content}` })
+      continue
+    }
+    for (const part of m.content) {
+      if (part.type === 'text') {
+        parts.push({ text: `${m.role.toUpperCase()}: ${part.text}` })
+      } else {
+        const { mediaType, data } = splitDataUrl(part.dataUrl)
+        parts.push({ inline_data: { mime_type: mediaType, data } })
+      }
+    }
+  }
+
   const res = await fetch(`${baseUrl}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ contents: [{ parts: [{ text: prompt }] }] }),
+    body: JSON.stringify({ contents: [{ parts }] }),
   })
   if (!res.ok) throw new Error(`Google AI API error ${res.status}: ${await res.text()}`)
 
