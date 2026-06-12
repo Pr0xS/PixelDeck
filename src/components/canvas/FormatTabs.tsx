@@ -28,6 +28,10 @@ export function FormatTabs() {
   const activeSlideGroupId = useEditorStore((s) => s.activeSlideGroupId)
   const toggleActiveFormat = useEditorStore((s) => s.toggleActiveFormat)
   const updateSlideGroup = useEditorStore((s) => s.updateSlideGroup)
+  const resetActiveFormatLayout = useEditorStore((s) => s.resetActiveFormatLayout)
+  const shareActiveFormatOwnedLayers = useEditorStore((s) => s.shareActiveFormatOwnedLayers)
+  const resetActiveFormatVisibility = useEditorStore((s) => s.resetActiveFormatVisibility)
+  const promoteActiveFormatLayoutToShared = useEditorStore((s) => s.promoteActiveFormatLayoutToShared)
 
   const baseFormat = getProjectBaseFormat(project)
 
@@ -39,6 +43,8 @@ export function FormatTabs() {
 
   const [dropdownOpen, setDropdownOpen] = useState(false)
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const [actionsOpen, setActionsOpen] = useState(false)
+  const actionsRef = useRef<HTMLDivElement>(null)
   const [showCustomInput, setShowCustomInput] = useState(false)
   const [customW, setCustomW] = useState('')
   const [customH, setCustomH] = useState('')
@@ -54,6 +60,17 @@ export function FormatTabs() {
     document.addEventListener('mousedown', handlePointerDown)
     return () => document.removeEventListener('mousedown', handlePointerDown)
   }, [dropdownOpen])
+
+  useEffect(() => {
+    if (!actionsOpen) return
+    const handlePointerDown = (e: MouseEvent) => {
+      if (actionsRef.current && !actionsRef.current.contains(e.target as Node)) {
+        setActionsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handlePointerDown)
+    return () => document.removeEventListener('mousedown', handlePointerDown)
+  }, [actionsOpen])
 
   // Formats not yet added (excluding base)
   const inactiveFormats = CANVAS_FORMAT_PRESETS.filter(
@@ -80,6 +97,26 @@ export function FormatTabs() {
 
   // Raw group for badge counts
   const rawGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+  const activeAdjustmentCount = rawGroup && !isBase
+    ? countFormatAdjustments(rawGroup, activeCanvasFormat, baseFormat)
+    : 0
+
+  const runFormatAction = (fn: (format: CanvasFormatId) => void) => {
+    fn(activeCanvasFormat)
+    setActionsOpen(false)
+  }
+
+  const handlePromoteLayout = () => {
+    const label = shortFormatLabel(activeCanvasFormat)
+    const ok = window.confirm(
+      `Use ${label} layout as shared for this slide?\n\n` +
+      'This promotes all layout/model overrides from this platform into Base, so other platforms may move. Content stays shared.',
+    )
+    if (!ok) return
+    runFormatAction(promoteActiveFormatLayoutToShared)
+  }
+
+  const actionItemCls = 'w-full text-left px-3 py-2 text-[11px] text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)] transition-colors'
 
   return (
     <div className="shrink-0 bg-[#18181f] border-b border-[rgba(255,255,255,0.06)]">
@@ -253,13 +290,54 @@ export function FormatTabs() {
             <strong>{shortFormatLabel(activeCanvasFormat)}</strong> · Layout adjustments only affect{' '}
             <strong>{shortFormatLabel(activeCanvasFormat)}</strong> · Content (text, colors) is shared
           </span>
-          <button
-            onClick={() => setActiveCanvasFormat(baseFormat)}
-            className="ml-4 shrink-0 text-xs transition-opacity hover:opacity-100"
-            style={{ color: '#fbbf24', opacity: 0.7 }}
-          >
-            ← Base
-          </button>
+          <div className="ml-4 flex shrink-0 items-center gap-2">
+            <button
+              onClick={() => setActiveCanvasFormat(baseFormat)}
+              className="text-xs transition-opacity hover:opacity-100"
+              style={{ color: '#fbbf24', opacity: 0.7 }}
+            >
+              ↩ Base
+            </button>
+            <div className="relative" ref={actionsRef}>
+              <button
+                onClick={() => setActionsOpen((v) => !v)}
+                className="rounded border border-[rgba(245,158,11,0.25)] px-2 py-0.5 text-xs transition-colors hover:bg-[rgba(245,158,11,0.12)]"
+                style={{ color: '#fbbf24' }}
+                title={`Global actions for this ${shortFormatLabel(activeCanvasFormat)} slide`}
+              >
+                Actions ▾
+              </button>
+              {actionsOpen && (
+                <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#1c1c26] shadow-xl">
+                  <div className="border-b border-[rgba(255,255,255,0.08)] px-3 py-2">
+                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#fbbf24]">
+                      {shortFormatLabel(activeCanvasFormat)} slide actions
+                    </p>
+                    <p className="mt-0.5 text-[10px] text-[#6b6b7a]">
+                      {activeAdjustmentCount} platform adjustment{activeAdjustmentCount !== 1 ? 's' : ''} on this slide
+                    </p>
+                  </div>
+                  <button className={actionItemCls} onClick={() => runFormatAction(resetActiveFormatLayout)}>
+                    Reset platform layout
+                    <span className="mt-0.5 block text-[10px] text-[#6b6b7a]">Remove all layout/model overrides for this platform.</span>
+                  </button>
+                  <button className={actionItemCls} onClick={() => runFormatAction(shareActiveFormatOwnedLayers)}>
+                    Make platform layers shared
+                    <span className="mt-0.5 block text-[10px] text-[#6b6b7a]">Convert layers created only in this platform into shared layers.</span>
+                  </button>
+                  <button className={actionItemCls} onClick={() => runFormatAction(resetActiveFormatVisibility)}>
+                    Reset platform visibility
+                    <span className="mt-0.5 block text-[10px] text-[#6b6b7a]">Clear hide/show decisions for this platform.</span>
+                  </button>
+                  <div className="h-px bg-[rgba(255,255,255,0.08)]" />
+                  <button className={actionItemCls} onClick={handlePromoteLayout}>
+                    Use platform layout as shared…
+                    <span className="mt-0.5 block text-[10px] text-[#f59e0b]">Promotes this platform layout into Base. Affects other platforms.</span>
+                  </button>
+                </div>
+              )}
+            </div>
+          </div>
         </div>
       )}
     </div>

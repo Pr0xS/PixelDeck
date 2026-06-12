@@ -23,8 +23,6 @@ interface ToolbarProps {
 export function Toolbar({ mode, onSetMode }: ToolbarProps) {
   const {
     project,
-    activeLocale,
-    setActiveLocale,
     zoom,
     setZoom,
     exportProject,
@@ -59,7 +57,6 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProjectMeta?.updatedAt])
 
-  const locales = project.settings.locales ?? [project.settings.defaultLocale]
   const openJsonInputRef = useRef<HTMLInputElement>(null)
 
   const handleSave = () => {
@@ -233,34 +230,6 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
           </button>
         )}
       </div>
-
-      {/* Locale switcher */}
-      {locales.length > 1 && (
-        <div className="flex items-center gap-0.5 border border-[rgba(255,255,255,0.1)] rounded px-1">
-          {locales.map((locale) => (
-            <button
-              key={locale}
-              onClick={() => setActiveLocale(locale)}
-              style={{
-                background: activeLocale === locale ? 'rgba(124,110,246,0.3)' : 'transparent',
-                border: 'none',
-                borderRadius: 4,
-                color: activeLocale === locale ? '#7c6ef6' : '#6b6b7a',
-                cursor: 'pointer',
-                fontSize: 11,
-                fontWeight: activeLocale === locale ? 700 : 400,
-                padding: '2px 7px',
-                textTransform: 'uppercase',
-              }}
-            >
-              {locale}
-              {locale === project.settings.defaultLocale && (
-                <span style={{ fontSize: 9, marginLeft: 2, opacity: 0.6 }}>⬩</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
 
       <div className="flex-1" />
 

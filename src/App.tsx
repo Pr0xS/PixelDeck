@@ -6,7 +6,6 @@ import { PreviewModal } from '@/components/panels/PreviewModal'
 import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SlideNavigator } from '@/components/panels/SlideNavigator'
 import { StageCanvas } from '@/components/canvas/StageCanvas'
-import { ContextualToolbar } from '@/components/canvas/ContextualToolbar'
 import { FormatTabs } from '@/components/canvas/FormatTabs'
 import { useThumbnails } from '@/hooks/useThumbnails'
 import { useEditorStore, useUndoRedo } from '@/store'
@@ -24,6 +23,9 @@ export default function App() {
   const { exitGroupEdit, editingGroupId } = useEditorStore()
   const [view, setView] = useState<'editor' | 'localization'>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
+  // Locale the preview opens in + the view to return to when it closes.
+  const [previewLocale, setPreviewLocale] = useState<string | undefined>(undefined)
+  const [previewReturnTo, setPreviewReturnTo] = useState<'localization' | null>(null)
   const {
     thumbnails,
     previewThumbs,
@@ -151,55 +153,85 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [undo, redo, exitGroupEdit, editingGroupId])
 
+  // Entering the editor always resets to the base locale — editing a derived
+  // locale view would silently write to the base layers.
+  const handleSetMode = (mode: 'editor' | 'localization') => {
+    if (mode === 'editor') {
+      const s = useEditorStore.getState()
+      s.setActiveLocale(s.project.settings.defaultLocale ?? 'en')
+    }
+    setView(mode)
+  }
+
+  // Preview from the Localization view: the Konva stage only exists in editor
+  // view, so switch to it underneath the fullscreen modal and return on close.
+  const handlePreviewLocale = (locale: string) => {
+    setPreviewLocale(locale)
+    setPreviewReturnTo('localization')
+    setView('editor')
+    setPreviewOpen(true)
+  }
+
+  const handleClosePreview = () => {
+    setPreviewOpen(false)
+    if (previewReturnTo === 'localization') setView('localization')
+    setPreviewReturnTo(null)
+    setPreviewLocale(undefined)
+  }
+
   return (
     <div className="w-screen h-screen flex flex-col overflow-hidden bg-[#0f0f13]">
       <Toolbar
         mode={view}
-        onSetMode={setView}
+        onSetMode={handleSetMode}
       />
-      <div className="flex flex-1 overflow-hidden">
-        {view === 'localization' ? (
-          <main className="flex-1 overflow-hidden bg-[#111118]" style={{ minWidth: 0 }}>
+      <div className="relative flex flex-1 overflow-hidden">
+        {/* Localization view — absolutely covers the editor when active */}
+        {view === 'localization' && (
+          <main className="absolute inset-0 z-10 overflow-hidden bg-[#111118]">
             <Suspense>
-              <LocalizationView embedded onBack={() => setView('editor')} />
+              <LocalizationView embedded onBack={() => handleSetMode('editor')} onPreview={handlePreviewLocale} />
             </Suspense>
           </main>
-        ) : (
-          <>
-        {/* Layers panel — always visible */}
-        <LayersPanel />
-
-        {/* Canvas area — fills remaining space */}
-        <main
-          className="flex-1 overflow-hidden bg-[#111118] flex flex-col"
-          style={{ minWidth: 0 }}
-        >
-          {/* Contextual toolbar — only shows when element selected */}
-          <ContextualToolbar />
-
-          {/* Format tabs — switch between platform preview formats */}
-          <FormatTabs />
-
-          {/* Canvas fills remaining height — StageCanvas takes full space */}
-          <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-            <StageCanvas stageRef={stageRef} />
-          </div>
-        </main>
-
-        {/* Properties panel — always visible */}
-        <PropertiesPanel />
-          </>
         )}
+
+        {/* Editor view — always mounted so the Konva stage + ResizeObserver are always alive.
+            Hidden (pointer-events-none, invisible) when the localization view is on top. */}
+        <div
+          className="flex flex-1 overflow-hidden"
+          style={view === 'localization' ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+        >
+          {/* Layers panel — always visible */}
+          <LayersPanel />
+
+          {/* Canvas area — fills remaining space */}
+          <main
+            className="flex-1 overflow-hidden bg-[#111118] flex flex-col"
+            style={{ minWidth: 0 }}
+          >
+            {/* Format tabs — switch between platform preview formats */}
+            <FormatTabs />
+
+            {/* Canvas fills remaining height — StageCanvas takes full space */}
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+              <StageCanvas stageRef={stageRef} />
+            </div>
+          </main>
+
+          {/* Properties panel — always visible */}
+          <PropertiesPanel />
+        </div>
       </div>
       <SlideNavigator thumbnails={thumbnails} stageRef={stageRef} onOpenPreview={() => setPreviewOpen(true)} />
       <PreviewModal
         open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
+        onClose={handleClosePreview}
         thumbnails={thumbnails}
         previewThumbs={previewThumbs}
         isCapturingPreview={isCapturingPreview}
         captureAllHighRes={captureAllHighRes}
         cancelCapture={cancelPreviewCapture}
+        initialLocale={previewLocale}
       />
     </div>
   )
