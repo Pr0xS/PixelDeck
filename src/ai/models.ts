@@ -1,4 +1,7 @@
 import { getProviderConfig } from '@/ai/providers'
+import { formatAiNetworkError } from '@/ai/errors'
+import { buildAnthropicHeaders, buildGoogleHeaders, buildOpenAiCompatibleHeaders } from '@/ai/headers'
+import { getAiModelsUrl } from '@/ai/urls'
 import type { AiModel, AiProvider } from '@/ai/providers'
 
 interface RemoteModel {
@@ -20,9 +23,14 @@ export async function listModels(provider: AiProvider, apiKey: string): Promise<
   if (!key) throw new Error('Add an API key before loading models.')
   if (!config.modelsUrl) throw new Error(`${config.label} does not expose a model list endpoint.`)
 
-  const res = await fetch(buildModelsUrl(config.modelsUrl, provider, key), {
-    headers: buildModelListHeaders(provider, key),
-  })
+  let res: Response
+  try {
+    res = await fetch(buildModelsUrl(config.modelsUrl, provider, key), {
+      headers: buildModelListHeaders(provider, key),
+    })
+  } catch (error) {
+    throw formatAiNetworkError(provider, 'load models', error)
+  }
   if (!res.ok) throw new Error(await readErrorMessage(res))
 
   const data = await res.json()
@@ -36,28 +44,19 @@ export async function listModels(provider: AiProvider, apiKey: string): Promise<
 }
 
 function buildModelsUrl(modelsUrl: string, provider: AiProvider, apiKey: string): string {
+  const urlWithProxy = getAiModelsUrl(provider, modelsUrl)
+  if (import.meta.env.DEV) return urlWithProxy
   if (provider !== 'google') return modelsUrl
-  const url = new URL(modelsUrl)
+  const url = new URL(urlWithProxy)
   url.searchParams.set('key', apiKey)
   return url.toString()
 }
 
 function buildModelListHeaders(provider: AiProvider, apiKey: string): HeadersInit {
-  if (provider === 'google') return {}
-  if (provider === 'anthropic') {
-    return {
-      'x-api-key': apiKey,
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    }
-  }
-
-  const headers: Record<string, string> = { Authorization: `Bearer ${apiKey}` }
-  if (provider === 'openrouter') {
-    headers['HTTP-Referer'] = typeof window === 'undefined' ? 'https://pixeldeck.local' : window.location.origin
-    headers['X-OpenRouter-Title'] = 'PixelDeck'
-  }
-  return headers
+  if (provider === 'google') return buildGoogleHeaders(apiKey, { includeApiKey: import.meta.env.DEV })
+  if (provider === 'opencode') return {}
+  if (provider === 'anthropic') return buildAnthropicHeaders(apiKey)
+  return buildOpenAiCompatibleHeaders(provider, apiKey)
 }
 
 async function readErrorMessage(res: Response): Promise<string> {
@@ -85,12 +84,28 @@ function normalizeModel(provider: AiProvider, model: RemoteModel): AiModel | nul
   const rawId = model.id ?? model.name
   if (!rawId) return null
   const id = provider === 'google' ? rawId.replace(/^models\//, '') : rawId
+  if (provider === 'opencode' && !isOpenCodeChatCompletionsModel(id)) return null
   return {
     id,
     name: model.display_name || model.displayName || model.name || model.id || id,
     description: model.description,
     contextLength: model.context_length ?? model.contextLength ?? model.max_input_tokens ?? model.inputTokenLimit,
   }
+}
+
+/**
+ * Returns true when the model is compatible with the OpenAI Chat Completions
+ * schema served by OpenCode Go's /zen/go/v1 endpoint.
+ *
+ * Known-incompatible models are excluded here:
+ *   - 'minimax-*'   — MiniMax proprietary API, not OAI-compatible
+ *   - 'qwen*'       — Alibaba Qwen models use a non-standard response schema
+ *                     via OpenCode's proxy; exclude until confirmed compatible.
+ *                     TODO: revisit when OpenCode adds Qwen compatibility.
+ *   - 'hy3-preview' — Hunyuan preview model, custom endpoint schema
+ */
+function isOpenCodeChatCompletionsModel(id: string): boolean {
+  return !id.startsWith('minimax-') && !id.startsWith('qwen') && id !== 'hy3-preview'
 }
 
 function dedupeModels(models: AiModel[]): AiModel[] {

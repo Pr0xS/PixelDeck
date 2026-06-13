@@ -1,14 +1,6 @@
 import type Konva from 'konva'
 import type { SlideGroup } from '@/types'
 
-// ─── Local copy of SLIDE_SIZE_PRESETS (avoids circular dep with @/store) ──────
-export const SLIDE_SIZE_PRESETS_LOCAL = [
-  { id: 'iphone-69',      label: 'iPhone 6.9"',       width: 1320, height: 2868 },
-  { id: 'ipad-13',        label: 'iPad 13"',           width: 2064, height: 2752 },
-  { id: 'android-phone',  label: 'Android Phone',      width: 1080, height: 1920 },
-  { id: 'android-tablet', label: 'Android Tablet 10"', width: 1600, height: 2560 },
-] as const
-
 interface WritableFileHandle {
   write(data: Blob): Promise<void>
   close(): Promise<void>
