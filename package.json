@@ -47,7 +47,6 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@playwright/test": "^1.60.0",
-    "@types/jszip": "^3.4.0",
     "js-yaml": "^4.2.0",
     "jszip": "^3.10.1",
     "konva": "^10.3.0",
