@@ -87,9 +87,9 @@ A `SlideGroup` with `numSlides: 2` and `slideWidth: 1290` renders on a **2580 px
 
 ### Editor store
 
-**File:** `src/store/index.ts`
+**Files:** `src/store/index.ts` (assembly + persistence), `src/store/types.ts` (EditorStore interface), `src/store/helpers.ts` (pure helpers/factories), `src/store/slices/*.ts` (domain slices: selection, locale, format, slideGroup, layer, group, clipboard, project)
 
-Uses **Zustand 5** with **zundo** for temporal undo/redo.
+Uses **Zustand 5** with **zundo** for temporal undo/redo. `index.ts` composes the slices inside the `temporal()` wrapper; each slice owns one domain of actions.
 
 ```ts
 {
@@ -282,7 +282,7 @@ All panels read from and write to the Zustand store directly; no prop drilling. 
 |---|---|
 | `src/utils/export.ts` | Browser PNG export; crops Konva stage per slide |
 | `src/utils/gradients.ts` | `FillValue` → Konva fill props / CSS / `CanvasGradient` |
-| `src/utils/svgToImage.ts` | SVG string / File → `HTMLImageElement` |
+| `src/utils/files.ts` | File → data URL helpers for imports |
 | `src/utils/fonts.ts` | `FONT_LIST` registry (80+ Google Fonts) + `loadGoogleFonts()` |
 | `src/utils/textRendering.ts` | `renderSpansToCanvas()`: off-screen canvas for rich text spans |
 

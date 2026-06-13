@@ -13,7 +13,7 @@ PixelDeck is a React + TypeScript visual editor for designing App Store screensh
 | Task | File(s) |
 |---|---|
 | Domain types | `src/types/index.ts` (read this first) |
-| State + actions | `src/store/index.ts` |
+| State + actions | `src/store/index.ts` (assembly), `src/store/slices/*.ts` (domain actions), `src/store/helpers.ts` |
 | Asset store | `src/store/assets.ts` |
 | App entry / mode routing | `src/main.tsx` |
 | Editor shell | `src/App.tsx` |
@@ -26,7 +26,7 @@ PixelDeck is a React + TypeScript visual editor for designing App Store screensh
 | Top toolbar | `src/components/toolbar/Toolbar.tsx` |
 | Browser PNG export | `src/utils/export.ts` |
 | Gradient conversion | `src/utils/gradients.ts` |
-| SVG/image utilities | `src/utils/svgToImage.ts` |
+| File/image utilities | `src/utils/files.ts` |
 | Headless CLI entry | `cli/index.mjs` |
 | Playwright export runner | `cli/export.mjs` |
 | Headless render page | `src/pages/ExportApp.tsx` |
@@ -58,9 +58,9 @@ Full types: `src/types/index.ts`
    - Define `interface MyTypeLayer extends BaseLayer { type: 'mytype'; ... }`
    - Add `| MyTypeLayer` to the `Layer` union
 
-2. **`src/store/index.ts`**
-   - Add a factory function `createMyTypeLayer(partial): MyTypeLayer`
-   - Add `addMyTypeLayer` action (or reuse `addLayer` with the factory output)
+2. **`src/store/slices/layerSlice.ts`**
+   - Add an `addMyType` factory action (see `addPhone` / `addText` for the pattern)
+   - Declare it in the `EditorStore` interface in `src/store/types.ts`
 
 3. **`src/components/canvas/MyTypeNode.tsx`** (new file)
    - Receive `layer: MyTypeLayer` as prop
@@ -69,8 +69,9 @@ Full types: `src/types/index.ts`
 4. **`src/components/canvas/LayerNode.tsx`**
    - Add `case 'mytype': return <MyTypeNode layer={layer as MyTypeLayer} />`
 
-5. **`src/components/panels/PropertiesPanel.tsx`**
-   - Add a section rendered when `selectedLayer.type === 'mytype'`
+5. **`src/components/properties/MyTypeProperties.tsx`** (new file)
+   - Per-type property editor (see `ShapeProperties.tsx` for the pattern)
+   - Register it in the type switch in `src/components/panels/PropertiesPanel.tsx`
 
 6. **`src/components/toolbar/Toolbar.tsx`**
    - Add an "Add MyType" button that dispatches the factory + `addLayer`
