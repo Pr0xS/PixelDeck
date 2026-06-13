@@ -1,9 +1,10 @@
-import { useRef, useEffect, useCallback, useMemo, useState } from 'react'
+import { memo, useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import { Stage, Layer, Rect, Line, Transformer } from 'react-konva'
 import type Konva from 'konva'
+import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
-import { fileToDataUrl } from '@/utils/svgToImage'
+import { fileToDataUrl } from '@/utils/files'
 import { applyLocale } from '@/utils/locale'
 import { applyCanvasFormat } from '@/utils/canvasFormats'
 import { LayerNode } from './LayerNode'
@@ -25,6 +26,83 @@ function useCtrlKey() {
 interface StageCanvasProps {
   stageRef: React.RefObject<Konva.Stage | null>
 }
+
+interface StageLayerItemProps {
+  layer: AppLayer
+  isSelected: boolean
+  isEditing: boolean
+  selectedChildId: string | null
+  canvasWidth: number
+  canvasHeight: number
+  ctrlRef: React.RefObject<boolean>
+}
+
+/**
+ * Memo boundary between the (frequently re-rendering) StageCanvas and the
+ * Konva node tree of each layer. All handlers read store state via
+ * `getState()` so their identity is stable across renders — pan/zoom and
+ * unrelated selection changes skip reconciling untouched layer subtrees.
+ */
+const StageLayerItem = memo(function StageLayerItem({
+  layer, isSelected, isEditing, selectedChildId, canvasWidth, canvasHeight, ctrlRef,
+}: StageLayerItemProps) {
+  const layerId = layer.id
+
+  const handleSelect = useCallback(() => {
+    const state = useEditorStore.getState()
+    if (ctrlRef.current) {
+      if (state.selectedLayerIds.length === 0 && state.selection?.layerId) {
+        if (state.selection.layerId === layerId) return
+        state.setMultiSelection([state.selection.layerId, layerId])
+      } else {
+        state.toggleLayerSelection(layerId)
+      }
+      return
+    }
+    if (state.selectedLayerIds.length > 1 && state.selectedLayerIds.includes(layerId)) return
+    state.select(layerId)
+  }, [layerId, ctrlRef])
+
+  const handleDragEnd = useCallback((x: number, y: number) => {
+    useEditorStore.getState().updateLayer(layerId, { x, y } as Partial<AppLayer>)
+  }, [layerId])
+
+  const handleTransformEnd = useCallback((attrs: Partial<AppLayer>) => {
+    useEditorStore.getState().updateLayer(layerId, attrs)
+  }, [layerId])
+
+  const isGroup = layer.type === 'group'
+  const handleEnterEdit = useCallback(() => {
+    useEditorStore.getState().enterGroupEdit(layerId)
+  }, [layerId])
+  const handleSelectChild = useCallback((childId: string) => {
+    useEditorStore.getState().selectChild(layerId, childId)
+  }, [layerId])
+  const handleChildDragEnd = useCallback((childId: string, x: number, y: number) => {
+    useEditorStore.getState().updateChildLayer(layerId, childId, { x, y } as Partial<AppLayer>)
+  }, [layerId])
+  const handleChildTransformEnd = useCallback((childId: string, attrs: Partial<AppLayer>) => {
+    useEditorStore.getState().updateChildLayer(layerId, childId, attrs)
+  }, [layerId])
+
+  return (
+    <LayerNode
+      layer={layer}
+      isSelected={isSelected}
+      onSelect={handleSelect}
+      onDragEnd={handleDragEnd}
+      onTransformEnd={handleTransformEnd}
+      canvasWidth={canvasWidth}
+      canvasHeight={canvasHeight}
+      isEditing={isEditing}
+      selectedChildId={selectedChildId}
+      onEnterEdit={isGroup ? handleEnterEdit : undefined}
+      onSelectChild={isGroup ? handleSelectChild : undefined}
+      onChildDragEnd={isGroup ? handleChildDragEnd : undefined}
+      onChildTransformEnd={isGroup ? handleChildTransformEnd : undefined}
+    />
+  )
+})
 
 export function StageCanvas({ stageRef }: StageCanvasProps) {
   const transformerRef = useRef<Konva.Transformer>(null)
@@ -72,19 +150,39 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     updateLayer,
     addImageAt,
     editingGroupId,
-    enterGroupEdit,
     exitGroupEdit,
-    updateChildLayer,
     setZoom,
     setViewportPosition,
-    toggleLayerSelection,
     clearMultiSelection,
     selectedLayerIds,
     setMultiSelection,
     activeLocale,
     activeCanvasFormat,
     editingTextId,
-  } = useEditorStore()
+  } = useEditorStore(useShallow((s) => ({
+    project: s.project,
+    activeSlideGroupId: s.activeSlideGroupId,
+    zoom: s.zoom,
+    viewportX: s.viewportX,
+    viewportY: s.viewportY,
+    showGrid: s.showGrid,
+    showSeamGuides: s.showSeamGuides,
+    selection: s.selection,
+    select: s.select,
+    deselect: s.deselect,
+    updateLayer: s.updateLayer,
+    addImageAt: s.addImageAt,
+    editingGroupId: s.editingGroupId,
+    exitGroupEdit: s.exitGroupEdit,
+    setZoom: s.setZoom,
+    setViewportPosition: s.setViewportPosition,
+    clearMultiSelection: s.clearMultiSelection,
+    selectedLayerIds: s.selectedLayerIds,
+    setMultiSelection: s.setMultiSelection,
+    activeLocale: s.activeLocale,
+    activeCanvasFormat: s.activeCanvasFormat,
+    editingTextId: s.editingTextId,
+  })))
   const ctrlRef = useCtrlKey()
   const assets = useAssetStore((s) => s.assets)
   const addAsset = useAssetStore((s) => s.addAsset)
@@ -416,22 +514,6 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
       })
     : null
 
-  const handleLayerSelect = (layerId: string) => {
-    if (ctrlRef.current) {
-      const state = useEditorStore.getState()
-      if (state.selectedLayerIds.length === 0 && state.selection?.layerId) {
-        if (state.selection.layerId === layerId) return
-        setMultiSelection([state.selection.layerId, layerId])
-      } else {
-        toggleLayerSelection(layerId)
-      }
-    } else {
-      const { selectedLayerIds: ids } = useEditorStore.getState()
-      if (ids.length > 1 && ids.includes(layerId)) return
-      select(layerId)
-    }
-  }
-
   // ─── Multi-drag ────────────────────────────────────────────────────────────
 
   const handleContentLayerDragStart = useCallback((e: Konva.KonvaEventObject<DragEvent>) => {
@@ -489,22 +571,6 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     }
     multiDragRef.current = null
   }, [updateLayer])
-
-  const handleDragEnd = (layerId: string, x: number, y: number) => {
-    updateLayer(layerId, { x, y } as Partial<AppLayer>)
-  }
-
-  const handleTransformEnd = (layerId: string, attrs: Partial<AppLayer>) => {
-    updateLayer(layerId, attrs)
-  }
-
-  const handleChildDragEnd = (groupId: string, childId: string, x: number, y: number) => {
-    updateChildLayer(groupId, childId, { x, y } as Partial<AppLayer>)
-  }
-
-  const handleChildTransformEnd = (groupId: string, childId: string, attrs: Partial<AppLayer>) => {
-    updateChildLayer(groupId, childId, attrs)
-  }
 
   const findLayerById = useCallback((layerId: string | null | undefined) => {
     if (!layerId || !group) return null
@@ -724,21 +790,15 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
               onDragEnd={handleContentLayerDragEnd}
             >
               {group.layers.map((layer) => (
-                <LayerNode
+                <StageLayerItem
                   key={layer.id}
-                  layer={{ ...layer, id: layer.id } as AppLayer}
+                  layer={layer}
                   isSelected={selection?.layerId === layer.id && !editingGroupId}
-                  onSelect={() => handleLayerSelect(layer.id)}
-                  onDragEnd={(x, y) => handleDragEnd(layer.id, x, y)}
-                  onTransformEnd={(attrs) => handleTransformEnd(layer.id, attrs)}
-                  canvasWidth={totalWidth}
-                  canvasHeight={totalHeight}
                   isEditing={layer.type === 'group' && editingGroupId === layer.id}
                   selectedChildId={editingGroupId === layer.id ? (selection?.layerId ?? null) : null}
-                  onEnterEdit={layer.type === 'group' ? () => enterGroupEdit(layer.id) : undefined}
-                  onSelectChild={layer.type === 'group' ? (childId) => useEditorStore.getState().selectChild(layer.id, childId) : undefined}
-                  onChildDragEnd={layer.type === 'group' ? (childId, x, y) => handleChildDragEnd(layer.id, childId, x, y) : undefined}
-                  onChildTransformEnd={layer.type === 'group' ? (childId, attrs) => handleChildTransformEnd(layer.id, childId, attrs) : undefined}
+                  canvasWidth={totalWidth}
+                  canvasHeight={totalHeight}
+                  ctrlRef={ctrlRef}
                 />
               ))}
             </Layer>
@@ -916,7 +976,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
             >Fit</button>
           </div>
 
-          {/* Pan hint */}
+          {/* Asset drop target highlight */}
           {assetDropHighlight && (
             <div
               style={{

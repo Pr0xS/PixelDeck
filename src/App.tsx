@@ -1,5 +1,6 @@
 import { useRef, useEffect, useState, lazy, Suspense } from 'react'
 import type Konva from 'konva'
+import { useShallow } from 'zustand/react/shallow'
 import { Toolbar } from '@/components/toolbar/Toolbar'
 import { LayersPanel } from '@/components/panels/LayersPanel'
 import { PreviewModal } from '@/components/panels/PreviewModal'
@@ -18,9 +19,15 @@ const LocalizationView = lazy(() =>
 
 export default function App() {
   const stageRef = useRef<Konva.Stage>(null)
-  const { project, activeSlideGroupId, setActiveSlideGroup } = useEditorStore()
+  const { project, activeSlideGroupId, setActiveSlideGroup, exitGroupEdit, editingGroupId } =
+    useEditorStore(useShallow((s) => ({
+      project: s.project,
+      activeSlideGroupId: s.activeSlideGroupId,
+      setActiveSlideGroup: s.setActiveSlideGroup,
+      exitGroupEdit: s.exitGroupEdit,
+      editingGroupId: s.editingGroupId,
+    })))
   const { undo, redo } = useUndoRedo()
-  const { exitGroupEdit, editingGroupId } = useEditorStore()
   const [view, setView] = useState<'editor' | 'localization'>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
   // Locale the preview opens in + the view to return to when it closes.
@@ -30,9 +37,12 @@ export default function App() {
     thumbnails,
     previewThumbs,
     isCapturingPreview,
+    isCapturingThumbnails,
     captureAllHighRes,
     cancelPreviewCapture,
   } = useThumbnails(stageRef)
+
+
 
   useEffect(() => {
     if (project.slideGroups.length === 0) return
@@ -223,6 +233,21 @@ export default function App() {
         </div>
       </div>
       <SlideNavigator thumbnails={thumbnails} stageRef={stageRef} onOpenPreview={() => setPreviewOpen(true)} />
+
+      {/* Full-editor overlay — hides all flickering while initial thumbnails are captured.
+          Covers everything below the toolbar (canvas, panels, slide navigator).
+          Fades out when capture completes. */}
+      {isCapturingThumbnails && (
+        <div className="absolute inset-0 top-[var(--toolbar-h,41px)] z-50 bg-[#0f0f13] flex items-center justify-center">
+          <div className="flex flex-col items-center gap-3">
+            <div className="w-5 h-5 rounded-full border-2 border-white/10 border-t-white/40 animate-spin" />
+            <span className="text-[11px] tracking-widest uppercase text-white/25 font-medium select-none">
+              Generating previews
+            </span>
+          </div>
+        </div>
+      )}
+
       <PreviewModal
         open={previewOpen}
         onClose={handleClosePreview}

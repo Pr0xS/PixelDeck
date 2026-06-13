@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useTemplatesStore } from '@/store/templates'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { looksLikeTemplate } from '@/utils/templates'
@@ -14,7 +15,12 @@ interface TemplatesModalProps {
 export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
   const { manifest, loading, error, loadManifest, fetchTemplate } = useTemplatesStore()
   const { project, exportActiveAsTemplate, importTemplateAsNewProject, addTemplateSlideGroups } =
-    useEditorStore()
+    useEditorStore(useShallow((s) => ({
+      project: s.project,
+      exportActiveAsTemplate: s.exportActiveAsTemplate,
+      importTemplateAsNewProject: s.importTemplateAsNewProject,
+      addTemplateSlideGroups: s.addTemplateSlideGroups,
+    })))
   const { canUndo } = useUndoRedo()
 
   const [view, setView] = useState<'gallery' | 'export'>('gallery')

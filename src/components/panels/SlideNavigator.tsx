@@ -1,5 +1,6 @@
 import { Fragment, useState, useEffect, useRef } from 'react'
 import type Konva from 'konva'
+import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
 import { downloadDataUrl, downloadSlide, downloadSlideGroup, saveToDirectory, exportGroupAsZip } from '@/utils/export'
@@ -36,7 +37,16 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
     duplicateSlideGroup,
     updateSlideGroup,
     activeCanvasFormat,
-  } = useEditorStore()
+  } = useEditorStore(useShallow((s) => ({
+    project: s.project,
+    activeSlideGroupId: s.activeSlideGroupId,
+    setActiveSlideGroup: s.setActiveSlideGroup,
+    addSlideGroup: s.addSlideGroup,
+    removeSlideGroup: s.removeSlideGroup,
+    duplicateSlideGroup: s.duplicateSlideGroup,
+    updateSlideGroup: s.updateSlideGroup,
+    activeCanvasFormat: s.activeCanvasFormat,
+  })))
 
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
