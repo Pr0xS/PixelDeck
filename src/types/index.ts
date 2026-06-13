@@ -34,6 +34,24 @@ export interface BrandColor {
   value: string   // hex color e.g. '#FF5A5F'
 }
 
+// ─── Custom Fonts ─────────────────────────────────────────────────────────────
+
+/**
+ * A user-uploaded font registered in the project.
+ * `family` is the opaque CSS font-family name used in fontFamily fields.
+ * `label` is the human-readable display name shown in the picker.
+ * `filename` is the key in fontStore.
+ */
+export interface CustomFontRef {
+  /** Opaque CSS family name — unique, collision-safe (e.g. "pf_MyBrand_a3f2") */
+  family: string
+  /** Human-readable display name (e.g. "MyBrand") */
+  label: string
+  /** Key in fontStore (e.g. "MyBrand.ttf") */
+  filename: string
+  format: 'ttf' | 'otf' | 'woff2' | 'woff'
+}
+
 // ─── Phone Models ────────────────────────────────────────────────────────────
 
 export type PhoneModel = 'iphone-16-pro' | 'iphone-16-pro-plain' | 'pixel-9' | 'pixel-9-plain';
@@ -417,6 +435,10 @@ export interface Project {
   updatedAt: string;
   settings: ProjectSettings;
   slideGroups: SlideGroup[];
+  /** User-uploaded custom fonts registered for this project. */
+  customFonts?: CustomFontRef[];
+  /** User-saved gradient presets for this project. */
+  savedGradients?: FillValue[];
 }
 
 // ─── Selection ────────────────────────────────────────────────────────────────

@@ -1,4 +1,5 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { useProjectsStore } from '@/store/projects'
 import { downloadDataUrl } from '@/utils/export'
@@ -29,7 +30,15 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
     importProject,
     selectedLayerIds,
     createGroup,
-  } = useEditorStore()
+  } = useEditorStore(useShallow((s) => ({
+    project: s.project,
+    zoom: s.zoom,
+    setZoom: s.setZoom,
+    exportProject: s.exportProject,
+    importProject: s.importProject,
+    selectedLayerIds: s.selectedLayerIds,
+    createGroup: s.createGroup,
+  })))
 
   const { undo, redo, canUndo, canRedo } = useUndoRedo()
 

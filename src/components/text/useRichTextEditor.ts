@@ -71,7 +71,7 @@ export function useRichTextEditor(
   editorRef: React.RefObject<HTMLDivElement | null>,
   opts: UseRichTextEditorOptions = {},
 ): RichTextEditorApi {
-  const { updateLayer } = useEditorStore()
+  const updateLayer = useEditorStore((s) => s.updateLayer)
   const [sel, setSel] = useState<{ start: number; end: number } | null>(null)
   // Key of the last state we wrote to the store — used to skip DOM rewrites
   // caused by our own commits (preserves the caret while typing).
@@ -190,8 +190,26 @@ export function useRichTextEditor(
     return applyPatch({ fontWeight: layer.fontWeight >= 600 ? null : 700 })
   }
 
-  const clearAll = () =>
-    applyPatch({ fill: null, fontWeight: null, italic: null, underline: null, strikethrough: null })
+  const clearAll = () => {
+    // Clear mark overrides AND reset layer.fill to white so no gradient bleeds through.
+    const el = editorRef.current
+    if (!el || text.length === 0) return
+    const newMarks = applyMarkStyle(marks, text.length, range.start, range.end, {
+      fill: null, fontWeight: null, italic: null, underline: null, strikethrough: null,
+    })
+    el.innerHTML = marksToHtml(text, newMarks)
+    if (sel && !range.whole) setDomSelection(el, sel.start, sel.end)
+    const norm = normalizeMarks(newMarks, text.length)
+    lastEmitted.current = JSON.stringify([text, norm])
+    const patch = {
+      text,
+      fill: '#ffffff',
+      marks: norm.length ? norm : undefined,
+      spans: undefined,
+    } as Partial<TextLayer>
+    if (opts.commitLayer) opts.commitLayer(patch)
+    else updateLayer(layer.id, patch as Partial<Layer>)
+  }
 
   const focusAndSelectAll = () => {
     const el = editorRef.current

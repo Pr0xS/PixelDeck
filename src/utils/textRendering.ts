@@ -1,6 +1,9 @@
 import type { TextLayer, TextMark, FillValue } from '@/types'
 import { createCanvasGradient } from '@/utils/gradients'
 
+/** Default text box width (px) when a TextLayer has no explicit `width`. */
+export const DEFAULT_TEXT_WIDTH = 1000
+
 // ─── Internal types ───────────────────────────────────────────────────────────
 
 interface ResolvedFragment {
@@ -264,11 +267,11 @@ export function wrapFragmentLines<T extends { text: string }>(
 /**
  * Renders a TextLayer's rich text to an off-screen HTMLCanvasElement.
  * Uses `marks` when present, falls back to legacy `spans`, then plain `text`.
- * The canvas is sized to (layer.width ?? 1000) × computed-height.
+ * The canvas is sized to (layer.width ?? DEFAULT_TEXT_WIDTH) × computed-height.
  */
 export function renderSpansToCanvas(layer: TextLayer): HTMLCanvasElement {
   const { fontSize, fontFamily, letterSpacing, lineHeight, align } = layer
-  const canvasWidth = Math.max(1, layer.width ?? 1000)
+  const canvasWidth = Math.max(1, layer.width ?? DEFAULT_TEXT_WIDTH)
   const lineHeightPx = fontSize * lineHeight
 
   // ── Measure setup ─────────────────────────────────────────────────────────
@@ -399,7 +402,7 @@ export function spansRenderKey(layer: TextLayer): string {
     JSON.stringify(layer.fill),
     layer.lineHeight,
     layer.letterSpacing,
-    layer.width ?? 1000,
+    layer.width ?? DEFAULT_TEXT_WIDTH,
     layer.height ?? 'auto',
     layer.verticalAlign ?? 'top',
     layer.align,

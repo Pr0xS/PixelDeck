@@ -4,6 +4,7 @@ import type {
   Template, Project, ProjectSettings,
   CanvasBackground, BackgroundLayer,
 } from '@/types'
+import { migrateLayerSpans } from '@/store/helpers'
 
 // ─── ID helpers ──────────────────────────────────────────────────────────────
 
@@ -158,6 +159,9 @@ export interface AppliedTemplate {
 export function applyTemplate(tpl: Template): AppliedTemplate {
   const slideGroups: SlideGroup[] = tpl.slideGroups.map((g) => {
     let layers = cloneLayersWithNewIds(g.layers)
+
+    // Migrate legacy TextLayer.spans → marks on every layer
+    layers = layers.map(migrateLayerSpans)
 
     // Migrate legacy `background` field → BackgroundLayer if none exists
     if (!layers.some((l) => l.type === 'background')) {

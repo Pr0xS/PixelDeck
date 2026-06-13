@@ -14,7 +14,9 @@ export function BrandKitButton() {
   const buttonRef = useRef<HTMLButtonElement>(null)
 
   const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
-  const { addBrandColor, updateBrandColor, removeBrandColor } = useEditorStore()
+  const addBrandColor = useEditorStore((s) => s.addBrandColor)
+  const updateBrandColor = useEditorStore((s) => s.updateBrandColor)
+  const removeBrandColor = useEditorStore((s) => s.removeBrandColor)
 
   // Close on click outside
   useEffect(() => {

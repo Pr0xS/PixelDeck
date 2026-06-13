@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import { getProjectBaseFormat } from '@/utils/canvasFormats'
 import type { Layer, GroupLayer } from '@/types'
@@ -26,7 +27,15 @@ export function OverrideDot({ layerId, propKey }: OverrideDotProps) {
     activeSlideGroupId,
     clearLayerFormatOverrideKey,
     applyLayerFormatKeyToShared,
-  } = useEditorStore()
+  } = useEditorStore(
+    useShallow((s) => ({
+      project: s.project,
+      activeCanvasFormat: s.activeCanvasFormat,
+      activeSlideGroupId: s.activeSlideGroupId,
+      clearLayerFormatOverrideKey: s.clearLayerFormatOverrideKey,
+      applyLayerFormatKeyToShared: s.applyLayerFormatKeyToShared,
+    }))
+  )
 
   const [menuOpen, setMenuOpen] = useState(false)
   const menuRef = useRef<HTMLDivElement>(null)

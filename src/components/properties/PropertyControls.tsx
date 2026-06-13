@@ -11,13 +11,11 @@ const labelCls = 'text-[11px] text-[#6b6b7a] mb-1 block uppercase tracking-[0.08
 const rowCls = 'flex gap-2 mb-3'
 const fieldCls = 'flex-1 min-w-0'
 
-// eslint-disable-next-line react-refresh/only-export-components
-export function clamp(value: number, min: number, max: number) {
+function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
-export function normalizeHexColor(value: string, fallback = '#ffffff') {
+function normalizeHexColor(value: string, fallback = '#ffffff') {
   const raw = value.trim()
   const withHash = raw.startsWith('#') ? raw : `#${raw}`
   if (/^#[0-9a-fA-F]{6}$/.test(withHash)) return withHash.toUpperCase()
@@ -212,7 +210,7 @@ export function ColorField({
   )
 }
 
-export function SegmentedButtons<T extends string>({
+function SegmentedButtons<T extends string>({
   value,
   options,
   onChange,
@@ -281,6 +279,8 @@ const GRADIENT_PRESETS: Array<{ label: string; fill: LinearGradient }> = [
 
 export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, onInteractionEnd = () => {} }: GradientEditorProps) {
   const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const savedGradients = useEditorStore((s) => s.project.savedGradients) ?? []
+  const updateProject = useEditorStore((s) => s.updateProject)
   const [selectedStopIndex, setSelectedStopIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
@@ -390,7 +390,21 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
 
       {mode !== 'solid' && (
         <div>
-          <span className={labelCls}>Presets</span>
+          <div className="flex items-center justify-between mb-1">
+            <span className={labelCls}>Presets</span>
+            <button
+              type="button"
+              title="Save current gradient"
+              onClick={() => {
+                if (typeof fill === 'string') return
+                updateProject({ savedGradients: [...savedGradients, fill] })
+              }}
+              className="text-[10px] text-[#7c6ef6] hover:text-[#9d90f8] transition-colors px-1.5 py-0.5 rounded border border-[rgba(124,110,246,0.3)] hover:border-[rgba(124,110,246,0.6)]"
+            >
+              + Save
+            </button>
+          </div>
+          {/* Built-in presets */}
           <div className="flex flex-wrap gap-1">
             {GRADIENT_PRESETS.map((p) => (
               <button
@@ -403,6 +417,35 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
               />
             ))}
           </div>
+          {/* Saved gradients */}
+          {savedGradients.length > 0 && (
+            <div className="mt-2">
+              <span className="text-[10px] text-[#4a4a5a] uppercase tracking-wider">Custom</span>
+            </div>
+          )}
+          {savedGradients.length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {savedGradients.map((g, i) => (
+                <div key={i} className="relative group">
+                  <button
+                    type="button"
+                    title="Apply saved gradient"
+                    onClick={() => onChange(g)}
+                    className="h-5 w-9 rounded border border-[rgba(255,255,255,0.12)] hover:border-[rgba(124,110,246,0.6)] transition-all hover:scale-105"
+                    style={{ background: fillToCss(g) }}
+                  />
+                  <button
+                    type="button"
+                    title="Remove"
+                    onClick={() => updateProject({ savedGradients: savedGradients.filter((_, j) => j !== i) })}
+                    className="absolute -top-1 -right-1 hidden group-hover:flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1a1a2e] border border-[rgba(255,255,255,0.2)] text-[8px] text-[#f87171] hover:text-white leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
         </div>
       )}
 

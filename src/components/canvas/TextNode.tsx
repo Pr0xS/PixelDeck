@@ -4,7 +4,7 @@ import type Konva from 'konva'
 import type { TextLayer } from '@/types'
 import { resolveFill } from '@/utils/brandColors'
 import { fillToKonvaProps } from '@/utils/gradients'
-import { renderSpansToCanvas, spansRenderKey } from '@/utils/textRendering'
+import { DEFAULT_TEXT_WIDTH, renderSpansToCanvas, spansRenderKey } from '@/utils/textRendering'
 import { useEditorStore } from '@/store'
 import { getShadowProps, useKonvaBlur } from './effects'
 
@@ -139,12 +139,12 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
       <KonvaImage
         ref={imageRef}
         id={`layer-${layer.id}`}
-        x={layer.x + (layer.width ?? 1000) / 2}
+        x={layer.x + (layer.width ?? DEFAULT_TEXT_WIDTH) / 2}
         y={layer.y + spanCanvas.height / 2}
-        offsetX={(layer.width ?? 1000) / 2}
+        offsetX={(layer.width ?? DEFAULT_TEXT_WIDTH) / 2}
         offsetY={spanCanvas.height / 2}
         image={spanCanvas}
-        width={layer.width ?? 1000}
+        width={layer.width ?? DEFAULT_TEXT_WIDTH}
         height={spanCanvas.height}
         rotation={layer.rotation}
         opacity={layer.opacity}
@@ -158,7 +158,7 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
         onDragEnd={() => {
           const node = imageRef.current
           if (!node) return
-          onDragEnd(node.x() - (layer.width ?? 1000) / 2, node.y() - spanCanvas.height / 2)
+          onDragEnd(node.x() - (layer.width ?? DEFAULT_TEXT_WIDTH) / 2, node.y() - spanCanvas.height / 2)
         }}
         onTransformStart={() => {
           const node = imageRef.current
@@ -230,7 +230,7 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
 
   const fillProps = fillToKonvaProps(
     resolveFill(layer.fill, brandColors),
-    layer.width ?? 1000,
+    layer.width ?? DEFAULT_TEXT_WIDTH,
     layer.fontSize * 1.5,
   )
 
@@ -238,9 +238,9 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
     <Text
       ref={textRef}
       id={`layer-${layer.id}`}
-      x={layer.x + (layer.width ?? 1000) / 2}
+      x={layer.x + (layer.width ?? DEFAULT_TEXT_WIDTH) / 2}
       y={layer.y + estimateTextHeight() / 2}
-      offsetX={(layer.width ?? 1000) / 2}
+      offsetX={(layer.width ?? DEFAULT_TEXT_WIDTH) / 2}
       offsetY={estimateTextHeight() / 2}
       text={layer.text}
       fontFamily={layer.fontFamily}
@@ -265,7 +265,7 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
       onDragEnd={() => {
         const node = textRef.current
         if (!node) return
-        onDragEnd(node.x() - (layer.width ?? 1000) / 2, node.y() - estimateTextHeight() / 2)
+        onDragEnd(node.x() - (layer.width ?? DEFAULT_TEXT_WIDTH) / 2, node.y() - estimateTextHeight() / 2)
       }}
       onTransformStart={() => {
         const node = textRef.current

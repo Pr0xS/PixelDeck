@@ -7,6 +7,7 @@ import { useRichTextEditor } from '@/components/text/useRichTextEditor'
 import { RichTextToolbar } from '@/components/text/RichTextToolbar'
 import { resolveFill } from '@/utils/brandColors'
 import { applyCanvasFormatToGroup, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { DEFAULT_TEXT_WIDTH } from '@/utils/textRendering'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // In-canvas WYSIWYG text editor. Mounted by StageCanvas when editingTextId is
@@ -168,7 +169,7 @@ function CanvasTextEditorBox({
   }, [])
 
   const scale = placement.scale
-  const boxW = (layer.width ?? 1000) * scale
+  const boxW = (layer.width ?? DEFAULT_TEXT_WIDTH) * scale
   const boxH = layer.height != null ? layer.height * scale : undefined
   const minH = layer.fontSize * layer.lineHeight * scale
   const justify =

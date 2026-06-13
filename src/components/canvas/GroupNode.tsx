@@ -3,15 +3,17 @@ import { Group } from 'react-konva'
 import type Konva from 'konva'
 import type { GroupLayer, Layer } from '@/types'
 import { LayerNode } from './LayerNode'
+import { getPhoneSpec } from '@/assets/mockups/specs'
+import { DEFAULT_TEXT_WIDTH } from '@/utils/textRendering'
 import { getShadowProps, useKonvaBlur } from './effects'
 
 function estimateLayerBox(layer: Layer): { x: number; y: number; w: number; h: number } {
   if (layer.type === 'phone') {
-    const frame = layer.model.includes('pixel') ? { w: 448, h: 914 } : { w: 430, h: 880 }
-    return { x: layer.x, y: layer.y, w: frame.w * layer.scale, h: frame.h * layer.scale }
+    const spec = getPhoneSpec(layer.model)
+    return { x: layer.x, y: layer.y, w: spec.frameWidth * layer.scale, h: spec.frameHeight * layer.scale }
   }
   if (layer.type === 'image' || layer.type === 'shape') return { x: layer.x, y: layer.y, w: layer.width, h: layer.height }
-  if (layer.type === 'text') return { x: layer.x, y: layer.y, w: layer.width ?? 1000, h: layer.height ?? layer.fontSize * layer.lineHeight * Math.max(1, layer.text.split('\n').length) }
+  if (layer.type === 'text') return { x: layer.x, y: layer.y, w: layer.width ?? DEFAULT_TEXT_WIDTH, h: layer.height ?? layer.fontSize * layer.lineHeight * Math.max(1, layer.text.split('\n').length) }
   if (layer.type === 'chips') return { x: layer.x, y: layer.y, w: 800, h: Math.max(1, layer.items.length) * (layer.chipFontSize + 32 + layer.gap) }
   if (layer.type === 'brand') return { x: layer.x, y: layer.y, w: 360, h: Math.max(layer.logoSize, layer.nameFontSize) }
   if (layer.type === 'group') {
