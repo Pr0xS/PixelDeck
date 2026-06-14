@@ -13,17 +13,59 @@
 
 import type {
   Project, Layer, GroupLayer, SlideGroup,
-  LocaleLayerPatch, TextLayer, PhoneLayer, ImageLayer,
+  LocaleLayerPatch, LocalizationMode, TextLayer, PhoneLayer, ImageLayer, TextMark, TextSpan,
 } from '@/types'
 
 // ─── Core resolver ────────────────────────────────────────────────────────────
 
+/**
+ * Convert legacy TextSpan[] in a locale patch to TextMark[] (pure, no browser APIs).
+ * The mark offsets are computed over the concatenated span texts.
+ */
+function migrateSpansInPatch(patch: LocaleLayerPatch): LocaleLayerPatch {
+  if (!patch.spans?.length || patch.marks?.length) return patch
+  const spans = patch.spans as TextSpan[]
+  let offset = 0
+  const marks: TextMark[] = []
+  const textParts: string[] = []
+  for (const span of spans) {
+    textParts.push(span.text)
+    const end = offset + span.text.length
+    const hasStyle =
+      span.fill !== undefined || span.fontWeight !== undefined ||
+      span.italic !== undefined || span.underline !== undefined ||
+      span.strikethrough !== undefined
+    if (hasStyle) {
+      marks.push({ start: offset, end, fill: span.fill, fontWeight: span.fontWeight,
+        italic: span.italic, underline: span.underline, strikethrough: span.strikethrough })
+    }
+    offset = end
+  }
+  const migratedText = patch.text ?? textParts.join('')
+  return {
+    ...patch,
+    text: migratedText,
+    marks: marks.length ? marks : undefined,
+    spans: undefined,
+  }
+}
+
 /** Merge localeOverrides[locale] into a single layer (non-mutating, shallow merge). */
 export function resolveLayerLocale<T extends Layer>(layer: T, locale: string): T {
   if (!layer.localeOverrides) return layer
-  const patch = layer.localeOverrides[locale]
-  if (!patch) return layer
-  return { ...layer, ...patch }
+  const rawPatch = layer.localeOverrides[locale]
+  if (!rawPatch) return layer
+  // Migrate legacy spans in locale patch first
+  const patch = rawPatch.spans?.length ? migrateSpansInPatch(rawPatch) : rawPatch
+  const merged = { ...layer, ...patch } as T
+  // When locale overrides text without providing its own marks, the base layer's
+  // marks reference positions in the original text and would style the wrong
+  // characters. Drop them so translated text renders without misplaced styling.
+  if (patch.text !== undefined && patch.marks === undefined) {
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    ;(merged as any).marks = undefined
+  }
+  return merged
 }
 
 /**
@@ -82,6 +124,19 @@ export function getLocalizableLayers(project: Project): LocalizableLayerRef[] {
   return result
 }
 
+/**
+ * Resolve a layer's effective localization mode.
+ * Text layers default to 'auto'. Image/phone layers can never be 'auto'
+ * (no AI image pipeline yet) — they are capped at 'manual'.
+ */
+export function effectiveLocalizationMode(layer: Layer): LocalizationMode {
+  const explicit = layer.localizationMode
+  if (layer.type === 'image' || layer.type === 'phone') {
+    return explicit === 'skip' ? 'skip' : 'manual'
+  }
+  return explicit ?? 'auto'
+}
+
 function collectFromLayers(
   layers: Layer[],
   groupId: string,
@@ -125,6 +180,8 @@ export interface LocaleManifestEntry {
   id: string
   name: string
   type: 'text' | 'phone' | 'image'
+  /** Effective localization mode — CLI must NOT translate 'skip' layers. */
+  mode: LocalizationMode
   /** Default (base-locale) values */
   default: LocaleLayerPatch
   /** Per-locale overrides; null means "not yet translated" */
@@ -175,7 +232,7 @@ function collectManifestEntries(
       layer.type === 'text'
         ? {
             text: (layer as TextLayer).text,
-            ...((layer as TextLayer).spans ? { spans: (layer as TextLayer).spans } : {}),
+            ...((layer as TextLayer).marks ? { marks: (layer as TextLayer).marks } : {}),
           }
         : layer.type === 'phone'
           ? { screenshotPath: (layer as PhoneLayer).screenshotPath }
@@ -191,6 +248,7 @@ function collectManifestEntries(
       id: layer.id,
       name: layer.name,
       type: layer.type,
+      mode: effectiveLocalizationMode(layer),
       default: defaultPatch,
       overrides,
     })
@@ -238,4 +296,95 @@ export function applyLocaleManifest(project: Project, manifest: LocaleManifest):
       layers: g.layers.map(patchLayer),
     })),
   }
+}
+
+// ─── Locale detection from filename ───────────────────────────────────────────
+
+export interface LanguageOption {
+  code: string;   // normalized, lowercase, hyphenated: 'pt-br'
+  name: string;   // human-readable: 'Portuguese (Brazil)'
+}
+
+/** Full list of supported languages for the locale combobox. */
+export const LANGUAGES: LanguageOption[] = [
+  { code: 'en',      name: 'English' },
+  { code: 'en-us',   name: 'English (US)' },
+  { code: 'en-gb',   name: 'English (UK)' },
+  { code: 'es',      name: 'Spanish' },
+  { code: 'es-es',   name: 'Spanish (Spain)' },
+  { code: 'es-mx',   name: 'Spanish (Mexico)' },
+  { code: 'fr',      name: 'French' },
+  { code: 'fr-fr',   name: 'French (France)' },
+  { code: 'de',      name: 'German' },
+  { code: 'de-de',   name: 'German (Germany)' },
+  { code: 'it',      name: 'Italian' },
+  { code: 'pt',      name: 'Portuguese' },
+  { code: 'pt-br',   name: 'Portuguese (Brazil)' },
+  { code: 'pt-pt',   name: 'Portuguese (Portugal)' },
+  { code: 'nl',      name: 'Dutch' },
+  { code: 'pl',      name: 'Polish' },
+  { code: 'ru',      name: 'Russian' },
+  { code: 'ja',      name: 'Japanese' },
+  { code: 'ko',      name: 'Korean' },
+  { code: 'zh',      name: 'Chinese' },
+  { code: 'zh-hans', name: 'Chinese (Simplified)' },
+  { code: 'zh-hant', name: 'Chinese (Traditional)' },
+  { code: 'zh-cn',   name: 'Chinese (China)' },
+  { code: 'zh-tw',   name: 'Chinese (Taiwan)' },
+  { code: 'ar',      name: 'Arabic' },
+  { code: 'tr',      name: 'Turkish' },
+  { code: 'sv',      name: 'Swedish' },
+  { code: 'da',      name: 'Danish' },
+  { code: 'fi',      name: 'Finnish' },
+  { code: 'nb',      name: 'Norwegian (Bokmål)' },
+  { code: 'cs',      name: 'Czech' },
+  { code: 'sk',      name: 'Slovak' },
+  { code: 'hu',      name: 'Hungarian' },
+  { code: 'ro',      name: 'Romanian' },
+  { code: 'el',      name: 'Greek' },
+  { code: 'uk',      name: 'Ukrainian' },
+  { code: 'ca',      name: 'Catalan' },
+  { code: 'hr',      name: 'Croatian' },
+  { code: 'bg',      name: 'Bulgarian' },
+  { code: 'lt',      name: 'Lithuanian' },
+  { code: 'lv',      name: 'Latvian' },
+  { code: 'et',      name: 'Estonian' },
+  { code: 'sl',      name: 'Slovenian' },
+  { code: 'sr',      name: 'Serbian' },
+  { code: 'he',      name: 'Hebrew' },
+  { code: 'th',      name: 'Thai' },
+  { code: 'vi',      name: 'Vietnamese' },
+  { code: 'id',      name: 'Indonesian' },
+  { code: 'ms',      name: 'Malay' },
+]
+
+/** Human-readable language name for a locale code (falls back to the uppercased code). */
+export function getLanguageName(code: string): string {
+  return LANGUAGES.find((l) => l.code === code)?.name ?? code.toUpperCase()
+}
+
+/** Derived set for filename-based locale detection. */
+const KNOWN_LOCALE_CODES = new Set(LANGUAGES.map((l) => l.code))
+
+/**
+ * Attempts to detect a locale code from a filename suffix.
+ *
+ * Supported patterns (at end of basename, before extension):
+ *   screenshot_es.png      → 'es'
+ *   app-screen-fr.png      → 'fr'
+ *   home_pt-BR.png         → 'pt-br'
+ *   slide_zh-Hans.png      → 'zh-hans'
+ *
+ * Returns the normalised (lowercase, hyphen-separated) locale code,
+ * or `null` if no recognised locale was found.
+ */
+export function detectLocaleFromFilename(filename: string): string | null {
+  // Strip extension
+  const base = filename.replace(/\.[^.]+$/, '')
+  // Match suffix: _xx or -xx optionally followed by _XX or -XX for region/script
+  const match = base.match(/[_-]([a-z]{2,3}(?:[_-][a-zA-Z]{2,4})?)$/i)
+  if (!match) return null
+  // Normalise: lowercase, underscores to hyphens
+  const code = match[1].toLowerCase().replace('_', '-')
+  return KNOWN_LOCALE_CODES.has(code) ? code : null
 }

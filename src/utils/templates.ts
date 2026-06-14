@@ -4,6 +4,7 @@ import type {
   Template, Project, ProjectSettings,
   CanvasBackground, BackgroundLayer,
 } from '@/types'
+import { migrateLayerSpans } from '@/store/helpers'
 
 // ─── ID helpers ──────────────────────────────────────────────────────────────
 
@@ -101,13 +102,18 @@ export function projectToTemplate(project: Project, opts: ExportTemplateOpts): T
     return { ...rest, layers }
   })
 
-  // Sanitize settings: never include outputPath or brandLogoDataUrl in templates
+  // Sanitize settings: never include outputPath or brandLogoDataUrl in templates.
+  // brandColors ARE included — layers may reference them via {brand:id} tokens,
+  // and without the palette those tokens would dangle after import.
   const settings: Partial<ProjectSettings> = {
     defaultSlideWidth: project.settings.defaultSlideWidth,
     defaultSlideHeight: project.settings.defaultSlideHeight,
     defaultLocale: project.settings.defaultLocale,
     ...(project.settings.locales ? { locales: project.settings.locales } : {}),
     brandName: project.settings.brandName,
+    ...(project.settings.brandColors?.length
+      ? { brandColors: project.settings.brandColors.map((c) => ({ ...c })) }
+      : {}),
   }
 
   return {
@@ -153,6 +159,9 @@ export interface AppliedTemplate {
 export function applyTemplate(tpl: Template): AppliedTemplate {
   const slideGroups: SlideGroup[] = tpl.slideGroups.map((g) => {
     let layers = cloneLayersWithNewIds(g.layers)
+
+    // Migrate legacy TextLayer.spans → marks on every layer
+    layers = layers.map(migrateLayerSpans)
 
     // Migrate legacy `background` field → BackgroundLayer if none exists
     if (!layers.some((l) => l.type === 'background')) {

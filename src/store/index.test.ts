@@ -1,6 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useEditorStore } from './index'
-import type { TextLayer, GroupLayer } from '@/types'
+import type { TextLayer, GroupLayer, Template } from '@/types'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -284,6 +284,34 @@ describe('dissolveGroup', () => {
     // background + text + shape = 3
     expect(after).toHaveLength(3)
   })
+
+  it('bakes the group scale into children so visuals are preserved', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    const layers = getActiveGroup().layers
+    const textId = layers.find((l) => l.type === 'text')!.id
+    const shapeId = layers.find((l) => l.type === 'shape')!.id
+    useEditorStore.getState().createGroup([textId, shapeId])
+
+    const grp = getActiveGroup().layers.find((l) => l.type === 'group') as GroupLayer
+    const childText = grp.children.find((c) => c.type === 'text') as TextLayer
+    const childShape = grp.children.find((c) => c.type === 'shape') as Extract<typeof grp.children[number], { type: 'shape' }>
+
+    useEditorStore.getState().updateLayer(grp.id, { scale: 2 } as Partial<GroupLayer>)
+    useEditorStore.getState().dissolveGroup(grp.id)
+
+    const after = getActiveGroup().layers
+    const textAfter = after.find((l) => l.id === textId) as TextLayer
+    const shapeAfter = after.find((l) => l.id === shapeId) as typeof childShape
+
+    // Positions: abs = local * scale + group origin
+    expect(textAfter.x).toBeCloseTo(childText.x * 2 + grp.x)
+    expect(textAfter.y).toBeCloseTo(childText.y * 2 + grp.y)
+    // Sizes scale per layer type
+    expect(textAfter.fontSize).toBeCloseTo(childText.fontSize * 2)
+    expect(shapeAfter.width).toBeCloseTo(childShape.width * 2)
+    expect(shapeAfter.height).toBeCloseTo(childShape.height * 2)
+  })
 })
 
 // ─── addSlideGroup / removeSlideGroup ────────────────────────────────────────
@@ -400,5 +428,66 @@ describe('setLocaleOverride / clearLocaleOverride', () => {
 
     const after = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
     expect(after.localeOverrides?.['es']).toBeUndefined()
+  })
+})
+
+// ─── addTemplateSlideGroups (brand kit merge) ─────────────────────────────────
+
+describe('addTemplateSlideGroups', () => {
+  const makeTemplate = (): Template => ({
+    id: 'tpl-test',
+    kind: 'template',
+    schemaVersion: 1,
+    name: 'Brand Merge Test',
+    description: '',
+    slideGroups: [
+      {
+        name: 'Slide A',
+        numSlides: 1,
+        slideWidth: 1290,
+        slideHeight: 2796,
+        slideNames: ['slide-a'],
+        layers: [
+          {
+            id: 'l0', name: 'Background', type: 'background',
+            x: 0, y: 0, rotation: 0, opacity: 1, visible: true, locked: true,
+            fill: '{brand:tpl-primary}', accents: [],
+          },
+        ],
+      },
+    ],
+    settings: {
+      brandColors: [
+        { id: 'tpl-primary', name: 'Primary', value: '#1ED760' },
+        { id: 'tpl-surface', name: 'Surface', value: '#14151F' },
+      ],
+    },
+  })
+
+  it('merges template brand colors into the current project palette', () => {
+    useEditorStore.getState().addTemplateSlideGroups(makeTemplate())
+    const colors = useEditorStore.getState().project.settings.brandColors ?? []
+    expect(colors.map((c) => c.id)).toEqual(['tpl-primary', 'tpl-surface'])
+  })
+
+  it('never overwrites an existing brand color with the same id', () => {
+    useEditorStore.getState().addBrandColor('Mine', '#FF0000')
+    const mine = useEditorStore.getState().project.settings.brandColors![0]
+    // Simulate collision: template carries a color with the user's id
+    const tpl = makeTemplate()
+    tpl.settings!.brandColors![0].id = mine.id
+
+    useEditorStore.getState().addTemplateSlideGroups(tpl)
+
+    const colors = useEditorStore.getState().project.settings.brandColors!
+    expect(colors.find((c) => c.id === mine.id)?.value).toBe('#FF0000')
+    // The non-colliding color still came in
+    expect(colors.some((c) => c.id === 'tpl-surface')).toBe(true)
+  })
+
+  it('appends the template slide groups to the project', () => {
+    const before = useEditorStore.getState().project.slideGroups.length
+    useEditorStore.getState().addTemplateSlideGroups(makeTemplate())
+    expect(useEditorStore.getState().project.slideGroups.length).toBe(before + 1)
   })
 })

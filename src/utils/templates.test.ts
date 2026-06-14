@@ -169,6 +169,23 @@ describe('projectToTemplate', () => {
     expect(tpl.settings?.brandLogoDataUrl).toBeUndefined()
   })
 
+  it('includes brandColors in settings so {brand:id} tokens keep resolving', () => {
+    const project = makeProject()
+    project.settings.brandColors = [
+      { id: 'bc1', name: 'Primary', value: '#1ED760' },
+      { id: 'bc2', name: 'Surface', value: '#14151F' },
+    ]
+    const tpl = projectToTemplate(project, { name: 'Brand Test' })
+    expect(tpl.settings?.brandColors).toEqual(project.settings.brandColors)
+    // Deep copy — mutating the template must not touch the project
+    expect(tpl.settings?.brandColors?.[0]).not.toBe(project.settings.brandColors[0])
+  })
+
+  it('omits brandColors from settings when the project has none', () => {
+    const tpl = projectToTemplate(makeProject(), { name: 'No Brand Test' })
+    expect(tpl.settings).not.toHaveProperty('brandColors')
+  })
+
   it('assigns deterministic layer ids (l0, l1, …) for clean diffs', () => {
     const tpl = projectToTemplate(makeProject(), { name: 'ID Test' })
     const ids = tpl.slideGroups[0].layers.map((l) => l.id)

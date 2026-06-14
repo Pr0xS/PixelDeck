@@ -42,6 +42,7 @@ Every contributor must run this gate before opening a PR and paste the command o
 npm run lint       # must be clean
 npm run typecheck  # must be clean
 npm run build      # must succeed
+npm test           # all tests must pass
 ```
 
 Do not open a PR with known lint, type, or build failures. “It mostly works” is not enough.

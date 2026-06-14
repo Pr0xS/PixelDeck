@@ -1,18 +1,26 @@
+import { useRef } from 'react'
 import { Group } from 'react-konva'
 import type Konva from 'konva'
 import type { GroupLayer, Layer } from '@/types'
 import { LayerNode } from './LayerNode'
+import { getPhoneSpec } from '@/assets/mockups/specs'
+import { DEFAULT_TEXT_WIDTH } from '@/utils/textRendering'
+import { getShadowProps, useKonvaBlur } from './effects'
 
 function estimateLayerBox(layer: Layer): { x: number; y: number; w: number; h: number } {
   if (layer.type === 'phone') {
-    const frame = layer.model.includes('pixel') ? { w: 448, h: 914 } : { w: 430, h: 880 }
-    return { x: layer.x, y: layer.y, w: frame.w * layer.scale, h: frame.h * layer.scale }
+    const spec = getPhoneSpec(layer.model)
+    return { x: layer.x, y: layer.y, w: spec.frameWidth * layer.scale, h: spec.frameHeight * layer.scale }
   }
   if (layer.type === 'image' || layer.type === 'shape') return { x: layer.x, y: layer.y, w: layer.width, h: layer.height }
-  if (layer.type === 'text') return { x: layer.x, y: layer.y, w: layer.width ?? 1000, h: layer.fontSize * layer.lineHeight * Math.max(1, layer.text.split('\n').length) }
+  if (layer.type === 'text') return { x: layer.x, y: layer.y, w: layer.width ?? DEFAULT_TEXT_WIDTH, h: layer.height ?? layer.fontSize * layer.lineHeight * Math.max(1, layer.text.split('\n').length) }
   if (layer.type === 'chips') return { x: layer.x, y: layer.y, w: 800, h: Math.max(1, layer.items.length) * (layer.chipFontSize + 32 + layer.gap) }
   if (layer.type === 'brand') return { x: layer.x, y: layer.y, w: 360, h: Math.max(layer.logoSize, layer.nameFontSize) }
-  if (layer.type === 'group') return estimateGroupBox(layer)
+  if (layer.type === 'group') {
+    const s = layer.scale ?? 1
+    const b = estimateGroupBox({ ...layer, x: 0, y: 0 })
+    return { x: layer.x + b.x * s, y: layer.y + b.y * s, w: b.w * s, h: b.h * s }
+  }
   return { x: layer.x, y: layer.y, w: 1, h: 1 }
 }
 
@@ -52,9 +60,14 @@ export function GroupNode({
   onTransformEnd,
   onChildTransformEnd,
 }: GroupNodeProps) {
+  const groupRef = useRef<Konva.Group>(null)
+  const scale = layer.scale ?? 1
   const box = estimateGroupBox({ ...layer, x: 0, y: 0 })
-  const centerX = layer.x + box.x + box.w / 2
-  const centerY = layer.y + box.y + box.h / 2
+  // Local (unscaled) center — used as rotation/scale pivot via offsetX/offsetY
+  const cx = box.x + box.w / 2
+  const cy = box.y + box.h / 2
+  const centerX = layer.x + cx * scale
+  const centerY = layer.y + cy * scale
   const handleClick = (e: Konva.KonvaEventObject<MouseEvent | TouchEvent>) => {
     if (layer.locked || isEditing) return
     e.cancelBubble = true
@@ -80,35 +93,49 @@ export function GroupNode({
       node = node.getParent() as Konva.Node | null
     }
   }
+  useKonvaBlur(groupRef, layer.blur, `${JSON.stringify(layer.children)}:${isEditing}:${scale}`)
 
   return (
     <Group
+      ref={groupRef}
       id={`layer-${layer.id}`}
       x={centerX}
       y={centerY}
-      offsetX={box.x + box.w / 2}
-      offsetY={box.y + box.h / 2}
+      offsetX={cx}
+      offsetY={cy}
+      scaleX={scale}
+      scaleY={scale}
       rotation={layer.rotation}
       opacity={layer.opacity}
       visible={layer.visible}
       draggable={!layer.locked && !isEditing}
+      {...getShadowProps(layer.shadow)}
       onClick={handleClick}
       onTap={handleClick}
       onDblClick={handleDblClick}
       onDblTap={handleDblClick}
       onDragStart={() => { if (!layer.locked && !isEditing) onSelect() }}
       onDragEnd={(e: Konva.KonvaEventObject<DragEvent>) => {
-        if (!isEditing) onDragEnd(e.target.x() - box.x - box.w / 2, e.target.y() - box.y - box.h / 2)
+        if (!isEditing) onDragEnd(e.target.x() - cx * scale, e.target.y() - cy * scale)
       }}
       onTransformEnd={(e: Konva.KonvaEventObject<Event>) => {
         if (!isEditing) {
           const node = e.target
-          node.scaleX(1)
-          node.scaleY(1)
+          // The transformer multiplied the node's existing scale (= `scale` prop).
+          // Pick the axis that actually changed (middle anchors only touch one) and
+          // persist a uniform scale.
+          const sx = node.scaleX()
+          const sy = node.scaleY()
+          const next = Math.max(0.05, Math.abs(sx / scale - 1) >= Math.abs(sy / scale - 1) ? sx : sy)
+          // Normalize the node to the value the next render will set as prop, so
+          // react-konva's prop diffing can't leave a stale scale behind.
+          node.scaleX(next)
+          node.scaleY(next)
           onTransformEnd({
-            x: node.x() - box.x - box.w / 2,
-            y: node.y() - box.y - box.h / 2,
+            x: node.x() - cx * next,
+            y: node.y() - cy * next,
             rotation: node.rotation(),
+            scale: next,
           } as Partial<GroupLayer>)
         }
       }}

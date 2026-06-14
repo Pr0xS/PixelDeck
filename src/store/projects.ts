@@ -47,7 +47,7 @@ interface ProjectsStore {
   saveCurrentProject: () => void
 
   /** Create a brand-new project, save current first, then switch. */
-  createProject: () => void
+  createProject: (name: string) => void
 
   /** Load a saved project into the editor (saves current first). */
   openProject: (id: string) => void
@@ -119,9 +119,16 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
     set({ projects: updated })
   },
 
-  createProject() {
+  createProject(name) {
+    const trimmed = name.trim()
+    const { projects } = get()
+    const duplicate = projects.find((p) => p.name.toLowerCase() === trimmed.toLowerCase())
+    if (duplicate) {
+      throw new Error(`A project named "${trimmed}" already exists.`)
+    }
     get().saveCurrentProject()
     useEditorStore.getState().resetProject()
+    useEditorStore.getState().setProjectName(trimmed)
     get().saveCurrentProject()
   },
 

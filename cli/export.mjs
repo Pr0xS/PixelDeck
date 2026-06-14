@@ -11,13 +11,26 @@ import yaml from 'js-yaml'
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const distPath = resolve(__dirname, '../dist')
 
+// ─── Defaults ─────────────────────────────────────────────────────────────────
+
+const DEFAULTS = {
+  port: 4321,
+  timeoutMs: 60000,
+  viewport: { width: 1400, height: 900 },
+}
+
 // ─── Static file server ──────────────────────────────────────────────────────
 
 const MIME_TYPES = {
   '.html': 'text/html',
   '.js': 'application/javascript',
   '.css': 'text/css',
+  '.json': 'application/json',
+  '.map': 'application/json',
   '.png': 'image/png',
+  '.jpg': 'image/jpeg',
+  '.jpeg': 'image/jpeg',
+  '.webp': 'image/webp',
   '.svg': 'image/svg+xml',
   '.ico': 'image/x-icon',
   '.woff2': 'font/woff2',
@@ -25,7 +38,7 @@ const MIME_TYPES = {
   '.ttf': 'font/ttf',
 }
 
-async function startServer(port = 4321) {
+async function startServer(port = DEFAULTS.port) {
   if (!existsSync(distPath)) {
     throw new Error(
       `Build not found at ${distPath}. Run "npm run build" first.`
@@ -119,7 +132,7 @@ async function loadScreenshots(screenshotsDir, projectJson) {
 
 // ─── Single export run ────────────────────────────────────────────────────────
 
-async function runSingle({ project, screenshotsDir, outputDir, locale, port = 4321, timeout = 60000 }) {
+async function runSingle({ project, screenshotsDir, outputDir, locale, port = DEFAULTS.port, timeout = DEFAULTS.timeoutMs }) {
   // Read project JSON
   const projectPath = resolve(project)
   if (!existsSync(projectPath)) {
@@ -143,7 +156,7 @@ async function runSingle({ project, screenshotsDir, outputDir, locale, port = 43
   try {
     browser = await chromium.launch({ headless: true })
     const page = await browser.newPage({
-      viewport: { width: 1400, height: 900 },
+      viewport: DEFAULTS.viewport,
     })
 
     // Inject config BEFORE navigation (addInitScript runs before page scripts)
@@ -215,8 +228,8 @@ export async function runExport(opts) {
         screenshotsDir: job.screenshots,
         outputDir: job.output,
         locale: job.locale ?? null,
-        port: opts.port ? Number(opts.port) : 4321 + i,  // different port per job to avoid conflict
-        timeout: opts.timeout ? Number(opts.timeout) : 60000,
+        port: opts.port ? Number(opts.port) : DEFAULTS.port + i,  // different port per job to avoid conflict
+        timeout: opts.timeout ? Number(opts.timeout) : DEFAULTS.timeoutMs,
       })
       totalSaved += result.saved
     }
@@ -246,8 +259,8 @@ export async function runExport(opts) {
         screenshotsDir: opts.screenshots,
         outputDir: opts.output,
         locale,
-        port: opts.port ? Number(opts.port) : 4321,
-        timeout: opts.timeout ? Number(opts.timeout) : 60000,
+        port: opts.port ? Number(opts.port) : DEFAULTS.port,
+        timeout: opts.timeout ? Number(opts.timeout) : DEFAULTS.timeoutMs,
       })
       totalSaved += result.saved
     }
@@ -260,7 +273,7 @@ export async function runExport(opts) {
     screenshotsDir: opts.screenshots,
     outputDir: opts.output,
     locale: opts.locale ?? null,
-    port: opts.port ? Number(opts.port) : 4321,
-    timeout: opts.timeout ? Number(opts.timeout) : 60000,
+    port: opts.port ? Number(opts.port) : DEFAULTS.port,
+    timeout: opts.timeout ? Number(opts.timeout) : DEFAULTS.timeoutMs,
   })
 }

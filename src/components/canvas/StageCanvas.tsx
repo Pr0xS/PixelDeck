@@ -1,10 +1,15 @@
-import { useRef, useEffect, useCallback, useMemo, useState } from 'react'
+import { memo, useRef, useEffect, useCallback, useMemo, useState } from 'react'
 import { Stage, Layer, Rect, Line, Transformer } from 'react-konva'
 import type Konva from 'konva'
+import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
+import { fileToDataUrl } from '@/utils/files'
 import { applyLocale } from '@/utils/locale'
+import { applyCanvasFormat } from '@/utils/canvasFormats'
+import { getPanoGapPx, getPanoSlideX, getPanoTotalWidth, getEffectivePano } from '@/utils/panoGeometry'
 import { LayerNode } from './LayerNode'
+import { CanvasTextEditor } from './CanvasTextEditor'
 import type { Layer as AppLayer } from '@/types'
 
 function useCtrlKey() {
@@ -22,6 +27,83 @@ function useCtrlKey() {
 interface StageCanvasProps {
   stageRef: React.RefObject<Konva.Stage | null>
 }
+
+interface StageLayerItemProps {
+  layer: AppLayer
+  isSelected: boolean
+  isEditing: boolean
+  selectedChildId: string | null
+  canvasWidth: number
+  canvasHeight: number
+  ctrlRef: React.RefObject<boolean>
+}
+
+/**
+ * Memo boundary between the (frequently re-rendering) StageCanvas and the
+ * Konva node tree of each layer. All handlers read store state via
+ * `getState()` so their identity is stable across renders — pan/zoom and
+ * unrelated selection changes skip reconciling untouched layer subtrees.
+ */
+const StageLayerItem = memo(function StageLayerItem({
+  layer, isSelected, isEditing, selectedChildId, canvasWidth, canvasHeight, ctrlRef,
+}: StageLayerItemProps) {
+  const layerId = layer.id
+
+  const handleSelect = useCallback(() => {
+    const state = useEditorStore.getState()
+    if (ctrlRef.current) {
+      if (state.selectedLayerIds.length === 0 && state.selection?.layerId) {
+        if (state.selection.layerId === layerId) return
+        state.setMultiSelection([state.selection.layerId, layerId])
+      } else {
+        state.toggleLayerSelection(layerId)
+      }
+      return
+    }
+    if (state.selectedLayerIds.length > 1 && state.selectedLayerIds.includes(layerId)) return
+    state.select(layerId)
+  }, [layerId, ctrlRef])
+
+  const handleDragEnd = useCallback((x: number, y: number) => {
+    useEditorStore.getState().updateLayer(layerId, { x, y } as Partial<AppLayer>)
+  }, [layerId])
+
+  const handleTransformEnd = useCallback((attrs: Partial<AppLayer>) => {
+    useEditorStore.getState().updateLayer(layerId, attrs)
+  }, [layerId])
+
+  const isGroup = layer.type === 'group'
+  const handleEnterEdit = useCallback(() => {
+    useEditorStore.getState().enterGroupEdit(layerId)
+  }, [layerId])
+  const handleSelectChild = useCallback((childId: string) => {
+    useEditorStore.getState().selectChild(layerId, childId)
+  }, [layerId])
+  const handleChildDragEnd = useCallback((childId: string, x: number, y: number) => {
+    useEditorStore.getState().updateChildLayer(layerId, childId, { x, y } as Partial<AppLayer>)
+  }, [layerId])
+  const handleChildTransformEnd = useCallback((childId: string, attrs: Partial<AppLayer>) => {
+    useEditorStore.getState().updateChildLayer(layerId, childId, attrs)
+  }, [layerId])
+
+  return (
+    <LayerNode
+      layer={layer}
+      isSelected={isSelected}
+      onSelect={handleSelect}
+      onDragEnd={handleDragEnd}
+      onTransformEnd={handleTransformEnd}
+      canvasWidth={canvasWidth}
+      canvasHeight={canvasHeight}
+      isEditing={isEditing}
+      selectedChildId={selectedChildId}
+      onEnterEdit={isGroup ? handleEnterEdit : undefined}
+      onSelectChild={isGroup ? handleSelectChild : undefined}
+      onChildDragEnd={isGroup ? handleChildDragEnd : undefined}
+      onChildTransformEnd={isGroup ? handleChildTransformEnd : undefined}
+    />
+  )
+})
 
 export function StageCanvas({ stageRef }: StageCanvasProps) {
   const transformerRef = useRef<Konva.Transformer>(null)
@@ -42,6 +124,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   const spaceRef = useRef(false)
   const [spaceDown, setSpaceDown] = useState(false)
   const [isPanning, setIsPanning] = useState(false)
+  const [zoomInput, setZoomInput] = useState<string | null>(null)
   const panStartRef = useRef<{ clientX: number; clientY: number; vpX: number; vpY: number } | null>(null)
   // Track which group + container size we last auto-centered for
   const lastCenteredGroupId = useRef<string | null>(null)
@@ -69,22 +152,69 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     updateLayer,
     addImageAt,
     editingGroupId,
-    enterGroupEdit,
     exitGroupEdit,
-    updateChildLayer,
     setZoom,
     setViewportPosition,
-    toggleLayerSelection,
     clearMultiSelection,
     selectedLayerIds,
     setMultiSelection,
     activeLocale,
-  } = useEditorStore()
+    activeCanvasFormat,
+    projectPano,
+    panoRenderOverride,
+    editingTextId,
+  } = useEditorStore(useShallow((s) => ({
+    project: s.project,
+    activeSlideGroupId: s.activeSlideGroupId,
+    zoom: s.zoom,
+    viewportX: s.viewportX,
+    viewportY: s.viewportY,
+    showGrid: s.showGrid,
+    showSeamGuides: s.showSeamGuides,
+    selection: s.selection,
+    select: s.select,
+    deselect: s.deselect,
+    updateLayer: s.updateLayer,
+    addImageAt: s.addImageAt,
+    editingGroupId: s.editingGroupId,
+    exitGroupEdit: s.exitGroupEdit,
+    setZoom: s.setZoom,
+    setViewportPosition: s.setViewportPosition,
+    clearMultiSelection: s.clearMultiSelection,
+    selectedLayerIds: s.selectedLayerIds,
+    setMultiSelection: s.setMultiSelection,
+    activeLocale: s.activeLocale,
+    activeCanvasFormat: s.activeCanvasFormat,
+    projectPano: s.project.settings.pano,
+    panoRenderOverride: s.panoRenderOverride,
+    editingTextId: s.editingTextId,
+  })))
   const ctrlRef = useCtrlKey()
   const assets = useAssetStore((s) => s.assets)
+  const addAsset = useAssetStore((s) => s.addAsset)
 
-  const viewProject = useMemo(() => applyLocale(project, activeLocale), [project, activeLocale])
+  const viewProject = useMemo(
+    () => applyCanvasFormat(applyLocale(project, activeLocale), activeCanvasFormat),
+    [project, activeLocale, activeCanvasFormat],
+  )
   const group = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
+
+  const { gapPx: panoCompensationPx, compensate: panoCompensate } = getEffectivePano(projectPano, panoRenderOverride)
+
+  // keepRatio=false for text layers: corner handles should resize the box independently
+  // (not force aspect-ratio scaling which causes scaleY artifacts on a text node).
+  const selectedLayerIsText = useMemo(() => {
+    const layerId = selection?.layerId
+    if (!group || !layerId) return false
+    for (const l of group.layers) {
+      if (l.id === layerId) return l.type === 'text'
+      if (l.type === 'group') {
+        const child = l.children.find((c) => c.id === layerId)
+        if (child) return child.type === 'text'
+      }
+    }
+    return false
+  }, [group, selection?.layerId])
 
   // ─── Container ResizeObserver ──────────────────────────────────────────────
 
@@ -103,7 +233,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
 
   useEffect(() => {
     if (!containerSize.w || !containerSize.h || !group) return
-    const totalW = group.slideWidth * group.numSlides
+    const totalW = getPanoTotalWidth(group, panoCompensate ? panoCompensationPx : 0)
     const totalH = group.slideHeight
     // Only re-center when the group changes or this is the very first render
     const needsCenter = lastCenteredGroupId.current !== group.id || lastContainerW.current === 0
@@ -141,6 +271,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
 
     if (selectedLayerIds.length > 0) {
       const nodes = selectedLayerIds
+        .filter((id) => id !== editingTextId)
         .map((id) => stage.findOne(`#layer-${id}`) as Konva.Node | undefined)
         .filter((n): n is Konva.Node => Boolean(n))
       tr.nodes(nodes)
@@ -148,7 +279,8 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
       return
     }
 
-    if (!selection?.layerId) {
+    // Hide the transformer while the in-canvas text editor covers the node
+    if (!selection?.layerId || selection.layerId === editingTextId) {
       tr.nodes([])
       tr.getLayer()?.batchDraw()
       return
@@ -161,7 +293,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
       tr.nodes(node ? [node] : [])
     }
     tr.getLayer()?.batchDraw()
-  }, [selection, editingGroupId, stageRef, selectedLayerIds])
+  }, [selection, editingGroupId, stageRef, selectedLayerIds, editingTextId])
 
   // ─── Wheel: Ctrl+scroll = zoom-to-cursor; scroll = pan ────────────────────
 
@@ -251,7 +383,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
 
   const handleFit = useCallback(() => {
     if (!group || !containerSize.w || !containerSize.h) return
-    const totalW = group.slideWidth * group.numSlides
+    const totalW = getPanoTotalWidth(group, panoCompensate ? panoCompensationPx : 0)
     const totalH = group.slideHeight
     const PADDING = 80
     const fitScale = Math.max(0.05, Math.min(4, Math.min(
@@ -263,7 +395,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
       (containerSize.w - totalW * fitScale) / 2,
       (containerSize.h - totalH * fitScale) / 2
     )
-  }, [group, containerSize.w, containerSize.h, setZoom, setViewportPosition])
+  }, [group, containerSize.w, containerSize.h, setZoom, setViewportPosition, panoCompensate, panoCompensationPx])
 
   // ─── Stage click / rubber-band selection ──────────────────────────────────
 
@@ -341,7 +473,13 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     }
   }
 
-  const totalWidth = group ? group.slideWidth * group.numSlides : 0
+  // When compensate is ON the gap is real geometry: it expands the Konva canvas
+  // and pushes each slide apart by effectiveGap, matching the capture window math
+  // in useThumbnails (getPanoSlideX with the same effective gap). When compensate
+  // is OFF effectiveGap is 0 → geometry is continuous (identical to legacy, no regression).
+  const effectiveCompensationPx = group && panoCompensate ? panoCompensationPx : 0
+  const visualGapPx = group ? getPanoGapPx(group, effectiveCompensationPx) : 0
+  const totalWidth = group ? getPanoTotalWidth(group, effectiveCompensationPx) : 0
   const totalHeight = group ? group.slideHeight : 0
 
   // Grid lines (every 100 real px)
@@ -371,40 +509,59 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     }
   }
 
-  // Seam guides between slides
-  const SEAM_GAP = 32
+  // Seam guides between slides.
+  // These are DOM overlays (never inside the Stage) so they don't appear in exports.
+  // When compensate is OFF: thin dashed line at the exact seam — purely decorative.
+  // When compensate is ON: solid dark band aligned to the actual gutter in expanded space.
   const seamGuides = showSeamGuides && group && group.numSlides > 1
     ? Array.from({ length: group.numSlides - 1 }, (_, i) => {
-        const x = group.slideWidth * (i + 1)
+        const screenH = Math.round(totalHeight * zoom)
+
+        if (panoCompensate && visualGapPx > 0) {
+          // Compensate ON: slide (i+1) starts at getPanoSlideX(i+1, gap); the dead
+          // gutter that export skips is the band [seamX - gap, seamX].
+          const seamX = getPanoSlideX(group, i + 1, effectiveCompensationPx)
+          const bandScreenX = Math.round(viewportX + (seamX - visualGapPx) * zoom)
+          const bandW = Math.max(2, Math.round(visualGapPx * zoom))
+          return (
+            <div
+              key={`seam-${i}`}
+              style={{
+                position: 'absolute',
+                left: bandScreenX,
+                top: Math.round(viewportY),
+                width: bandW,
+                height: screenH,
+                background: 'rgba(17,17,24,0.85)',
+                borderLeft: '1px solid rgba(124,110,246,0.5)',
+                borderRight: '1px solid rgba(124,110,246,0.5)',
+                pointerEvents: 'none',
+                zIndex: 6,
+              }}
+            />
+          )
+        }
+
+        // Compensate OFF (or gap=0): thin dashed line at the continuous seam.
+        const seamX = getPanoSlideX(group, i + 1, 0)
+        const screenX = Math.round(viewportX + seamX * zoom)
         return (
-          <Rect
+          <div
             key={`seam-${i}`}
-            x={x - SEAM_GAP / 2}
-            y={0}
-            width={SEAM_GAP}
-            height={totalHeight}
-            fill="#111118"
-            listening={false}
+            style={{
+              position: 'absolute',
+              left: screenX - 1,
+              top: Math.round(viewportY),
+              width: 2,
+              height: screenH,
+              background: 'rgba(255,255,255,0.15)',
+              pointerEvents: 'none',
+              zIndex: 6,
+            }}
           />
         )
       })
     : null
-
-  const handleLayerSelect = (layerId: string) => {
-    if (ctrlRef.current) {
-      const state = useEditorStore.getState()
-      if (state.selectedLayerIds.length === 0 && state.selection?.layerId) {
-        if (state.selection.layerId === layerId) return
-        setMultiSelection([state.selection.layerId, layerId])
-      } else {
-        toggleLayerSelection(layerId)
-      }
-    } else {
-      const { selectedLayerIds: ids } = useEditorStore.getState()
-      if (ids.length > 1 && ids.includes(layerId)) return
-      select(layerId)
-    }
-  }
 
   // ─── Multi-drag ────────────────────────────────────────────────────────────
 
@@ -464,22 +621,6 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     multiDragRef.current = null
   }, [updateLayer])
 
-  const handleDragEnd = (layerId: string, x: number, y: number) => {
-    updateLayer(layerId, { x, y } as Partial<AppLayer>)
-  }
-
-  const handleTransformEnd = (layerId: string, attrs: Partial<AppLayer>) => {
-    updateLayer(layerId, attrs)
-  }
-
-  const handleChildDragEnd = (groupId: string, childId: string, x: number, y: number) => {
-    updateChildLayer(groupId, childId, { x, y } as Partial<AppLayer>)
-  }
-
-  const handleChildTransformEnd = (groupId: string, childId: string, attrs: Partial<AppLayer>) => {
-    updateChildLayer(groupId, childId, attrs)
-  }
-
   const findLayerById = useCallback((layerId: string | null | undefined) => {
     if (!layerId || !group) return null
     const stack = [...group.layers]
@@ -509,21 +650,13 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
       img.src = dataUrl
     })
 
-  const handleAssetDrop = async (e: React.DragEvent<HTMLDivElement>) => {
-    const filename = e.dataTransfer.getData('application/x-pixeldeck-asset') || e.dataTransfer.getData('text/plain')
-    if (!filename || !stageRef.current || !group) return
-
-    const asset = assets[filename]
-    if (!asset) return
-
-    e.preventDefault()
-    e.stopPropagation()
-    setAssetDropHighlight(null)
-
+  /** Resolve the stage pointer + the phone/image layer (if any) targeted by a DOM drag event. */
+  const resolveDropTarget = (e: React.DragEvent<HTMLDivElement>) => {
     const stage = stageRef.current
+    if (!stage || !group) return null
     stage.setPointersPositions(e.nativeEvent)
     const pointer = stage.getPointerPosition()
-    if (!pointer) return
+    if (!pointer) return null
 
     const hitLayer = findLayerById(getLayerIdFromNode(stage.getIntersection(pointer)))
     const selectedLayer = findLayerById(selection?.layerId)
@@ -533,41 +666,79 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
         ? selectedLayer
         : null
 
+    return { stage, pointer, targetLayer }
+  }
+
+  /** Apply a dropped asset: replace phone screenshot / image src, or create a new image layer. */
+  const applyAssetToTarget = async (
+    filename: string,
+    dataUrl: string,
+    targetLayer: AppLayer | null,
+    pointer: { x: number; y: number },
+    cascade = 0,
+  ) => {
     if (targetLayer?.type === 'phone') {
-      updateLayer(targetLayer.id, { screenshotPath: filename, screenshotDataUrl: undefined } as Partial<AppLayer>)
+      updateLayer(targetLayer.id, { screenshotPath: filename, screenshotDataUrl: dataUrl } as Partial<AppLayer>)
       return
     }
 
-    const { width, height } = await getImageSize(asset.dataUrl)
+    const { width, height } = await getImageSize(dataUrl)
 
     if (targetLayer?.type === 'image') {
       updateLayer(targetLayer.id, { src: filename, width, height } as Partial<AppLayer>)
       return
     }
 
-    const x = (pointer.x - viewportX) / zoom - width / 2
-    const y = (pointer.y - viewportY) / zoom - height / 2
+    const x = (pointer.x - viewportX) / zoom - width / 2 + cascade
+    const y = (pointer.y - viewportY) / zoom - height / 2 + cascade
     addImageAt(filename, width, height, x, y)
   }
 
-  const handleAssetDragOver = (e: React.DragEvent<HTMLDivElement>) => {
-    if (!e.dataTransfer.types.includes('application/x-pixeldeck-asset')) return
+  const handleAssetDrop = async (e: React.DragEvent<HTMLDivElement>) => {
+    const target = resolveDropTarget(e)
+    if (!target) return
+
+    // Internal drag from the assets panel
+    const internalName = e.dataTransfer.getData('application/x-pixeldeck-asset') || e.dataTransfer.getData('text/plain')
+    const internalAsset = internalName ? assets[internalName] : undefined
+
+    if (internalAsset) {
+      e.preventDefault()
+      e.stopPropagation()
+      setAssetDropHighlight(null)
+      await applyAssetToTarget(internalName, internalAsset.dataUrl, target.targetLayer, target.pointer)
+      return
+    }
+
+    // External OS file drop
+    const files = Array.from(e.dataTransfer.files).filter((f) => f.type.startsWith('image/'))
+    if (files.length === 0) {
+      setAssetDropHighlight(null)
+      return
+    }
+
     e.preventDefault()
-    if (!stageRef.current || !group) return
+    e.stopPropagation()
+    setAssetDropHighlight(null)
 
-    const stage = stageRef.current
-    stage.setPointersPositions(e.nativeEvent)
-    const pointer = stage.getPointerPosition()
-    if (!pointer) return
+    for (const [i, file] of files.entries()) {
+      const dataUrl = await fileToDataUrl(file)
+      addAsset(file.name, dataUrl)
+      // Only the first file may replace the targeted layer; the rest cascade as new image layers.
+      await applyAssetToTarget(file.name, dataUrl, i === 0 ? target.targetLayer : null, target.pointer, i * 48)
+    }
+  }
 
-    const hitNode = stage.getIntersection(pointer)
-    const hitLayer = findLayerById(getLayerIdFromNode(hitNode))
-    const selectedLayer = findLayerById(selection?.layerId)
-    const targetLayer = hitLayer?.type === 'phone' || hitLayer?.type === 'image'
-      ? hitLayer
-      : selectedLayer?.type === 'phone' || selectedLayer?.type === 'image'
-        ? selectedLayer
-        : null
+  const handleAssetDragOver = (e: React.DragEvent<HTMLDivElement>) => {
+    const isInternal = e.dataTransfer.types.includes('application/x-pixeldeck-asset')
+    const isFiles = e.dataTransfer.types.includes('Files')
+    if (!isInternal && !isFiles) return
+    e.preventDefault()
+    if (isFiles && !isInternal) e.dataTransfer.dropEffect = 'copy'
+
+    const target = resolveDropTarget(e)
+    if (!target) return
+    const { stage, pointer, targetLayer } = target
 
     if (targetLayer) {
       const node = stage.findOne(`#layer-${targetLayer.id}`)
@@ -668,29 +839,20 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
               onDragEnd={handleContentLayerDragEnd}
             >
               {group.layers.map((layer) => (
-                <LayerNode
+                <StageLayerItem
                   key={layer.id}
-                  layer={{ ...layer, id: layer.id } as AppLayer}
+                  layer={layer}
                   isSelected={selection?.layerId === layer.id && !editingGroupId}
-                  onSelect={() => handleLayerSelect(layer.id)}
-                  onDragEnd={(x, y) => handleDragEnd(layer.id, x, y)}
-                  onTransformEnd={(attrs) => handleTransformEnd(layer.id, attrs)}
-                  canvasWidth={totalWidth}
-                  canvasHeight={totalHeight}
                   isEditing={layer.type === 'group' && editingGroupId === layer.id}
                   selectedChildId={editingGroupId === layer.id ? (selection?.layerId ?? null) : null}
-                  onEnterEdit={layer.type === 'group' ? () => enterGroupEdit(layer.id) : undefined}
-                  onSelectChild={layer.type === 'group' ? (childId) => useEditorStore.getState().selectChild(layer.id, childId) : undefined}
-                  onChildDragEnd={layer.type === 'group' ? (childId, x, y) => handleChildDragEnd(layer.id, childId, x, y) : undefined}
-                  onChildTransformEnd={layer.type === 'group' ? (childId, attrs) => handleChildTransformEnd(layer.id, childId, attrs) : undefined}
+                  canvasWidth={totalWidth}
+                  canvasHeight={totalHeight}
+                  ctrlRef={ctrlRef}
                 />
               ))}
             </Layer>
 
-            {/* ── UI layer: guides + transformer ── */}
-            <Layer listening={false}>
-              {seamGuides}
-            </Layer>
+            {/* ── UI layer: transformer ── */}
             <Layer>
               {/* Group edit outline */}
               <Transformer
@@ -720,6 +882,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
               )}
               <Transformer
                 ref={transformerRef}
+                keepRatio={!selectedLayerIsText}
                 boundBoxFunc={(oldBox, newBox) => {
                   if (newBox.width < 20 || newBox.height < 20) return oldBox
                   return newBox
@@ -741,9 +904,20 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
             </Layer>
           </Stage>
 
-          {/* Per-slide card frames for pano groups */}
+          {/* Visual-only pano separators. DOM overlay so preview/export PNGs stay clean. */}
+          {seamGuides}
+
+          {/* In-canvas WYSIWYG text editor overlay */}
+          {editingTextId && <CanvasTextEditor stageRef={stageRef} />}
+
+          {/* Per-slide card frames for pano groups.
+              Card frames always align to the continuous canvas (no gap offset).
+              When compensate is ON, the seam guide overlay shows the dead zone. */}
           {group.numSlides > 1 && Array.from({ length: group.numSlides }, (_, i) => {
             const slideScreenW = Math.round(group.slideWidth * zoom)
+            // Frame i starts at getPanoSlideX(i, gap): continuous when compensate is
+            // OFF, expanded by the gutter when it is ON.
+            const slideScreenX = Math.round(viewportX + getPanoSlideX(group, i, effectiveCompensationPx) * zoom)
             const isFirst = i === 0
             const isLast = i === group.numSlides - 1
             const R = 10
@@ -752,7 +926,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
                 key={`card-frame-${i}`}
                 style={{
                   position: 'absolute',
-                  left: Math.round(viewportX) + i * slideScreenW,
+                  left: slideScreenX,
                   top: Math.round(viewportY),
                   width: slideScreenW,
                   height: Math.round(displayHeight),
@@ -828,15 +1002,42 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
             }}
           >
             <button
-              onClick={(e) => { e.stopPropagation(); setZoom(zoom - 0.1) }}
+              onClick={(e) => { e.stopPropagation(); setZoom(Math.max(0.05, zoom - 0.02)) }}
               title="Zoom out"
               style={{ background: 'none', border: 'none', color: '#e8e8f0', cursor: 'pointer', fontSize: 16, padding: '0 4px', lineHeight: 1 }}
             >−</button>
-            <span style={{ color: '#6b6b7a', fontSize: 11, minWidth: 36, textAlign: 'center' }}>
-              {Math.round(zoom * 100)}%
-            </span>
+            <input
+              type="text"
+              value={zoomInput ?? `${Math.round(zoom * 100)}`}
+              onChange={(e) => setZoomInput(e.target.value)}
+              onFocus={(e) => { setZoomInput(`${Math.round(zoom * 100)}`); e.target.select() }}
+              onBlur={() => {
+                const parsed = parseInt(zoomInput ?? '', 10)
+                if (!isNaN(parsed) && parsed > 0) setZoom(Math.max(0.05, Math.min(4, parsed / 100)))
+                setZoomInput(null)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                if (e.key === 'Escape') { setZoomInput(null); (e.target as HTMLInputElement).blur() }
+                e.stopPropagation()
+              }}
+              onClick={(e) => e.stopPropagation()}
+              title="Zoom level — click to edit"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#6b6b7a',
+                fontSize: 11,
+                width: 36,
+                textAlign: 'center',
+                cursor: 'text',
+                outline: 'none',
+                padding: 0,
+              }}
+            />
+            <span style={{ color: '#6b6b7a', fontSize: 11, marginLeft: -2 }}>%</span>
             <button
-              onClick={(e) => { e.stopPropagation(); setZoom(zoom + 0.1) }}
+              onClick={(e) => { e.stopPropagation(); setZoom(Math.min(4, zoom + 0.02)) }}
               title="Zoom in"
               style={{ background: 'none', border: 'none', color: '#e8e8f0', cursor: 'pointer', fontSize: 16, padding: '0 4px', lineHeight: 1 }}
             >＋</button>
@@ -856,7 +1057,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
             >Fit</button>
           </div>
 
-          {/* Pan hint */}
+          {/* Asset drop target highlight */}
           {assetDropHighlight && (
             <div
               style={{
@@ -925,7 +1126,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
               style={{
                 position: 'absolute',
                 top: Math.round(viewportY + displayHeight) + 8,
-                left: Math.round(viewportX + (group.slideWidth * i + group.slideWidth / 2) * zoom) - 20,
+                left: Math.round(viewportX + (getPanoSlideX(group, i, effectiveCompensationPx) + group.slideWidth / 2) * zoom) - 20,
                 color: 'rgba(124,110,246,0.6)',
                 fontSize: 10,
                 pointerEvents: 'none',

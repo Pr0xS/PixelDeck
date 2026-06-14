@@ -28,9 +28,37 @@ export interface ShadowConfig {
   opacity: number;
 }
 
+export interface BrandColor {
+  id: string      // nanoid(10) key
+  name: string    // display name e.g. 'Primary'
+  value: string   // hex color e.g. '#FF5A5F'
+}
+
+// ─── Custom Fonts ─────────────────────────────────────────────────────────────
+
+/**
+ * A user-uploaded font registered in the project.
+ * `family` is the opaque CSS font-family name used in fontFamily fields.
+ * `label` is the human-readable display name shown in the picker.
+ * `filename` is the key in fontStore.
+ */
+export interface CustomFontRef {
+  /** Opaque CSS family name — unique, collision-safe (e.g. "pf_MyBrand_a3f2") */
+  family: string
+  /** Human-readable display name (e.g. "MyBrand") */
+  label: string
+  /** Key in fontStore (e.g. "MyBrand.ttf") */
+  filename: string
+  format: 'ttf' | 'otf' | 'woff2' | 'woff'
+}
+
 // ─── Phone Models ────────────────────────────────────────────────────────────
 
 export type PhoneModel = 'iphone-16-pro' | 'iphone-16-pro-plain' | 'pixel-9' | 'pixel-9-plain';
+
+// ─── Canvas Formats ──────────────────────────────────────────────────────────
+
+export type CanvasFormatId = 'base' | 'iphone-69' | 'android-phone' | 'ipad-13' | 'android-tablet';
 
 /** Screen area within the mockup frame (all in "phone canvas" pixels) */
 export interface PhoneScreenRect {
@@ -74,6 +102,8 @@ export interface PhoneModelSpec {
 export interface LocaleLayerPatch {
   // TextLayer
   text?: string;
+  marks?: TextMark[];
+  /** @deprecated Legacy. Kept for reading old project files. */
   spans?: TextSpan[];
   // PhoneLayer
   screenshotPath?: string;
@@ -81,6 +111,28 @@ export interface LocaleLayerPatch {
   // ImageLayer
   src?: string;
 }
+
+/**
+ * Controls how a layer participates in localization / bulk AI translation.
+ *  - 'auto'   : eligible for bulk AI translate (default; undefined === 'auto')
+ *  - 'manual' : human-entered overrides only; bulk translate SKIPS it
+ *  - 'skip'   : not localized at all; excluded from manifest + progress denominator
+ */
+export type LocalizationMode = 'auto' | 'manual' | 'skip';
+
+/** A single entry in a batch locale override commit. */
+export interface LocaleOverrideBatchEntry {
+  slideGroupId: string;
+  layerId: string;
+  locale: string;
+  patch: LocaleLayerPatch;
+}
+
+/**
+ * Per-format visual overrides. These are shallow-merged on top of the shared
+ * base layer when previewing/exporting a specific canvas format.
+ */
+export type FormatLayerPatch = Partial<Omit<Layer, 'id' | 'type' | 'formatOverrides' | 'formatVisibility'>>;
 
 // ─── Layer Base ───────────────────────────────────────────────────────────────
 
@@ -101,6 +153,22 @@ export interface BaseLayer {
    * Merged at render / export time by applyLocale(). Never affects undo history shape.
    */
   localeOverrides?: Record<string, LocaleLayerPatch>;
+  /** Per-format visual/layout overrides. Base layer remains the shared source. */
+  formatOverrides?: Partial<Record<CanvasFormatId, FormatLayerPatch>>;
+  /** Optional per-format visibility. Undefined = follows `visible`. */
+  formatVisibility?: Partial<Record<CanvasFormatId, boolean>>;
+  /**
+   * If set, this layer belongs exclusively to one format and is invisible in all others.
+   * Set automatically when a layer is added while viewing a non-base format.
+   * Cleared when the user explicitly "Makes shared".
+   */
+  ownerFormat?: CanvasFormatId;
+  /**
+   * Localization participation mode. Undefined === 'auto'.
+   * Co-located with localeOverrides because it is layer-scoped, undoable,
+   * and travels with copy/paste + manifest.
+   */
+  localizationMode?: LocalizationMode;
 }
 
 export type LayerType = 'background' | 'phone' | 'text' | 'image' | 'shape' | 'chips' | 'brand' | 'group';
@@ -117,9 +185,27 @@ export interface BackgroundLayer extends BaseLayer {
   type: 'background';
   fill: FillValue;
   accents: BackgroundAccent[];
+  /** Inline data URL for image background mode */
+  imageDataUrl?: string;
+  /** How to fit the image within the canvas */
+  imageFit?: 'cover' | 'contain' | 'fill';
+  /** Blur radius in px applied to the background image */
+  imageBlur?: number;
+  /** Hex color of the overlay tint placed above the image */
+  imageOverlayColor?: string;
+  /** Opacity of the overlay tint (0–1) */
+  imageOverlayOpacity?: number;
+  /** Noise texture opacity (0–1). 0 = off. */
+  noise?: number;
 }
 
 // ─── Layer Variants ───────────────────────────────────────────────────────────
+
+export interface PhoneBorder {
+  color: string;    // hex
+  width: number;    // px at 1x scale
+  opacity: number;  // 0–1
+}
 
 export interface PhoneLayer extends BaseLayer {
   type: 'phone';
@@ -140,11 +226,14 @@ export interface PhoneLayer extends BaseLayer {
   statusBarBg?: 'transparent' | 'solid';
   /** Solid background colour (hex). Only used when statusBarBg === 'solid'. Defaults to '#000000'. */
   statusBarColor?: string;
+  /** Optional border drawn inside the screen area (above the screenshot, below the frame). */
+  border?: PhoneBorder;
 }
 
 /**
  * A styled text segment within a TextLayer.
  * Fields are optional overrides of the parent layer's values.
+ * @deprecated Use TextMark instead. Kept only for reading legacy project files.
  */
 export interface TextSpan {
   text: string;
@@ -154,6 +243,30 @@ export interface TextSpan {
   fontWeight?: number;
   /** Override italic. Undefined = inherit layer.italic */
   italic?: boolean;
+  /** Override underline. Undefined = inherit layer.underline */
+  underline?: boolean;
+  /** Override strikethrough. Undefined = inherit layer.strikethrough */
+  strikethrough?: boolean;
+}
+
+/**
+ * A styled range over layer.text.
+ * start is inclusive, end is exclusive (like String.slice).
+ * All style fields are optional overrides of the parent layer's values.
+ */
+export interface TextMark {
+  start: number;
+  end: number;
+  /** Override fill for this range. Undefined = inherit layer.fill */
+  fill?: FillValue;
+  /** Override font weight. Undefined = inherit layer.fontWeight */
+  fontWeight?: number;
+  /** Override italic. Undefined = inherit layer.italic */
+  italic?: boolean;
+  /** Override underline. Undefined = inherit layer.underline */
+  underline?: boolean;
+  /** Override strikethrough. Undefined = inherit layer.strikethrough */
+  strikethrough?: boolean;
 }
 
 export interface TextLayer extends BaseLayer {
@@ -163,15 +276,29 @@ export interface TextLayer extends BaseLayer {
   fontSize: number;
   fontWeight: number;
   italic?: boolean;
+  underline?: boolean;
+  strikethrough?: boolean;
   fill: FillValue;
   letterSpacing: number;
   lineHeight: number;
   align: 'left' | 'center' | 'right';
   width?: number;   // wrapping width; undefined = auto
   /**
-   * Rich text mode: array of styled spans.
-   * When defined (non-empty), overrides `text` for rendering.
-   * Use \n within span.text for explicit line breaks.
+   * Explicit box height. undefined = auto (box grows with content).
+   * When set, the text box has a fixed height; content is clipped if taller.
+   */
+  height?: number;
+  /** Vertical anchoring of the text inside the box. Only meaningful when height is set. Defaults to 'top'. */
+  verticalAlign?: 'top' | 'middle' | 'bottom';
+  /**
+   * Rich text marks: styled ranges over `text` (preferred system).
+   * start/end are char offsets into `text` (end exclusive, like String.slice).
+   * When defined, enables rich-text rendering; `text` remains the single source of truth.
+   */
+  marks?: TextMark[];
+  /**
+   * @deprecated Legacy rich text spans. Kept for reading old project files only.
+   * Automatically migrated to `marks` on import. Do not write.
    */
   spans?: TextSpan[];
 }
@@ -244,6 +371,8 @@ export interface BrandLayer extends BaseLayer {
 export interface GroupLayer extends BaseLayer {
   type: 'group'
   children: Layer[]
+  /** Uniform scale applied to all children. Undefined = 1 (backwards compat with old project files). */
+  scale?: number
 }
 
 export type Layer = BackgroundLayer | PhoneLayer | TextLayer | ImageLayer | ShapeLayer | ChipsLayer | BrandLayer | GroupLayer;
@@ -282,6 +411,11 @@ export interface SlideGroup {
 
 // ─── Project ──────────────────────────────────────────────────────────────────
 
+export interface PanoSettings {
+  gapPx: number;
+  compensate: boolean;
+}
+
 export interface ProjectSettings {
   defaultSlideWidth: number;
   defaultSlideHeight: number;
@@ -291,7 +425,13 @@ export interface ProjectSettings {
   locales?: string[];
   brandName: string;
   brandLogoDataUrl?: string;
+  brandColors?: BrandColor[];
   outputPath?: string;  // last used output dir (File System Access API handle)
+  /** Non-exported authoring canvas sentinel. Defaults to base. */
+  baseCanvasFormat?: CanvasFormatId;
+  /** Exportable platform formats the user has opted into. Default = iPhone + Android. */
+  activeFormats?: CanvasFormatId[];
+  pano?: PanoSettings;
 }
 
 export interface Project {
@@ -301,6 +441,10 @@ export interface Project {
   updatedAt: string;
   settings: ProjectSettings;
   slideGroups: SlideGroup[];
+  /** User-uploaded custom fonts registered for this project. */
+  customFonts?: CustomFontRef[];
+  /** User-saved gradient presets for this project. */
+  savedGradients?: FillValue[];
 }
 
 // ─── Selection ────────────────────────────────────────────────────────────────

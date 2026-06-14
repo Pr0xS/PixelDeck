@@ -1,0 +1,181 @@
+{
+  "id": "tpl-fintech-night",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Fintech Night",
+  "description": "Sleek midnight navy with violet glows and a tilted device. Inspired by leading neobank and finance apps.",
+  "category": "Finance",
+  "author": "PixelDeck",
+  "createdAt": "2026-06-10T00:00:00.000Z",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "Nova"
+  },
+  "slideGroups": [
+    {
+      "name": "Hero",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-01"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              { "offset": 0, "color": "#0A0E27" },
+              { "offset": 0.6, "color": "#141B3F" },
+              { "offset": 1, "color": "#1B2350" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(124,58,237,0.28)", "cx": 82, "cy": 8, "rx": 850, "ry": 750 },
+            { "color": "rgba(59,130,246,0.20)", "cx": 12, "cy": 88, "rx": 900, "ry": 800 }
+          ]
+        },
+        {
+          "id": "l1",
+          "name": "Brand",
+          "type": "brand",
+          "x": 100, "y": 92, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "appName": "Nova",
+          "logoSize": 66,
+          "nameColor": "#A78BFA",
+          "nameFontSize": 40,
+          "nameFontFamily": "Sora",
+          "nameFontWeight": 800,
+          "direction": "row",
+          "gap": 18
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 100, "y": 260, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Your money,\nsupercharged",
+          "fontFamily": "Sora",
+          "fontSize": 122,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -4,
+          "lineHeight": 1.05,
+          "align": "center",
+          "width": 1090
+        },
+        {
+          "id": "l3",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 100, "y": 580, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Spend, save and invest in one place",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "fontWeight": 500,
+          "fill": "#94A3B8",
+          "letterSpacing": -0.5,
+          "lineHeight": 1.3,
+          "align": "center",
+          "width": 1090
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 177, "y": 840, "rotation": -6, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.4,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000"
+        }
+      ]
+    },
+    {
+      "name": "Insights",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-02"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 200,
+            "stops": [
+              { "offset": 0, "color": "#0A0E27" },
+              { "offset": 1, "color": "#181F47" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(124,58,237,0.22)", "cx": 18, "cy": 12, "rx": 800, "ry": 700 }
+          ]
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 100, "y": 240, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Track every\ndollar, live",
+          "fontFamily": "Sora",
+          "fontSize": 116,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3.5,
+          "lineHeight": 1.05,
+          "align": "center",
+          "width": 1090
+        },
+        {
+          "id": "l2",
+          "name": "Feature Chips",
+          "type": "chips",
+          "x": 110, "y": 580, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "items": [
+            { "label": "Instant alerts", "primary": true, "variant": "filled" },
+            { "label": "Smart budgets", "primary": false, "variant": "dark" },
+            { "label": "Crypto", "primary": false, "variant": "outlined" },
+            { "label": "Vaults", "primary": false, "variant": "soft" }
+          ],
+          "primaryGradientFrom": "#7C3AED",
+          "primaryGradientTo": "#3B82F6",
+          "primaryTextColor": "#FFFFFF",
+          "defaultBg": "rgba(255,255,255,0.10)",
+          "defaultTextColor": "#C7CCE8",
+          "chipFontSize": 31,
+          "gap": 18,
+          "direction": "row"
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 196, "y": 800, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.3,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000"
+        }
+      ]
+    }
+  ]
+}

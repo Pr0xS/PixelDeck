@@ -61,8 +61,8 @@ representative at an online or offline event.
 ## Enforcement
 
 Instances of abusive, harassing, or otherwise unacceptable behavior may be
-reported to the community leaders responsible for enforcement at
-[INSERT CONTACT METHOD].
+reported to the community leaders responsible for enforcement by opening a
+GitHub Discussion tagged `[moderation]` in the repository.
 All complaints will be reviewed and investigated promptly and fairly.
 
 All community leaders are obligated to respect the privacy and security of the
@@ -132,5 +132,3 @@ at [https://www.contributor-covenant.org/translations][translations].
 [Mozilla CoC]: https://github.com/mozilla/diversity
 [FAQ]: https://www.contributor-covenant.org/faq
 [translations]: https://www.contributor-covenant.org/translations
-
-Enforcement contact: open a GitHub Discussion tagged [moderation] or email the maintainers via the repository contact.

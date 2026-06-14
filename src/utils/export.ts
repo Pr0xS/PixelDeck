@@ -1,5 +1,7 @@
 import type Konva from 'konva'
 import type { SlideGroup } from '@/types'
+import { withIdentityTransform } from './stageCapture'
+import { getPanoSlideX, getPanoTotalWidth } from './panoGeometry'
 
 interface WritableFileHandle {
   write(data: Blob): Promise<void>
@@ -11,6 +13,7 @@ interface FileSystemFileHandleLike {
 }
 
 interface FileSystemDirectoryHandleLike {
+  getDirectoryHandle?(name: string, options?: { create?: boolean }): Promise<FileSystemDirectoryHandleLike>
   getFileHandle(name: string, options?: { create?: boolean }): Promise<FileSystemFileHandleLike>
 }
 
@@ -20,23 +23,11 @@ declare global {
   }
 }
 
-function withIdentityTransform<T>(stage: Konva.Stage, fn: () => T): T {
-  const prevX = stage.x()
-  const prevY = stage.y()
-  const prevScaleX = stage.scaleX()
-  const prevScaleY = stage.scaleY()
-  try {
-    stage.x(0)
-    stage.y(0)
-    stage.scaleX(1)
-    stage.scaleY(1)
-    return fn()
-  } finally {
-    stage.x(prevX)
-    stage.y(prevY)
-    stage.scaleX(prevScaleX)
-    stage.scaleY(prevScaleY)
-  }
+export type PanoExportMode = 'split' | 'whole'
+
+export interface ExportedImage {
+  name: string
+  dataUrl: string
 }
 
 /**
@@ -47,11 +38,12 @@ export async function exportSlide(
   stage: Konva.Stage,
   slideIndex: number,
   group: SlideGroup,
+  panoCompensationPx = 0,
 ): Promise<string> {
   const { slideWidth, slideHeight } = group
   return withIdentityTransform(stage, () =>
     stage.toDataURL({
-      x: slideIndex * slideWidth,
+      x: getPanoSlideX(group, slideIndex, panoCompensationPx),
       y: 0,
       width: slideWidth,
       height: slideHeight,
@@ -67,14 +59,44 @@ export async function exportSlide(
 export async function exportAllSlides(
   stage: Konva.Stage,
   group: SlideGroup,
-): Promise<{ name: string; dataUrl: string }[]> {
-  const results: { name: string; dataUrl: string }[] = []
+  panoCompensationPx = 0,
+): Promise<ExportedImage[]> {
+  const results: ExportedImage[] = []
   for (let i = 0; i < group.numSlides; i++) {
     const name = group.slideNames[i] ?? `slide-${i + 1}`
-    const dataUrl = await exportSlide(stage, i, group)
+    const dataUrl = await exportSlide(stage, i, group, panoCompensationPx)
     results.push({ name, dataUrl })
   }
   return results
+}
+
+export async function exportWholeGroup(
+  stage: Konva.Stage,
+  group: SlideGroup,
+  panoCompensationPx = 0,
+): Promise<string> {
+  return withIdentityTransform(stage, () =>
+    stage.toDataURL({
+      x: 0,
+      y: 0,
+      width: getPanoTotalWidth(group, panoCompensationPx),
+      height: group.slideHeight,
+      pixelRatio: 1,
+      mimeType: 'image/png',
+    }),
+  )
+}
+
+export async function exportGroupImages(
+  stage: Konva.Stage,
+  group: SlideGroup,
+  panoMode: PanoExportMode = 'split',
+  panoCompensationPx = 0,
+): Promise<ExportedImage[]> {
+  if (panoMode === 'whole' && group.numSlides > 1) {
+    return [{ name: group.name || 'pano', dataUrl: await exportWholeGroup(stage, group, panoCompensationPx) }]
+  }
+  return exportAllSlides(stage, group, panoMode === 'split' ? panoCompensationPx : 0)
 }
 
 /**
@@ -86,68 +108,4 @@ export function downloadDataUrl(dataUrl: string, filename: string) {
   a.download = filename.endsWith('.png') ? filename : `${filename}.png`
   a.click()
   a.remove()
-}
-
-/**
- * Save all slides in a SlideGroup by downloading them.
- */
-export async function downloadSlideGroup(
-  stage: Konva.Stage,
-  group: SlideGroup,
-): Promise<void> {
-  const slides = await exportAllSlides(stage, group)
-  for (const { name, dataUrl } of slides) {
-    downloadDataUrl(dataUrl, name)
-    // Brief delay to avoid browser blocking multiple downloads
-    await new Promise((r) => setTimeout(r, 80))
-  }
-}
-
-/**
- * Save a single slide by downloading it.
- */
-export async function downloadSlide(
-  stage: Konva.Stage,
-  slideIndex: number,
-  group: SlideGroup,
-): Promise<void> {
-  const name = group.slideNames[slideIndex] ?? `slide-${slideIndex + 1}`
-  const dataUrl = await exportSlide(stage, slideIndex, group)
-  downloadDataUrl(dataUrl, name)
-}
-
-/**
- * Use File System Access API to save all slides to a chosen directory.
- * Falls back to download if API not supported.
- */
-export async function saveToDirectory(
-  stage: Konva.Stage,
-  group: SlideGroup,
-): Promise<void> {
-  const slides = await exportAllSlides(stage, group)
-
-  if (!window.showDirectoryPicker) {
-    // Fallback: download individually
-    for (const { name, dataUrl } of slides) {
-      downloadDataUrl(dataUrl, name)
-      await new Promise((r) => setTimeout(r, 80))
-    }
-    return
-  }
-
-  try {
-    const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' })
-    for (const { name, dataUrl } of slides) {
-      const filename = name.endsWith('.png') ? name : `${name}.png`
-      const fileHandle = await dirHandle.getFileHandle(filename, { create: true })
-      const writable = await fileHandle.createWritable()
-      // Convert data URL to blob
-      const res = await fetch(dataUrl)
-      const blob = await res.blob()
-      await writable.write(blob)
-      await writable.close()
-    }
-  } catch (err: unknown) {
-    if (!(err instanceof DOMException && err.name === 'AbortError')) throw err
-  }
 }

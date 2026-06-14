@@ -4,6 +4,7 @@ import useImage from 'use-image'
 import type Konva from 'konva'
 import type { ImageLayer } from '@/types'
 import { useAssetStore } from '@/store/assets'
+import { getShadowProps, useKonvaBlur } from './effects'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,15 +27,9 @@ export function ImageNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
   const currentSize = useRef({ w: layer.width, h: layer.height })
   useEffect(() => { currentSize.current = { w: layer.width, h: layer.height } }, [layer.width, layer.height])
 
-  const shadowProps = layer.shadow
-    ? {
-        shadowColor: layer.shadow.color,
-        shadowBlur: layer.shadow.blur,
-        shadowOffsetX: layer.shadow.offsetX,
-        shadowOffsetY: layer.shadow.offsetY,
-        shadowOpacity: layer.shadow.opacity,
-      }
-    : {}
+  useKonvaBlur(nodeRef, layer.blur, `${imageSrc}:${layer.width}:${layer.height}:${layer.cornerRadius}`)
+
+  const shadowProps = getShadowProps(layer.shadow)
   const cx = layer.x + layer.width / 2
   const cy = layer.y + layer.height / 2
 

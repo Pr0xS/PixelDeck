@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import type { PointerEvent } from 'react'
+import type { PointerEvent, ReactNode } from 'react'
 import type { FillValue, GradientStop, LinearGradient, RadialGradient } from '@/types'
+import { useEditorStore } from '@/store'
+import { isBrandToken, parseBrandToken, resolveBrandColor, toBrandToken } from '@/utils/brandColors'
 import { fillToCss } from '@/utils/gradients'
 
 const inputCls =
@@ -9,13 +11,11 @@ const labelCls = 'text-[11px] text-[#6b6b7a] mb-1 block uppercase tracking-[0.08
 const rowCls = 'flex gap-2 mb-3'
 const fieldCls = 'flex-1 min-w-0'
 
-// eslint-disable-next-line react-refresh/only-export-components
-export function clamp(value: number, min: number, max: number) {
+function clamp(value: number, min: number, max: number) {
   return Math.min(max, Math.max(min, value))
 }
 
-// eslint-disable-next-line react-refresh/only-export-components
-export function normalizeHexColor(value: string, fallback = '#ffffff') {
+function normalizeHexColor(value: string, fallback = '#ffffff') {
   const raw = value.trim()
   const withHash = raw.startsWith('#') ? raw : `#${raw}`
   if (/^#[0-9a-fA-F]{6}$/.test(withHash)) return withHash.toUpperCase()
@@ -106,7 +106,9 @@ function setStopOffset(stops: GradientStop[], index: number, nextOffset: number)
 }
 
 function updateStopColor(stops: GradientStop[], index: number, color: string) {
-  const target = { ...stops[index], color: normalizeHexColor(color, stops[index].color) }
+  // Preserve brand tokens as-is — only normalize plain hex/color strings
+  const resolved = isBrandToken(color) ? color : normalizeHexColor(color, stops[index].color)
+  const target = { ...stops[index], color: resolved }
   const nextStops = stops.map((stop, stopIndex) => (stopIndex === index ? target : stop))
   const sorted = sortStops(nextStops)
   return { stops: sorted, index: sorted.indexOf(target) }
@@ -125,7 +127,10 @@ export function ColorField({
   onInteractionStart?: () => void
   onInteractionEnd?: () => void
 }) {
-  const safeValue = normalizeHexColor(value)
+  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const resolvedValue = resolveBrandColor(value, brandColors)
+  const safeValue = normalizeHexColor(resolvedValue)
+  const activeBrand = isBrandToken(value) ? brandColors.find((c) => c.id === (parseBrandToken(value) ?? '')) : undefined
   const activeRef = useRef(false)
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
@@ -150,32 +155,62 @@ export function ColorField({
   }
 
   return (
-    <div className="flex items-center gap-2">
-      <input
-        type="color"
-        value={safeValue}
-        onPointerDown={beginInteraction}
-        onChange={(e) => {
-          beginInteraction()
-          onChange(e.target.value)
-          scheduleEnd()
-        }}
-        className="h-8 w-8 rounded-md cursor-pointer border border-[rgba(255,255,255,0.1)] bg-transparent"
-      />
-      <input
-        type="text"
-        value={value}
-        onFocus={beginInteraction}
-        onBlur={scheduleEnd}
-        onChange={(e) => onChange(e.target.value)}
-        className={`${inputCls} flex-1`}
-        placeholder={placeholder}
-      />
+    <div>
+      {/* Brand colors row — always visible */}
+      <div className="flex flex-wrap gap-1.5 mb-2 items-center">
+        {brandColors.map((bc) => (
+          <button
+            key={bc.id}
+            type="button"
+            title={bc.name}
+            onClick={() => onChange(toBrandToken(bc.id))}
+            className={`w-5 h-5 rounded-full border-2 transition-all ${
+              activeBrand?.id === bc.id
+                ? 'border-[#7c6ef6] scale-110'
+                : 'border-[rgba(255,255,255,0.2)] hover:border-[rgba(255,255,255,0.5)]'
+            }`}
+            style={{ background: bc.value }}
+          />
+        ))}
+        {activeBrand && (
+          <button
+            type="button"
+            title="Clear brand binding"
+            onClick={() => onChange(safeValue)}
+            className="text-[10px] px-1.5 py-0.5 rounded border border-[rgba(124,110,246,0.4)] text-[#9d90f8] hover:text-white hover:border-[#7c6ef6] transition-colors"
+          >
+            ✕ {activeBrand.name}
+          </button>
+        )}
+        <AddBrandColorButton currentColor={safeValue} />
+      </div>
+      <div className="flex items-center gap-2">
+        <input
+          type="color"
+          value={safeValue}
+          onPointerDown={beginInteraction}
+          onChange={(e) => {
+            beginInteraction()
+            onChange(e.target.value)
+            scheduleEnd()
+          }}
+          className="h-8 w-8 rounded-md cursor-pointer border border-[rgba(255,255,255,0.1)] bg-transparent"
+        />
+        <input
+          type="text"
+          value={activeBrand ? safeValue : value}
+          onFocus={beginInteraction}
+          onBlur={scheduleEnd}
+          onChange={(e) => onChange(e.target.value)}
+          className={`${inputCls} flex-1`}
+          placeholder={placeholder}
+        />
+      </div>
     </div>
   )
 }
 
-export function SegmentedButtons<T extends string>({
+function SegmentedButtons<T extends string>({
   value,
   options,
   onChange,
@@ -225,7 +260,103 @@ function ensureEndStops(stops: GradientStop[]): GradientStop[] {
   return sortStops(result)
 }
 
+// ─── Gradient Presets ─────────────────────────────────────────────────────────
+
+const GRADIENT_PRESETS: Array<{ label: string; fill: LinearGradient }> = [
+  { label: 'Midnight', fill: { type: 'linear', angle: 160, stops: [{ offset: 0, color: '#12101E' }, { offset: 1, color: '#1a1240' }] } },
+  { label: 'Nordic',   fill: { type: 'linear', angle: 160, stops: [{ offset: 0, color: '#1c1c2e' }, { offset: 0.5, color: '#2d3561' }, { offset: 1, color: '#0d0d1a' }] } },
+  { label: 'Ocean',    fill: { type: 'linear', angle: 160, stops: [{ offset: 0, color: '#0052D4' }, { offset: 1, color: '#0D324D' }] } },
+  { label: 'Aurora',   fill: { type: 'linear', angle: 130, stops: [{ offset: 0, color: '#00C9FF' }, { offset: 0.5, color: '#005A8E' }, { offset: 1, color: '#7B2FBE' }] } },
+  { label: 'Candy',    fill: { type: 'linear', angle: 135, stops: [{ offset: 0, color: '#FF9A9E' }, { offset: 1, color: '#A18CD1' }] } },
+  { label: 'Sunset',   fill: { type: 'linear', angle: 135, stops: [{ offset: 0, color: '#FF6B6B' }, { offset: 0.5, color: '#FF8E53' }, { offset: 1, color: '#C850C0' }] } },
+  { label: 'Fire',     fill: { type: 'linear', angle: 45,  stops: [{ offset: 0, color: '#F83600' }, { offset: 1, color: '#F9D423' }] } },
+  { label: 'Forest',   fill: { type: 'linear', angle: 160, stops: [{ offset: 0, color: '#093028' }, { offset: 1, color: '#237A57' }] } },
+  { label: 'Peach',    fill: { type: 'linear', angle: 135, stops: [{ offset: 0, color: '#FFECD2' }, { offset: 1, color: '#FCB69F' }] } },
+  { label: 'Royal',    fill: { type: 'linear', angle: 160, stops: [{ offset: 0, color: '#141E30' }, { offset: 1, color: '#243B55' }] } },
+  { label: 'Lavender', fill: { type: 'linear', angle: 135, stops: [{ offset: 0, color: '#E0C3FC' }, { offset: 1, color: '#8EC5FC' }] } },
+  { label: 'Neon',     fill: { type: 'linear', angle: 135, stops: [{ offset: 0, color: '#00DBDE' }, { offset: 1, color: '#FC00FF' }] } },
+]
+
+const SOLID_PRESETS: Array<{ label: string; color: string }> = [
+  // Neutrals
+  { label: 'Black',       color: '#000000' },
+  { label: 'Near Black',  color: '#0f0f13' },
+  { label: 'Dark Gray',   color: '#1c1c2e' },
+  { label: 'Gray',        color: '#6b7280' },
+  { label: 'Light Gray',  color: '#d1d5db' },
+  { label: 'White',       color: '#ffffff' },
+  // iOS / App Store accents
+  { label: 'iOS Blue',    color: '#007AFF' },
+  { label: 'iOS Green',   color: '#34C759' },
+  { label: 'iOS Red',     color: '#FF3B30' },
+  { label: 'iOS Orange',  color: '#FF9500' },
+  { label: 'iOS Purple',  color: '#AF52DE' },
+  { label: 'iOS Teal',    color: '#5AC8FA' },
+]
+
+function AddBrandColorButton({ currentColor }: { currentColor: string }) {
+  const [adding, setAdding] = useState(false)
+  const [name, setName] = useState('')
+  const addBrandColor = useEditorStore((s) => s.addBrandColor)
+  const inputRef = useRef<HTMLInputElement>(null)
+
+  useEffect(() => {
+    if (adding) inputRef.current?.focus()
+  }, [adding])
+
+  if (!adding) {
+    return (
+      <button
+        type="button"
+        title="Save as brand color"
+        onClick={() => { setAdding(true); setName('') }}
+        className="text-[10px] px-1.5 py-0.5 rounded border border-dashed border-[rgba(255,255,255,0.2)] text-[#6b6b7a] hover:text-[#e8e8f0] hover:border-[rgba(255,255,255,0.4)] transition-colors"
+      >
+        ＋ Brand
+      </button>
+    )
+  }
+
+  return (
+    <div className="flex items-center gap-1">
+      <input
+        ref={inputRef}
+        value={name}
+        onChange={(e) => setName(e.target.value)}
+        onKeyDown={(e) => {
+          if (e.key === 'Enter' && name.trim()) {
+            addBrandColor(name.trim(), currentColor)
+            setAdding(false)
+          }
+          if (e.key === 'Escape') setAdding(false)
+          e.stopPropagation()
+        }}
+        placeholder="Name…"
+        className="w-20 rounded border border-[rgba(124,110,246,0.5)] bg-[#0f0f13] px-1.5 py-0.5 text-[10px] text-[#e8e8f0] outline-none"
+      />
+      <button
+        type="button"
+        onClick={() => { if (name.trim()) { addBrandColor(name.trim(), currentColor); setAdding(false) } }}
+        disabled={!name.trim()}
+        className="text-[10px] px-1.5 py-0.5 rounded bg-[#7c6ef6] text-white disabled:opacity-40"
+      >
+        ✓
+      </button>
+      <button
+        type="button"
+        onClick={() => setAdding(false)}
+        className="text-[10px] text-[#6b6b7a] hover:text-[#e8e8f0]"
+      >
+        ✕
+      </button>
+    </div>
+  )
+}
+
 export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, onInteractionEnd = () => {} }: GradientEditorProps) {
+  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const savedGradients = useEditorStore((s) => s.project.savedGradients) ?? []
+  const updateProject = useEditorStore((s) => s.updateProject)
   const [selectedStopIndex, setSelectedStopIndex] = useState(0)
   const containerRef = useRef<HTMLDivElement>(null)
   const barRef = useRef<HTMLDivElement>(null)
@@ -252,7 +383,9 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
 
   const switchMode = (nextMode: 'solid' | 'linear' | 'radial') => {
     if (nextMode === 'solid') {
-      onChange(normalizeHexColor(typeof fill === 'string' ? fill : fill.stops[0]?.color ?? '#FFFFFF'))
+      // Preserve brand tokens; only normalize plain hex strings
+      const stopColor = typeof fill === 'string' ? fill : fill.stops[0]?.color ?? '#FFFFFF'
+      onChange(isBrandToken(stopColor) ? stopColor : normalizeHexColor(stopColor))
       return
     }
     if (typeof fill === 'string') {
@@ -331,13 +464,166 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
         onChange={switchMode}
       />
 
+      {/* ── Swatches tray (all modes) ── */}
+      {(() => {
+        const savedSolids = savedGradients.filter((g): g is string => typeof g === 'string')
+        const hasBrand = brandColors.length > 0
+        const hasSaved = savedSolids.length > 0
+        if (!hasBrand && !hasSaved) return null
+        return (
+          <div className="space-y-1.5">
+            {hasBrand && (
+              <div>
+                <span className={labelCls}>Brand</span>
+                <div className="mt-1 flex flex-wrap gap-1.5 items-center">
+                  {brandColors.map((bc) => {
+                    const isActive = typeof fill === 'string' && isBrandToken(fill) && parseBrandToken(fill) === bc.id
+                    return (
+                      <button
+                        key={bc.id}
+                        type="button"
+                        title={bc.name}
+                        onClick={() => onChange(toBrandToken(bc.id))}
+                        className={`w-5 h-5 rounded-full border-2 transition-all ${
+                          isActive ? 'border-[#7c6ef6] scale-110' : 'border-[rgba(255,255,255,0.2)] hover:border-[rgba(255,255,255,0.5)]'
+                        }`}
+                        style={{ background: resolveBrandColor(bc.value, brandColors) }}
+                      />
+                    )
+                  })}
+                </div>
+              </div>
+            )}
+            {hasSaved && (
+              <div>
+                <span className={labelCls}>Saved</span>
+                <div className="mt-1 flex flex-wrap gap-1">
+                  {savedSolids.map((color, i) => (
+                    <div key={i} className="relative group">
+                      <button
+                        type="button"
+                        title={color}
+                        onClick={() => onChange(color)}
+                        className="h-5 w-5 rounded border border-[rgba(255,255,255,0.12)] hover:border-[rgba(124,110,246,0.6)] transition-all hover:scale-105"
+                        style={{ background: color }}
+                      />
+                      <button
+                        type="button"
+                        title="Remove"
+                        onClick={() => updateProject({ savedGradients: savedGradients.filter((g) => g !== color) })}
+                        className="absolute -top-1 -right-1 hidden group-hover:flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1a1a2e] border border-[rgba(255,255,255,0.2)] text-[8px] text-[#f87171] hover:text-white leading-none"
+                      >
+                        ×
+                      </button>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+          </div>
+        )
+      })()}
+
+      {mode !== 'solid' && (
+        <div>
+          <div className="flex items-center justify-between mb-1">
+            <span className={labelCls}>Presets</span>
+            <button
+              type="button"
+              title="Save current gradient"
+              onClick={() => {
+                if (typeof fill === 'string') return
+                updateProject({ savedGradients: [...savedGradients, fill] })
+              }}
+              className="text-[10px] text-[#7c6ef6] hover:text-[#9d90f8] transition-colors px-1.5 py-0.5 rounded border border-[rgba(124,110,246,0.3)] hover:border-[rgba(124,110,246,0.6)]"
+            >
+              + Save
+            </button>
+          </div>
+          {/* Built-in presets */}
+          <div className="flex flex-wrap gap-1">
+            {GRADIENT_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                title={p.label}
+                onClick={() => onChange(p.fill)}
+                className="h-5 w-9 rounded border border-[rgba(255,255,255,0.12)] hover:border-[rgba(124,110,246,0.6)] transition-all hover:scale-105"
+                style={{ background: fillToCss(p.fill) }}
+              />
+            ))}
+          </div>
+          {/* Saved gradients (non-string only — strings live in Swatches tray) */}
+          {savedGradients.filter((g) => typeof g !== 'string').length > 0 && (
+            <div className="mt-2">
+              <span className="text-[10px] text-[#4a4a5a] uppercase tracking-wider">Custom</span>
+            </div>
+          )}
+          {savedGradients.filter((g) => typeof g !== 'string').length > 0 && (
+            <div className="mt-1 flex flex-wrap gap-1">
+              {savedGradients.filter((g) => typeof g !== 'string').map((g, i) => (
+                <div key={i} className="relative group">
+                  <button
+                    type="button"
+                    title="Apply saved gradient"
+                    onClick={() => onChange(g)}
+                    className="h-5 w-9 rounded border border-[rgba(255,255,255,0.12)] hover:border-[rgba(124,110,246,0.6)] transition-all hover:scale-105"
+                    style={{ background: fillToCss(g) }}
+                  />
+                  <button
+                    type="button"
+                    title="Remove"
+                    onClick={() => updateProject({ savedGradients: savedGradients.filter((sg) => sg !== g) })}
+                    className="absolute -top-1 -right-1 hidden group-hover:flex h-3.5 w-3.5 items-center justify-center rounded-full bg-[#1a1a2e] border border-[rgba(255,255,255,0.2)] text-[8px] text-[#f87171] hover:text-white leading-none"
+                  >
+                    ×
+                  </button>
+                </div>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
+      {mode === 'solid' && (
+        <div>
+          <span className={labelCls}>Presets</span>
+          <div className="mt-1 flex flex-wrap gap-1">
+            {SOLID_PRESETS.map((p) => (
+              <button
+                key={p.label}
+                type="button"
+                title={p.label}
+                onClick={() => onChange(p.color)}
+                className="h-5 w-5 rounded border border-[rgba(255,255,255,0.12)] hover:border-[rgba(124,110,246,0.6)] transition-all hover:scale-105"
+                style={{ background: p.color }}
+              />
+            ))}
+          </div>
+        </div>
+      )}
+
       {mode === 'solid' ? (
-        <ColorField
-          value={typeof fill === 'string' ? fill : fill.stops[0]?.color ?? '#FFFFFF'}
-          onChange={(v) => onChange(v)}
-          onInteractionStart={onInteractionStart}
-          onInteractionEnd={onInteractionEnd}
-        />
+        <>
+          <ColorField
+            value={typeof fill === 'string' ? fill : fill.stops[0]?.color ?? '#FFFFFF'}
+            onChange={(v) => onChange(v)}
+            onInteractionStart={onInteractionStart}
+            onInteractionEnd={onInteractionEnd}
+          />
+          {typeof fill === 'string' && !isBrandToken(fill) && (
+            <button
+              type="button"
+              onClick={() => {
+                if (savedGradients.includes(fill)) return
+                updateProject({ savedGradients: [...savedGradients, fill] })
+              }}
+              className="text-[10px] text-[#7c6ef6] hover:text-[#9d90f8] transition-colors px-1.5 py-0.5 rounded border border-[rgba(124,110,246,0.3)] hover:border-[rgba(124,110,246,0.6)]"
+            >
+              + Save color
+            </button>
+          )}
+        </>
       ) : gradient && selectedStop ? (
         <>
           <div className="flex items-center justify-between">
@@ -375,16 +661,18 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
                     width: 14,
                     height: 10,
                     clipPath: 'polygon(0% 0%, 100% 0%, 50% 100%)',
-                    background: isSelected ? '#ffffff' : normalizeHexColor(stop.color),
+                    // Always show the actual stop color — selection is communicated
+                    // via drop-shadow only, never by overriding the fill color.
+                    background: normalizeHexColor(resolveBrandColor(stop.color, brandColors)),
+                    // drop-shadow follows clip-path shape, so it acts as a border.
+                    // Unselected: dark outline so the triangle is visible on any bg.
+                    // Selected:   white ring + purple glow without touching the fill.
                     filter: isSelected
-                      ? 'drop-shadow(0 0 5px rgba(124,110,246,0.9))'
-                      : fixed
-                        ? 'drop-shadow(0 1px 3px rgba(0,0,0,0.9))'
-                        : 'drop-shadow(0 1px 2px rgba(0,0,0,0.7))',
+                      ? 'drop-shadow(0 0 1.5px #fff) drop-shadow(0 0 5px rgba(124,110,246,1))'
+                      : 'drop-shadow(0 0 1.5px rgba(0,0,0,0.95)) drop-shadow(0 1px 3px rgba(0,0,0,0.6))',
                     cursor: fixed ? 'pointer' : isDragging ? 'grabbing' : 'grab',
                     touchAction: 'none',
                     zIndex: isSelected ? 3 : fixed ? 2 : 1,
-                    outline: fixed && isSelected ? '1.5px solid rgba(124,110,246,0.7)' : undefined,
                   }}
                   onPointerDown={(e) => handleMarkerPointerDown(e, index)}
                 />
@@ -395,7 +683,10 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
             <div
               ref={barRef}
               className="absolute bottom-0 h-4 rounded-full border border-[rgba(255,255,255,0.12)] shadow-[inset_0_1px_0_rgba(255,255,255,0.08)]"
-              style={{ left: 7, right: 7, background: fillToCss(gradient) }}
+              style={{ left: 7, right: 7, background: fillToCss({
+                ...gradient,
+                stops: gradient.stops.map((s) => ({ ...s, color: resolveBrandColor(s.color, brandColors) })),
+              }) }}
             />
           </div>
 
@@ -523,6 +814,7 @@ export function SliderField({
   onInteractionEnd,
   formatDisplay,
   className = '',
+  labelAddon,
 }: {
   label: string
   value: number
@@ -535,6 +827,7 @@ export function SliderField({
   onInteractionEnd?: () => void
   formatDisplay?: (v: number) => string
   className?: string
+  labelAddon?: ReactNode
 }) {
   const display = formatDisplay
     ? formatDisplay(value)
@@ -545,7 +838,10 @@ export function SliderField({
   return (
     <div className={`mb-3 ${className}`}>
       <div className="mb-1 flex items-center justify-between">
-        <label className="text-[11px] text-[#6b6b7a] uppercase tracking-[0.08em]">{label}</label>
+        <div className="flex items-center">
+          <label className="text-[11px] text-[#6b6b7a] uppercase tracking-[0.08em]">{label}</label>
+          {labelAddon}
+        </div>
         <span className="text-xs text-[#e8e8f0]">{display}{unit}</span>
       </div>
       <div className="flex items-center gap-2">

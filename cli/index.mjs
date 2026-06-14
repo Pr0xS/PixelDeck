@@ -3,7 +3,7 @@
  * PixelDeck CLI
  * 
  * Usage:
- *   pixeldeck export --project=<path> --screenshots=<dir> --output=<dir> [--width=1290] [--height=2796]
+ *   pixeldeck export --project=<path> --screenshots=<dir> --output=<dir>
  *   pixeldeck export --config=<batch.yaml>
  *   pixeldeck serve  # serve dist/ for development
  */

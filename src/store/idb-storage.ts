@@ -9,6 +9,7 @@ const STORE_NAME = 'kv'
 
 // Singleton DB promise — opened once, reused for every read/write.
 let _db: Promise<IDBDatabase> | null = null
+let storageWarningShown = false
 
 function getDB(): Promise<IDBDatabase> {
   if (_db) return _db
@@ -56,6 +57,12 @@ export const idbStorage = {
       })
     } catch (e) {
       console.warn('[idbStorage] setItem failed:', e)
+      if (!storageWarningShown && typeof window !== 'undefined') {
+        storageWarningShown = true
+        window.setTimeout(() => {
+          alert('Image autosave failed. Screenshots are embedded as fallback, but export your project to avoid losing assets.')
+        }, 0)
+      }
     }
   },
 

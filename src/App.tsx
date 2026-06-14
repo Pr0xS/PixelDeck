@@ -1,23 +1,38 @@
-import { useRef, useEffect, useState } from 'react'
+import { useRef, useEffect, useState, lazy, Suspense } from 'react'
 import type Konva from 'konva'
+import { useShallow } from 'zustand/react/shallow'
 import { Toolbar } from '@/components/toolbar/Toolbar'
 import { LayersPanel } from '@/components/panels/LayersPanel'
 import { PreviewModal } from '@/components/panels/PreviewModal'
 import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SlideNavigator } from '@/components/panels/SlideNavigator'
 import { StageCanvas } from '@/components/canvas/StageCanvas'
-import { ContextualToolbar } from '@/components/canvas/ContextualToolbar'
+import { FormatTabs } from '@/components/canvas/FormatTabs'
 import { useThumbnails } from '@/hooks/useThumbnails'
-import { LocalizationView } from '@/pages/LocalizationView'
 import { useEditorStore, useUndoRedo } from '@/store'
+import { applyCanvasFormat } from '@/utils/canvasFormats'
+
+// Lazy-load the localization view — it's a separate mode and not needed on initial load.
+const LocalizationView = lazy(() =>
+  import('@/pages/LocalizationView').then((m) => ({ default: m.LocalizationView })),
+)
 
 export default function App() {
   const stageRef = useRef<Konva.Stage>(null)
-  const { project, activeSlideGroupId, setActiveSlideGroup } = useEditorStore()
+  const { project, activeSlideGroupId, setActiveSlideGroup, exitGroupEdit, editingGroupId } =
+    useEditorStore(useShallow((s) => ({
+      project: s.project,
+      activeSlideGroupId: s.activeSlideGroupId,
+      setActiveSlideGroup: s.setActiveSlideGroup,
+      exitGroupEdit: s.exitGroupEdit,
+      editingGroupId: s.editingGroupId,
+    })))
   const { undo, redo } = useUndoRedo()
-  const { exitGroupEdit, editingGroupId } = useEditorStore()
   const [view, setView] = useState<'editor' | 'localization'>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
+  // Locale the preview opens in + the view to return to when it closes.
+  const [previewLocale, setPreviewLocale] = useState<string | undefined>(undefined)
+  const [previewReturnTo, setPreviewReturnTo] = useState<'localization' | null>(null)
   const {
     thumbnails,
     previewThumbs,
@@ -26,18 +41,21 @@ export default function App() {
     cancelPreviewCapture,
   } = useThumbnails(stageRef)
 
+
+
   useEffect(() => {
-    if (!activeSlideGroupId && project.slideGroups.length > 0) {
+    if (project.slideGroups.length === 0) return
+    const groupExists = project.slideGroups.some((g) => g.id === activeSlideGroupId)
+    if (!activeSlideGroupId || !groupExists) {
       setActiveSlideGroup(project.slideGroups[0].id)
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [])
+  }, [project.slideGroups, activeSlideGroupId, setActiveSlideGroup])
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Don't fire when user is typing in an input
-      const tag = (document.activeElement as HTMLElement | null)?.tagName
-      if (tag === 'INPUT' || tag === 'TEXTAREA') return
+      // Don't fire when user is typing in an input or rich text editor
+      const active = document.activeElement as HTMLElement | null
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return
 
       if (e.key === 'Escape') {
         if (editingGroupId) {
@@ -63,15 +81,23 @@ export default function App() {
         } else if ((e.key === 'z' && e.shiftKey) || e.key === 'y') {
           e.preventDefault()
           redo()
-        } else if (e.key === 'c') {
+        } else if (e.key === 'c' && !e.altKey) {
           e.preventDefault()
           useEditorStore.getState().copyLayers()
         } else if (e.key === 'x') {
           e.preventDefault()
           useEditorStore.getState().cutLayers()
-        } else if (e.key === 'v') {
+        } else if (e.key === 'v' && !e.altKey) {
           e.preventDefault()
           useEditorStore.getState().pasteLayers()
+        } else if (e.key === 'c' && e.altKey) {
+          e.preventDefault()
+          const { selection: sel, copyLayerStyle: cls } = useEditorStore.getState()
+          if (sel?.layerId) cls(sel.layerId)
+        } else if (e.key === 'v' && e.altKey) {
+          e.preventDefault()
+          const { selection: sel, pasteLayerStyle: pls } = useEditorStore.getState()
+          if (sel?.layerId) pls(sel.layerId)
         } else if (e.key === 'd') {
           e.preventDefault()
           const { selection, duplicateLayer } = useEditorStore.getState()
@@ -79,8 +105,9 @@ export default function App() {
         } else if (e.key === '0') {
           // Ctrl+0: fit — delegate to canvas by resetting centering flag
           e.preventDefault()
-          const { project: p, activeSlideGroupId: gid, setZoom: sz, setViewportPosition: svp } = useEditorStore.getState()
-          const grp = p.slideGroups.find((g) => g.id === gid)
+          const { project: p, activeSlideGroupId: gid, activeCanvasFormat, setZoom: sz, setViewportPosition: svp } = useEditorStore.getState()
+          const viewProject = applyCanvasFormat(p, activeCanvasFormat)
+          const grp = viewProject.slideGroups.find((g) => g.id === gid)
           if (grp) {
             const availW = window.innerWidth - 224 - 288 - 64
             const availH = window.innerHeight - 140
@@ -135,50 +162,86 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [undo, redo, exitGroupEdit, editingGroupId])
 
+  // Entering the editor always resets to the base locale — editing a derived
+  // locale view would silently write to the base layers.
+  const handleSetMode = (mode: 'editor' | 'localization') => {
+    if (mode === 'editor') {
+      const s = useEditorStore.getState()
+      s.setActiveLocale(s.project.settings.defaultLocale ?? 'en')
+    }
+    setView(mode)
+  }
+
+  // Preview from the Localization view: the Konva stage only exists in editor
+  // view, so switch to it underneath the fullscreen modal and return on close.
+  const handlePreviewLocale = (locale: string) => {
+    setPreviewLocale(locale)
+    setPreviewReturnTo('localization')
+    setView('editor')
+    setPreviewOpen(true)
+  }
+
+  const handleClosePreview = () => {
+    setPreviewOpen(false)
+    if (previewReturnTo === 'localization') setView('localization')
+    setPreviewReturnTo(null)
+    setPreviewLocale(undefined)
+  }
+
   return (
     <div className="w-screen h-screen flex flex-col overflow-hidden bg-[#0f0f13]">
       <Toolbar
         mode={view}
-        onSetMode={setView}
+        onSetMode={handleSetMode}
       />
-      <div className="flex flex-1 overflow-hidden">
-        {view === 'localization' ? (
-          <main className="flex-1 overflow-hidden bg-[#111118]" style={{ minWidth: 0 }}>
-            <LocalizationView embedded onBack={() => setView('editor')} />
+      <div className="relative flex flex-1 overflow-hidden">
+        {/* Localization view — absolutely covers the editor when active */}
+        {view === 'localization' && (
+          <main className="absolute inset-0 z-10 overflow-hidden bg-[#111118]">
+            <Suspense>
+              <LocalizationView embedded onBack={() => handleSetMode('editor')} onPreview={handlePreviewLocale} />
+            </Suspense>
           </main>
-        ) : (
-          <>
-        {/* Layers panel — always visible */}
-        <LayersPanel />
-
-        {/* Canvas area — fills remaining space */}
-        <main
-          className="flex-1 overflow-hidden bg-[#111118] flex flex-col"
-          style={{ minWidth: 0 }}
-        >
-          {/* Contextual toolbar — only shows when element selected */}
-          <ContextualToolbar />
-
-          {/* Canvas fills remaining height — StageCanvas takes full space */}
-          <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
-            <StageCanvas stageRef={stageRef} />
-          </div>
-        </main>
-
-        {/* Properties panel — always visible */}
-        <PropertiesPanel />
-          </>
         )}
+
+        {/* Editor view — always mounted so the Konva stage + ResizeObserver are always alive.
+            Hidden (pointer-events-none, invisible) when the localization view is on top. */}
+        <div
+          className="flex flex-1 overflow-hidden"
+          style={view === 'localization' ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
+        >
+          {/* Layers panel — always visible */}
+          <LayersPanel />
+
+          {/* Canvas area — fills remaining space */}
+          <main
+            className="flex-1 overflow-hidden bg-[#111118] flex flex-col"
+            style={{ minWidth: 0 }}
+          >
+            {/* Format tabs — switch between platform preview formats */}
+            <FormatTabs />
+
+            {/* Canvas fills remaining height — StageCanvas takes full space */}
+            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+              <StageCanvas stageRef={stageRef} />
+            </div>
+          </main>
+
+          {/* Properties panel — always visible */}
+          <PropertiesPanel />
+        </div>
       </div>
       <SlideNavigator thumbnails={thumbnails} stageRef={stageRef} onOpenPreview={() => setPreviewOpen(true)} />
+
       <PreviewModal
         open={previewOpen}
-        onClose={() => setPreviewOpen(false)}
+        onClose={handleClosePreview}
         thumbnails={thumbnails}
         previewThumbs={previewThumbs}
         isCapturingPreview={isCapturingPreview}
         captureAllHighRes={captureAllHighRes}
         cancelCapture={cancelPreviewCapture}
+        initialLocale={previewLocale}
       />
     </div>
   )

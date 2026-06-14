@@ -1,0 +1,633 @@
+{
+  "id": "tpl-bold-beats",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Bold Beats",
+  "description": "8-slide music-app set: vibrant hero, 2-slide panoramic carousel with tilted phones, four feature slides with accent-bordered devices, and a closing CTA. Fully wired to the Brand Kit — recolor the whole set by editing 5 palette colors.",
+  "category": "Music",
+  "author": "PixelDeck",
+  "createdAt": "2026-06-10T00:00:00.000Z",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "Wavely",
+    "brandColors": [
+      { "id": "bb-primary", "name": "Primary", "value": "#1ED760" },
+      { "id": "bb-primary-deep", "name": "Primary Deep", "value": "#149E43" },
+      { "id": "bb-surface", "name": "Surface", "value": "#15151C" },
+      { "id": "bb-surface-deep", "name": "Surface Deep", "value": "#0A0A0F" },
+      { "id": "bb-muted", "name": "Muted Text", "value": "#A7ADB8" }
+    ]
+  },
+  "slideGroups": [
+    {
+      "name": "01 · Hero",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-01"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 165,
+            "stops": [
+              { "offset": 0, "color": "{brand:bb-primary}" },
+              { "offset": 1, "color": "{brand:bb-primary-deep}" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(255,255,255,0.16)", "cx": 18, "cy": 8, "rx": 750, "ry": 650 },
+            { "color": "rgba(0,0,0,0.18)", "cx": 85, "cy": 96, "rx": 850, "ry": 700 }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Brand",
+          "type": "brand",
+          "x": 100, "y": 96, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "appName": "Wavely",
+          "logoSize": 66,
+          "nameColor": "#FFFFFF",
+          "nameFontSize": 40,
+          "nameFontFamily": "Sora",
+          "nameFontWeight": 800,
+          "direction": "row",
+          "gap": 18
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 95, "y": 300, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Music that\nmoves you",
+          "spans": [
+            { "text": "Music that\n" },
+            { "text": "moves", "fill": "#0A3D1E", "italic": true },
+            { "text": " you" }
+          ],
+          "fontFamily": "Sora",
+          "fontSize": 132,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -4,
+          "lineHeight": 1.06,
+          "align": "center",
+          "width": 1100
+        },
+        {
+          "id": "l3",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145, "y": 660, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Stream 100M+ songs, podcasts\nand live sessions — free.",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "fontWeight": 500,
+          "fill": "#EAFBEF",
+          "letterSpacing": -0.5,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 177, "y": 880, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.4,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "shadow": { "color": "#000000", "blur": 90, "offsetX": 0, "offsetY": 50, "opacity": 0.45 }
+        }
+      ]
+    },
+    {
+      "name": "02-03 · Carousel",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-02", "slide-03"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              { "offset": 0, "color": "{brand:bb-surface}" },
+              { "offset": 1, "color": "{brand:bb-surface-deep}" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(30,215,96,0.16)", "cx": 50, "cy": 50, "rx": 1100, "ry": 950 },
+            { "color": "rgba(30,215,96,0.08)", "cx": 8, "cy": 6, "rx": 700, "ry": 600 },
+            { "color": "rgba(30,215,96,0.08)", "cx": 92, "cy": 94, "rx": 700, "ry": 600 }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline Left",
+          "type": "text",
+          "x": 90, "y": 230, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "All your music,\none place",
+          "spans": [
+            { "text": "All your " },
+            { "text": "music", "fill": "{brand:bb-primary}" },
+            { "text": ",\none place" }
+          ],
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3.5,
+          "lineHeight": 1.08,
+          "align": "left",
+          "width": 880
+        },
+        {
+          "id": "l2",
+          "name": "Phone Tilted Left",
+          "type": "phone",
+          "x": 540, "y": 820, "rotation": -8, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.15,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "border": { "color": "{brand:bb-primary}", "width": 8, "opacity": 1 },
+          "shadow": { "color": "#000000", "blur": 100, "offsetX": -20, "offsetY": 60, "opacity": 0.55 }
+        },
+        {
+          "id": "l3",
+          "name": "Phone Tilted Right",
+          "type": "phone",
+          "x": 1380, "y": 300, "rotation": 7, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.15,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "border": { "color": "{brand:bb-primary}", "width": 8, "opacity": 1 },
+          "shadow": { "color": "#000000", "blur": 100, "offsetX": 20, "offsetY": 60, "opacity": 0.55 }
+        },
+        {
+          "id": "l4",
+          "name": "Headline Right",
+          "type": "text",
+          "x": 1610, "y": 2330, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Synced on\nevery device",
+          "spans": [
+            { "text": "Synced on\n" },
+            { "text": "every device", "fill": "{brand:bb-primary}" }
+          ],
+          "fontFamily": "Sora",
+          "fontSize": 104,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "left",
+          "width": 880
+        }
+      ]
+    },
+    {
+      "name": "04 · Discover",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-04"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              { "offset": 0, "color": "{brand:bb-surface}" },
+              { "offset": 1, "color": "{brand:bb-surface-deep}" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(30,215,96,0.14)", "cx": 15, "cy": 12, "rx": 800, "ry": 700 }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 95, "y": 200, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Discover\nnew sounds",
+          "spans": [
+            { "text": "Discover\n" },
+            { "text": "new sounds", "fill": "{brand:bb-primary}" }
+          ],
+          "fontFamily": "Sora",
+          "fontSize": 104,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 195, "y": 470, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Fresh picks tuned to your taste,\nevery morning",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 500,
+          "fill": "{brand:bb-muted}",
+          "letterSpacing": -0.4,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 900
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 196, "y": 860, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.3,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "border": { "color": "{brand:bb-primary}", "width": 8, "opacity": 1 },
+          "shadow": { "color": "#000000", "blur": 90, "offsetX": 0, "offsetY": 50, "opacity": 0.5 }
+        }
+      ]
+    },
+    {
+      "name": "05 · Lyrics",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-05"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 200,
+            "stops": [
+              { "offset": 0, "color": "{brand:bb-surface}" },
+              { "offset": 1, "color": "{brand:bb-surface-deep}" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(30,215,96,0.14)", "cx": 85, "cy": 12, "rx": 800, "ry": 700 }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 95, "y": 200, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Lyrics that\nfollow along",
+          "spans": [
+            { "text": "Lyrics", "fill": "{brand:bb-primary}" },
+            { "text": " that\nfollow along" }
+          ],
+          "fontFamily": "Sora",
+          "fontSize": 104,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 195, "y": 470, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Sing every word with synced,\nreal-time lyrics",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 500,
+          "fill": "{brand:bb-muted}",
+          "letterSpacing": -0.4,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 900
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 196, "y": 860, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.3,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "border": { "color": "{brand:bb-primary}", "width": 8, "opacity": 1 },
+          "shadow": { "color": "#000000", "blur": 90, "offsetX": 0, "offsetY": 50, "opacity": 0.5 }
+        }
+      ]
+    },
+    {
+      "name": "06 · Offline",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-06"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              { "offset": 0, "color": "{brand:bb-surface}" },
+              { "offset": 1, "color": "{brand:bb-surface-deep}" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(30,215,96,0.14)", "cx": 15, "cy": 12, "rx": 800, "ry": 700 }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 95, "y": 200, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Take it\noffline",
+          "spans": [
+            { "text": "Take it\n" },
+            { "text": "offline", "fill": "{brand:bb-primary}" }
+          ],
+          "fontFamily": "Sora",
+          "fontSize": 104,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 195, "y": 470, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Download playlists and listen\nanywhere — no signal needed",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 500,
+          "fill": "{brand:bb-muted}",
+          "letterSpacing": -0.4,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 900
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 196, "y": 860, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.3,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "border": { "color": "{brand:bb-primary}", "width": 8, "opacity": 1 },
+          "shadow": { "color": "#000000", "blur": 90, "offsetX": 0, "offsetY": 50, "opacity": 0.5 }
+        }
+      ]
+    },
+    {
+      "name": "07 · Share",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-07"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 200,
+            "stops": [
+              { "offset": 0, "color": "{brand:bb-surface}" },
+              { "offset": 1, "color": "{brand:bb-surface-deep}" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(30,215,96,0.14)", "cx": 85, "cy": 12, "rx": 800, "ry": 700 }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 95, "y": 200, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Share the\nmoment",
+          "spans": [
+            { "text": "Share", "fill": "{brand:bb-primary}" },
+            { "text": " the\nmoment" }
+          ],
+          "fontFamily": "Sora",
+          "fontSize": 104,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 195, "y": 470, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Send tracks to friends and\nbuild playlists together",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 500,
+          "fill": "{brand:bb-muted}",
+          "letterSpacing": -0.4,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 900
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 196, "y": 860, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.3,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "border": { "color": "{brand:bb-primary}", "width": 8, "opacity": 1 },
+          "shadow": { "color": "#000000", "blur": 90, "offsetX": 0, "offsetY": 50, "opacity": 0.5 }
+        }
+      ]
+    },
+    {
+      "name": "08 · Outro",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": ["slide-08"],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0, "y": 0, "rotation": 0, "opacity": 1, "visible": true, "locked": true,
+          "fill": {
+            "type": "radial",
+            "cx": 0.5,
+            "cy": 0.42,
+            "radius": 1.1,
+            "stops": [
+              { "offset": 0, "color": "#1B2B20" },
+              { "offset": 0.6, "color": "{brand:bb-surface}" },
+              { "offset": 1, "color": "{brand:bb-surface-deep}" }
+            ]
+          },
+          "accents": [
+            { "color": "rgba(30,215,96,0.20)", "cx": 50, "cy": 38, "rx": 900, "ry": 800 }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Brand",
+          "type": "brand",
+          "x": 100, "y": 96, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "appName": "Wavely",
+          "logoSize": 66,
+          "nameColor": "{brand:bb-primary}",
+          "nameFontSize": 40,
+          "nameFontFamily": "Sora",
+          "nameFontWeight": 800,
+          "direction": "row",
+          "gap": 18
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 95, "y": 720, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "text": "Press play\non your world",
+          "spans": [
+            { "text": "Press " },
+            { "text": "play", "fill": "{brand:bb-primary}" },
+            { "text": "\non your world" }
+          ],
+          "fontFamily": "Sora",
+          "fontSize": 124,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -4,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100
+        },
+        {
+          "id": "l3",
+          "name": "Feature Chips",
+          "type": "chips",
+          "x": 200, "y": 1130, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "items": [
+            { "label": "100M+ songs", "primary": true, "variant": "filled" },
+            { "label": "Ad-free", "primary": false, "variant": "dark" },
+            { "label": "Hi-Fi audio", "primary": false, "variant": "outlined" },
+            { "label": "Podcasts", "primary": false, "variant": "soft" }
+          ],
+          "primaryGradientFrom": "{brand:bb-primary}",
+          "primaryGradientTo": "{brand:bb-primary-deep}",
+          "primaryTextColor": "#06250F",
+          "defaultBg": "rgba(255,255,255,0.10)",
+          "defaultTextColor": "#E6E6E6",
+          "chipFontSize": 31,
+          "gap": 18,
+          "direction": "row"
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 157, "y": 1420, "rotation": 0, "opacity": 1, "visible": true, "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.5,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "border": { "color": "{brand:bb-primary}", "width": 8, "opacity": 1 },
+          "shadow": { "color": "#000000", "blur": 110, "offsetX": 0, "offsetY": -30, "opacity": 0.5 }
+        }
+      ]
+    }
+  ]
+}

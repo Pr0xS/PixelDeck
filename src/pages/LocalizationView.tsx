@@ -1,268 +1,70 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
-import type {
-  GroupLayer,
-  ImageLayer,
-  Layer,
-  LocaleLayerPatch,
-  PhoneLayer,
-  SlideGroup,
-  TextLayer,
-} from '@/types'
-import { getLocalizableLayers } from '@/utils/locale'
+import { useApiKeysStore } from '@/store/apiKeys'
+import type { Layer, LocaleLayerPatch, LocalizationMode, SlideGroup, TextLayer } from '@/types'
+import { effectiveLocalizationMode, getLanguageName } from '@/utils/locale'
+import { translateLayerText, translateGroupTexts } from '@/ai/features/translateText'
+import type { AiAuth } from '@/ai/features/translateText'
+// import { generateLocalizedImage } from '@/ai/features/localizeImage' // TODO: re-enable when AI image generation is ready
+import { collectLocalizableRows, isOverrideComplete, readFileAsDataUrl, buildLocaleAssetKey, findLayerById } from './localization/helpers'
+import { cellKey, type CellKey, type CellStatus, type LocalizableRow, type UploadTarget } from './localization/types'
+import { LocaleBar } from './localization/LocaleBar'
+import { BulkTranslateBar } from './localization/BulkTranslateBar'
+import { SlideGroupSection } from './localization/SlideGroupSection'
+
+const ApiKeysModal = lazy(() =>
+  import('@/components/panels/ApiKeysModal').then((m) => ({ default: m.ApiKeysModal })),
+)
+
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 interface LocalizationViewProps {
   onBack: () => void
   embedded?: boolean
+  /** Opens the slide preview pre-set to the given locale (provided by App). */
+  onPreview?: (locale: string) => void
 }
 
-type LocalizableDisplayLayer = TextLayer | PhoneLayer | ImageLayer
-
-interface LocalizableRow {
-  slideGroupId: string
-  slideGroupName: string
-  layerId: string
-  layerName: string
-  layerType: 'text' | 'phone' | 'image'
-  depth: number
-  containerGroupId: string | null
-  defaultText?: string
-  defaultImageRef?: string
-  layer: LocalizableDisplayLayer
+function getErrorMessage(error: unknown): string {
+  return error instanceof Error ? error.message : String(error)
 }
 
-interface UploadTarget {
-  slideGroupId: string
-  layerId: string
-  locale: string
-  layerType: 'phone' | 'image'
-}
+// ─── Main Component ───────────────────────────────────────────────────────────
 
-function findLayerById(
-  layers: Layer[],
-  layerId: string,
-  containerGroupId: string | null = null,
-): { layer: Layer; containerGroupId: string | null } | null {
-  for (const layer of layers) {
-    if (layer.id === layerId) return { layer, containerGroupId }
-    if (layer.type === 'group') {
-      const found = findLayerById((layer as GroupLayer).children, layerId, layer.id)
-      if (found) return found
-    }
-  }
-  return null
-}
-
-function collectLocalizableRows(
-  slideGroup: SlideGroup,
-  layers: Layer[],
-  depth = 0,
-  containerGroupId: string | null = null,
-): LocalizableRow[] {
-  const rows: LocalizableRow[] = []
-
-  for (const layer of layers) {
-    if (layer.type === 'group') {
-      rows.push(...collectLocalizableRows(slideGroup, layer.children, depth + 1, layer.id))
-      continue
-    }
-
-    if (layer.type !== 'text' && layer.type !== 'phone' && layer.type !== 'image') continue
-
-    rows.push({
-      slideGroupId: slideGroup.id,
-      slideGroupName: slideGroup.name,
-      layerId: layer.id,
-      layerName: layer.name,
-      layerType: layer.type,
-      depth,
-      containerGroupId,
-      defaultText: layer.type === 'text' ? layer.text : undefined,
-      defaultImageRef:
-        layer.type === 'phone'
-          ? layer.screenshotPath ?? layer.screenshotDataUrl
-          : layer.type === 'image'
-            ? layer.src
-            : undefined,
-      layer,
-    })
-  }
-
-  return rows
-}
-
-function getLayerIcon(type: LocalizableRow['layerType']): string {
-  if (type === 'text') return 'T'
-  if (type === 'phone') return '📱'
-  return '🖼'
-}
-
-function truncate(value: string, length = 120): string {
-  if (value.length <= length) return value
-  return `${value.slice(0, length - 1)}…`
-}
-
-function getFileLabel(value?: string): string {
-  if (!value) return 'No image'
-  if (value.startsWith('data:')) return 'Embedded image'
-  const parts = value.split('/')
-  return parts[parts.length - 1] || value
-}
-
-function isOverrideComplete(row: LocalizableRow, locale: string, defaultLocale: string): boolean {
-  if (locale === defaultLocale) return true
-
-  const override = row.layer.localeOverrides?.[locale]
-  if (!override) return false
-
-  if (row.layerType === 'text') return typeof override.text === 'string' && override.text.trim().length > 0
-  if (row.layerType === 'phone') {
-    return Boolean((override.screenshotPath && override.screenshotPath.trim()) || override.screenshotDataUrl)
-  }
-  return Boolean(override.src && override.src.trim())
-}
-
-function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string') resolve(reader.result)
-      else reject(new Error('Failed to read file'))
-    }
-    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'))
-    reader.readAsDataURL(file)
-  })
-}
-
-function buildLocaleAssetKey(locale: string, slideGroupId: string, layerId: string, fileName: string): string {
-  return `locale-${locale}-${slideGroupId}-${layerId}-${fileName}`
-}
-
-function TextOverrideCell({
-  row,
-  locale,
-  defaultLocale,
-  activeLocale,
-  setLocaleOverride,
-  clearLocaleOverride,
-}: {
-  row: LocalizableRow
-  locale: string
-  defaultLocale: string
-  activeLocale: string
-  setLocaleOverride: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
-  clearLocaleOverride: (slideGroupId: string, layerId: string, locale: string) => void
-}) {
-  const textareaRef = useRef<HTMLTextAreaElement>(null)
-  const override = row.layer.localeOverrides?.[locale]
-  const hasOverride = typeof override?.text === 'string'
-  const [draft, setDraft] = useState(override?.text ?? '')
-
-  useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
-    setDraft(override?.text ?? '')
-  }, [override?.text])
-
-  useEffect(() => {
-    const el = textareaRef.current
-    if (!el) return
-    el.style.height = '0px'
-    el.style.height = `${el.scrollHeight}px`
-  }, [draft])
-
-  const isActiveColumn = locale === activeLocale
-
-  if (locale === defaultLocale) {
-    return (
-      <div
-        className="min-h-[72px] rounded-xl border px-4 py-3 text-sm leading-6 text-[#d9d9e6]"
-        style={{
-          borderColor: isActiveColumn ? 'rgba(124,110,246,0.45)' : 'rgba(255,255,255,0.08)',
-          background: isActiveColumn ? 'rgba(124,110,246,0.08)' : 'rgba(255,255,255,0.02)',
-        }}
-      >
-        “{truncate(row.defaultText ?? '')}”
-      </div>
-    )
-  }
-
-  if (!hasOverride) {
-    return (
-      <div
-        className="min-h-[72px] rounded-xl border border-dashed px-4 py-3"
-        style={{
-          borderColor: isActiveColumn ? 'rgba(124,110,246,0.4)' : 'rgba(255,255,255,0.14)',
-          background: isActiveColumn ? 'rgba(124,110,246,0.06)' : 'rgba(255,255,255,0.015)',
-        }}
-      >
-        <div className="mb-3 text-xs leading-5 text-[#6b6b7a]">
-          Inherits: {truncate(row.defaultText ?? '', 72)}
-        </div>
-        <div className="flex items-center gap-2">
-          <button
-            type="button"
-            onClick={() => setLocaleOverride(row.slideGroupId, row.layerId, locale, { ...(override ?? {}), text: '' })}
-            className="rounded-lg border border-[#7c6ef6] bg-[#7c6ef6]/14 px-3 py-1.5 text-xs font-medium text-[#c5befd] transition hover:bg-[#7c6ef6]/22"
-          >
-            + Add text
-          </button>
-          <span className="text-xs text-amber-400">⚠ Missing</span>
-        </div>
-      </div>
-    )
-  }
-
-  return (
-    <div
-      className="min-h-[72px] rounded-xl border px-3 py-3"
-      style={{
-        borderColor: locale === activeLocale ? '#7c6ef6' : 'rgba(124,110,246,0.66)',
-        background: locale === activeLocale ? 'rgba(124,110,246,0.12)' : 'rgba(124,110,246,0.06)',
-      }}
-    >
-      <textarea
-        ref={textareaRef}
-        value={draft}
-        onChange={(e) => setDraft(e.target.value)}
-        onBlur={() => {
-          setLocaleOverride(row.slideGroupId, row.layerId, locale, { ...(override ?? {}), text: draft })
-        }}
-        placeholder="Enter localized text"
-        className="w-full resize-none overflow-hidden border-0 bg-transparent text-sm leading-6 text-[#f3f2ff] outline-none placeholder:text-[#9a95c8]"
-        rows={1}
-      />
-      <div className="mt-3 flex justify-end">
-        <button
-          type="button"
-          onClick={() => clearLocaleOverride(row.slideGroupId, row.layerId, locale)}
-          className="text-xs font-medium text-[#b9b6c9] transition hover:text-white"
-        >
-          × Clear
-        </button>
-      </div>
-    </div>
-  )
-}
-
-export function LocalizationView({ onBack, embedded = false }: LocalizationViewProps) {
+export function LocalizationView({ onBack, embedded = false, onPreview }: LocalizationViewProps) {
   const {
     project,
     activeLocale,
     addLocale,
+    removeLocale,
+    renameDefaultLocale,
     setActiveLocale,
     setLocaleOverride,
     clearLocaleOverride,
-  } = useEditorStore()
-  const { addAsset, getAsset } = useAssetStore()
+    setLocaleOverridesBatch,
+    updateLayerInSlideGroup,
+  } = useEditorStore(useShallow((s) => ({
+    project: s.project,
+    activeLocale: s.activeLocale,
+    addLocale: s.addLocale,
+    removeLocale: s.removeLocale,
+    renameDefaultLocale: s.renameDefaultLocale,
+    setActiveLocale: s.setActiveLocale,
+    setLocaleOverride: s.setLocaleOverride,
+    clearLocaleOverride: s.clearLocaleOverride,
+    setLocaleOverridesBatch: s.setLocaleOverridesBatch,
+    updateLayerInSlideGroup: s.updateLayerInSlideGroup,
+  })))
+  const { addAsset, getAsset } = useAssetStore(useShallow((s) => ({ addAsset: s.addAsset, getAsset: s.getAsset })))
+  const { provider, getActiveKey, getActiveModel } = useApiKeysStore()
 
   const defaultLocale = project.settings.defaultLocale
   const locales = useMemo(() => {
     const defined = project.settings.locales ?? [defaultLocale]
-    return [defaultLocale, ...defined.filter((locale) => locale !== defaultLocale)]
+    return [defaultLocale, ...defined.filter((l) => l !== defaultLocale)]
   }, [defaultLocale, project.settings.locales])
-
-  const allLocalizableLayers = useMemo(() => getLocalizableLayers(project), [project])
 
   const groups = useMemo(
     () =>
@@ -273,16 +75,57 @@ export function LocalizationView({ onBack, embedded = false }: LocalizationViewP
     [project],
   )
 
+  const allRows = useMemo(() => groups.flatMap((g) => g.rows), [groups])
+
+  // ─ Progress per locale (excludes 'skip' layers)
+  const progressByLocale = useMemo(() => {
+    const progress = new Map<string, { complete: number; total: number }>()
+    for (const locale of locales) {
+      const eligible = allRows.filter((r) => effectiveLocalizationMode(r.layer) !== 'skip')
+      const total = eligible.length
+      const complete = eligible.filter((row) => isOverrideComplete(row, locale, defaultLocale)).length
+      progress.set(locale, { complete, total })
+    }
+    return progress
+  }, [allRows, defaultLocale, locales])
+
+  // ─ UI state
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
-  const [addingLocale, setAddingLocale] = useState(false)
-  const [localeInput, setLocaleInput] = useState('')
-  const [localeError, setLocaleError] = useState('')
+  const [showAddLocale, setShowAddLocale] = useState(false)
+  const [showDefaultLocalePicker, setShowDefaultLocalePicker] = useState(false)
   const [uploadTarget, setUploadTarget] = useState<UploadTarget | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
-  const addLocaleInputRef = useRef<HTMLInputElement>(null)
+  const defaultLocaleAnchorRef = useRef<HTMLDivElement>(null)
+  const addLocaleAnchorRef = useRef<HTMLDivElement>(null)
+
+  // ─ Bulk translate state (component-local, never in undo store)
+  const [cellStatus, setCellStatus] = useState<Map<CellKey, CellStatus>>(new Map())
+  const [cellError, setCellError] = useState<Map<CellKey, string>>(new Map())
+  // Optimistic bulk AI results: displayed immediately, then committed once at
+  // the end via setLocaleOverridesBatch so the operation remains one undo step.
+  const [bulkPreviewOverrides, setBulkPreviewOverrides] = useState<Map<CellKey, LocaleLayerPatch>>(new Map())
+  const [isBulkRunning, setIsBulkRunning] = useState(false)
+  const [overwriteExisting, setOverwriteExisting] = useState(false)
+  const [aiSettingsOpen, setAiSettingsOpen] = useState(false)
+  // Cancellation flag for the bulk worker pool — a ref so in-flight workers see it
+  const bulkCancelRef = useRef(false)
+  // Cells where the last AI translation could not preserve rich-text formatting
+  const [lostFormattingCells, setLostFormattingCells] = useState<Set<CellKey>>(new Set())
+  // Active text-cell editing session → drives the floating styling toolbar
+  const [editingTextCell, setEditingTextCell] = useState<{ layerName: string; locale: string } | null>(null)
+  const [toolbarSlotEl, setToolbarSlotEl] = useState<HTMLElement | null>(null)
+
+  const markFormattingLost = useCallback((key: CellKey, lost: boolean) => {
+    setLostFormattingCells((prev) => {
+      if (prev.has(key) === lost) return prev
+      const next = new Set(prev)
+      if (lost) next.add(key)
+      else next.delete(key)
+      return next
+    })
+  }, [])
 
   useEffect(() => {
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     setCollapsedSections((prev) => {
       const next = { ...prev }
       for (const { slideGroup } of groups) {
@@ -292,50 +135,7 @@ export function LocalizationView({ onBack, embedded = false }: LocalizationViewP
     })
   }, [groups])
 
-  useEffect(() => {
-    if (addingLocale) addLocaleInputRef.current?.focus()
-  }, [addingLocale])
-
-  const progressByLocale = useMemo(() => {
-    const progress = new Map<string, { complete: number; total: number }>()
-    for (const locale of locales) {
-      const total = allLocalizableLayers.length
-      const complete = groups
-        .flatMap((group) => group.rows)
-        .filter((row) => isOverrideComplete(row, locale, defaultLocale)).length
-      progress.set(locale, { complete, total })
-    }
-    return progress
-  }, [allLocalizableLayers.length, defaultLocale, groups, locales])
-
-  const gridTemplateColumns = useMemo(
-    () => `200px 240px ${locales.slice(1).map(() => '240px').join(' ')}`.trim(),
-    [locales],
-  )
-
-  const commitNewLocale = () => {
-    const nextLocale = localeInput.trim().toLowerCase()
-
-    if (!nextLocale) {
-      setLocaleError('Enter a locale code')
-      return
-    }
-    if (nextLocale === defaultLocale) {
-      setLocaleError(`${defaultLocale} is already the default locale`)
-      return
-    }
-    if (locales.includes(nextLocale)) {
-      setLocaleError('Locale already exists')
-      setActiveLocale(nextLocale)
-      return
-    }
-
-    addLocale(nextLocale)
-    setLocaleInput('')
-    setLocaleError('')
-    setAddingLocale(false)
-  }
-
+  // ─ Upload handler
   const openUploadPicker = (target: UploadTarget) => {
     setUploadTarget(target)
     fileInputRef.current?.click()
@@ -344,16 +144,26 @@ export function LocalizationView({ onBack, embedded = false }: LocalizationViewP
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file || !uploadTarget) return
-
     const dataUrl = await readFileAsDataUrl(file)
     const group = project.slideGroups.find((item) => item.id === uploadTarget.slideGroupId)
     const found = group ? findLayerById(group.layers, uploadTarget.layerId) : null
     const layer = found?.layer
     const existingOverride = layer?.localeOverrides?.[uploadTarget.locale] ?? {}
     const assetKey = buildLocaleAssetKey(uploadTarget.locale, uploadTarget.slideGroupId, uploadTarget.layerId, file.name)
-
     addAsset(assetKey, dataUrl)
-
+    if (uploadTarget.locale === project.settings.defaultLocale) {
+      if (uploadTarget.layerType === 'phone') {
+        updateLayerInSlideGroup(uploadTarget.slideGroupId, uploadTarget.layerId, {
+          screenshotPath: assetKey,
+          screenshotDataUrl: undefined,
+        } as Partial<Layer>)
+      } else {
+        updateLayerInSlideGroup(uploadTarget.slideGroupId, uploadTarget.layerId, { src: assetKey } as Partial<Layer>)
+      }
+      event.target.value = ''
+      setUploadTarget(null)
+      return
+    }
     if (uploadTarget.layerType === 'phone') {
       setLocaleOverride(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {
         ...existingOverride,
@@ -366,11 +176,11 @@ export function LocalizationView({ onBack, embedded = false }: LocalizationViewP
         src: assetKey,
       })
     }
-
     event.target.value = ''
     setUploadTarget(null)
   }
 
+  // ─ Navigate to layer in editor
   const navigateToLayer = (row: LocalizableRow) => {
     const store = useEditorStore.getState()
     store.setActiveSlideGroup(row.slideGroupId)
@@ -383,330 +193,345 @@ export function LocalizationView({ onBack, embedded = false }: LocalizationViewP
     onBack()
   }
 
+  // ─ Single cell AI translate (full design context: all slides + texts + roles)
+  const handleSingleAiTranslate = useCallback(async (row: LocalizableRow, locale: string) => {
+    const key = cellKey(row.layerId, locale)
+    const apiKey = getActiveKey()
+    const model = getActiveModel()
+    if (!apiKey) {
+      setAiSettingsOpen(true)
+      return
+    }
+    if (!row.defaultText) return
+    const slideGroup = project.slideGroups.find((g) => g.id === row.slideGroupId)
+    if (!slideGroup) return
+    const auth: AiAuth = { provider, apiKey, model }
+    setCellStatus((m) => new Map(m).set(key, 'translating'))
+    try {
+      const result = await translateLayerText({
+        auth,
+        project,
+        slideGroup,
+        layerId: row.layerId,
+        text: row.defaultText,
+        marks: (row.layer as TextLayer).marks,
+        targetLocale: locale,
+      })
+      setLocaleOverride(row.slideGroupId, row.layerId, locale, { text: result.text, marks: result.marks })
+      markFormattingLost(key, Boolean(result.formattingLost))
+      setCellStatus((m) => new Map(m).set(key, 'done'))
+    } catch (e) {
+      setCellError((m) => new Map(m).set(key, getErrorMessage(e)))
+      setCellStatus((m) => new Map(m).set(key, 'error'))
+    }
+  }, [getActiveKey, getActiveModel, markFormattingLost, project, provider, setLocaleOverride])
+
+  // TODO: AI image generation disabled temporarily — re-enable when ready.
+  // Handler and import are preserved in git history. See localizeImage.ts + editImage() in client.ts.
+
+  // ─ Bulk AI translate
+  // One request per (slide group × locale) with ALL the group's texts and the
+  // full design context — the model sees the whole narrative and keeps
+  // terminology consistent. Falls back to per-item calls if the batch fails.
+  const handleBulkTranslate = useCallback(async () => {
+    const apiKey = getActiveKey()
+    const model = getActiveModel()
+    if (!apiKey || isBulkRunning) return
+
+    const nonDefaultLocales = locales.filter((l) => l !== defaultLocale)
+    const auth: AiAuth = { provider, apiKey, model }
+
+    // Build batch jobs: one per (slide group × locale)
+    interface BatchJob {
+      slideGroup: SlideGroup
+      locale: string
+      rows: LocalizableRow[]
+    }
+    const batches: BatchJob[] = []
+    for (const { slideGroup, rows } of groups) {
+      const eligibleRows = rows.filter(
+        (row) =>
+          row.layerType === 'text' &&
+          effectiveLocalizationMode(row.layer) === 'auto' &&
+          row.defaultText,
+      )
+      if (eligibleRows.length === 0) continue
+      for (const locale of nonDefaultLocales) {
+        const pending = eligibleRows.filter((row) => {
+          const hasOverride = typeof row.layer.localeOverrides?.[locale]?.text === 'string'
+          return !hasOverride || overwriteExisting
+        })
+        if (pending.length > 0) batches.push({ slideGroup, locale, rows: pending })
+      }
+    }
+
+    if (batches.length === 0) return
+
+    setIsBulkRunning(true)
+    bulkCancelRef.current = false
+    setBulkPreviewOverrides(new Map())
+
+    // Mark all cells as queued
+    setCellStatus((m) => {
+      const next = new Map(m)
+      for (const batch of batches) {
+        for (const row of batch.rows) next.set(cellKey(row.layerId, batch.locale), 'queued')
+      }
+      return next
+    })
+
+    const staged: Array<{ slideGroupId: string; layerId: string; locale: string; patch: LocaleLayerPatch }> = []
+    let cursor = 0
+
+    function recordBulkTranslation(row: LocalizableRow, locale: string, result: { text: string; marks?: TextLayer['marks'] }) {
+      const patch: LocaleLayerPatch = { text: result.text, marks: result.marks }
+      staged.push({
+        slideGroupId: row.slideGroupId,
+        layerId: row.layerId,
+        locale,
+        patch,
+      })
+      setBulkPreviewOverrides((m) => new Map(m).set(cellKey(row.layerId, locale), patch))
+    }
+
+    async function worker() {
+      while (cursor < batches.length && !bulkCancelRef.current) {
+        const batch = batches[cursor++]
+        const markBatch = (status: CellStatus) =>
+          setCellStatus((m) => {
+            const next = new Map(m)
+            for (const row of batch.rows) next.set(cellKey(row.layerId, batch.locale), status)
+            return next
+          })
+
+        markBatch('translating')
+        try {
+          const translations = await translateGroupTexts({
+            auth,
+            project,
+            slideGroup: batch.slideGroup,
+            items: batch.rows.map((row) => ({
+              id: row.layerId,
+              text: row.defaultText!,
+              marks: (row.layer as TextLayer).marks,
+            })),
+            targetLocale: batch.locale,
+          })
+          for (const row of batch.rows) {
+            const key = cellKey(row.layerId, batch.locale)
+            const result = translations[row.layerId]
+            if (result) {
+              recordBulkTranslation(row, batch.locale, result)
+              markFormattingLost(key, Boolean(result.formattingLost))
+              setCellStatus((m) => new Map(m).set(key, 'done'))
+            } else {
+              setCellError((m) => new Map(m).set(key, 'Missing from batch response'))
+              setCellStatus((m) => new Map(m).set(key, 'error'))
+            }
+          }
+        } catch {
+          // Batch failed (bad JSON / API error) — fall back to per-item calls
+          for (const row of batch.rows) {
+            if (bulkCancelRef.current) break
+            const key = cellKey(row.layerId, batch.locale)
+            try {
+              const result = await translateLayerText({
+                auth,
+                project,
+                slideGroup: batch.slideGroup,
+                layerId: row.layerId,
+                text: row.defaultText!,
+                marks: (row.layer as TextLayer).marks,
+                targetLocale: batch.locale,
+              })
+              recordBulkTranslation(row, batch.locale, result)
+              markFormattingLost(key, Boolean(result.formattingLost))
+              setCellStatus((m) => new Map(m).set(key, 'done'))
+            } catch (e) {
+              setCellError((m) => new Map(m).set(key, getErrorMessage(e)))
+              setCellStatus((m) => new Map(m).set(key, 'error'))
+            }
+          }
+        }
+      }
+    }
+
+    // 2 parallel workers — each batch is already a large request
+    await Promise.all(Array.from({ length: 2 }, worker))
+
+    // Reset cells still queued after a cancellation
+    if (bulkCancelRef.current) {
+      setCellStatus((m) => {
+        const next = new Map(m)
+        for (const [key, status] of next) {
+          if (status === 'queued') next.set(key, 'idle')
+        }
+        return next
+      })
+    }
+
+    // Single undo step for the whole batch (includes work finished before Stop)
+    if (staged.length > 0) setLocaleOverridesBatch(staged)
+    setBulkPreviewOverrides(new Map())
+
+    setIsBulkRunning(false)
+  }, [defaultLocale, getActiveKey, getActiveModel, groups, isBulkRunning, locales, markFormattingLost, overwriteExisting, project, provider, setLocaleOverridesBatch])
+
+  // ─ Mode update
+  const handleModeUpdate = useCallback((row: LocalizableRow, mode: LocalizationMode | undefined) => {
+    updateLayerInSlideGroup(row.slideGroupId, row.layerId, { localizationMode: mode } as Partial<Layer>)
+  }, [updateLayerInSlideGroup])
+
+  // ─ Remove locale
+  const handleRemoveLocale = (locale: string) => {
+    if (locale === defaultLocale) return
+    if (!confirm(`Remove locale "${getLanguageName(locale)}" and all its overrides?`)) return
+    removeLocale(locale)
+    if (activeLocale === locale) setActiveLocale(defaultLocale)
+  }
+
+  const handleDefaultLocaleChange = (locale: string) => {
+    if (locale === defaultLocale) {
+      setShowDefaultLocalePicker(false)
+      return
+    }
+    const nonDefault = locales.filter((l) => l !== defaultLocale)
+    if (nonDefault.includes(locale)) return
+    renameDefaultLocale(locale)
+    setShowDefaultLocalePicker(false)
+  }
+
+  const nonDefaultLocales = locales.filter((l) => l !== defaultLocale)
+  const hasApiKey = Boolean(getActiveKey())
+
+  // Bulk translate eligibility count
+  const bulkEligibleCount = useMemo(() => {
+    return allRows.filter((r) => {
+      if (r.layerType !== 'text') return false
+      if (effectiveLocalizationMode(r.layer) !== 'auto') return false
+      if (!r.defaultText) return false
+      return nonDefaultLocales.some((locale) => {
+        const hasOverride = typeof r.layer.localeOverrides?.[locale]?.text === 'string'
+        return !hasOverride || overwriteExisting
+      })
+    }).length * nonDefaultLocales.length
+  }, [allRows, nonDefaultLocales, overwriteExisting])
+
+  const gridTemplateColumns = `300px ${locales.map(() => '260px').join(' ')}`
+
   return (
     <div className={`relative overflow-hidden bg-[#0f0f13] text-[#e8e8f0] ${embedded ? 'h-full w-full' : 'h-screen w-screen'}`}>
+      {/* AI Settings modal — reachable from no-key states without leaving the view */}
+      <Suspense>
+        <ApiKeysModal open={aiSettingsOpen} onClose={() => setAiSettingsOpen(false)} />
+      </Suspense>
+
+      {/* Background glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
         <div className="absolute left-[-10%] top-[-18%] h-[28rem] w-[28rem] rounded-full bg-[#7c6ef6]/16 blur-3xl" />
         <div className="absolute bottom-[-18%] right-[-8%] h-[24rem] w-[24rem] rounded-full bg-[#ec4899]/10 blur-3xl" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.04),transparent_45%)]" />
       </div>
 
       <div className="relative flex h-full flex-col">
-        <header className="border-b border-white/8 bg-[#111118]/92 px-8 py-6 backdrop-blur-xl">
-          <div className="flex items-center justify-between gap-4">
-            <div>
-              <div className="mb-1 text-[11px] uppercase tracking-[0.28em] text-[#7c6ef6]">Global content matrix</div>
-              <div className="flex items-center gap-3">
-                <span className="text-2xl">🌐</span>
-                <h1
-                  className="m-0 text-[32px] leading-none text-[#f7f4ff]"
-                  style={{ fontFamily: 'Iowan Old Style, Palatino Linotype, serif' }}
-                >
-                  Localization
-                </h1>
-              </div>
-            </div>
+        {/* ── Locale bar ── */}
+        <LocaleBar
+          locales={locales}
+          defaultLocale={defaultLocale}
+          activeLocale={activeLocale}
+          progressByLocale={progressByLocale}
+          showDefaultLocalePicker={showDefaultLocalePicker}
+          showAddLocale={showAddLocale}
+          defaultLocaleAnchorRef={defaultLocaleAnchorRef}
+          addLocaleAnchorRef={addLocaleAnchorRef}
+          onPreview={onPreview}
+          onBack={onBack}
+          setActiveLocale={setActiveLocale}
+          setShowDefaultLocalePicker={setShowDefaultLocalePicker}
+          setShowAddLocale={setShowAddLocale}
+          handleRemoveLocale={handleRemoveLocale}
+          handleDefaultLocaleChange={handleDefaultLocaleChange}
+          addLocale={addLocale}
+          setAddLocaleOpen={setShowAddLocale}
+        />
 
-            <button
-              type="button"
-              onClick={onBack}
-              className="rounded-full border border-white/10 bg-white/4 px-5 py-2.5 text-sm font-medium text-[#d7d7e3] transition hover:border-[#7c6ef6]/50 hover:bg-[#7c6ef6]/10 hover:text-white"
-            >
-              ← Back to Editor
-            </button>
-          </div>
-        </header>
+        {/* ── Bulk translate toolbar ── */}
+        <BulkTranslateBar
+          nonDefaultLocales={nonDefaultLocales}
+          bulkEligibleCount={bulkEligibleCount}
+          hasApiKey={hasApiKey}
+          isBulkRunning={isBulkRunning}
+          overwriteExisting={overwriteExisting}
+          setOverwriteExisting={setOverwriteExisting}
+          onBulkTranslate={handleBulkTranslate}
+          bulkCancelRef={bulkCancelRef}
+          onOpenAiSettings={() => setAiSettingsOpen(true)}
+        />
 
-        <section className="border-b border-white/8 bg-[#18181f]/86 px-8 py-4 backdrop-blur-xl">
-          <div className="flex flex-wrap items-start gap-3">
-            <div className="pt-2 text-xs font-medium uppercase tracking-[0.22em] text-[#6b6b7a]">Locales</div>
-            <div className="flex flex-1 flex-wrap gap-2">
-              {locales.map((locale) => {
-                const progress = progressByLocale.get(locale) ?? { complete: 0, total: 0 }
-                const ratio = progress.total === 0 ? 1 : progress.complete / progress.total
-                const selected = locale === activeLocale
-                const isDefault = locale === defaultLocale
+        {/* ── Table ── */}
+        <div className="flex flex-1 overflow-hidden">
+          <main className="flex-1 overflow-auto px-8 py-7">
+            <div className="space-y-6 pb-12">
+              {groups.map(({ slideGroup, rows }) => (
+                <SlideGroupSection
+                  key={slideGroup.id}
+                  slideGroup={slideGroup}
+                  rows={rows}
+                  collapsed={collapsedSections[slideGroup.id] ?? false}
+                  onToggleCollapse={() => setCollapsedSections((prev) => ({ ...prev, [slideGroup.id]: !(prev[slideGroup.id] ?? false) }))}
+                  activeLocale={activeLocale}
+                  defaultLocale={defaultLocale}
+                  locales={locales}
+                  gridTemplateColumns={gridTemplateColumns}
+                  cellStatus={cellStatus}
+                  cellError={cellError}
+                  previewOverrides={bulkPreviewOverrides}
+                  lostFormattingCells={lostFormattingCells}
+                  toolbarSlotEl={toolbarSlotEl}
+                  onSingleAiTranslate={(row, locale) => void handleSingleAiTranslate(row, locale)}
+                  onNavigateToLayer={navigateToLayer}
+                  onModeUpdate={handleModeUpdate}
+                  updateLayerInSlideGroup={updateLayerInSlideGroup}
+                  setLocaleOverride={setLocaleOverride}
+                  clearLocaleOverride={clearLocaleOverride}
+                  getAsset={getAsset}
+                  openUploadPicker={openUploadPicker}
+                  setEditingTextCell={setEditingTextCell}
+                />
+              ))}
 
-                return (
-                  <button
-                    key={locale}
-                    type="button"
-                    onClick={() => setActiveLocale(locale)}
-                    className="group rounded-full border px-4 py-2 text-sm transition"
-                    style={{
-                      borderColor: selected ? 'rgba(124,110,246,0.7)' : 'rgba(255,255,255,0.08)',
-                      background: selected ? 'rgba(124,110,246,0.14)' : 'rgba(255,255,255,0.03)',
-                      color: selected ? '#f3f1ff' : '#c6c6d2',
-                      boxShadow: selected ? '0 0 0 1px rgba(124,110,246,0.18) inset' : 'none',
-                    }}
-                  >
-                    <span className="font-semibold uppercase">{locale}</span>
-                    {isDefault ? (
-                      <span className="ml-2 text-xs text-[#9f98dc]">default</span>
-                    ) : (
-                      <span className="ml-2 text-xs text-[#8f90a3] group-hover:text-[#cfcfe1]">
-                        <span style={{ color: ratio >= 0.5 ? '#7c6ef6' : '#f59e0b' }}>{ratio >= 0.5 ? '●' : '○'}</span>{' '}
-                        {progress.complete}/{progress.total}
-                      </span>
-                    )}
-                  </button>
-                )
-              })}
-
-              {addingLocale ? (
-                <div className="flex flex-wrap items-center gap-2 rounded-2xl border border-white/10 bg-white/4 px-3 py-2">
-                  <input
-                    ref={addLocaleInputRef}
-                    value={localeInput}
-                    onChange={(e) => {
-                      setLocaleInput(e.target.value)
-                      if (localeError) setLocaleError('')
-                    }}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') commitNewLocale()
-                      if (e.key === 'Escape') {
-                        setAddingLocale(false)
-                        setLocaleInput('')
-                        setLocaleError('')
-                      }
-                    }}
-                    placeholder="e.g. de"
-                    className="w-28 rounded-lg border border-white/10 bg-[#0f0f13] px-3 py-1.5 text-sm text-white outline-none placeholder:text-[#6b6b7a] focus:border-[#7c6ef6]"
-                  />
-                  <button
-                    type="button"
-                    onClick={commitNewLocale}
-                    className="rounded-lg bg-[#7c6ef6] px-3 py-1.5 text-xs font-semibold text-white transition hover:bg-[#8a7df7]"
-                  >
-                    ✓
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setAddingLocale(false)
-                      setLocaleInput('')
-                      setLocaleError('')
-                    }}
-                    className="rounded-lg px-2 py-1.5 text-xs text-[#8f90a3] transition hover:text-white"
-                  >
-                    Cancel
-                  </button>
-                  {localeError ? <div className="text-xs text-amber-400">{localeError}</div> : null}
+              {groups.every((g) => g.rows.length === 0) && (
+                <div className="rounded-2xl border border-white/8 bg-[#18181f]/78 px-8 py-16 text-center">
+                  <div className="text-4xl mb-4">🌐</div>
+                  <div className="text-lg text-[#d5d5df] mb-2">No localizable content</div>
+                  <div className="text-sm text-[#6b6b7a]">Add text, phone, or image layers to your slides to start localizing.</div>
                 </div>
-              ) : (
-                <button
-                  type="button"
-                  onClick={() => setAddingLocale(true)}
-                  className="rounded-full border border-dashed border-white/12 bg-white/2 px-4 py-2 text-sm font-medium text-[#b7b7c7] transition hover:border-[#7c6ef6]/50 hover:bg-[#7c6ef6]/10 hover:text-white"
-                >
-                  + Add locale
-                </button>
               )}
             </div>
-          </div>
-        </section>
+          </main>
 
-        <main className="flex-1 overflow-auto px-8 py-7">
-          <div className="space-y-6 pb-12">
-            {groups.map(({ slideGroup, rows }) => {
-              const collapsed = collapsedSections[slideGroup.id] ?? false
-              const activeProgress = rows.filter((row) => isOverrideComplete(row, activeLocale, defaultLocale)).length
-
-              return (
-                <section
-                  key={slideGroup.id}
-                  className="overflow-hidden rounded-[24px] border border-white/8 bg-[#18181f]/78 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl"
-                >
-                  <button
-                    type="button"
-                    onClick={() =>
-                      setCollapsedSections((prev) => ({
-                        ...prev,
-                        [slideGroup.id]: !collapsed,
-                      }))
-                    }
-                    className="flex w-full items-center justify-between gap-4 px-6 py-5 text-left transition hover:bg-white/[0.03]"
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-sm text-[#d5d2eb]">{collapsed ? '▸' : '▾'}</span>
-                      <div>
-                        <div
-                          className="text-xl text-[#f2efff]"
-                          style={{ fontFamily: 'Iowan Old Style, Palatino Linotype, serif' }}
-                        >
-                          {slideGroup.name}
-                        </div>
-                        <div className="mt-1 text-sm text-[#7f8094]">
-                          {rows.length} localizable {rows.length === 1 ? 'layer' : 'layers'} · {activeProgress}/{rows.length} complete for{' '}
-                          <span className="font-medium uppercase text-[#bdb7f6]">{activeLocale}</span>
-                        </div>
-                      </div>
-                    </div>
-
-                    <div className="rounded-full border border-white/8 bg-white/4 px-3 py-1 text-xs uppercase tracking-[0.18em] text-[#8d8ea3]">
-                      {slideGroup.slideWidth} × {slideGroup.slideHeight}
-                    </div>
-                  </button>
-
-                  {!collapsed ? (
-                    <div className="overflow-x-auto border-t border-white/8 px-4 py-4">
-                      <div style={{ minWidth: 200 + 240 + Math.max(locales.length - 1, 0) * 240 }}>
-                        <div
-                          className="grid gap-3 px-2 pb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#78798b]"
-                          style={{ gridTemplateColumns }}
-                        >
-                          <div className="px-3 py-2">Layer</div>
-                          <div className="px-3 py-2">{defaultLocale} (default)</div>
-                          {locales.slice(1).map((locale) => (
-                            <div key={locale} className="px-3 py-2">
-                              {locale}
-                            </div>
-                          ))}
-                        </div>
-
-                        <div className="space-y-3 px-2">
-                          {rows.map((row) => (
-                            <div
-                              key={row.layerId}
-                              className="grid gap-3"
-                              style={{ gridTemplateColumns }}
-                            >
-                              <div className="flex min-h-[72px] items-center rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 text-sm text-[#a6a7b9]">
-                                <div className="flex w-full items-center gap-3" style={{ paddingLeft: row.depth * 18 }}>
-                                  <div
-                                    className="flex h-9 w-9 items-center justify-center rounded-xl border border-white/10 bg-[#111118] text-sm font-semibold"
-                                    style={{ color: row.layerType === 'text' ? '#c9c3ff' : '#d9d9e6' }}
-                                  >
-                                    {getLayerIcon(row.layerType)}
-                                  </div>
-                                  <div className="min-w-0">
-                                    <div className="truncate font-medium text-[#d5d5df]">{row.layerName}</div>
-                                    <div className="mt-1 text-xs uppercase tracking-[0.16em] text-[#6b6b7a]">
-                                      {row.layerType}
-                                    </div>
-                                  </div>
-                                </div>
-                              </div>
-
-                              <button
-                                type="button"
-                                onClick={() => navigateToLayer(row)}
-                                className="min-h-[72px] rounded-xl border px-4 py-3 text-left transition hover:border-[#7c6ef6]/45 hover:bg-[#7c6ef6]/6"
-                                style={{
-                                  borderColor:
-                                    activeLocale === defaultLocale ? 'rgba(124,110,246,0.4)' : 'rgba(255,255,255,0.08)',
-                                  background:
-                                    activeLocale === defaultLocale ? 'rgba(124,110,246,0.08)' : 'rgba(255,255,255,0.02)',
-                                }}
-                              >
-                                {row.layerType === 'text' ? (
-                                  <div className="text-sm leading-6 text-[#dbdbe6]">“{truncate(row.defaultText ?? '', 90)}”</div>
-                                ) : (
-                                  <div className="flex h-full items-center text-sm text-[#dbdbe6]">
-                                    {row.defaultImageRef ? getFileLabel(row.defaultImageRef) : <span className="text-[#6b6b7a]">No image</span>}
-                                  </div>
-                                )}
-                              </button>
-
-                              {locales.slice(1).map((locale) => {
-                                const override = row.layer.localeOverrides?.[locale]
-                                const isActiveColumn = locale === activeLocale
-
-                                if (row.layerType === 'text') {
-                                  return (
-                                    <TextOverrideCell
-                                      key={`${row.layerId}-${locale}`}
-                                      row={row}
-                                      locale={locale}
-                                      defaultLocale={defaultLocale}
-                                      activeLocale={activeLocale}
-                                      setLocaleOverride={setLocaleOverride}
-                                      clearLocaleOverride={clearLocaleOverride}
-                                    />
-                                  )
-                                }
-
-                                const previewSrc =
-                                  row.layerType === 'phone'
-                                    ? (override?.screenshotPath ? getAsset(override.screenshotPath) : undefined) ?? override?.screenshotDataUrl
-                                    : (override?.src ? getAsset(override.src) : undefined) ?? override?.src
-
-                                return (
-                                  <div
-                                    key={`${row.layerId}-${locale}`}
-                                    className="min-h-[72px] rounded-xl border px-3 py-3"
-                                    style={{
-                                      borderColor: previewSrc
-                                        ? isActiveColumn
-                                          ? '#7c6ef6'
-                                          : 'rgba(124,110,246,0.45)'
-                                        : isActiveColumn
-                                          ? 'rgba(124,110,246,0.4)'
-                                          : 'rgba(255,255,255,0.14)',
-                                      background: previewSrc
-                                        ? isActiveColumn
-                                          ? 'rgba(124,110,246,0.12)'
-                                          : 'rgba(124,110,246,0.06)'
-                                        : isActiveColumn
-                                          ? 'rgba(124,110,246,0.06)'
-                                          : 'rgba(255,255,255,0.015)',
-                                    }}
-                                  >
-                                    {previewSrc ? (
-                                      <div className="flex items-center gap-3">
-                                        <img
-                                          src={previewSrc}
-                                          alt={`${row.layerName} ${locale}`}
-                                          className="h-12 w-12 rounded-lg border border-white/10 object-cover"
-                                        />
-                                        <div className="min-w-0 flex-1">
-                                          <div className="truncate text-sm text-[#ecebfa]">
-                                            {row.layerType === 'phone'
-                                              ? getFileLabel(override?.screenshotPath ?? override?.screenshotDataUrl)
-                                              : getFileLabel(override?.src)}
-                                          </div>
-                                          <button
-                                            type="button"
-                                            onClick={() => clearLocaleOverride(row.slideGroupId, row.layerId, locale)}
-                                            className="mt-2 text-xs font-medium text-[#b9b6c9] transition hover:text-white"
-                                          >
-                                            × Clear
-                                          </button>
-                                        </div>
-                                      </div>
-                                    ) : (
-                                      <div className="flex h-full items-center justify-between gap-3">
-                                        <button
-                                          type="button"
-                                          onClick={() =>
-                                            openUploadPicker({
-                                              slideGroupId: row.slideGroupId,
-                                              layerId: row.layerId,
-                                              locale,
-                                              layerType: row.layerType === 'phone' ? 'phone' : 'image',
-                                            })
-                                          }
-                                          className="rounded-lg border border-[#7c6ef6] bg-[#7c6ef6]/14 px-3 py-1.5 text-xs font-medium text-[#c5befd] transition hover:bg-[#7c6ef6]/22"
-                                        >
-                                          + Upload
-                                        </button>
-                                        <span className="text-xs text-amber-400">⚠ Missing</span>
-                                      </div>
-                                    )}
-                                  </div>
-                                )
-                              })}
-                            </div>
-                          ))}
-                        </div>
-                      </div>
-                    </div>
-                  ) : null}
-                </section>
-              )
-            })}
-          </div>
-        </main>
+          {/* ── Text styling side panel — docked like the editor's properties
+                panel, but only takes space while a text cell is being edited.
+                Cells portal their RichTextToolbar into the slot below. ── */}
+          {editingTextCell && (
+            <aside
+              data-locale-toolbar-panel
+              className="w-72 shrink-0 overflow-y-auto border-l border-[rgba(255,255,255,0.06)] bg-[#18181f] px-4 py-4"
+            >
+              <div className="mb-1 text-xs font-semibold uppercase tracking-wider text-[#6b6b7a]">
+                Text Styling
+              </div>
+              <div className="mb-3 truncate text-xs text-[#c4b5fd]" title={editingTextCell.layerName}>
+                ✏️ {editingTextCell.layerName}
+                <span className="ml-1.5 text-[#8f90a3]">· {getLanguageName(editingTextCell.locale)}</span>
+              </div>
+              <div ref={setToolbarSlotEl} />
+              <p className="mt-3 text-[10px] leading-relaxed text-[#6b6b7a]">
+                Select text in the cell, then apply styles here.
+                <br />Enter confirms · the panel closes when you finish.
+              </p>
+            </aside>
+          )}
+        </div>
       </div>
 
       <input
@@ -714,9 +539,7 @@ export function LocalizationView({ onBack, embedded = false }: LocalizationViewP
         type="file"
         accept="image/*"
         className="hidden"
-        onChange={(event) => {
-          void handleUpload(event)
-        }}
+        onChange={(event) => { void handleUpload(event) }}
       />
     </div>
   )

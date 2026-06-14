@@ -1,8 +1,11 @@
-import { Fragment, useEffect } from 'react'
+import { Fragment, useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
-import type { BackgroundLayer } from '@/types'
+import { getLanguageName } from '@/utils/locale'
+import { BASE_CANVAS_FORMAT, CANVAS_FORMAT_PRESETS, getFormatCanvasDims, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
+import type { BackgroundLayer, CanvasFormatId } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
+import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
 
 interface PreviewModalProps {
   open: boolean
@@ -10,8 +13,10 @@ interface PreviewModalProps {
   thumbnails: ThumbnailMap
   previewThumbs: ThumbnailMap
   isCapturingPreview: boolean
-  captureAllHighRes: () => void
+  captureAllHighRes: (options?: { panoCompensationPx?: number; panoCompensate?: boolean }) => void
   cancelCapture: () => void
+  /** Locale to preview when the modal opens (defaults to the current editor locale). */
+  initialLocale?: string
 }
 
 export function PreviewModal({
@@ -22,16 +27,34 @@ export function PreviewModal({
   isCapturingPreview,
   captureAllHighRes,
   cancelCapture,
+  initialLocale,
 }: PreviewModalProps) {
   const project = useEditorStore((s) => s.project)
   const activeSlideGroupId = useEditorStore((s) => s.activeSlideGroupId)
   const activeLocale = useEditorStore((s) => s.activeLocale)
-  const setActiveLocale = useEditorStore((s) => s.setActiveLocale)
+  const activeCanvasFormat = useEditorStore((s) => s.activeCanvasFormat)
   const setActiveSlideGroup = useEditorStore((s) => s.setActiveSlideGroup)
+  const panoSettings = useEditorStore((s) => s.project.settings.pano ?? { gapPx: 24, compensate: false })
+  const setPanoRenderOverride = useEditorStore((s) => s.setPanoRenderOverride)
+  const updatePanoSettings = useEditorStore((s) => s.updatePanoSettings)
 
   const locales = project.settings.locales ?? [project.settings.defaultLocale]
+  // Preview shows export targets only — 'base' is the shared authoring canvas.
+  const platformFormats = getProjectActiveFormats(project).filter((f) => f !== BASE_CANVAS_FORMAT)
 
   const totalSlides = project.slideGroups.reduce((n, g) => n + g.numSlides, 0)
+
+  // Snapshot of the editor state at open time, restored on close — the preview
+  // is ephemeral and must never leave the editor in a non-base locale/format.
+  const restoreRef = useRef<{
+    locale: string
+    format: CanvasFormatId
+  } | null>(null)
+  const hasPanoGroups = project.slideGroups.some((g) => g.numSlides > 1)
+
+  const recapturePreview = () => {
+    captureAllHighRes({ panoCompensationPx: panoSettings.gapPx, panoCompensate: panoSettings.compensate })
+  }
 
   useEffect(() => {
     if (!open) return
@@ -41,9 +64,42 @@ export function PreviewModal({
   }, [open, onClose])
 
   useEffect(() => {
-    if (open) captureAllHighRes()
-    else cancelCapture()
+    if (open) {
+      const s = useEditorStore.getState()
+      restoreRef.current = {
+        locale: s.activeLocale,
+        format: s.activeCanvasFormat,
+      }
+      if (initialLocale) s.setActiveLocale(initialLocale)
+      // Ensure a platform (export) format is active — the editor may be on Base.
+      const formats = getProjectActiveFormats(s.project).filter((f) => f !== BASE_CANVAS_FORMAT)
+      if (!formats.includes(s.activeCanvasFormat) && formats.length > 0) {
+        s.setActiveCanvasFormat(formats[0])
+      }
+      captureAllHighRes({ panoCompensationPx: panoSettings.gapPx, panoCompensate: panoSettings.compensate })
+    } else {
+      cancelCapture()
+      setPanoRenderOverride(null)
+      if (restoreRef.current) {
+        const s = useEditorStore.getState()
+        s.setActiveLocale(restoreRef.current.locale)
+        s.setActiveCanvasFormat(restoreRef.current.format)
+        restoreRef.current = null
+      }
+    }
   }, [open]) // eslint-disable-line react-hooks/exhaustive-deps
+
+  const selectLocale = (locale: string) => {
+    if (locale === activeLocale) return
+    useEditorStore.getState().setActiveLocale(locale)
+    recapturePreview()
+  }
+
+  const selectFormat = (format: CanvasFormatId) => {
+    if (format === activeCanvasFormat) return
+    useEditorStore.getState().setActiveCanvasFormat(format)
+    recapturePreview()
+  }
 
   if (!open) return null
 
@@ -102,24 +158,86 @@ export function PreviewModal({
           </div>
 
           <div className="flex flex-wrap items-center gap-2">
+            {/* Platform selector */}
+            {platformFormats.length > 1 && (
+              <div className="flex items-center gap-0.5 rounded-lg border border-[rgba(255,255,255,0.1)] p-1">
+                {platformFormats.map((format) => {
+                  const preset = CANVAS_FORMAT_PRESETS.find((f) => f.id === format)
+                  const selected = activeCanvasFormat === format
+                  return (
+                    <button
+                      key={format}
+                      onClick={() => selectFormat(format)}
+                      className="rounded-md px-2.5 py-1 text-[11px] transition-colors"
+                      style={{
+                        background: selected ? 'rgba(124,110,246,0.26)' : 'transparent',
+                        color: selected ? '#cbbfff' : '#7d7a90',
+                        fontWeight: selected ? 700 : 500,
+                      }}
+                    >
+                      {preset?.label ?? format}
+                    </button>
+                  )
+                })}
+              </div>
+            )}
+
             {/* Locale selector */}
             {locales.length > 1 && (
               <div className="flex items-center gap-0.5 rounded-lg border border-[rgba(255,255,255,0.1)] p-1">
-                {locales.map((locale) => (
-                  <button
-                    key={locale}
-                    onClick={() => setActiveLocale(locale)}
-                    className="rounded-md px-2.5 py-1 text-[11px] uppercase transition-colors"
-                    style={{
-                      background: activeLocale === locale ? 'rgba(124,110,246,0.26)' : 'transparent',
-                      color: activeLocale === locale ? '#cbbfff' : '#7d7a90',
-                      fontWeight: activeLocale === locale ? 700 : 500,
-                    }}
-                  >
-                    {locale}
-                  </button>
-                ))}
+                {locales.map((locale) => {
+                  const selected = activeLocale === locale
+                  return (
+                    <button
+                      key={locale}
+                      onClick={() => selectLocale(locale)}
+                      title={getLanguageName(locale)}
+                      className="rounded-md px-2.5 py-1 text-[11px] transition-colors"
+                      style={{
+                        background: selected ? 'rgba(124,110,246,0.26)' : 'transparent',
+                        color: selected ? '#cbbfff' : '#7d7a90',
+                        fontWeight: selected ? 700 : 500,
+                      }}
+                    >
+                      {getLanguageName(locale)}
+                    </button>
+                  )
+                })}
               </div>
+            )}
+
+            {hasPanoGroups && (
+              <label className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.1)] px-2 py-1 text-[11px] text-[#8f90a3]">
+                <input
+                  type="checkbox"
+                  checked={panoSettings.compensate}
+                  onChange={(e) => {
+                    const next = e.target.checked
+                    updatePanoSettings({ compensate: next })
+                    captureAllHighRes({ panoCompensationPx: panoSettings.gapPx, panoCompensate: next })
+                  }}
+                  className="h-3 w-3 accent-[#7c6ef6]"
+                />
+                <span>Compensate</span>
+                <input
+                  type="number"
+                  min={0}
+                  max={MAX_PANO_COMPENSATION_PX}
+                  value={panoSettings.gapPx || DEFAULT_PANO_COMPENSATION_PX}
+                  onChange={(e) => updatePanoSettings({ gapPx: parseInt(e.target.value, 10) || 0 })}
+                  onBlur={() => {
+                    const next = normalizePanoCompensationPx(panoSettings.gapPx)
+                    updatePanoSettings({ gapPx: next || DEFAULT_PANO_COMPENSATION_PX })
+                    captureAllHighRes({ panoCompensationPx: next || DEFAULT_PANO_COMPENSATION_PX, panoCompensate: panoSettings.compensate })
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                    e.stopPropagation()
+                  }}
+                  className="w-14 rounded border border-[rgba(255,255,255,0.12)] bg-[#0f0f13] px-1 py-0.5 text-right text-[#e8e8f0] disabled:opacity-40"
+                />
+                <span>px</span>
+              </label>
             )}
 
             <button
@@ -135,18 +253,25 @@ export function PreviewModal({
         {/* Filmstrip */}
         <div className="overflow-y-auto px-6 py-6">
           <div className="overflow-x-auto pb-2">
-            <div className="flex min-w-max items-start gap-4">
+            <div className="flex min-w-max items-start" style={{ gap: 0 }}>
               {flatSlides.map(({ group, slideIdx, globalNum: slideNum, isFirstInGroup, groupIndex }) => {
                 const isActiveGroup = group.id === activeSlideGroupId
                 const bgLayer = group.layers.find((l) => l.type === 'background') as BackgroundLayer | undefined
                 const fallbackFill = fillToCss(bgLayer?.fill ?? group.background?.fill ?? '#171724')
-                const slideW = Math.round((group.slideWidth / group.slideHeight) * SLIDE_H)
+                // Use format-specific dims so the container aspect ratio matches the captured image.
+                const baseFormat = getProjectBaseFormat(project)
+                const dims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat)
+                const slideW = Math.round((dims.width / dims.height) * SLIDE_H)
+                const isPanoContinuation = !isFirstInGroup && group.numSlides > 1
+                const seamGap = isPanoContinuation && panoSettings.compensate
+                  ? Math.round((panoSettings.gapPx * SLIDE_H) / dims.height)
+                  : 0
                 const highResThumb = previewThumbs[group.id]?.[slideIdx]
                 const navThumb = thumbnails[group.id]?.[slideIdx]
 
                 return (
                   <Fragment key={`${group.id}-${slideIdx}`}>
-                    {/* Divider between groups — no extra margin, sits in the natural gap-4 */}
+                    {/* Divider between groups — carries the 16px inter-group spacing (container gap is 0) */}
                     {isFirstInGroup && groupIndex > 0 && (
                       <div
                         aria-hidden="true"
@@ -156,11 +281,13 @@ export function PreviewModal({
                           background: 'rgba(255,255,255,0.07)',
                           flexShrink: 0,
                           alignSelf: 'flex-end',
+                          marginLeft: 16,
+                          marginRight: 16,
                         }}
                       />
                     )}
 
-                    <div className="flex flex-col" style={{ gap: 6 }}>
+                    <div className="flex flex-col" style={{ gap: 6, marginLeft: seamGap }}>
                       {/* Group name label — only on first slide of each group */}
                       <div style={{ height: 16 }}>
                         {isFirstInGroup && (

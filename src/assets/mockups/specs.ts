@@ -1,4 +1,4 @@
-import type { PhoneModelSpec } from '@/types'
+import type { PhoneModel, PhoneModelSpec } from '@/types'
 
 // iPhone 16 Pro: 6.3" display, 1320×2868 native
 // Mockup at 390×844 logical units (standard design canvas)
@@ -92,4 +92,18 @@ export const PHONE_MODELS: PhoneModelSpec[] = [IPHONE_16_PRO, IPHONE_16_PRO_PLAI
 
 export function getPhoneSpec(model: string): PhoneModelSpec {
   return PHONE_MODELS.find((m) => m.id === model) ?? IPHONE_16_PRO
+}
+
+/** Map a phone model to its equivalent for a given platform. */
+export function getModelForPlatform(model: PhoneModel, platform: 'ios' | 'android'): PhoneModel {
+  const iosToAndroid: Record<string, PhoneModel> = {
+    'iphone-16-pro': 'pixel-9',
+    'iphone-16-pro-plain': 'pixel-9-plain',
+  }
+  const androidToIos: Record<string, PhoneModel> = {
+    'pixel-9': 'iphone-16-pro',
+    'pixel-9-plain': 'iphone-16-pro-plain',
+  }
+  if (platform === 'android') return iosToAndroid[model] ?? model
+  return androidToIos[model] ?? model
 }

@@ -1,8 +1,11 @@
 import { useEffect, useRef } from 'react'
 import { Rect, Ellipse, Group } from 'react-konva'
 import type Konva from 'konva'
+import { useEditorStore } from '@/store'
 import type { ShapeLayer } from '@/types'
+import { resolveBrandColor, resolveFill } from '@/utils/brandColors'
 import { fillToKonvaProps } from '@/utils/gradients'
+import { getShadowProps, useKonvaBlur } from './effects'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -18,12 +21,14 @@ interface ShapeNodeProps {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function ShapeNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: ShapeNodeProps) {
-  const fillProps = fillToKonvaProps(layer.fill, layer.width, layer.height)
+  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const fillProps = fillToKonvaProps(resolveFill(layer.fill, brandColors), layer.width, layer.height)
   const groupRef = useRef<Konva.Group>(null)
   const rectRef = useRef<Konva.Rect>(null)
   const ellipseRef = useRef<Konva.Ellipse>(null)
   const currentSize = useRef({ w: layer.width, h: layer.height })
   useEffect(() => { currentSize.current = { w: layer.width, h: layer.height } }, [layer.width, layer.height])
+  useKonvaBlur(groupRef, layer.blur, `${layer.shapeType}:${layer.width}:${layer.height}:${layer.cornerRadius}:${JSON.stringify(layer.fill)}:${layer.stroke}:${layer.strokeWidth}`)
 
   const groupProps = {
     id: `layer-${layer.id}`,
@@ -80,11 +85,12 @@ export function ShapeNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
   }
 
   const shapeProps = {
-    stroke: layer.stroke,
+    stroke: layer.stroke ? resolveBrandColor(layer.stroke, brandColors) : layer.stroke,
     strokeWidth: layer.strokeWidth,
     onClick: () => { if (!layer.locked) onSelect() },
     onTap: () => { if (!layer.locked) onSelect() },
     ...fillProps,
+    ...getShadowProps(layer.shadow),
   }
 
   if (layer.shapeType === 'ellipse') {

@@ -1,9 +1,22 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, lazy, Suspense } from 'react'
+import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { useProjectsStore } from '@/store/projects'
-import { downloadDataUrl } from '@/utils/export'
-import { ProjectsModal } from '@/components/panels/ProjectsModal'
-import { TemplatesModal } from '@/components/panels/TemplatesModal'
+import { BrandKitButton } from '@/components/toolbar/BrandKitButton'
+
+// Lazy-load heavy modals — only fetched when the user opens them for the first time.
+const ProjectsModal = lazy(() =>
+  import('@/components/panels/ProjectsModal').then((m) => ({ default: m.ProjectsModal })),
+)
+const TemplatesModal = lazy(() =>
+  import('@/components/panels/TemplatesModal').then((m) => ({ default: m.TemplatesModal })),
+)
+const SettingsModal = lazy(() =>
+  import('@/components/panels/SettingsModal').then((m) => ({ default: m.SettingsModal })),
+)
+const HelpModal = lazy(() =>
+  import('@/components/panels/HelpModal').then((m) => ({ default: m.HelpModal })),
+)
 
 interface ToolbarProps {
   mode: 'editor' | 'localization'
@@ -13,15 +26,13 @@ interface ToolbarProps {
 export function Toolbar({ mode, onSetMode }: ToolbarProps) {
   const {
     project,
-    activeLocale,
-    setActiveLocale,
-    zoom,
-    setZoom,
-    exportProject,
-    importProject,
     selectedLayerIds,
     createGroup,
-  } = useEditorStore()
+  } = useEditorStore(useShallow((s) => ({
+    project: s.project,
+    selectedLayerIds: s.selectedLayerIds,
+    createGroup: s.createGroup,
+  })))
 
   const { undo, redo, canUndo, canRedo } = useUndoRedo()
 
@@ -30,6 +41,8 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
   const activeProjectMeta = projects.find((p) => p.id === project.id)
   const [projectsOpen, setProjectsOpen] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
+  const [settingsOpen, setSettingsOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
 
   // Saved indicator — flashes "Saving…" then "Saved" briefly
   const [saveLabel, setSaveLabel] = useState<'saved' | 'saving' | null>(null)
@@ -48,34 +61,6 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [activeProjectMeta?.updatedAt])
 
-  const locales = project.settings.locales ?? [project.settings.defaultLocale]
-  const openJsonInputRef = useRef<HTMLInputElement>(null)
-
-  const handleSave = () => {
-    const json = exportProject()
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    downloadDataUrl(url, 'project.json')
-    URL.revokeObjectURL(url)
-  }
-
-  const handleOpenJson = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
-    if (!file) return
-    const reader = new FileReader()
-    reader.onload = () => {
-      try {
-        importProject(reader.result as string)
-      } catch {
-        alert('Failed to open project file.')
-      }
-    }
-    reader.readAsText(file)
-    e.target.value = ''
-  }
-
-  const inputCls = 'hidden'
-
   return (
     <header
       className="h-12 flex items-center px-3 gap-4 border-b"
@@ -84,9 +69,13 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
         borderColor: 'rgba(255,255,255,0.08)',
       }}
     >
-      {/* Projects modal */}
-      <ProjectsModal open={projectsOpen} onClose={() => setProjectsOpen(false)} />
-      <TemplatesModal open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
+      {/* Projects / Templates / API modals — lazy loaded on first open */}
+      <Suspense>
+        <ProjectsModal open={projectsOpen} onClose={() => setProjectsOpen(false)} />
+        <TemplatesModal open={templatesOpen} onClose={() => setTemplatesOpen(false)} />
+        <SettingsModal open={settingsOpen} onClose={() => setSettingsOpen(false)} />
+        <HelpModal open={helpOpen} onClose={() => setHelpOpen(false)} />
+      </Suspense>
 
       {/* Logo */}
       <div className="text-sm font-semibold text-[#e8e8f0] whitespace-nowrap select-none">
@@ -119,7 +108,7 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
           ;(e.currentTarget as HTMLButtonElement).style.color = '#a0a0b0'
         }}
       >
-        Project Library
+        Projects
       </button>
 
       {/* Templates button */}
@@ -150,6 +139,8 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
       >
         🗂 Templates
       </button>
+
+      <BrandKitButton />
 
       {/* Save indicator */}
       {saveLabel && (
@@ -182,27 +173,6 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
         </button>
       </div>
 
-      {/* Zoom controls */}
-      <div className="flex items-center gap-1">
-        <button
-          onClick={() => setZoom(zoom - 0.1)}
-          title="Zoom out (canvas Fit button centers)"
-          className="w-7 h-7 flex items-center justify-center text-[#e8e8f0] text-sm rounded hover:bg-[rgba(255,255,255,0.06)]"
-        >
-          −
-        </button>
-        <span className="text-xs text-[#e8e8f0] w-12 text-center tabular-nums">
-          {Math.round(zoom * 100)}%
-        </span>
-        <button
-          onClick={() => setZoom(zoom + 0.1)}
-          title="Zoom in (canvas Fit button centers)"
-          className="w-7 h-7 flex items-center justify-center text-[#e8e8f0] text-sm rounded hover:bg-[rgba(255,255,255,0.06)]"
-        >
-          ＋
-        </button>
-      </div>
-
       <div className="w-px h-6 bg-[rgba(255,255,255,0.1)]" />
 
       {/* Group actions */}
@@ -218,38 +188,18 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
         )}
       </div>
 
-      {/* Locale switcher */}
-      {locales.length > 1 && (
-        <div className="flex items-center gap-0.5 border border-[rgba(255,255,255,0.1)] rounded px-1">
-          {locales.map((locale) => (
-            <button
-              key={locale}
-              onClick={() => setActiveLocale(locale)}
-              style={{
-                background: activeLocale === locale ? 'rgba(124,110,246,0.3)' : 'transparent',
-                border: 'none',
-                borderRadius: 4,
-                color: activeLocale === locale ? '#7c6ef6' : '#6b6b7a',
-                cursor: 'pointer',
-                fontSize: 11,
-                fontWeight: activeLocale === locale ? 700 : 400,
-                padding: '2px 7px',
-                textTransform: 'uppercase',
-              }}
-            >
-              {locale}
-              {locale === project.settings.defaultLocale && (
-                <span style={{ fontSize: 9, marginLeft: 2, opacity: 0.6 }}>⬩</span>
-              )}
-            </button>
-          ))}
-        </div>
-      )}
-
       <div className="flex-1" />
 
       {/* Right section */}
       <div className="flex items-center gap-2">
+        <button
+          onClick={() => setSettingsOpen(true)}
+          title="Open settings"
+          className="text-xs text-[#e8e8f0] px-3 py-1.5 rounded border border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)] transition-colors"
+        >
+          ⚙ Settings
+        </button>
+
         <button
           onClick={() => onSetMode(mode === 'localization' ? 'editor' : 'localization')}
           title="Manage translations inside the editor flow"
@@ -263,27 +213,12 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
         </button>
 
         <button
-          onClick={handleSave}
-          title="Download the project template as JSON"
+          onClick={() => setHelpOpen(true)}
+          title="Help & keyboard shortcuts"
           className="text-xs text-[#e8e8f0] px-3 py-1.5 rounded border border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)] transition-colors"
         >
-          Export Project
+          ? Help
         </button>
-
-        <button
-          onClick={() => openJsonInputRef.current?.click()}
-          title="Import a project JSON template"
-          className="text-xs text-[#e8e8f0] px-3 py-1.5 rounded border border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)] transition-colors"
-        >
-          Import Project
-        </button>
-        <input
-          ref={openJsonInputRef}
-          type="file"
-          accept=".json"
-          className={inputCls}
-          onChange={handleOpenJson}
-        />
       </div>
     </header>
   )

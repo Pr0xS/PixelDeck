@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from 'react'
 import { useProjectsStore } from '@/store/projects'
 import { useEditorStore } from '@/store'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+
 
 interface ProjectsModalProps {
   open: boolean
@@ -23,25 +25,46 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
   const { projects, createProject, openProject, deleteProject, renameProject } =
     useProjectsStore()
   const activeProjectId = useEditorStore((s) => s.project.id)
+  const exportProject = useEditorStore((s) => s.exportProject)
+  const importProject = useEditorStore((s) => s.importProject)
 
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
+  const [deleteId, setDeleteId] = useState<string | null>(null)
   const renameInputRef = useRef<HTMLInputElement>(null)
+
+  const [creatingNew, setCreatingNew] = useState(false)
+  const [newName, setNewName] = useState('')
+  const [newNameError, setNewNameError] = useState('')
+  const newNameInputRef = useRef<HTMLInputElement>(null)
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   // Focus rename input when it appears
   useEffect(() => {
     if (renamingId) renameInputRef.current?.select()
   }, [renamingId])
 
+  // Focus new name input when creating
+  useEffect(() => {
+    if (creatingNew) newNameInputRef.current?.focus()
+  }, [creatingNew])
+
   // Close on Escape
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
+      if (deleteId) return
+      if (e.key === 'Escape') {
+        if (creatingNew) {
+          setCreatingNew(false)
+          return
+        }
+        onClose()
+      }
     }
     window.addEventListener('keydown', onKey)
     return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose])
+  }, [open, onClose, deleteId, creatingNew])
 
   if (!open) return null
 
@@ -67,16 +90,70 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
   }
 
   const handleNew = () => {
-    createProject()
-    onClose()
+    setCreatingNew(true)
+    setNewName('')
+    setNewNameError('')
+  }
+
+  const handleCreateConfirm = () => {
+    const trimmed = newName.trim()
+    if (!trimmed) {
+      setNewNameError('Name is required')
+      return
+    }
+    try {
+      createProject(trimmed)
+      setCreatingNew(false)
+      onClose()
+    } catch (err) {
+      setNewNameError(err instanceof Error ? err.message : String(err))
+    }
   }
 
   const handleDelete = (e: React.MouseEvent, id: string) => {
     e.stopPropagation()
-    const p = projects.find((p) => p.id === id)
-    if (!confirm(`Delete "${p?.name ?? 'this project'}"? This cannot be undone.`)) return
-    deleteProject(id)
-    if (id === activeProjectId) onClose()
+    setDeleteId(id)
+  }
+
+  const confirmDelete = () => {
+    if (!deleteId) return
+    deleteProject(deleteId)
+    if (deleteId === activeProjectId) onClose()
+    setDeleteId(null)
+  }
+
+  const handleExportProject = (id: string, name: string) => {
+    // If it's the active project, use the live editor state (most up-to-date)
+    const json = id === activeProjectId
+      ? exportProject()
+      : localStorage.getItem(`pd:project:${id}`) ?? exportProject()
+    const blob = new Blob([json], { type: 'application/json' })
+    const url = URL.createObjectURL(blob)
+    const slug = name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'project'
+    const a = document.createElement('a')
+    a.href = url
+    a.download = `${slug}.json`
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  const handleImport = () => importInputRef.current?.click()
+
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        importProject(reader.result as string)
+        onClose()
+      } catch {
+        alert('Failed to open project file.')
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
   }
 
   // Sort: active first, then by most recently updated
@@ -88,271 +165,396 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
 
   return (
     <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.6)',
-          zIndex: 200,
-        }}
+      <ConfirmDialog
+        open={deleteId !== null}
+        title={`Delete project "${projects.find((p) => p.id === deleteId)?.name ?? 'this project'}"?`}
+        message="This cannot be undone."
+        confirmLabel="Delete Project"
+        danger
+        onConfirm={confirmDelete}
+        onCancel={() => setDeleteId(null)}
       />
 
-      {/* Modal */}
       <div
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%, -50%)',
-          width: 480,
-          maxHeight: '70vh',
-          background: '#18181f',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 12,
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 201,
-          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
-        }}
+        className="fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-sm"
+        style={{ background: 'rgba(0,0,0,0.65)' }}
+        onClick={onClose}
       >
-        {/* Header */}
         <div
+          className="relative rounded-2xl border shadow-2xl w-full max-w-lg mx-4 flex flex-col overflow-hidden"
           style={{
-            padding: '18px 20px 12px',
-            borderBottom: '1px solid rgba(255,255,255,0.07)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
+            background: '#18181f',
+            borderColor: 'rgba(255,255,255,0.1)',
+            maxHeight: '75vh',
+            boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
           }}
+          onClick={(e) => e.stopPropagation()}
         >
-          <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#e8e8f0' }}>
-            Projects
-          </h2>
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-            <button
-              onClick={handleNew}
-              style={{
-                background: '#7c6ef6',
-                color: '#fff',
-                border: 'none',
-                borderRadius: 6,
-                padding: '5px 14px',
-                fontSize: 12,
-                fontWeight: 600,
-                cursor: 'pointer',
-              }}
-            >
-              + New Project
-            </button>
-            <button
-              onClick={onClose}
-              style={{
-                background: 'none',
-                border: 'none',
-                color: '#6b6b7a',
-                cursor: 'pointer',
-                fontSize: 18,
-                lineHeight: 1,
-                padding: '2px 4px',
-              }}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-
-        {/* Project list */}
-        <div style={{ overflowY: 'auto', flex: 1, padding: '8px 8px' }}>
-          {sorted.length === 0 && (
-            <p style={{ textAlign: 'center', color: '#6b6b7a', fontSize: 13, padding: '24px 0' }}>
-              No projects yet
-            </p>
-          )}
-
-          {sorted.map((p) => {
-            const isActive = p.id === activeProjectId
-            const isRenaming = renamingId === p.id
-
-            return (
-              <div
-                key={p.id}
-                onClick={() => !isRenaming && handleOpen(p.id)}
+          {/* Header */}
+          <div
+            style={{
+              padding: '18px 20px 12px',
+              borderBottom: '1px solid rgba(255,255,255,0.07)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'space-between',
+            }}
+          >
+            <h2 style={{ margin: 0, fontSize: 15, fontWeight: 600, color: '#e8e8f0' }}>
+              Projects
+            </h2>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <button
+                onClick={handleImport}
                 style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: 10,
-                  padding: '10px 12px',
-                  borderRadius: 8,
+                  background: 'none',
+                  border: '1px solid rgba(255,255,255,0.1)',
+                  borderRadius: 6,
+                  color: '#a0a0b0',
                   cursor: 'pointer',
-                  background: isActive ? 'rgba(124,110,246,0.15)' : 'transparent',
-                  border: isActive
-                    ? '1px solid rgba(124,110,246,0.4)'
-                    : '1px solid transparent',
-                  marginBottom: 4,
-                  transition: 'background 0.15s',
+                  fontSize: 12,
+                  padding: '5px 12px',
+                  whiteSpace: 'nowrap',
                 }}
                 onMouseEnter={(e) => {
-                  if (!isActive)
-                    (e.currentTarget as HTMLDivElement).style.background =
-                      'rgba(255,255,255,0.04)'
+                  ;(e.currentTarget as HTMLButtonElement).style.color = '#e8e8f0'
+                  ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.25)'
                 }}
                 onMouseLeave={(e) => {
-                  if (!isActive)
-                    (e.currentTarget as HTMLDivElement).style.background = 'transparent'
+                  ;(e.currentTarget as HTMLButtonElement).style.color = '#a0a0b0'
+                  ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.1)'
                 }}
               >
-                {/* Icon */}
-                <div
+                Import
+              </button>
+              <button
+                onClick={handleNew}
+                style={{
+                  background: '#7c6ef6',
+                  color: '#fff',
+                  border: 'none',
+                  borderRadius: 6,
+                  padding: '5px 14px',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                + New
+              </button>
+              <input
+                ref={importInputRef}
+                type="file"
+                accept=".json"
+                style={{ display: 'none' }}
+                onChange={handleImportFile}
+              />
+              <button
+                onClick={onClose}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#6b6b7a',
+                  cursor: 'pointer',
+                  fontSize: 18,
+                  lineHeight: 1,
+                  padding: '2px 4px',
+                }}
+              >
+                ×
+              </button>
+            </div>
+          </div>
+
+          {/* New project form */}
+          {creatingNew && (
+            <div
+              style={{
+                padding: '12px 16px',
+                borderBottom: '1px solid rgba(255,255,255,0.07)',
+                background: 'rgba(255,255,255,0.02)',
+              }}
+            >
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <input
+                  ref={newNameInputRef}
+                  value={newName}
+                  onChange={(e) => {
+                    setNewName(e.target.value)
+                    if (newNameError) setNewNameError('')
+                  }}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') handleCreateConfirm()
+                    if (e.key === 'Escape') setCreatingNew(false)
+                    e.stopPropagation()
+                  }}
+                  placeholder="Project name..."
                   style={{
-                    width: 36,
-                    height: 36,
-                    borderRadius: 8,
-                    background: isActive
-                      ? 'rgba(124,110,246,0.25)'
-                      : 'rgba(255,255,255,0.07)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontSize: 18,
+                    flex: 1,
+                    background: 'rgba(255,255,255,0.08)',
+                    border: `1px solid ${newNameError ? '#f87171' : 'rgba(255,255,255,0.1)'}`,
+                    borderRadius: 6,
+                    color: '#e8e8f0',
+                    fontSize: 13,
+                    fontWeight: 500,
+                    padding: '6px 10px',
+                    outline: 'none',
+                  }}
+                />
+                <button
+                  onClick={handleCreateConfirm}
+                  disabled={!newName.trim()}
+                  style={{
+                    background: newName.trim() ? '#7c6ef6' : 'rgba(124,110,246,0.4)',
+                    color: '#fff',
+                    border: 'none',
+                    borderRadius: 6,
+                    padding: '6px 14px',
+                    fontSize: 12,
+                    fontWeight: 600,
+                    cursor: newName.trim() ? 'pointer' : 'not-allowed',
                     flexShrink: 0,
                   }}
                 >
-                  📸
+                  Create
+                </button>
+                <button
+                  onClick={() => setCreatingNew(false)}
+                  style={{
+                    background: 'none',
+                    border: '1px solid rgba(255,255,255,0.1)',
+                    borderRadius: 6,
+                    color: '#6b6b7a',
+                    fontSize: 12,
+                    fontWeight: 500,
+                    padding: '6px 10px',
+                    cursor: 'pointer',
+                    flexShrink: 0,
+                  }}
+                >
+                  Cancel
+                </button>
+              </div>
+              {newNameError && (
+                <div style={{ fontSize: 11, color: '#f87171', marginTop: 6 }}>
+                  {newNameError}
                 </div>
+              )}
+            </div>
+          )}
 
-                {/* Name + meta */}
-                <div style={{ flex: 1, minWidth: 0 }}>
-                  {isRenaming ? (
-                    <input
-                      ref={renameInputRef}
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={commitRename}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') commitRename()
-                        if (e.key === 'Escape') setRenamingId(null)
-                        e.stopPropagation()
-                      }}
-                      onClick={(e) => e.stopPropagation()}
+          {/* Project list */}
+          <div style={{ overflowY: 'auto', flex: 1, padding: '8px 8px' }}>
+            {sorted.length === 0 && (
+              <p style={{ textAlign: 'center', color: '#6b6b7a', fontSize: 13, padding: '24px 0' }}>
+                No projects yet
+              </p>
+            )}
+
+            {sorted.map((p) => {
+              const isActive = p.id === activeProjectId
+              const isRenaming = renamingId === p.id
+
+              return (
+                <div
+                  key={p.id}
+                  onClick={() => !isRenaming && handleOpen(p.id)}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 10,
+                    padding: '10px 12px',
+                    borderRadius: 8,
+                    cursor: 'pointer',
+                    background: isActive ? 'rgba(124,110,246,0.15)' : 'transparent',
+                    border: isActive
+                      ? '1px solid rgba(124,110,246,0.4)'
+                      : '1px solid transparent',
+                    marginBottom: 4,
+                    transition: 'background 0.15s',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!isActive)
+                      (e.currentTarget as HTMLDivElement).style.background =
+                        'rgba(255,255,255,0.04)'
+                  }}
+                  onMouseLeave={(e) => {
+                    if (!isActive)
+                      (e.currentTarget as HTMLDivElement).style.background = 'transparent'
+                  }}
+                >
+                  {/* Icon */}
+                  <div
+                    style={{
+                      width: 36,
+                      height: 36,
+                      borderRadius: 8,
+                      background: isActive
+                        ? 'rgba(124,110,246,0.25)'
+                        : 'rgba(255,255,255,0.07)',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 18,
+                      flexShrink: 0,
+                    }}
+                  >
+                    📸
+                  </div>
+
+                  {/* Name + meta */}
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    {isRenaming ? (
+                      <input
+                        ref={renameInputRef}
+                        value={renameValue}
+                        onChange={(e) => setRenameValue(e.target.value)}
+                        onBlur={commitRename}
+                        onKeyDown={(e) => {
+                          if (e.key === 'Enter') commitRename()
+                          if (e.key === 'Escape') setRenamingId(null)
+                          e.stopPropagation()
+                        }}
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                          background: 'rgba(255,255,255,0.08)',
+                          border: '1px solid rgba(124,110,246,0.6)',
+                          borderRadius: 4,
+                          color: '#e8e8f0',
+                          fontSize: 13,
+                          fontWeight: 500,
+                          padding: '2px 6px',
+                          width: '100%',
+                          outline: 'none',
+                        }}
+                      />
+                    ) : (
+                      <div
+                        onDoubleClick={(e) => {
+                          e.stopPropagation()
+                          startRename(p.id, p.name)
+                        }}
+                        style={{
+                          fontSize: 13,
+                          fontWeight: 500,
+                          color: isActive ? '#c4b9fc' : '#e8e8f0',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          whiteSpace: 'nowrap',
+                        }}
+                      >
+                        {p.name}
+                        {isActive && (
+                          <span
+                            style={{
+                              marginLeft: 8,
+                              fontSize: 10,
+                              background: 'rgba(124,110,246,0.35)',
+                              color: '#a89cf6',
+                              borderRadius: 4,
+                              padding: '1px 6px',
+                              fontWeight: 600,
+                            }}
+                          >
+                            current
+                          </span>
+                        )}
+                      </div>
+                    )}
+                    <div style={{ fontSize: 11, color: '#6b6b7a', marginTop: 2 }}>
+                      {relativeTime(p.updatedAt)}
+                    </div>
+                  </div>
+
+                  {/* Actions */}
+                  <div
+                    style={{ display: 'flex', gap: 4 }}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      title="Export project as JSON"
+                      onClick={(e) => { e.stopPropagation(); handleExportProject(p.id, p.name) }}
                       style={{
-                        background: 'rgba(255,255,255,0.08)',
-                        border: '1px solid rgba(124,110,246,0.6)',
+                        background: 'none',
+                        border: 'none',
+                        color: '#6b6b7a',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        padding: '4px',
                         borderRadius: 4,
-                        color: '#e8e8f0',
-                        fontSize: 13,
-                        fontWeight: 500,
-                        padding: '2px 6px',
-                        width: '100%',
-                        outline: 'none',
                       }}
-                    />
-                  ) : (
-                    <div
-                      onDoubleClick={(e) => {
+                      onMouseEnter={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.color = '#e8e8f0')
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.color = '#6b6b7a')
+                      }
+                    >
+                      Export
+                    </button>
+                    <button
+                      title="Rename (double-click name)"
+                      onClick={(e) => {
                         e.stopPropagation()
                         startRename(p.id, p.name)
                       }}
                       style={{
-                        fontSize: 13,
-                        fontWeight: 500,
-                        color: isActive ? '#c4b9fc' : '#e8e8f0',
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
+                        background: 'none',
+                        border: 'none',
+                        color: '#6b6b7a',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        padding: '4px',
+                        borderRadius: 4,
                       }}
+                      onMouseEnter={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.color = '#e8e8f0')
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.color = '#6b6b7a')
+                      }
                     >
-                      {p.name}
-                      {isActive && (
-                        <span
-                          style={{
-                            marginLeft: 8,
-                            fontSize: 10,
-                            background: 'rgba(124,110,246,0.35)',
-                            color: '#a89cf6',
-                            borderRadius: 4,
-                            padding: '1px 6px',
-                            fontWeight: 600,
-                          }}
-                        >
-                          current
-                        </span>
-                      )}
-                    </div>
-                  )}
-                  <div style={{ fontSize: 11, color: '#6b6b7a', marginTop: 2 }}>
-                    {relativeTime(p.updatedAt)}
+                      ✎
+                    </button>
+                    <button
+                      title="Delete project"
+                      onClick={(e) => handleDelete(e, p.id)}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#6b6b7a',
+                        cursor: 'pointer',
+                        fontSize: 14,
+                        padding: '4px',
+                        borderRadius: 4,
+                      }}
+                      onMouseEnter={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.color = '#f87171')
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.color = '#6b6b7a')
+                      }
+                    >
+                      🗑
+                    </button>
                   </div>
                 </div>
+              )
+            })}
+          </div>
 
-                {/* Actions */}
-                <div
-                  style={{ display: 'flex', gap: 4 }}
-                  onClick={(e) => e.stopPropagation()}
-                >
-                  <button
-                    title="Rename (double-click name)"
-                    onClick={(e) => {
-                      e.stopPropagation()
-                      startRename(p.id, p.name)
-                    }}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#6b6b7a',
-                      cursor: 'pointer',
-                      fontSize: 14,
-                      padding: '4px',
-                      borderRadius: 4,
-                    }}
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.color = '#e8e8f0')
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.color = '#6b6b7a')
-                    }
-                  >
-                    ✎
-                  </button>
-                  <button
-                    title="Delete project"
-                    onClick={(e) => handleDelete(e, p.id)}
-                    style={{
-                      background: 'none',
-                      border: 'none',
-                      color: '#6b6b7a',
-                      cursor: 'pointer',
-                      fontSize: 14,
-                      padding: '4px',
-                      borderRadius: 4,
-                    }}
-                    onMouseEnter={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.color = '#f87171')
-                    }
-                    onMouseLeave={(e) =>
-                      ((e.currentTarget as HTMLButtonElement).style.color = '#6b6b7a')
-                    }
-                  >
-                    🗑
-                  </button>
-                </div>
-              </div>
-            )
-          })}
-        </div>
-
-        {/* Footer hint */}
-        <div
-          style={{
-            padding: '10px 20px',
-            borderTop: '1px solid rgba(255,255,255,0.07)',
-            fontSize: 11,
-            color: '#6b6b7a',
-            textAlign: 'center',
-          }}
-        >
-          Projects are auto-saved to your browser · Double-click a name to rename
+          {/* Footer */}
+          <div
+            style={{
+              padding: '10px 20px',
+              borderTop: '1px solid rgba(255,255,255,0.07)',
+              fontSize: 11,
+              color: '#6b6b7a',
+              textAlign: 'center',
+            }}
+          >
+            Auto-saved · Double-click a name to rename
+          </div>
         </div>
       </div>
     </>

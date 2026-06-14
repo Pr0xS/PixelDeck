@@ -1,7 +1,11 @@
+import { useRef } from 'react'
 import { Group, Image, Text } from 'react-konva'
 import useImage from 'use-image'
 import type Konva from 'konva'
+import { useEditorStore } from '@/store'
 import type { BrandLayer } from '@/types'
+import { resolveBrandColor } from '@/utils/brandColors'
+import { getShadowProps, useKonvaBlur } from './effects'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -17,6 +21,8 @@ interface BrandNodeProps {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: BrandNodeProps) {
+  const groupRef = useRef<Konva.Group>(null)
+  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
   const [logoImage] = useImage(layer.logoDataUrl ?? '')
 
   const hasLogo = Boolean(layer.logoDataUrl && logoImage)
@@ -32,9 +38,12 @@ export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
   const height = layer.direction === 'row'
     ? Math.max(hasLogo ? layer.logoSize : 0, layer.nameFontSize)
     : (hasLogo ? layer.logoSize + layer.gap : 0) + layer.nameFontSize
+  useKonvaBlur(groupRef, layer.blur, `${layer.logoDataUrl}:${layer.logoSize}:${layer.appName}:${layer.nameFontSize}:${layer.nameFontFamily}:${layer.nameFontWeight}:${layer.nameColor}:${layer.direction}:${layer.gap}`)
+  const shadowProps = getShadowProps(layer.shadow)
 
   return (
     <Group
+      ref={groupRef}
       id={`layer-${layer.id}`}
       x={layer.x + width / 2}
       y={layer.y + height / 2}
@@ -69,6 +78,7 @@ export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
           y={logoY}
           width={layer.logoSize}
           height={layer.logoSize}
+          {...shadowProps}
         />
       )}
       <Text
@@ -78,7 +88,8 @@ export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
         fontSize={layer.nameFontSize}
         fontFamily={layer.nameFontFamily}
         fontStyle={`${layer.nameFontWeight}`}
-        fill={layer.nameColor}
+        fill={resolveBrandColor(layer.nameColor, brandColors)}
+        {...shadowProps}
       />
     </Group>
   )
