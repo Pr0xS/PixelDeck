@@ -471,6 +471,29 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
             {tab === 'pano' && <PanoSettingsContent />}
           </div>
         </div>
+
+        {/* Footer — version info */}
+        <div
+          className="shrink-0 px-5 py-2.5 border-t border-[rgba(255,255,255,0.06)] flex items-center gap-3"
+          style={{ background: 'rgba(0,0,0,0.15)' }}
+        >
+          <span className="text-[11px] text-[#4a4a5a] font-mono select-all">
+            v{__APP_VERSION__}
+          </span>
+          <span className="text-[#2a2a3a]">·</span>
+          <span className="text-[11px] text-[#4a4a5a] font-mono select-all" title="Git commit hash">
+            {__GIT_HASH__}
+          </span>
+          <span className="flex-1" />
+          <a
+            href="https://github.com/Pr0xS/PixelDeck"
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-[11px] text-[#4a4a5a] hover:text-[#7c6ef6] transition-colors"
+          >
+            github.com/Pr0xS/PixelDeck
+          </a>
+        </div>
       </div>
     </div>
   )
