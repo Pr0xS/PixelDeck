@@ -47,6 +47,7 @@ beforeEach(() => {
 afterEach(() => {
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
+  vi.unstubAllEnvs()
 })
 
 // ─── forceJsonMode: providers that DO get response_format ─────────────────────
@@ -99,6 +100,23 @@ describe('chat – forceJsonMode with providers that reject response_format', ()
     })
 
     expect(capturedBody(fetchMock).response_format).toBeUndefined()
+  })
+
+  it('blocks opencode in no-proxy production before fetch', async () => {
+    vi.stubEnv('DEV', false)
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      chat({
+        provider: 'opencode',
+        apiKey: 'sk-test',
+        model: 'kimi-k2.6',
+        messages: [{ role: 'user', content: 'translate this' }],
+      }),
+    ).rejects.toThrow(/does not allow direct browser requests from GitHub Pages/i)
+
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })
 
@@ -286,6 +304,7 @@ describe('editImage', () => {
   })
 
   it('surfaces model-reported JSON error from chat response', async () => {
+    vi.stubEnv('DEV', true)
     const fetchMock = makeJsonFetchMock({
       choices: [{ message: { content: '{"error":"This model cannot generate images."}' } }],
     })
@@ -300,5 +319,23 @@ describe('editImage', () => {
         imageDataUrl: sourceImage,
       }),
     ).rejects.toThrow('This model cannot generate images.')
+  })
+
+  it('blocks opencode image edits in no-proxy production before fetch', async () => {
+    vi.stubEnv('DEV', false)
+    const fetchMock = vi.fn()
+    vi.stubGlobal('fetch', fetchMock)
+
+    await expect(
+      editImage({
+        provider: 'opencode',
+        apiKey: 'sk-test',
+        model: 'kimi-k2.6',
+        prompt: 'localize image',
+        imageDataUrl: sourceImage,
+      }),
+    ).rejects.toThrow(/does not allow direct browser requests from GitHub Pages/i)
+
+    expect(fetchMock).not.toHaveBeenCalled()
   })
 })

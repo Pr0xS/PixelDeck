@@ -192,7 +192,7 @@ Yes. Everything stays on your machine. No telemetry, no backend, no cloud sync. 
 Yes. Run `npm run build` and serve the `dist/` folder from any static host (GitHub Pages, Netlify, Vercel, S3, etc.).
 
 **Do AI providers work on static hosts?**
-Most providers can be called directly with your own key, but some APIs block browser CORS. For those, deploy a small proxy and build with `VITE_AI_PROXY_BASE_URL=https://your-proxy.example.com`; PixelDeck will route AI calls through `/{provider}` and model listing through `/{provider}/models`. Without a proxy, PixelDeck falls back to known model lists when model discovery is blocked.
+Most providers can be called directly with your own key, but some APIs block browser CORS. For those, deploy a small proxy and build with `VITE_AI_PROXY_BASE_URL=https://your-proxy.example.com`; PixelDeck will route AI calls through `/{provider}` and model listing through `/{provider}/models`. OpenCode Go is disabled in GitHub Pages/no-proxy builds because it does not allow direct browser requests.
 
 ---
 

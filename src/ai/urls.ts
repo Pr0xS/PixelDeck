@@ -11,6 +11,10 @@ export function usesAiProxy(): boolean {
   return import.meta.env.DEV || Boolean(getConfiguredAiProxyBaseUrl())
 }
 
+export function isAiProviderBlockedInStaticBrowser(provider: AiProvider): boolean {
+  return provider === 'opencode' && !usesAiProxy()
+}
+
 function getAiProxyProviderBaseUrl(provider: AiProvider): string | null {
   if (import.meta.env.DEV) return `${LOCAL_AI_PROXY_BASE}/${provider}`
   const proxyBaseUrl = getConfiguredAiProxyBaseUrl()

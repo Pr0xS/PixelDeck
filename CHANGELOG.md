@@ -7,6 +7,17 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.2] - 2026-06-14
+
+### Fixed
+
+- OpenCode Go is now explicitly blocked in GitHub Pages/no-proxy production builds before any browser request is attempted, avoiding CORS console errors for both model loading and chat/image calls.
+- Removed the hardcoded OpenCode model list from static production mode; unsupported providers now show a clear error instead of exposing models that cannot run.
+
+### Changed
+
+- Image-editing capability hints now treat OpenCode as unavailable in no-proxy static builds.
+
 ## [0.2.1] - 2026-06-14
 
 ### Fixed
@@ -74,7 +85,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Preview modal: full-project filmstrip preview with high-res thumbnail capture
 - Slide navigator: thumbnail-based navigation with per-slide index
 
-[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.1...HEAD
+[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.2...HEAD
+[0.2.2]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Pr0xS/PixelDeck/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Pr0xS/PixelDeck/releases/tag/v0.1.0
