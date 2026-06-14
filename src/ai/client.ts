@@ -1,7 +1,7 @@
 import { formatAiNetworkError } from '@/ai/errors'
 import { buildAnthropicHeaders, buildGoogleHeaders, buildOpenAiCompatibleHeaders } from '@/ai/headers'
 import { getDefaultModel, getProviderConfig } from '@/ai/providers'
-import { getAiApiBaseUrl, usesAiProxy } from '@/ai/urls'
+import { getAiApiBaseUrl, isAiProviderBlockedInStaticBrowser, usesAiProxy } from '@/ai/urls'
 import type { AiProvider } from '@/ai/providers'
 
 /** A multimodal content part: plain text or an image as a data URL. */
@@ -154,6 +154,7 @@ export interface AiImageEditOptions {
 export async function chat(options: AiChatOptions): Promise<string> {
   const apiKey = options.apiKey.trim()
   if (!apiKey) throw new Error('No API key configured. Open AI Settings in the toolbar.')
+  assertProviderAvailableInBrowser(options.provider)
 
   const config = getProviderConfig(options.provider)
   const baseUrl = getAiApiBaseUrl(options.provider, config.baseUrl)
@@ -179,6 +180,7 @@ export async function chat(options: AiChatOptions): Promise<string> {
 export async function editImage(options: AiImageEditOptions): Promise<string> {
   const apiKey = options.apiKey.trim()
   if (!apiKey) throw new Error('No API key configured. Open AI Settings in the toolbar.')
+  assertProviderAvailableInBrowser(options.provider)
 
   const config = getProviderConfig(options.provider)
   const baseUrl = getAiApiBaseUrl(options.provider, config.baseUrl)
@@ -206,6 +208,7 @@ export async function editImage(options: AiImageEditOptions): Promise<string> {
  * hard gate. The actual capability is determined at call time.
  */
 export function supportsImageEditing(provider: AiProvider, model: string): boolean {
+  if (isAiProviderBlockedInStaticBrowser(provider)) return false
   if (provider === 'anthropic') return false
   if (provider === 'openai') return model.toLowerCase().startsWith('gpt-image')
   if (provider === 'google') {
@@ -214,6 +217,13 @@ export function supportsImageEditing(provider: AiProvider, model: string): boole
   }
   // OpenRouter and OpenCode Go: optimistically true — the model decides at runtime
   return true
+}
+
+function assertProviderAvailableInBrowser(provider: AiProvider): void {
+  if (!isAiProviderBlockedInStaticBrowser(provider)) return
+  throw new Error(
+    'OpenCode Go does not allow direct browser requests from GitHub Pages. Use OpenRouter, OpenAI, Anthropic, or Google AI for the static web app.',
+  )
 }
 
 async function chatWithOpenAiCompatible(

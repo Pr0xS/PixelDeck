@@ -8,28 +8,23 @@ describe('AI model listing', () => {
     vi.resetModules()
   })
 
-  it('uses known OpenCode models directly in no-proxy production', async () => {
+  it('blocks OpenCode model loading in no-proxy production before fetch', async () => {
     vi.stubEnv('DEV', false)
     const fetchMock = vi.fn()
     vi.stubGlobal('fetch', fetchMock)
     const { listModels } = await import('./models')
 
-    const models = await listModels('opencode', 'sk-test')
+    await expect(listModels('opencode', 'sk-test')).rejects.toThrow(/does not allow direct browser requests from GitHub Pages/i)
 
     expect(fetchMock).not.toHaveBeenCalled()
-    expect(models.map((model) => model.id)).toContain('kimi-k2.6')
-    expect(models.map((model) => model.id)).toContain('deepseek-v4-pro')
   })
 
-  it('falls back to known OpenCode models when the browser request is blocked', async () => {
+  it('surfaces OpenCode network errors instead of using hardcoded fallbacks', async () => {
     vi.stubEnv('DEV', true)
     vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
     const { listModels } = await import('./models')
 
-    const models = await listModels('opencode', 'sk-test')
-
-    expect(models.map((model) => model.id)).toContain('kimi-k2.6')
-    expect(models.map((model) => model.id)).toContain('deepseek-v4-pro')
+    await expect(listModels('opencode', 'sk-test')).rejects.toThrow(/Could not load models for opencode/i)
   })
 
   it('still surfaces non-network provider errors instead of falling back', async () => {
