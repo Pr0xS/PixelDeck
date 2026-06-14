@@ -3,8 +3,9 @@ import { createPortal } from 'react-dom'
 import type React from 'react'
 import { useRichTextEditor } from './useRichTextEditor'
 import { RichTextToolbar } from './RichTextToolbar'
-import { marksToHtml } from '@/utils/richText'
-import type { TextLayer, TextMark } from '@/types'
+import { isEmptyStyle, normalizeMarks, segmentMarks, type MarkStyle } from '@/utils/richText'
+import { fillToCss } from '@/utils/gradients'
+import type { FillValue, TextLayer, TextMark } from '@/types'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // WYSIWYG editor for locale overrides (Localization view cells).
@@ -59,10 +60,9 @@ export function LocaleRichTextEditor({
         className="block w-full cursor-text text-left text-sm leading-6 text-[#f3f2ff] outline-none"
       >
         {text ? (
-          <span
-            className="whitespace-pre-wrap break-words"
-            dangerouslySetInnerHTML={{ __html: marksToHtml(text, marks ?? []) }}
-          />
+          <span className="whitespace-pre-wrap break-words">
+            <RichTextPreview text={text} marks={marks ?? []} />
+          </span>
         ) : (
           <span className="text-[#9a95c8]">{placeholder ?? 'Enter localized text'}</span>
         )}
@@ -81,6 +81,45 @@ export function LocaleRichTextEditor({
       onEditingChange={onEditingChange}
     />
   )
+}
+
+function RichTextPreview({ text, marks }: { text: string; marks: TextMark[] }) {
+  const segments = segmentMarks(normalizeMarks(marks, text.length), text.length)
+  return segments.map((seg) => {
+    const value = text.slice(seg.start, seg.end)
+    if (isEmptyStyle(seg.style)) return <span key={`${seg.start}-${seg.end}`}>{value}</span>
+    return (
+      <span key={`${seg.start}-${seg.end}`} style={styleToReactStyle(seg.style)}>
+        {value}
+      </span>
+    )
+  })
+}
+
+function styleToReactStyle(style: MarkStyle): React.CSSProperties {
+  const css: React.CSSProperties = {}
+  if (style.fill !== undefined) applyFillStyle(css, style.fill)
+  if (style.fontWeight !== undefined) css.fontWeight = style.fontWeight
+  if (style.italic !== undefined) css.fontStyle = style.italic ? 'italic' : 'normal'
+  if (style.underline !== undefined || style.strikethrough !== undefined) {
+    const decorations = [style.underline ? 'underline' : '', style.strikethrough ? 'line-through' : '']
+      .filter(Boolean)
+      .join(' ')
+    css.textDecoration = decorations || 'none'
+  }
+  return css
+}
+
+function applyFillStyle(css: React.CSSProperties, fill: FillValue) {
+  if (typeof fill === 'string') {
+    css.color = fill
+    return
+  }
+  css.backgroundImage = fillToCss(fill)
+  css.WebkitBackgroundClip = 'text'
+  css.backgroundClip = 'text'
+  css.color = 'transparent'
+  css.WebkitTextFillColor = 'transparent'
 }
 
 function ActiveLocaleEditor({
