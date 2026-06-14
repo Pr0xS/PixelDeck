@@ -11,7 +11,7 @@
 
 **Design beautiful App Store and Play Store screenshots in your browser, then batch-export them from the CLI. Free, open-source, and 100% local — no account, no subscription, no server.**
 
-PixelDeck is a free **App Store screenshot generator** and **device mockup maker** for indie developers and mobile teams. Create polished App Store and Google Play screenshots with a layer-based canvas editor — drag device mockups, headlines, gradients, and shapes onto your screens — then automate PNG export for every screen, locale, and device size from a headless CLI. A self-hosted, local-first alternative to Previewed, AppMockUp, Shotbot, and Canva.
+PixelDeck is a free **App Store screenshot generator** and **device mockup maker** for indie developers and mobile teams. Create polished App Store and Google Play screenshots with a layer-based canvas editor — drag device mockups, headlines, gradients, and shapes onto your screens — then automate PNG export for every screen, locale, and device size from a headless CLI. Free, open-source, and 100% local.
 
 ### 🚀 [Try the Live Demo →](https://pr0xs.github.io/PixelDeck/)
 
@@ -43,20 +43,6 @@ Most screenshot tools give you a fixed template: one background, one phone, one 
 - 🤖 **Headless CLI export** — batch-render every slide, locale, and format to PNG with Playwright. Perfect for CI pipelines and release automation.
 - 🔒 **100% local-first** — no account, no backend, no telemetry. Projects auto-save to localStorage and imported screenshots persist in IndexedDB. Your work never leaves your machine.
 - 🆓 **Free & MIT-licensed** — own your tooling. Fork it, extend it, ship it.
-
----
-
-## How PixelDeck compares
-
-| | PixelDeck | Previewed / AppMockUp | fastlane frameit | Canva |
-|---|:---:|:---:|:---:|:---:|
-| Free & open-source | ✅ | ❌ | ✅ | ❌ |
-| Visual layer editor | ✅ | ✅ | ❌ | ✅ |
-| Panoramic multi-slide | ✅ | ⚠️ limited | ❌ | ❌ |
-| Headless CLI / CI export | ✅ | ❌ | ✅ | ❌ |
-| Built-in localization | ✅ | ⚠️ | ✅ | ❌ |
-| No account / 100% local | ✅ | ❌ | ✅ | ❌ |
-| Custom gradients & effects | ✅ | ⚠️ | ❌ | ✅ |
 
 ---
 
@@ -217,7 +203,7 @@ PixelDeck is designed to be extended by AI coding agents. [`AGENTS.md`](AGENTS.m
 
 Bug reports, feature ideas, docs improvements, and pull requests are welcome. Please read [`CONTRIBUTING.md`](CONTRIBUTING.md) before opening a PR.
 
-⭐ If PixelDeck saved you a Canva or Previewed subscription, consider starring the repo — it helps others find it.
+⭐ If PixelDeck is useful to you, consider starring the repo — it helps others find it.
 
 ---
 

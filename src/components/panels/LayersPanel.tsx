@@ -119,14 +119,18 @@ export function LayersPanel() {
     const layer = layers.find((l) => l.id === layerId)
     if (layer?.type === 'background') return
     e.preventDefault(); e.stopPropagation()
-    setContextMenu({ layerId, x: e.clientX, y: e.clientY })
+    const MENU_HEIGHT = 220 // up to 8 items × ~28px
+    const y = e.clientY + MENU_HEIGHT > window.innerHeight ? e.clientY - MENU_HEIGHT : e.clientY
+    setContextMenu({ layerId, x: e.clientX, y })
   }
 
   const handleMenuOpen = (e: React.MouseEvent, layerId: string) => {
     const layer = layers.find((l) => l.id === layerId)
     if (layer?.type === 'background') return
     const rect = (e.currentTarget as HTMLElement).getBoundingClientRect()
-    setContextMenu({ layerId, x: rect.right, y: rect.bottom })
+    const MENU_HEIGHT = 220 // up to 8 items × ~28px
+    const y = rect.bottom + MENU_HEIGHT > window.innerHeight ? rect.top - MENU_HEIGHT : rect.bottom
+    setContextMenu({ layerId, x: rect.right, y })
   }
 
   const handleMenuAction = (action: string, layerId: string) => {

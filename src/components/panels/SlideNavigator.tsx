@@ -1,13 +1,17 @@
 import { Fragment, useState, useEffect, useRef } from 'react'
 import type Konva from 'konva'
 import { useShallow } from 'zustand/react/shallow'
+import { DndContext, closestCenter, PointerSensor, useSensor, useSensors } from '@dnd-kit/core'
+import type { DragEndEvent } from '@dnd-kit/core'
+import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove } from '@dnd-kit/sortable'
+import { CSS } from '@dnd-kit/utilities'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
-import { downloadDataUrl, downloadSlide, downloadSlideGroup, saveToDirectory, exportGroupAsZip } from '@/utils/export'
-import { applyCanvasFormat, CANVAS_FORMAT_PRESETS, countFormatAdjustments, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
-import { exportAllFormats } from '@/utils/multiFormatExport'
-import type { BackgroundLayer, CanvasFormatId } from '@/types'
+import { applyCanvasFormat, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { MAX_PANO_COMPENSATION_PX } from '@/utils/panoGeometry'
+import type { BackgroundLayer, CanvasFormatId, SlideGroup } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
+import { ExportModal } from './ExportModal'
 
 interface ContextMenu {
   groupId: string
@@ -27,6 +31,174 @@ const NUM_SLIDES_OPTIONS: { value: number; label: string }[] = [
   { value: 3, label: 'Strip (×3)' },
 ]
 
+type FlatSlide = {
+  group: SlideGroup
+  slideIdx: number
+  globalNum: number
+  bgCss: string
+}
+
+interface SortableGroupItemProps {
+  group: SlideGroup
+  groupSlides: FlatSlide[]
+  isActive: boolean
+  isFirst: boolean
+  renamingId: string | null
+  renameValue: string
+  renameInputRef: React.RefObject<HTMLInputElement | null>
+  thumbnails: ThumbnailMap
+  THUMB_H: number
+  handleContextMenu: (e: React.MouseEvent, groupId: string) => void
+  startRename: (groupId: string, currentName: string) => void
+  setActiveSlideGroup: (id: string) => void
+  commitRename: () => void
+  setRenamingId: (id: string | null) => void
+  setRenameValue: (v: string) => void
+}
+
+function SortableGroupItem({
+  group,
+  groupSlides,
+  isActive,
+  isFirst,
+  renamingId,
+  renameValue,
+  renameInputRef,
+  thumbnails,
+  THUMB_H,
+  handleContextMenu,
+  startRename,
+  setActiveSlideGroup,
+  commitRename,
+  setRenamingId,
+  setRenameValue,
+}: SortableGroupItemProps) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id })
+
+  const wrapperStyle: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    display: 'flex',
+    alignItems: 'center',
+    gap: 8,
+  }
+
+  return (
+    <div ref={setNodeRef} style={wrapperStyle} {...attributes} {...listeners}>
+      {/* Visual divider between groups */}
+      {!isFirst && (
+        <div
+          style={{
+            width: 1,
+            height: 32,
+            background: 'rgba(255,255,255,0.1)',
+            flexShrink: 0,
+            alignSelf: 'center',
+          }}
+        />
+      )}
+
+      {groupSlides.map(({ slideIdx, globalNum: num, bgCss }) => {
+        const isFirstInGroup = slideIdx === 0
+        const thumb = thumbnails[group.id]?.[slideIdx]
+        const thumbW = Math.min(50, Math.round((group.slideWidth / group.slideHeight) * THUMB_H))
+
+        return (
+          <Fragment key={`${group.id}-${slideIdx}`}>
+            <div
+              style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}
+              className="relative shrink-0 group"
+              onContextMenu={(e) => handleContextMenu(e, group.id)}
+              onDoubleClick={() => startRename(group.id, group.name)}
+            >
+              {/* Group name — editable label on first slide, spacer on subsequent slides for alignment */}
+              {isFirstInGroup ? (
+                renamingId === group.id ? (
+                  <input
+                    ref={renameInputRef}
+                    type="text"
+                    value={renameValue}
+                    onChange={(e) => setRenameValue(e.target.value)}
+                    onBlur={commitRename}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') commitRename()
+                      if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
+                    }}
+                    onClick={(e) => e.stopPropagation()}
+                    style={{ width: Math.max(thumbW, 52), height: 14, fontSize: 9 }}
+                    className="px-1 rounded border border-[#7c6ef6] bg-[#0f0f13] text-[#e8e8f0] focus:outline-none"
+                  />
+                ) : (
+                  <span
+                    style={{
+                      fontSize: 10,
+                      color: isActive ? '#9b8fff' : '#8b8b9e',
+                      lineHeight: '14px',
+                      height: 14,
+                      cursor: 'default',
+                      maxWidth: Math.max(thumbW, 52),
+                      overflow: 'hidden',
+                      textOverflow: 'ellipsis',
+                      whiteSpace: 'nowrap',
+                      display: 'block',
+                    }}
+                    title={group.name}
+                  >
+                    {group.name}
+                  </span>
+                )
+              ) : (
+                <div style={{ height: 14 }} />
+              )}
+
+              <div
+                style={{
+                  width: thumbW,
+                  height: THUMB_H,
+                  background: bgCss,
+                  border: `1px solid ${isActive ? '#7c6ef6' : 'rgba(255,255,255,0.12)'}`,
+                  borderRadius: 4,
+                  cursor: isDragging ? 'grabbing' : 'grab',
+                  position: 'relative',
+                  overflow: 'hidden',
+                  flexShrink: 0,
+                }}
+                onClick={() => setActiveSlideGroup(group.id)}
+              >
+                {thumb ? (
+                  <img
+                    src={thumb}
+                    alt={`Slide ${num}`}
+                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                  />
+                ) : (
+                  <div
+                    style={{
+                      position: 'absolute',
+                      inset: 0,
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      fontSize: 10,
+                    }}
+                  >
+                    📱
+                  </div>
+                )}
+              </div>
+
+              <span style={{ fontSize: 9, color: isActive ? '#7c6ef6' : '#6b6b7a', lineHeight: 1 }}>
+                {num}
+              </span>
+            </div>
+          </Fragment>
+        )
+      })}
+    </div>
+  )
+}
+
 export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNavigatorProps) {
   const {
     project,
@@ -36,7 +208,10 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
     removeSlideGroup,
     duplicateSlideGroup,
     updateSlideGroup,
+    reorderSlideGroups,
     activeCanvasFormat,
+    panoSettings,
+    updatePanoSettings,
   } = useEditorStore(useShallow((s) => ({
     project: s.project,
     activeSlideGroupId: s.activeSlideGroupId,
@@ -45,19 +220,17 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
     removeSlideGroup: s.removeSlideGroup,
     duplicateSlideGroup: s.duplicateSlideGroup,
     updateSlideGroup: s.updateSlideGroup,
+    reorderSlideGroups: s.reorderSlideGroups,
     activeCanvasFormat: s.activeCanvasFormat,
+    panoSettings: s.project.settings.pano ?? { gapPx: 24, compensate: false },
+    updatePanoSettings: s.updatePanoSettings,
   })))
 
   const [contextMenu, setContextMenu] = useState<ContextMenu | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
-  const [exportError, setExportError] = useState<string | null>(null)
-  const [stageReady, setStageReady] = useState(false)
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
-  const [isExporting, setIsExporting] = useState(false)
-  const [selectedExportFormats, setSelectedExportFormats] = useState<CanvasFormatId[]>([])
   const renameInputRef = useRef<HTMLInputElement>(null)
-  const exportRef = useRef<HTMLDivElement>(null)
 
   const viewProject = applyCanvasFormat(project, activeCanvasFormat)
   const activeGroup = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
@@ -65,17 +238,8 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   // The formats currently active for this project
   const baseFormat = getProjectBaseFormat(project)
   const activeFormats: CanvasFormatId[] = getProjectActiveFormats(project)
-  // Non-base (exportable) formats — these are the ones shown in the export checklist
+  // Non-base (exportable) formats — used to disable the Export button when nothing to export
   const exportableFormats = activeFormats.filter((f) => f !== baseFormat)
-
-  // Initialize selectedExportFormats when export menu opens (adjust-state-during-render pattern)
-  const [lastExportOpen, setLastExportOpen] = useState(false)
-  if (exportOpen && !lastExportOpen) {
-    setLastExportOpen(true)
-    setSelectedExportFormats(exportableFormats)
-  } else if (!exportOpen && lastExportOpen) {
-    setLastExportOpen(false)
-  }
 
   // Close context menu on outside click
   useEffect(() => {
@@ -84,25 +248,6 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
     window.addEventListener('click', close)
     return () => window.removeEventListener('click', close)
   }, [contextMenu])
-
-  useEffect(() => {
-    if (!exportOpen) return
-    const close = (e: MouseEvent) => {
-      if (!exportRef.current?.contains(e.target as Node)) setExportOpen(false)
-    }
-    window.addEventListener('mousedown', close)
-    return () => window.removeEventListener('mousedown', close)
-  }, [exportOpen])
-
-  useEffect(() => {
-    if (!exportError) return
-    const timeout = window.setTimeout(() => setExportError(null), 4000)
-    return () => window.clearTimeout(timeout)
-  }, [exportError])
-
-  useEffect(() => {
-    setStageReady(Boolean(stageRef.current))
-  }, [stageRef, activeGroup])
 
   // Focus rename input
   useEffect(() => {
@@ -124,7 +269,9 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   const handleContextMenu = (e: React.MouseEvent, groupId: string) => {
     e.preventDefault()
     e.stopPropagation()
-    setContextMenu({ groupId, x: e.clientX, y: e.clientY })
+    const MENU_HEIGHT = 100 // 3 items × ~32px
+    const y = e.clientY + MENU_HEIGHT > window.innerHeight ? e.clientY - MENU_HEIGHT : e.clientY
+    setContextMenu({ groupId, x: e.clientX, y })
   }
 
   const handleMenuAction = (action: string, groupId: string) => {
@@ -142,195 +289,7 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
     }
   }
 
-  const getStage = () => {
-    if (!stageRef.current || !activeGroup) {
-      setExportError('Export unavailable. Try again.')
-      return null
-    }
-    return stageRef.current
-  }
-
-  const toggleExportFormat = (formatId: CanvasFormatId) => {
-    setSelectedExportFormats((prev) => {
-      if (prev.includes(formatId)) {
-        // Can't uncheck the last selected format
-        if (prev.length <= 1) return prev
-        return prev.filter((f) => f !== formatId)
-      }
-      return [...prev, formatId]
-    })
-  }
-
-  // ─── Export handlers ──────────────────────────────────────────────────────
-
-  const handleExportCurrent = async () => {
-    const stage = getStage()
-    if (!stage || !activeGroup) return
-
-    try {
-      setIsExporting(true)
-
-      if (selectedExportFormats.length <= 1) {
-        // Single format — legacy path
-        await downloadSlide(stage, 0, activeGroup)
-      } else {
-        // Multi-format: export slide 0 from each selected format
-        const results = await exportAllFormats(stage, selectedExportFormats)
-        for (const result of results) {
-          const slide = result.slides[0]
-          if (slide) {
-            downloadDataUrl(slide.dataUrl, slide.name)
-            await new Promise((r) => setTimeout(r, 80))
-          }
-        }
-      }
-      setExportOpen(false)
-    } catch {
-      setExportError('Export failed. Try again.')
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
-  const handleExportAll = async () => {
-    const stage = getStage()
-    if (!stage || !activeGroup) return
-
-    try {
-      setIsExporting(true)
-
-      if (selectedExportFormats.length <= 1) {
-        // Single format — legacy path
-        await downloadSlideGroup(stage, activeGroup)
-      } else {
-        const results = await exportAllFormats(stage, selectedExportFormats)
-        for (const result of results) {
-          for (const slide of result.slides) {
-            downloadDataUrl(slide.dataUrl, slide.name)
-            await new Promise((r) => setTimeout(r, 80))
-          }
-        }
-      }
-      setExportOpen(false)
-    } catch {
-      setExportError('Export failed. Try again.')
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
-  const handleExportFolder = async () => {
-    const stage = getStage()
-    if (!stage || !activeGroup) return
-
-    try {
-      setIsExporting(true)
-
-      if (selectedExportFormats.length <= 1) {
-        // Single format — legacy path
-        await saveToDirectory(stage, activeGroup)
-      } else {
-        const results = await exportAllFormats(stage, selectedExportFormats)
-
-        if (!window.showDirectoryPicker) {
-          // Fallback: download individually with format prefix
-          for (const result of results) {
-            for (const slide of result.slides) {
-              downloadDataUrl(slide.dataUrl, slide.name)
-              await new Promise((r) => setTimeout(r, 80))
-            }
-          }
-        } else {
-          try {
-            const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' })
-            for (const result of results) {
-              // Create a subfolder per format
-              const subDir = await (dirHandle as unknown as {
-                getDirectoryHandle(name: string, options?: { create?: boolean }): Promise<typeof dirHandle>
-              }).getDirectoryHandle(result.formatId, { create: true })
-              for (const slide of result.slides) {
-                const filename = slide.name.endsWith('.png') ? slide.name : `${slide.name}.png`
-                const fileHandle = await subDir.getFileHandle(filename, { create: true })
-                const writable = await fileHandle.createWritable()
-                const res = await fetch(slide.dataUrl)
-                const blob = await res.blob()
-                await writable.write(blob)
-                await writable.close()
-              }
-            }
-          } catch (err: unknown) {
-            if (!(err instanceof DOMException && err.name === 'AbortError')) throw err
-          }
-        }
-      }
-      setExportOpen(false)
-    } catch {
-      setExportError('Export failed. Try again.')
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
-  const handleExportZip = async () => {
-    const stage = getStage()
-    if (!stage || !activeGroup) return
-
-    try {
-      setIsExporting(true)
-
-      if (selectedExportFormats.length <= 1) {
-        // Single format — legacy path
-        const blob = await exportGroupAsZip(stage, activeGroup)
-        const url = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = url
-        const zipName = activeGroup.name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'slides'
-        a.download = `${zipName}.zip`
-        a.click()
-        a.remove()
-        setTimeout(() => URL.revokeObjectURL(url), 10_000)
-      } else {
-        const { default: JSZip } = await import('jszip')
-        const results = await exportAllFormats(stage, selectedExportFormats)
-        const zip = new JSZip()
-
-        for (const result of results) {
-          // Create a subfolder per format in the ZIP
-          const folder = zip.folder(result.formatId)
-          if (!folder) continue
-          for (const slide of result.slides) {
-            const filename = slide.name.endsWith('.png') ? slide.name : `${slide.name}.png`
-            const res = await fetch(slide.dataUrl)
-            const blob = await res.blob()
-            folder.file(filename, blob)
-          }
-        }
-
-        const zipBlob = await zip.generateAsync({ type: 'blob' })
-        const url = URL.createObjectURL(zipBlob)
-        const a = document.createElement('a')
-        a.href = url
-        const zipName = activeGroup.name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'slides'
-        a.download = `${zipName}-multi.zip`
-        a.click()
-        a.remove()
-        setTimeout(() => URL.revokeObjectURL(url), 10_000)
-      }
-      setExportOpen(false)
-    } catch {
-      setExportError('Export failed. Try again.')
-    } finally {
-      setIsExporting(false)
-    }
-  }
-
-  // Build flat slide list with global sequential numbers
-  type FlatSlide = {
-    group: (typeof viewProject.slideGroups)[number]
-    slideIdx: number
-    globalNum: number
-    bgCss: string
-  }
+  // Build flat slide list with global sequential numbers (used for globalNum lookup)
   const flatSlides: FlatSlide[] = []
   let globalNum = 0
   for (const group of viewProject.slideGroups) {
@@ -345,15 +304,20 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
 
   const THUMB_H = 44
   const borderColor = 'rgba(255,255,255,0.06)'
-  const exportReady = Boolean(stageReady && activeGroup) && !isExporting
-  const exportItemClass = `w-full text-left px-3 py-2 text-sm transition-colors ${
-    exportReady
-      ? 'text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)]'
-      : 'text-[#6b6b7a] cursor-not-allowed opacity-50'
-  }`
 
-  // Raw (unresolved) active group for countFormatAdjustments
-  const rawActiveGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+  // ─── Drag-and-drop ───────────────────────────────────────────────────────
+  const sensors = useSensors(
+    useSensor(PointerSensor, { activationConstraint: { distance: 5 } }),
+  )
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event
+    if (!over || active.id === over.id) return
+    const ids = viewProject.slideGroups.map((g) => g.id)
+    const oldIndex = ids.indexOf(active.id as string)
+    const newIndex = ids.indexOf(over.id as string)
+    reorderSlideGroups(arrayMove(ids, oldIndex, newIndex))
+  }
 
   return (
     <footer
@@ -379,122 +343,61 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
             ))}
           </div>
         )}
+        {activeGroup && activeGroup.numSlides > 1 && (
+          <label className="flex items-center gap-1.5 text-[10px] text-[#6b6b7a]">
+            <input
+              type="checkbox"
+              checked={panoSettings.compensate}
+              onChange={(e) => updatePanoSettings({ compensate: e.target.checked })}
+              className="h-3 w-3 accent-[#7c6ef6]"
+              title="When enabled, export/preview skip this gap between slides"
+            />
+            <span>Compensate</span>
+            <span className="ml-1">Gap</span>
+            <input
+              type="number"
+              min={0}
+              max={MAX_PANO_COMPENSATION_PX}
+              value={panoSettings.gapPx}
+              onChange={(e) => updatePanoSettings({ gapPx: parseInt(e.target.value, 10) || 0 })}
+              className="w-12 rounded border border-[rgba(255,255,255,0.1)] bg-[#0f0f13] px-1 py-0.5 text-right text-[#e8e8f0] focus:outline-none"
+              title="Store preview gap shown in editor and preview"
+            />
+            <span>px</span>
+          </label>
+        )}
       </div>
 
       <div className="flex items-center gap-2 flex-1 overflow-x-auto min-w-0">
-        {flatSlides.map(({ group, slideIdx, globalNum: num, bgCss }, idx) => {
-          const isActive = group.id === activeSlideGroupId
-          const isFirstInGroup = slideIdx === 0
-
-          const thumb = thumbnails[group.id]?.[slideIdx]
-          const thumbW = Math.min(50, Math.round((group.slideWidth / group.slideHeight) * THUMB_H))
-
-          return (
-            <Fragment key={`${group.id}-${slideIdx}`}>
-              {/* Visual divider between groups — no extra margin, sits in the natural gap */}
-              {isFirstInGroup && idx > 0 && (
-                <div
-                  style={{
-                    width: 1,
-                    height: 32,
-                    background: 'rgba(255,255,255,0.1)',
-                    flexShrink: 0,
-                    alignSelf: 'center',
-                  }}
+        <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+          <SortableContext items={viewProject.slideGroups.map((g) => g.id)} strategy={horizontalListSortingStrategy}>
+            {viewProject.slideGroups.map((group, groupIdx) => {
+              const groupSlides = flatSlides.filter((fs) => fs.group.id === group.id)
+              return (
+                <SortableGroupItem
+                  key={group.id}
+                  group={group}
+                  groupSlides={groupSlides}
+                  isActive={group.id === activeSlideGroupId}
+                  isFirst={groupIdx === 0}
+                  renamingId={renamingId}
+                  renameValue={renameValue}
+                  renameInputRef={renameInputRef}
+                  thumbnails={thumbnails}
+                  THUMB_H={THUMB_H}
+                  handleContextMenu={handleContextMenu}
+                  startRename={startRename}
+                  setActiveSlideGroup={setActiveSlideGroup}
+                  commitRename={commitRename}
+                  setRenamingId={setRenamingId}
+                  setRenameValue={setRenameValue}
                 />
-              )}
+              )
+            })}
+          </SortableContext>
+        </DndContext>
 
-              <div
-                style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}
-                className="relative shrink-0 group"
-                onContextMenu={(e) => handleContextMenu(e, group.id)}
-                onDoubleClick={() => startRename(group.id, group.name)}
-              >
-                {/* Group name — editable label on first slide, spacer on subsequent slides for alignment */}
-                {isFirstInGroup ? (
-                  renamingId === group.id ? (
-                    <input
-                      ref={renameInputRef}
-                      type="text"
-                      value={renameValue}
-                      onChange={(e) => setRenameValue(e.target.value)}
-                      onBlur={commitRename}
-                      onKeyDown={(e) => {
-                        if (e.key === 'Enter') commitRename()
-                        if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
-                      }}
-                      onClick={(e) => e.stopPropagation()}
-                      style={{ width: Math.max(thumbW, 52), height: 14, fontSize: 9 }}
-                      className="px-1 rounded border border-[#7c6ef6] bg-[#0f0f13] text-[#e8e8f0] focus:outline-none"
-                    />
-                  ) : (
-                    <span
-                      style={{
-                        fontSize: 10,
-                        color: isActive ? '#9b8fff' : '#8b8b9e',
-                        lineHeight: '14px',
-                        height: 14,
-                        cursor: 'default',
-                        maxWidth: Math.max(thumbW, 52),
-                        overflow: 'hidden',
-                        textOverflow: 'ellipsis',
-                        whiteSpace: 'nowrap',
-                        display: 'block',
-                      }}
-                      title={group.name}
-                    >
-                      {group.name}
-                    </span>
-                  )
-                ) : (
-                  <div style={{ height: 14 }} />
-                )}
-
-                <div
-                  style={{
-                    width: thumbW,
-                    height: THUMB_H,
-                    background: bgCss,
-                    border: `1px solid ${isActive ? '#7c6ef6' : 'rgba(255,255,255,0.12)'}`,
-                    borderRadius: 4,
-                    cursor: 'pointer',
-                    position: 'relative',
-                    overflow: 'hidden',
-                    flexShrink: 0,
-                  }}
-                  onClick={() => setActiveSlideGroup(group.id)}
-                >
-                  {thumb ? (
-                    <img
-                      src={thumb}
-                      alt={`Slide ${num}`}
-                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                    />
-                  ) : (
-                    <div
-                      style={{
-                        position: 'absolute',
-                        inset: 0,
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        fontSize: 10,
-                      }}
-                    >
-                      📱
-                    </div>
-                  )}
-                </div>
-
-                <span style={{ fontSize: 9, color: isActive ? '#7c6ef6' : '#6b6b7a', lineHeight: 1 }}>
-                  {num}
-                </span>
-              </div>
-            </Fragment>
-          )
-        })}
-
-        {/* Add slide group button */}
+        {/* Add slide group button — kept outside SortableContext so it's not draggable */}
         <button
           onClick={addSlideGroup}
           title="Add slide group"
@@ -512,105 +415,16 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
           Preview Slides
         </button>
 
-        <div className="relative" ref={exportRef}>
-          <button
-            onClick={() => setExportOpen((o) => !o)}
-            disabled={!exportReady && !isExporting}
-            className="text-xs text-white px-3 py-2 rounded bg-[#7c6ef6] hover:bg-[#6c5ed6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {isExporting ? 'Exporting…' : 'Export PNG'}
-          </button>
-          {exportOpen && (
-            <div
-              className="absolute bottom-full right-0 mb-2 rounded shadow-2xl z-50 min-w-[280px] border"
-              style={{ background: '#18181f', borderColor: 'rgba(255,255,255,0.08)' }}
-            >
-              {/* ── Section 1: Format checklist ── */}
-              <div className="px-3 pt-3 pb-2 border-b border-[rgba(255,255,255,0.06)]">
-                {exportableFormats.length === 0 ? (
-                  <p className="text-[10px] leading-snug text-[#6b6b7a]">
-                    No export formats added yet. Use the{' '}
-                    <span className="text-[#bdb7f6]">[+]</span> button above the canvas to add iPhone or Android.
-                  </p>
-                ) : (
-                  <>
-                    <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#6b6b7a] mb-2">
-                      Export formats
-                    </p>
-                    <div className="flex flex-col gap-1">
-                      {exportableFormats.map((formatId) => {
-                        const preset = CANVAS_FORMAT_PRESETS.find((p) => p.id === formatId)
-                        if (!preset) return null
-                        const isChecked = selectedExportFormats.includes(formatId)
-                        const adjustments = rawActiveGroup
-                          ? countFormatAdjustments(rawActiveGroup, formatId, baseFormat)
-                          : 0
-
-                        return (
-                          <label
-                            key={formatId}
-                            className="flex items-center gap-2 px-1 py-0.5 rounded cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.04)]"
-                            onClick={(e) => {
-                              e.preventDefault()
-                              toggleExportFormat(formatId)
-                            }}
-                          >
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => toggleExportFormat(formatId)}
-                              className="accent-[#7c6ef6] w-3 h-3 shrink-0"
-                            />
-                            <span className="text-[11px] text-[#e8e8f0] flex-1 truncate">
-                              {preset.label}
-                            </span>
-                            <span className="text-[10px] text-[#6b6b7a] shrink-0">
-                              {preset.width}×{preset.height}
-                            </span>
-                            {adjustments > 0 ? (
-                              <span className="text-[9px] text-[#f59e0b] bg-[rgba(245,158,11,0.1)] rounded px-1 py-px shrink-0">
-                                adjusted ({adjustments})
-                              </span>
-                            ) : (
-                              <span className="text-[9px] text-[#6b6b7a] bg-[rgba(255,255,255,0.05)] rounded px-1 py-px shrink-0">
-                                auto
-                              </span>
-                            )}
-                          </label>
-                        )
-                      })}
-                    </div>
-                    <p className="text-[10px] leading-snug text-[#6b6b7a] mt-2">
-                      Exports the selected formats. Switch format tabs above the canvas to preview each one.
-                    </p>
-                  </>
-                )}
-              </div>
-
-              <div className="py-1">
-                <button disabled={!exportReady} className={exportItemClass} onClick={handleExportCurrent}>
-                  Export current slide
-                </button>
-                <button disabled={!exportReady} className={exportItemClass} onClick={handleExportAll}>
-                  Export all slides in group
-                </button>
-                <button disabled={!exportReady} className={exportItemClass} onClick={handleExportFolder}>
-                  Export PNGs to folder
-                </button>
-                <div className="h-px mx-2 my-1 bg-[rgba(255,255,255,0.06)]" />
-                <button disabled={!exportReady} className={exportItemClass} onClick={handleExportZip}>
-                  Export all slides as ZIP
-                </button>
-              </div>
-            </div>
-          )}
-          {exportError && (
-            <div className="absolute bottom-full right-0 mb-2 w-48 rounded border border-[rgba(248,113,113,0.35)] bg-[#18181f] px-3 py-2 text-xs text-[#f87171] shadow-xl">
-              {exportError}
-            </div>
-          )}
-        </div>
+        <button
+          onClick={() => setExportOpen(true)}
+          disabled={exportableFormats.length === 0}
+          className="text-xs text-white px-3 py-2 rounded bg-[#7c6ef6] hover:bg-[#6c5ed6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+        >
+          Export
+        </button>
       </div>
+
+      <ExportModal open={exportOpen} onClose={() => setExportOpen(false)} stageRef={stageRef} />
 
       {/* Context menu */}
       {contextMenu && (

@@ -4,7 +4,7 @@ import { temporal } from 'zundo'
 import type { Layer, LayerType, Selection } from '@/types'
 import { BASE_CANVAS_FORMAT } from '@/utils/canvasFormats'
 import type { EditorStore } from './types'
-import { newProject, migrateProject, assertProjectShape } from './helpers'
+import { newProject, migrateProject, assertProjectShape, touchProject } from './helpers'
 import { createSelectionSlice } from './slices/selectionSlice'
 import { createLocaleSlice } from './slices/localeSlice'
 import { createFormatSlice } from './slices/formatSlice'
@@ -40,6 +40,16 @@ export const useEditorStore = create<EditorStore>()(
       editingTextId: null as string | null,
       activeLocale: 'en',
       activeCanvasFormat: BASE_CANVAS_FORMAT,
+      panoRenderOverride: null as { gapPx: number; compensate: boolean } | null,
+      setPanoRenderOverride: (override) => set({ panoRenderOverride: override }),
+      updatePanoSettings: (patch) => set((s) => ({
+        project: touchProject(s.project, {
+          settings: {
+            ...s.project.settings,
+            pano: { ...(s.project.settings.pano ?? { gapPx: 24, compensate: false }), ...patch },
+          },
+        }),
+      })),
 
       // ─ Init activeSlideGroupId after project creation
       // (called once in App.tsx on mount)
@@ -96,6 +106,7 @@ const PROJECT_STORAGE_KEY = 'pixeldeck-project'
 // Selection / zoom / editingGroupId are intentionally excluded (transient UI).
 useEditorStore.subscribe((state, prev) => {
   if (state.project === prev.project && state.activeSlideGroupId === prev.activeSlideGroupId) return
+  if (typeof localStorage === 'undefined') return
   try {
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify({
       project: state.project,

@@ -223,6 +223,7 @@ export function newProject(): Project {
       brandName: 'My App',
       baseCanvasFormat: BASE_CANVAS_FORMAT,
       activeFormats: ['iphone-69', 'android-phone'],
+      pano: { gapPx: 24, compensate: false },
     },
     slideGroups: [newSlideGroup({ name: 'Slide 1' })],
   }
@@ -265,6 +266,9 @@ export function migrateProject(raw: Project): Project {
     sg.layers = sg.layers.map(migrateLayerSpans)
     // Legacy field — fully superseded by the BackgroundLayer in layers[0]
     delete sg.background
+  }
+  if (!project.settings.pano) {
+    project.settings = { ...project.settings, pano: { gapPx: 24, compensate: false } }
   }
   return project
 }

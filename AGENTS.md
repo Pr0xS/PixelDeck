@@ -23,6 +23,16 @@ PixelDeck is a React + TypeScript visual editor for designing App Store screensh
 | Properties inspector | `src/components/panels/PropertiesPanel.tsx` |
 | Layer list panel | `src/components/panels/LayersPanel.tsx` |
 | Slide navigator | `src/components/panels/SlideNavigator.tsx` |
+| Settings modal | `src/components/panels/SettingsModal.tsx` |
+| Export modal | `src/components/panels/ExportModal.tsx` |
+| Projects modal | `src/components/panels/ProjectsModal.tsx` |
+| Brand kit button | `src/components/toolbar/BrandKitButton.tsx` |
+| Pano geometry | `src/utils/panoGeometry.ts` |
+| Multi-format export | `src/utils/multiFormatExport.ts` |
+| Stage capture mutex | `src/utils/stageCapture.ts` |
+| Canvas formats | `src/utils/canvasFormats.ts` |
+| Brand color utils | `src/utils/brandColors.ts` |
+| Locale utils | `src/utils/locale.ts` |
 | Top toolbar | `src/components/toolbar/Toolbar.tsx` |
 | Browser PNG export | `src/utils/export.ts` |
 | Gradient conversion | `src/utils/gradients.ts` |
@@ -40,11 +50,13 @@ PixelDeck is a React + TypeScript visual editor for designing App Store screensh
 ```
 Project { id, name, settings, slideGroups: SlideGroup[] }
   SlideGroup { id, name, numSlides, slideWidth, slideHeight, background, layers: Layer[], slideNames[] }
-    Layer = PhoneLayer | TextLayer | ImageLayer | ShapeLayer | ChipsLayer | BrandLayer | GroupLayer
+    Layer = BackgroundLayer | PhoneLayer | TextLayer | ImageLayer | ShapeLayer | ChipsLayer | BrandLayer | GroupLayer
     
     All layers extend BaseLayer: { id, name, type, x, y, rotation, opacity, visible, locked, blur?, shadow? }
     
 FillValue = string | LinearGradient | RadialGradient
+PanoSettings { gapPx: number; compensate: boolean }
+ProjectSettings { defaultSlideWidth, defaultSlideHeight, defaultLocale, locales?, brandName, brandColors?, pano?: PanoSettings, ... }
 ```
 
 Full types: `src/types/index.ts`
@@ -82,32 +94,43 @@ Full types: `src/types/index.ts`
 
 ```ts
 // Read
-const project = useStore(s => s.project)
-const slideGroups = useStore(s => s.project.slideGroups)
-const selection = useStore(s => s.selection)
+const project = useEditorStore(s => s.project)
+const slideGroups = useEditorStore(s => s.project.slideGroups)
+const selection = useEditorStore(s => s.selection)
 
-// Write
-addLayer(slideGroupId: string, layer: Layer): void
-updateLayer(slideGroupId: string, layerId: string, patch: Partial<Layer>): void
-removeLayer(slideGroupId: string, layerId: string): void
-moveLayer(slideGroupId: string, fromIndex: number, toIndex: number): void
+// Write — layer actions operate on the ACTIVE slide group implicitly
+addLayer(layer: Layer): void
+updateLayer(layerId: string, patch: Partial<Layer>): void
+removeLayer(layerId: string): void
+duplicateLayer(layerId: string): void
+moveLayerUp(layerId: string): void
+moveLayerDown(layerId: string): void
+reorderLayers(layerIds: string[]): void
 
-addSlideGroup(group: SlideGroup): void
+addSlideGroup(): void                 // appends a new default group
 updateSlideGroup(id: string, patch: Partial<SlideGroup>): void
 removeSlideGroup(id: string): void
+setActiveSlideGroup(id: string): void
 
-setSelection(sel: Selection): void
-undo(): void
+select(layerId: string | null): void
+deselect(): void
+undo(): void                          // via useUndoRedo() hook
 redo(): void
-importProject(project: Project): void
-exportProject(): Project
+importProject(json: string): void     // takes a JSON string
+exportProject(): string               // returns a JSON string
+
+// Pano settings
+updatePanoSettings(patch: Partial<PanoSettings>): void
+setPanoRenderOverride(override: { gapPx: number; compensate: boolean } | null): void
 ```
 
-Asset store (`src/store/assets.ts`):
+Asset store (`src/store/assets.ts`) — persisted to IndexedDB, NOT undoable:
 ```ts
-setAsset(filename: string, dataUrl: string): void
+addAsset(filename: string, dataUrl: string): void
 getAsset(filename: string): string | undefined
+removeAsset(filename: string): void
 clearAssets(): void
+listAssets(): AssetEntry[]
 ```
 
 ---
@@ -146,6 +169,12 @@ CLI (`cli/export.mjs`) injects `window.__EXPORT_CONFIG__` before page navigation
 - **Export DPI**: `stage.toDataURL({ pixelRatio: 1 })` exports at the canvas's logical pixel size. The CLI does not upscale; match `slideWidth`/`slideHeight` to your target App Store resolution.
 - **Seam guides**: `StageCanvas` renders dashed vertical lines at `x = slideWidth × i` for pano groups. These are visual-only and not included in exports.
 - **`screenshotFit: 'cover'`**: The phone screenshot is clipped to the screen rect. Cover mode crops center; contain mode letterboxes.
+- **Pano gap only applies when compensation is active**: `pano.gapPx` becomes visible in the canvas/preview only when `pano.compensate` is true. When `compensate` is false, pano geometry is continuous and export does not skip gap pixels.
+- **Capture mutex**: `stageCapture.ts` exports `acquireCaptureLock()` / `runExclusiveCapture()` — a FIFO mutex that prevents concurrent stage mutations during thumbnail generation, preview, and export. Always use it when mutating store state and then capturing the stage.
+- **Multi-format export**: `multiFormatExport.ts:exportProjectImages()` handles the full export pipeline: iterates locales × formats × groups, applies `applyLocale()` + `applyCanvasFormat()`, waits for stage settle, captures, and restores state. Use this instead of calling `exportSlide` directly.
+- **Brand color tokens**: Colors can be stored as `brand:id` tokens (e.g. `brand:abc123`). Use `resolveBrandColor(value, brandColors)` from `src/utils/brandColors.ts` before passing to Konva. Never pass raw tokens to Konva.
+- **Canvas formats**: `activeCanvasFormat` controls which format is being previewed/edited. `applyCanvasFormat(project, formatId)` returns a project with format overrides merged. The base format is not exported — only formats in `project.settings.activeFormats` are.
+- **Localization**: `applyLocale(project, locale)` merges `localeOverrides` into layers. The base locale is `project.settings.defaultLocale`. `activeLocale` in the store controls the current preview locale.
 
 ---
 
@@ -156,6 +185,8 @@ CLI (`cli/export.mjs`) injects `window.__EXPORT_CONFIG__` before page navigation
 - **Phone SVGs as TypeScript constants**: Device frames are `.ts` files exporting SVG strings, not `.svg` files. This is intentional so they can be imported at build time without a fetch. Do not convert them to `.svg` imports.
 - **Gradient text via offscreen canvas**: Konva does not natively support gradient text fills. `TextNode.tsx` uses an offscreen canvas to create a pattern. Do not replace it with a “simpler” approach without verifying gradient text still works.
 - **`screenshotFit` cover/contain/fill math**: The clip rect calculation in `PhoneNode.tsx` handles aspect ratio correctly for all three modes. Do not refactor the geometry unless you are explicitly fixing and verifying that behavior.
+- **Pano gap gated on compensate**: `StageCanvas.tsx` uses `effectiveCompensationPx = group && panoCompensate ? panoCompensationPx : 0` — the gap is applied to canvas geometry only while compensation is active. Do NOT make the gap always visible unless the product decision changes again.
+- **Capture mutex is mandatory**: Any code that mutates `activeSlideGroupId`, `activeCanvasFormat`, `activeLocale`, or `panoRenderOverride` and then captures the stage MUST use `acquireCaptureLock()` from `stageCapture.ts`. Removing it causes race conditions between thumbnail generation and export.
 
 ---
 
@@ -163,7 +194,7 @@ CLI (`cli/export.mjs`) injects `window.__EXPORT_CONFIG__` before page navigation
 
 ### Change a layer's property
 ```ts
-useStore.getState().updateLayer(slideGroupId, layerId, { fontSize: 24 })
+useEditorStore.getState().updateLayer(layerId, { fontSize: 24 })
 ```
 
 ### Access the current slide group

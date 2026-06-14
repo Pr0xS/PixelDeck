@@ -1,8 +1,11 @@
 import type Konva from 'konva'
 import type { CanvasFormatId } from '@/types'
-import { exportAllSlides } from './export'
+import { exportGroupImages, type PanoExportMode } from './export'
 import { applyCanvasFormat, CANVAS_FORMAT_PRESETS } from './canvasFormats'
+import { applyLocale } from './locale'
+import { acquireCaptureLock, waitForStageCaptureReady } from './stageCapture'
 import { useEditorStore } from '@/store'
+import { normalizePanoCompensationPx } from './panoGeometry'
 
 export interface FormatExportResult {
   formatId: CanvasFormatId
@@ -10,57 +13,111 @@ export interface FormatExportResult {
   slides: { name: string; dataUrl: string }[]
 }
 
-/**
- * Export all slides for each requested format.
- * Switches activeCanvasFormat sequentially (canvas re-renders), waits for
- * settle, captures, then restores the original format.
- *
- * onProgress(formatId) called before each format capture.
- */
-export async function exportAllFormats(
+export type ProjectExportScope = 'current-group' | 'project'
+
+export interface ProjectImageExportOptions {
+  formatIds: CanvasFormatId[]
+  locales: string[]
+  scope: ProjectExportScope
+  groupIds?: string[]
+  panoMode?: PanoExportMode
+  panoCompensate?: boolean
+  panoCompensationPx?: number
+  onProgress?: (status: { formatId: CanvasFormatId; locale: string; groupName: string }) => void
+}
+
+export interface ProjectImageExportResult {
+  formatId: CanvasFormatId
+  formatLabel: string
+  locale: string
+  groupId: string
+  groupName: string
+  name: string
+  relativePath: string
+  dataUrl: string
+}
+
+function safeSegment(value: string): string {
+  return value.trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'untitled'
+}
+
+function formatLabel(formatId: CanvasFormatId): string {
+  return CANVAS_FORMAT_PRESETS.find((p) => p.id === formatId)?.label ?? formatId
+}
+
+export async function exportProjectImages(
   stage: Konva.Stage,
-  formatIds: CanvasFormatId[],
-  onProgress?: (formatId: CanvasFormatId) => void,
-): Promise<FormatExportResult[]> {
+  options: ProjectImageExportOptions,
+): Promise<ProjectImageExportResult[]> {
+  const release = await acquireCaptureLock()
   const store = useEditorStore.getState()
   const originalFormat = store.activeCanvasFormat
   const originalGroupId = store.activeSlideGroupId
-  const results: FormatExportResult[] = []
+  const originalLocale = store.activeLocale
+  const projectPano = store.project.settings.pano ?? { gapPx: 24, compensate: false }
+  const project = store.project
+  const formatIds = options.formatIds.length ? options.formatIds : [originalFormat]
+  const locales = options.locales.length ? options.locales : [project.settings.defaultLocale ?? originalLocale]
+  const panoMode = options.panoMode ?? 'split'
+  const panoCompensate = panoMode === 'split' && options.panoCompensate === true
+  const panoCompensationPx = panoCompensate
+    ? normalizePanoCompensationPx(options.panoCompensationPx ?? 0)
+    : 0
+  const groupIds = options.scope === 'current-group'
+    ? [options.groupIds?.[0] ?? originalGroupId]
+    : (options.groupIds?.length ? options.groupIds : project.slideGroups.map((group) => group.id))
+  const results: ProjectImageExportResult[] = []
 
   try {
-    for (const formatId of formatIds) {
-      onProgress?.(formatId)
+    for (const locale of locales) {
+      useEditorStore.getState().setActiveLocale(locale)
+      for (const formatId of formatIds) {
+        useEditorStore.getState().setActiveCanvasFormat(formatId)
+        const resolvedProject = applyCanvasFormat(applyLocale(project, locale), formatId)
 
-      useEditorStore.getState().setActiveCanvasFormat(formatId)
-      // Wait for canvas re-render + SVG load
-      await new Promise((r) => setTimeout(r, 300))
+        for (const groupId of groupIds) {
+          const resolvedGroup = resolvedProject.slideGroups.find((group) => group.id === groupId)
+          if (!resolvedGroup) continue
 
-      const { project, activeSlideGroupId } = useEditorStore.getState()
-      const resolvedProject = applyCanvasFormat(project, formatId)
-      const resolvedGroup = resolvedProject.slideGroups.find((g) => g.id === activeSlideGroupId)
+          options.onProgress?.({ formatId, locale, groupName: resolvedGroup.name })
+          useEditorStore.getState().setActiveSlideGroup(groupId)
+          useEditorStore.getState().setPanoRenderOverride({
+            gapPx: options.panoCompensationPx ?? projectPano.gapPx,
+            compensate: resolvedGroup.numSlides > 1 && panoCompensate,
+          })
+          await waitForStageCaptureReady(stage)
 
-      if (!resolvedGroup) continue
-
-      const rawSlides = await exportAllSlides(stage, resolvedGroup)
-
-      // Name slides: if multiple formats, append _${formatId} suffix
-      const slides =
-        formatIds.length === 1
-          ? rawSlides
-          : rawSlides.map((s) => ({ ...s, name: `${s.name}_${formatId}` }))
-
-      const preset = CANVAS_FORMAT_PRESETS.find((p) => p.id === formatId)
-      results.push({
-        formatId,
-        formatLabel: preset?.label ?? formatId,
-        slides,
-      })
+          const images = await exportGroupImages(stage, resolvedGroup, panoMode, panoCompensationPx)
+          for (const image of images) {
+            const groupSlug = safeSegment(resolvedGroup.name)
+            const imageSlug = safeSegment(image.name)
+            const fileName = options.scope === 'project' && imageSlug !== groupSlug
+              ? `${groupSlug}__${imageSlug}`
+              : imageSlug
+            const relativePath = [safeSegment(formatId), safeSegment(locale), fileName].join('/')
+            results.push({
+              formatId,
+              formatLabel: formatLabel(formatId),
+              locale,
+              groupId,
+              groupName: resolvedGroup.name,
+              name: fileName,
+              relativePath,
+              dataUrl: image.dataUrl,
+            })
+          }
+        }
+      }
     }
   } finally {
+    useEditorStore.getState().setActiveLocale(originalLocale)
     useEditorStore.getState().setActiveCanvasFormat(originalFormat)
+    useEditorStore.getState().setPanoRenderOverride(null)
     if (useEditorStore.getState().activeSlideGroupId !== originalGroupId) {
       useEditorStore.getState().setActiveSlideGroup(originalGroupId)
     }
+    await waitForStageCaptureReady(stage)
+    release()
   }
 
   return results

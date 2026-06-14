@@ -7,6 +7,7 @@ import { useAssetStore } from '@/store/assets'
 import { fileToDataUrl } from '@/utils/files'
 import { applyLocale } from '@/utils/locale'
 import { applyCanvasFormat } from '@/utils/canvasFormats'
+import { getPanoGapPx, getPanoSlideX, getPanoTotalWidth, getEffectivePano } from '@/utils/panoGeometry'
 import { LayerNode } from './LayerNode'
 import { CanvasTextEditor } from './CanvasTextEditor'
 import type { Layer as AppLayer } from '@/types'
@@ -123,6 +124,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   const spaceRef = useRef(false)
   const [spaceDown, setSpaceDown] = useState(false)
   const [isPanning, setIsPanning] = useState(false)
+  const [zoomInput, setZoomInput] = useState<string | null>(null)
   const panStartRef = useRef<{ clientX: number; clientY: number; vpX: number; vpY: number } | null>(null)
   // Track which group + container size we last auto-centered for
   const lastCenteredGroupId = useRef<string | null>(null)
@@ -158,6 +160,8 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     setMultiSelection,
     activeLocale,
     activeCanvasFormat,
+    projectPano,
+    panoRenderOverride,
     editingTextId,
   } = useEditorStore(useShallow((s) => ({
     project: s.project,
@@ -181,6 +185,8 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     setMultiSelection: s.setMultiSelection,
     activeLocale: s.activeLocale,
     activeCanvasFormat: s.activeCanvasFormat,
+    projectPano: s.project.settings.pano,
+    panoRenderOverride: s.panoRenderOverride,
     editingTextId: s.editingTextId,
   })))
   const ctrlRef = useCtrlKey()
@@ -192,6 +198,8 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     [project, activeLocale, activeCanvasFormat],
   )
   const group = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
+
+  const { gapPx: panoCompensationPx, compensate: panoCompensate } = getEffectivePano(projectPano, panoRenderOverride)
 
   // keepRatio=false for text layers: corner handles should resize the box independently
   // (not force aspect-ratio scaling which causes scaleY artifacts on a text node).
@@ -225,7 +233,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
 
   useEffect(() => {
     if (!containerSize.w || !containerSize.h || !group) return
-    const totalW = group.slideWidth * group.numSlides
+    const totalW = getPanoTotalWidth(group, panoCompensate ? panoCompensationPx : 0)
     const totalH = group.slideHeight
     // Only re-center when the group changes or this is the very first render
     const needsCenter = lastCenteredGroupId.current !== group.id || lastContainerW.current === 0
@@ -375,7 +383,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
 
   const handleFit = useCallback(() => {
     if (!group || !containerSize.w || !containerSize.h) return
-    const totalW = group.slideWidth * group.numSlides
+    const totalW = getPanoTotalWidth(group, panoCompensate ? panoCompensationPx : 0)
     const totalH = group.slideHeight
     const PADDING = 80
     const fitScale = Math.max(0.05, Math.min(4, Math.min(
@@ -387,7 +395,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
       (containerSize.w - totalW * fitScale) / 2,
       (containerSize.h - totalH * fitScale) / 2
     )
-  }, [group, containerSize.w, containerSize.h, setZoom, setViewportPosition])
+  }, [group, containerSize.w, containerSize.h, setZoom, setViewportPosition, panoCompensate, panoCompensationPx])
 
   // ─── Stage click / rubber-band selection ──────────────────────────────────
 
@@ -465,7 +473,13 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     }
   }
 
-  const totalWidth = group ? group.slideWidth * group.numSlides : 0
+  // When compensate is ON the gap is real geometry: it expands the Konva canvas
+  // and pushes each slide apart by effectiveGap, matching the capture window math
+  // in useThumbnails (getPanoSlideX with the same effective gap). When compensate
+  // is OFF effectiveGap is 0 → geometry is continuous (identical to legacy, no regression).
+  const effectiveCompensationPx = group && panoCompensate ? panoCompensationPx : 0
+  const visualGapPx = group ? getPanoGapPx(group, effectiveCompensationPx) : 0
+  const totalWidth = group ? getPanoTotalWidth(group, effectiveCompensationPx) : 0
   const totalHeight = group ? group.slideHeight : 0
 
   // Grid lines (every 100 real px)
@@ -495,20 +509,55 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     }
   }
 
-  // Seam guides between slides
-  const SEAM_GAP = 32
+  // Seam guides between slides.
+  // These are DOM overlays (never inside the Stage) so they don't appear in exports.
+  // When compensate is OFF: thin dashed line at the exact seam — purely decorative.
+  // When compensate is ON: solid dark band aligned to the actual gutter in expanded space.
   const seamGuides = showSeamGuides && group && group.numSlides > 1
     ? Array.from({ length: group.numSlides - 1 }, (_, i) => {
-        const x = group.slideWidth * (i + 1)
+        const screenH = Math.round(totalHeight * zoom)
+
+        if (panoCompensate && visualGapPx > 0) {
+          // Compensate ON: slide (i+1) starts at getPanoSlideX(i+1, gap); the dead
+          // gutter that export skips is the band [seamX - gap, seamX].
+          const seamX = getPanoSlideX(group, i + 1, effectiveCompensationPx)
+          const bandScreenX = Math.round(viewportX + (seamX - visualGapPx) * zoom)
+          const bandW = Math.max(2, Math.round(visualGapPx * zoom))
+          return (
+            <div
+              key={`seam-${i}`}
+              style={{
+                position: 'absolute',
+                left: bandScreenX,
+                top: Math.round(viewportY),
+                width: bandW,
+                height: screenH,
+                background: 'rgba(17,17,24,0.85)',
+                borderLeft: '1px solid rgba(124,110,246,0.5)',
+                borderRight: '1px solid rgba(124,110,246,0.5)',
+                pointerEvents: 'none',
+                zIndex: 6,
+              }}
+            />
+          )
+        }
+
+        // Compensate OFF (or gap=0): thin dashed line at the continuous seam.
+        const seamX = getPanoSlideX(group, i + 1, 0)
+        const screenX = Math.round(viewportX + seamX * zoom)
         return (
-          <Rect
+          <div
             key={`seam-${i}`}
-            x={x - SEAM_GAP / 2}
-            y={0}
-            width={SEAM_GAP}
-            height={totalHeight}
-            fill="#111118"
-            listening={false}
+            style={{
+              position: 'absolute',
+              left: screenX - 1,
+              top: Math.round(viewportY),
+              width: 2,
+              height: screenH,
+              background: 'rgba(255,255,255,0.15)',
+              pointerEvents: 'none',
+              zIndex: 6,
+            }}
           />
         )
       })
@@ -629,7 +678,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     cascade = 0,
   ) => {
     if (targetLayer?.type === 'phone') {
-      updateLayer(targetLayer.id, { screenshotPath: filename, screenshotDataUrl: undefined } as Partial<AppLayer>)
+      updateLayer(targetLayer.id, { screenshotPath: filename, screenshotDataUrl: dataUrl } as Partial<AppLayer>)
       return
     }
 
@@ -803,10 +852,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
               ))}
             </Layer>
 
-            {/* ── UI layer: guides + transformer ── */}
-            <Layer listening={false}>
-              {seamGuides}
-            </Layer>
+            {/* ── UI layer: transformer ── */}
             <Layer>
               {/* Group edit outline */}
               <Transformer
@@ -858,12 +904,20 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
             </Layer>
           </Stage>
 
+          {/* Visual-only pano separators. DOM overlay so preview/export PNGs stay clean. */}
+          {seamGuides}
+
           {/* In-canvas WYSIWYG text editor overlay */}
           {editingTextId && <CanvasTextEditor stageRef={stageRef} />}
 
-          {/* Per-slide card frames for pano groups */}
+          {/* Per-slide card frames for pano groups.
+              Card frames always align to the continuous canvas (no gap offset).
+              When compensate is ON, the seam guide overlay shows the dead zone. */}
           {group.numSlides > 1 && Array.from({ length: group.numSlides }, (_, i) => {
             const slideScreenW = Math.round(group.slideWidth * zoom)
+            // Frame i starts at getPanoSlideX(i, gap): continuous when compensate is
+            // OFF, expanded by the gutter when it is ON.
+            const slideScreenX = Math.round(viewportX + getPanoSlideX(group, i, effectiveCompensationPx) * zoom)
             const isFirst = i === 0
             const isLast = i === group.numSlides - 1
             const R = 10
@@ -872,7 +926,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
                 key={`card-frame-${i}`}
                 style={{
                   position: 'absolute',
-                  left: Math.round(viewportX) + i * slideScreenW,
+                  left: slideScreenX,
                   top: Math.round(viewportY),
                   width: slideScreenW,
                   height: Math.round(displayHeight),
@@ -948,15 +1002,42 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
             }}
           >
             <button
-              onClick={(e) => { e.stopPropagation(); setZoom(zoom - 0.1) }}
+              onClick={(e) => { e.stopPropagation(); setZoom(Math.max(0.05, zoom - 0.02)) }}
               title="Zoom out"
               style={{ background: 'none', border: 'none', color: '#e8e8f0', cursor: 'pointer', fontSize: 16, padding: '0 4px', lineHeight: 1 }}
             >−</button>
-            <span style={{ color: '#6b6b7a', fontSize: 11, minWidth: 36, textAlign: 'center' }}>
-              {Math.round(zoom * 100)}%
-            </span>
+            <input
+              type="text"
+              value={zoomInput ?? `${Math.round(zoom * 100)}`}
+              onChange={(e) => setZoomInput(e.target.value)}
+              onFocus={(e) => { setZoomInput(`${Math.round(zoom * 100)}`); e.target.select() }}
+              onBlur={() => {
+                const parsed = parseInt(zoomInput ?? '', 10)
+                if (!isNaN(parsed) && parsed > 0) setZoom(Math.max(0.05, Math.min(4, parsed / 100)))
+                setZoomInput(null)
+              }}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') (e.target as HTMLInputElement).blur()
+                if (e.key === 'Escape') { setZoomInput(null); (e.target as HTMLInputElement).blur() }
+                e.stopPropagation()
+              }}
+              onClick={(e) => e.stopPropagation()}
+              title="Zoom level — click to edit"
+              style={{
+                background: 'none',
+                border: 'none',
+                color: '#6b6b7a',
+                fontSize: 11,
+                width: 36,
+                textAlign: 'center',
+                cursor: 'text',
+                outline: 'none',
+                padding: 0,
+              }}
+            />
+            <span style={{ color: '#6b6b7a', fontSize: 11, marginLeft: -2 }}>%</span>
             <button
-              onClick={(e) => { e.stopPropagation(); setZoom(zoom + 0.1) }}
+              onClick={(e) => { e.stopPropagation(); setZoom(Math.min(4, zoom + 0.02)) }}
               title="Zoom in"
               style={{ background: 'none', border: 'none', color: '#e8e8f0', cursor: 'pointer', fontSize: 16, padding: '0 4px', lineHeight: 1 }}
             >＋</button>
@@ -1045,7 +1126,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
               style={{
                 position: 'absolute',
                 top: Math.round(viewportY + displayHeight) + 8,
-                left: Math.round(viewportX + (group.slideWidth * i + group.slideWidth / 2) * zoom) - 20,
+                left: Math.round(viewportX + (getPanoSlideX(group, i, effectiveCompensationPx) + group.slideWidth / 2) * zoom) - 20,
                 color: 'rgba(124,110,246,0.6)',
                 fontSize: 10,
                 pointerEvents: 'none',

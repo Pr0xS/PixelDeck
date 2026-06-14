@@ -95,7 +95,10 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
   const handleScreenshotFile = async (file: File) => {
     const dataUrl = await fileToDataUrl(file)
     addAsset(file.name, dataUrl)
-    upd({ screenshotPath: file.name, screenshotDataUrl: undefined })
+    // Keep the inline data URL as a last-resort fallback. The asset store lives
+    // in IndexedDB and can fail/hydrate late; without this, phone screenshots
+    // can render blank in the editor, previews, or exports.
+    upd({ screenshotPath: file.name, screenshotDataUrl: dataUrl })
   }
 
   const previewSrc = layer.screenshotPath ? assets[layer.screenshotPath]?.dataUrl ?? layer.screenshotDataUrl : layer.screenshotDataUrl
@@ -318,7 +321,7 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
               {nonDefaultLocales.map((locale) => {
                 const override = layer.localeOverrides?.[locale]
                 const path = override?.screenshotPath
-                const previewSrc = path ? assets[path]?.dataUrl : undefined
+                const previewSrc = path ? assets[path]?.dataUrl ?? override?.screenshotDataUrl : override?.screenshotDataUrl
                 return (
                   <LocaleScreenshotRow
                     key={locale}
@@ -327,7 +330,7 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
                     onUpload={async (file) => {
                       const dataUrl = await fileToDataUrl(file)
                       addAsset(file.name, dataUrl)
-                      setLocaleOverride(activeSlideGroupId, layer.id, locale, { screenshotPath: file.name })
+                      setLocaleOverride(activeSlideGroupId, layer.id, locale, { screenshotPath: file.name, screenshotDataUrl: dataUrl })
                     }}
                     onClear={() => clearLocaleOverride(activeSlideGroupId, layer.id, locale)}
                   />

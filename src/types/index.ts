@@ -411,6 +411,11 @@ export interface SlideGroup {
 
 // ─── Project ──────────────────────────────────────────────────────────────────
 
+export interface PanoSettings {
+  gapPx: number;
+  compensate: boolean;
+}
+
 export interface ProjectSettings {
   defaultSlideWidth: number;
   defaultSlideHeight: number;
@@ -426,6 +431,7 @@ export interface ProjectSettings {
   baseCanvasFormat?: CanvasFormatId;
   /** Exportable platform formats the user has opted into. Default = iPhone + Android. */
   activeFormats?: CanvasFormatId[];
+  pano?: PanoSettings;
 }
 
 export interface Project {

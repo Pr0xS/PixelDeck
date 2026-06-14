@@ -5,6 +5,7 @@ import type {
   LocaleOverrideBatchEntry,
   CanvasFormatId,
   Template,
+  PanoSettings,
 } from '@/types'
 
 // ─── EditorStore interface ────────────────────────────────────────────────────
@@ -54,6 +55,11 @@ export interface EditorStore {
 
   // ─ Canvas format state (transient preview/export context)
   activeCanvasFormat: CanvasFormatId
+  /** Ephemeral override for capture/export — null means "use project.settings.pano". */
+  panoRenderOverride: { gapPx: number; compensate: boolean } | null
+  setPanoRenderOverride: (override: { gapPx: number; compensate: boolean } | null) => void
+  /** Convenience: update project.settings.pano (undoable). */
+  updatePanoSettings: (patch: Partial<PanoSettings>) => void
 
   // ─ Locale actions
   setActiveLocale: (locale: string) => void

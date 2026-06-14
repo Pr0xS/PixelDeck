@@ -8,6 +8,8 @@ export interface TemplateManifestEntry {
   category?: string
   thumbnail?: string   // path relative to BASE_URL e.g. /templates/thumbs/slug.png
   file: string         // path relative to BASE_URL e.g. /templates/slug.template.json
+  slides?: number      // total slide count across all slide groups
+  previewSize?: string // e.g. "1290×2796" — first slide group dimensions
 }
 
 interface TemplatesState {
@@ -18,7 +20,7 @@ interface TemplatesState {
   fetchTemplate: (entry: TemplateManifestEntry) => Promise<Template>
 }
 
-function toAbsolute(path: string): string {
+export function toAbsolute(path: string): string {
   const base = (import.meta.env.BASE_URL ?? '/') as string
   const b = base.endsWith('/') ? base : `${base}/`
   const p = path.startsWith('/') ? path.slice(1) : path
