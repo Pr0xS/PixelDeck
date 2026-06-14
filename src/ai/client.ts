@@ -1,7 +1,7 @@
 import { formatAiNetworkError } from '@/ai/errors'
 import { buildAnthropicHeaders, buildGoogleHeaders, buildOpenAiCompatibleHeaders } from '@/ai/headers'
 import { getDefaultModel, getProviderConfig } from '@/ai/providers'
-import { getAiApiBaseUrl } from '@/ai/urls'
+import { getAiApiBaseUrl, usesAiProxy } from '@/ai/urls'
 import type { AiProvider } from '@/ai/providers'
 
 /** A multimodal content part: plain text or an image as a data URL. */
@@ -352,7 +352,7 @@ async function editImageWithGoogle(
   imageDataUrl: string,
 ): Promise<string> {
   const { mediaType, data } = splitDataUrl(imageDataUrl)
-  const googleUrl = import.meta.env.DEV
+  const googleUrl = usesAiProxy()
     ? `${baseUrl}/models/${model}:generateContent`
     : `${baseUrl}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
 
@@ -360,7 +360,7 @@ async function editImageWithGoogle(
   try {
     res = await fetch(googleUrl, {
       method: 'POST',
-      headers: buildGoogleHeaders(apiKey, { contentType: true, includeApiKey: import.meta.env.DEV }),
+      headers: buildGoogleHeaders(apiKey, { contentType: true, includeApiKey: usesAiProxy() }),
       body: JSON.stringify({
         contents: [
           {
@@ -457,7 +457,7 @@ async function chatWithGoogle(
     }
   }
 
-  const googleUrl = import.meta.env.DEV
+  const googleUrl = usesAiProxy()
     ? `${baseUrl}/models/${model}:generateContent`
     : `${baseUrl}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
 
@@ -465,7 +465,7 @@ async function chatWithGoogle(
   try {
     res = await fetch(googleUrl, {
       method: 'POST',
-      headers: buildGoogleHeaders(apiKey, { contentType: true, includeApiKey: import.meta.env.DEV }),
+      headers: buildGoogleHeaders(apiKey, { contentType: true, includeApiKey: usesAiProxy() }),
       body: JSON.stringify({ contents: [{ parts }] }),
     })
   } catch (error) {

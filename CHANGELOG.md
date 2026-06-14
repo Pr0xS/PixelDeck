@@ -7,6 +7,23 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.1] - 2026-06-14
+
+### Fixed
+
+- GitHub Pages AI provider compatibility: OpenCode now uses a local curated model list in no-proxy production builds instead of calling its `/models` endpoint, avoiding the browser CORS failure.
+- Google AI requests now switch correctly between direct browser API-key query parameters and proxy header auth when `VITE_AI_PROXY_BASE_URL` is configured.
+
+### Added
+
+- Optional production AI proxy routing via `VITE_AI_PROXY_BASE_URL`, while keeping static GitHub Pages direct-provider mode as the default.
+- Fallback model lists for providers when dynamic model discovery is blocked by CORS or network errors.
+- Tests covering AI URL routing and OpenCode no-proxy model fallback behavior.
+
+### Documentation
+
+- Documented static-host AI behavior and optional proxy configuration in the README.
+
 ## [0.2.0] - 2026-06-14
 
 ### Added
@@ -57,6 +74,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Preview modal: full-project filmstrip preview with high-res thumbnail capture
 - Slide navigator: thumbnail-based navigation with per-slide index
 
-[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.0...HEAD
+[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.1...HEAD
+[0.2.1]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Pr0xS/PixelDeck/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Pr0xS/PixelDeck/releases/tag/v0.1.0
