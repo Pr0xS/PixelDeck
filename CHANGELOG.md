@@ -7,6 +7,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.0] - 2026-06-14
+
 ### Added
 
 - 80+ curated Google Fonts (expanded from 23; includes sans-serif, serif, display, monospace, handwriting)
@@ -55,5 +57,6 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Preview modal: full-project filmstrip preview with high-res thumbnail capture
 - Slide navigator: thumbnail-based navigation with per-slide index
 
-[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.1.0...HEAD
+[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.0...HEAD
+[0.2.0]: https://github.com/Pr0xS/PixelDeck/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Pr0xS/PixelDeck/releases/tag/v0.1.0
