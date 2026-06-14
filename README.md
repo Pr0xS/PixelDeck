@@ -1,3 +1,9 @@
+<p align="center">
+  <a href="https://pr0xs.github.io/PixelDeck/" aria-label="PixelDeck live demo">
+    <img src="public/logo.svg" alt="PixelDeck" width="260" />
+  </a>
+</p>
+
 # PixelDeck
 
 ### App Store & Play Store Screenshot Generator — Visual Editor + CLI

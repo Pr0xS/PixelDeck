@@ -7,6 +7,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.2.3] - 2026-06-14
+
+### Added
+
+- Logo and favicon: new SVG brand mark (two portrait screenshot cards with purple→pink gradient) replaces the generic bolt icon; added `public/logo.svg` wordmark for use in README and OG metadata.
+- Current project name displayed in the toolbar between the logo and the Projects button — click to rename inline (Enter to confirm, Escape to cancel).
+- README now shows the PixelDeck logo at the top, linked to the live demo.
+- Richer `index.html` metadata: page title, description, theme-color, Open Graph, and Twitter/X card tags.
+
+### Fixed
+
+- Infinite render loop (`Maximum update depth exceeded`) caused by `useProjectsStore` selector returning a new object on every render; fixed by wrapping with `useShallow`.
+
 ## [0.2.2] - 2026-06-14
 
 ### Fixed

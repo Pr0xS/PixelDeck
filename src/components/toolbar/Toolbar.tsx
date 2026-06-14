@@ -3,6 +3,7 @@ import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { useProjectsStore } from '@/store/projects'
 import { BrandKitButton } from '@/components/toolbar/BrandKitButton'
+import { Logo } from '@/components/toolbar/Logo'
 
 // Lazy-load heavy modals — only fetched when the user opens them for the first time.
 const ProjectsModal = lazy(() =>
@@ -36,9 +37,40 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
 
   const { undo, redo, canUndo, canRedo } = useUndoRedo()
 
-  // Projects store — for save indicator
-  const projects = useProjectsStore((s) => s.projects)
+  // Projects store — for save indicator + rename
+  const { projects, renameProject } = useProjectsStore(
+    useShallow((s) => ({
+      projects: s.projects,
+      renameProject: s.renameProject,
+    })),
+  )
   const activeProjectMeta = projects.find((p) => p.id === project.id)
+
+  // Inline project name editing
+  const [editingName, setEditingName] = useState(false)
+  const [tempName, setTempName] = useState('')
+  const nameInputRef = useRef<HTMLInputElement>(null)
+
+  function startEditingName() {
+    setTempName(project.name)
+    setEditingName(true)
+  }
+
+  function commitName() {
+    const trimmed = tempName.trim()
+    if (trimmed && trimmed !== project.name) {
+      renameProject(project.id, trimmed)
+    }
+    setEditingName(false)
+  }
+
+  function cancelName() {
+    setEditingName(false)
+  }
+
+  useEffect(() => {
+    if (editingName) nameInputRef.current?.select()
+  }, [editingName])
   const [projectsOpen, setProjectsOpen] = useState(false)
   const [templatesOpen, setTemplatesOpen] = useState(false)
   const [settingsOpen, setSettingsOpen] = useState(false)
@@ -78,9 +110,61 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
       </Suspense>
 
       {/* Logo */}
-      <div className="text-sm font-semibold text-[#e8e8f0] whitespace-nowrap select-none">
-        🎴 PixelDeck
-      </div>
+      <Logo />
+
+      {/* Current project name — click to rename inline */}
+      {editingName ? (
+        <input
+          ref={nameInputRef}
+          value={tempName}
+          onChange={(e) => setTempName(e.target.value)}
+          onBlur={commitName}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') commitName()
+            if (e.key === 'Escape') cancelName()
+          }}
+          style={{
+            background: 'rgba(255,255,255,0.07)',
+            border: '1px solid rgba(124,110,246,0.6)',
+            borderRadius: 5,
+            color: '#e8e8f0',
+            fontSize: 12,
+            padding: '3px 8px',
+            width: 160,
+            outline: 'none',
+            flexShrink: 0,
+          }}
+        />
+      ) : (
+        <button
+          onClick={startEditingName}
+          title="Click to rename project"
+          style={{
+            background: 'none',
+            border: 'none',
+            color: '#a0a0b0',
+            cursor: 'text',
+            fontSize: 12,
+            padding: '3px 6px',
+            borderRadius: 5,
+            maxWidth: 180,
+            overflow: 'hidden',
+            textOverflow: 'ellipsis',
+            whiteSpace: 'nowrap',
+            flexShrink: 0,
+          }}
+          onMouseEnter={(e) => {
+            ;(e.currentTarget as HTMLButtonElement).style.color = '#e8e8f0'
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'rgba(255,255,255,0.05)'
+          }}
+          onMouseLeave={(e) => {
+            ;(e.currentTarget as HTMLButtonElement).style.color = '#a0a0b0'
+            ;(e.currentTarget as HTMLButtonElement).style.background = 'none'
+          }}
+        >
+          {project.name}
+        </button>
+      )}
 
       {/* Projects button */}
       <button
