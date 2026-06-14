@@ -1,7 +1,7 @@
 import { getProviderConfig } from '@/ai/providers'
 import { formatAiNetworkError } from '@/ai/errors'
 import { buildAnthropicHeaders, buildGoogleHeaders, buildOpenAiCompatibleHeaders } from '@/ai/headers'
-import { getAiModelsUrl } from '@/ai/urls'
+import { getAiModelsUrl, usesAiProxy } from '@/ai/urls'
 import type { AiModel, AiProvider } from '@/ai/providers'
 
 interface RemoteModel {
@@ -23,12 +23,16 @@ export async function listModels(provider: AiProvider, apiKey: string): Promise<
   if (!key) throw new Error('Add an API key before loading models.')
   if (!config.modelsUrl) throw new Error(`${config.label} does not expose a model list endpoint.`)
 
+  if (usesLocalModelList(provider)) return getFallbackModels(provider)
+
   let res: Response
   try {
     res = await fetch(buildModelsUrl(config.modelsUrl, provider, key), {
       headers: buildModelListHeaders(provider, key),
     })
   } catch (error) {
+    const fallbackModels = getFallbackModels(provider)
+    if (fallbackModels.length) return fallbackModels
     throw formatAiNetworkError(provider, 'load models', error)
   }
   if (!res.ok) throw new Error(await readErrorMessage(res))
@@ -45,7 +49,7 @@ export async function listModels(provider: AiProvider, apiKey: string): Promise<
 
 function buildModelsUrl(modelsUrl: string, provider: AiProvider, apiKey: string): string {
   const urlWithProxy = getAiModelsUrl(provider, modelsUrl)
-  if (import.meta.env.DEV) return urlWithProxy
+  if (usesAiProxy()) return urlWithProxy
   if (provider !== 'google') return modelsUrl
   const url = new URL(urlWithProxy)
   url.searchParams.set('key', apiKey)
@@ -53,10 +57,53 @@ function buildModelsUrl(modelsUrl: string, provider: AiProvider, apiKey: string)
 }
 
 function buildModelListHeaders(provider: AiProvider, apiKey: string): HeadersInit {
-  if (provider === 'google') return buildGoogleHeaders(apiKey, { includeApiKey: import.meta.env.DEV })
+  if (provider === 'google') return buildGoogleHeaders(apiKey, { includeApiKey: usesAiProxy() })
   if (provider === 'opencode') return {}
   if (provider === 'anthropic') return buildAnthropicHeaders(apiKey)
   return buildOpenAiCompatibleHeaders(provider, apiKey)
+}
+
+function usesLocalModelList(provider: AiProvider): boolean {
+  // OpenCode's /models endpoint currently returns a 200 response without CORS
+  // headers on static GitHub Pages deploys. Avoid making the doomed browser
+  // request in no-proxy production; use the curated list instead.
+  return provider === 'opencode' && !usesAiProxy()
+}
+
+function getFallbackModels(provider: AiProvider): AiModel[] {
+  const models = FALLBACK_MODELS[provider] ?? []
+  return sortModels(dedupeModels(models))
+}
+
+const FALLBACK_MODELS: Partial<Record<AiProvider, AiModel[]>> = {
+  opencode: [
+    { id: 'kimi-k2.7-code', name: 'kimi-k2.7-code' },
+    { id: 'kimi-k2.6', name: 'kimi-k2.6' },
+    { id: 'kimi-k2.5', name: 'kimi-k2.5' },
+    { id: 'glm-5.1', name: 'glm-5.1' },
+    { id: 'glm-5', name: 'glm-5' },
+    { id: 'deepseek-v4-pro', name: 'deepseek-v4-pro' },
+    { id: 'deepseek-v4-flash', name: 'deepseek-v4-flash' },
+    { id: 'mimo-v2-pro', name: 'mimo-v2-pro' },
+    { id: 'mimo-v2-omni', name: 'mimo-v2-omni' },
+    { id: 'mimo-v2.5-pro', name: 'mimo-v2.5-pro' },
+    { id: 'mimo-v2.5', name: 'mimo-v2.5' },
+  ],
+  openai: [
+    { id: 'gpt-4o-mini', name: 'gpt-4o-mini' },
+    { id: 'gpt-4o', name: 'gpt-4o' },
+    { id: 'gpt-image-1', name: 'gpt-image-1' },
+  ],
+  anthropic: [
+    { id: 'claude-haiku-4-5', name: 'Claude Haiku 4.5' },
+    { id: 'claude-sonnet-4-5', name: 'Claude Sonnet 4.5' },
+  ],
+  google: [
+    { id: 'gemini-2.0-flash', name: 'Gemini 2.0 Flash' },
+    { id: 'gemini-2.5-flash', name: 'Gemini 2.5 Flash' },
+    { id: 'gemini-2.5-pro', name: 'Gemini 2.5 Pro' },
+    { id: 'gemini-2.5-flash-image', name: 'Gemini 2.5 Flash Image' },
+  ],
 }
 
 async function readErrorMessage(res: Response): Promise<string> {
