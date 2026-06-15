@@ -283,6 +283,7 @@ export const createLayerSlice = (
       cornerRadius: 40,
     }
     get().addLayer(layer)
+    set({ pendingContentFocusLayerId: layer.id })
   },
 
   addEmoji: () => {
@@ -302,6 +303,7 @@ export const createLayerSlice = (
       fontSize: 200,
     }
     get().addLayer(layer)
+    set({ pendingContentFocusLayerId: layer.id })
   },
 
   addBrand: () => {

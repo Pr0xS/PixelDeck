@@ -294,6 +294,8 @@ export function PropertiesPanel() {
     copyLayerStyle,
     pasteLayerStyle,
     styleClipboard,
+    pendingContentFocusLayerId,
+    setPendingContentFocus,
   } = useEditorStore(
     useShallow((s) => ({
       project: s.project,
@@ -307,6 +309,8 @@ export function PropertiesPanel() {
       copyLayerStyle: s.copyLayerStyle,
       pasteLayerStyle: s.pasteLayerStyle,
       styleClipboard: s.styleClipboard,
+      pendingContentFocusLayerId: s.pendingContentFocusLayerId,
+      setPendingContentFocus: s.setPendingContentFocus,
     }))
   )
   const editingTextId = useEditorStore((s) => s.editingTextId)
@@ -344,6 +348,17 @@ export function PropertiesPanel() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveTab('content')
   }, [editingTextId])
+
+  // Shape/Emoji just inserted → open the Content tab so the shape/emoji picker
+  // is visible immediately. Declared AFTER the layout-reset effect so it wins
+  // on the same insert commit. Clears the flag after consuming it.
+  useEffect(() => {
+    if (!pendingContentFocusLayerId) return
+    if (selectedLayer?.id !== pendingContentFocusLayerId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveTab('content')
+    setPendingContentFocus(null)
+  }, [pendingContentFocusLayerId, selectedLayer?.id, setPendingContentFocus])
 
   const handlePanelFocus = (e: FocusEvent<HTMLDivElement>) => {
     const el = e.target as HTMLElement
