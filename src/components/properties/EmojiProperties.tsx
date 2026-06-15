@@ -55,7 +55,7 @@ export function EmojiProperties({ layer }: { layer: EmojiLayer }) {
                 type="button"
                 onClick={() => upd({ emoji })}
                 title={emoji}
-                className={`text-xl p-1 rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)] ${layer.emoji === emoji ? 'bg-[rgba(124,110,246,0.2)] ring-1 ring-[#7c6ef6]' : ''}`}
+                className={`flex items-center justify-center w-full aspect-square text-xl rounded-lg transition-colors hover:bg-[rgba(255,255,255,0.1)] ${layer.emoji === emoji ? 'bg-[rgba(124,110,246,0.2)] ring-1 ring-[#7c6ef6]' : ''}`}
               >
                 {emoji}
               </button>
