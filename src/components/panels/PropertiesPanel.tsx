@@ -8,7 +8,7 @@ import type {
   TextLayer,
   ImageLayer,
   ShapeLayer,
-  ChipsLayer,
+  EmojiLayer,
   BrandLayer,
   GroupLayer,
   PhoneLayer,
@@ -34,7 +34,7 @@ import { BackgroundProperties } from '@/components/properties/BackgroundProperti
 import { PhoneProperties } from '@/components/properties/PhoneProperties'
 import { TextProperties } from '@/components/properties/TextProperties'
 import { ImageProperties } from '@/components/properties/ImageProperties'
-import { ChipsProperties } from '@/components/properties/ChipsProperties'
+import { EmojiProperties } from '@/components/properties/EmojiProperties'
 import { BrandProperties } from '@/components/properties/BrandProperties'
 import { ShapeProperties } from '@/components/properties/ShapeProperties'
 import { GroupProperties } from '@/components/properties/GroupProperties'
@@ -272,7 +272,7 @@ function ContentTab({ layer }: { layer: Layer }) {
   if (layer.type === 'phone') return <PhoneProperties layer={layer as PhoneLayer} />
   if (layer.type === 'text') return <TextProperties layer={layer as TextLayer} />
   if (layer.type === 'image') return <ImageProperties layer={layer as ImageLayer} />
-  if (layer.type === 'chips') return <ChipsProperties layer={layer as ChipsLayer} />
+  if (layer.type === 'emoji') return <EmojiProperties layer={layer as EmojiLayer} />
   if (layer.type === 'brand') return <BrandProperties layer={layer as BrandLayer} />
   if (layer.type === 'shape') return <ShapeProperties layer={layer as ShapeLayer} />
   if (layer.type === 'group') return <GroupProperties layer={layer as GroupLayer} />
@@ -294,6 +294,8 @@ export function PropertiesPanel() {
     copyLayerStyle,
     pasteLayerStyle,
     styleClipboard,
+    pendingContentFocusLayerId,
+    setPendingContentFocus,
   } = useEditorStore(
     useShallow((s) => ({
       project: s.project,
@@ -307,6 +309,8 @@ export function PropertiesPanel() {
       copyLayerStyle: s.copyLayerStyle,
       pasteLayerStyle: s.pasteLayerStyle,
       styleClipboard: s.styleClipboard,
+      pendingContentFocusLayerId: s.pendingContentFocusLayerId,
+      setPendingContentFocus: s.setPendingContentFocus,
     }))
   )
   const editingTextId = useEditorStore((s) => s.editingTextId)
@@ -344,6 +348,17 @@ export function PropertiesPanel() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     setActiveTab('content')
   }, [editingTextId])
+
+  // Shape/Emoji just inserted → open the Content tab so the shape/emoji picker
+  // is visible immediately. Declared AFTER the layout-reset effect so it wins
+  // on the same insert commit. Clears the flag after consuming it.
+  useEffect(() => {
+    if (!pendingContentFocusLayerId) return
+    if (selectedLayer?.id !== pendingContentFocusLayerId) return
+    // eslint-disable-next-line react-hooks/set-state-in-effect
+    setActiveTab('content')
+    setPendingContentFocus(null)
+  }, [pendingContentFocusLayerId, selectedLayer?.id, setPendingContentFocus])
 
   const handlePanelFocus = (e: FocusEvent<HTMLDivElement>) => {
     const el = e.target as HTMLElement

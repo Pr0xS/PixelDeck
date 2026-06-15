@@ -171,7 +171,7 @@ export interface BaseLayer {
   localizationMode?: LocalizationMode;
 }
 
-export type LayerType = 'background' | 'phone' | 'text' | 'image' | 'shape' | 'chips' | 'brand' | 'group';
+export type LayerType = 'background' | 'phone' | 'text' | 'image' | 'shape' | 'emoji' | 'brand' | 'group';
 
 // ─── Background ──────────────────────────────────────────────────────────────
 
@@ -311,7 +311,7 @@ export interface ImageLayer extends BaseLayer {
   cornerRadius: number;
 }
 
-export type ShapeType = 'rect' | 'ellipse' | 'line';
+export type ShapeType = 'rect' | 'ellipse' | 'arrow' | 'triangle' | 'star' | 'pentagon' | 'hexagon' | 'diamond' | 'cross';
 
 export interface ShapeLayer extends BaseLayer {
   type: 'shape';
@@ -322,37 +322,18 @@ export interface ShapeLayer extends BaseLayer {
   cornerRadius: number;
   stroke?: string;
   strokeWidth?: number;
+  /** Number of points for star shape (3–12). Default 5. */
+  starPoints?: number;
+  /** Inner radius ratio for star (0.1–0.9). Default 0.4. */
+  starInnerRatio?: number;
+  /** Arrow direction for arrow shape. Default 'right'. */
+  arrowDirection?: 'up' | 'down' | 'left' | 'right';
 }
 
-/**
- * Visual style for an individual chip.
- * - filled  → gradient background (vibrant)
- * - outlined → border only, transparent bg
- * - soft    → lightly tinted with primary color
- * - dark    → dark semi-transparent (glass)
- * - plain   → neutral background
- */
-export type ChipVariant = 'filled' | 'outlined' | 'soft' | 'dark' | 'plain'
-
-export interface ChipItem {
-  label: string;
-  /** @deprecated use variant instead */
-  primary: boolean;
-  /** Visual style — overrides the legacy `primary` flag when set */
-  variant?: ChipVariant;
-}
-
-export interface ChipsLayer extends BaseLayer {
-  type: 'chips';
-  items: ChipItem[];
-  primaryGradientFrom: string;
-  primaryGradientTo: string;
-  primaryTextColor: string;
-  defaultBg: string;
-  defaultTextColor: string;
-  chipFontSize: number;
-  gap: number;
-  direction: 'row' | 'column';
+export interface EmojiLayer extends BaseLayer {
+  type: 'emoji';
+  emoji: string;   // the emoji character(s), e.g. '🚀'
+  fontSize: number; // size in px
 }
 
 export interface BrandLayer extends BaseLayer {
@@ -375,7 +356,7 @@ export interface GroupLayer extends BaseLayer {
   scale?: number
 }
 
-export type Layer = BackgroundLayer | PhoneLayer | TextLayer | ImageLayer | ShapeLayer | ChipsLayer | BrandLayer | GroupLayer;
+export type Layer = BackgroundLayer | PhoneLayer | TextLayer | ImageLayer | ShapeLayer | EmojiLayer | BrandLayer | GroupLayer;
 
 // ─── CanvasBackground (legacy — kept for backwards-compat with old project files) ──
 

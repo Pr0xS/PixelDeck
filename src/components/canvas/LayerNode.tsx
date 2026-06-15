@@ -1,10 +1,10 @@
-import type { Layer, BackgroundLayer, PhoneLayer, TextLayer, ImageLayer, ShapeLayer, ChipsLayer, BrandLayer, GroupLayer } from '@/types'
+import type { Layer, BackgroundLayer, PhoneLayer, TextLayer, ImageLayer, ShapeLayer, EmojiLayer, BrandLayer, GroupLayer } from '@/types'
 import { BackgroundNode } from './BackgroundNode'
 import { PhoneNode } from './PhoneNode'
 import { TextNode } from './TextNode'
 import { ImageNode } from './ImageNode'
 import { ShapeNode } from './ShapeNode'
-import { ChipsNode } from './ChipsNode'
+import { EmojiNode } from './EmojiNode'
 import { BrandNode } from './BrandNode'
 import { GroupNode } from './GroupNode'
 
@@ -88,10 +88,10 @@ export function LayerNode({
           forceNotDraggable={forceNotDraggable}
         />
       )
-    case 'chips':
+    case 'emoji':
       return (
-        <ChipsNode
-          layer={layer as ChipsLayer}
+        <EmojiNode
+          layer={layer as EmojiLayer}
           isSelected={isSelected}
           onSelect={onSelect}
           onDragEnd={onDragEnd}

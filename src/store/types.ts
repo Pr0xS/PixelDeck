@@ -45,6 +45,12 @@ export interface EditorStore {
   startTextEdit: (layerId: string) => void
   stopTextEdit: () => void
 
+  // ─ Transient: when a layer is inserted that should open in the Content tab
+  //   (shape/emoji), the factory sets this to the new layer id. PropertiesPanel
+  //   reads it once, switches to 'content', then clears it. Not undoable.
+  pendingContentFocusLayerId: string | null
+  setPendingContentFocus: (layerId: string | null) => void
+
   // ─ Brand color actions
   addBrandColor: (name: string, value: string) => void
   updateBrandColor: (id: string, patch: { name?: string; value?: string }) => void
@@ -157,7 +163,7 @@ export interface EditorStore {
   addImage: (src: string, width: number, height: number) => void
   addImageAt: (src: string, width: number, height: number, x: number, y: number) => void
   addShape: () => void
-  addChips: () => void
+  addEmoji: () => void
   addBrand: () => void
 
   // ─ Project persistence

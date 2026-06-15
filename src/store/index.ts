@@ -38,6 +38,7 @@ export const useEditorStore = create<EditorStore>()(
       pasteCount: 0,
       styleClipboard: null as { layerType: LayerType; style: Record<string, unknown> } | null,
       editingTextId: null as string | null,
+      pendingContentFocusLayerId: null as string | null,
       activeLocale: 'en',
       activeCanvasFormat: BASE_CANVAS_FORMAT,
       panoRenderOverride: null as { gapPx: number; compensate: boolean } | null,

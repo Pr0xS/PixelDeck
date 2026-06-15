@@ -16,12 +16,14 @@ export const createSelectionSlice = (
   | 'toggleSeamGuides'
   | 'startTextEdit'
   | 'stopTextEdit'
+  | 'setPendingContentFocus'
   | 'enterGroupEdit'
   | 'exitGroupEdit'
   | 'selectChild'
 > => ({
   startTextEdit: (layerId) => set({ editingTextId: layerId }),
   stopTextEdit: () => set({ editingTextId: null }),
+  setPendingContentFocus: (layerId) => set({ pendingContentFocusLayerId: layerId }),
 
   // ─ Selection
   select: (layerId) => {
