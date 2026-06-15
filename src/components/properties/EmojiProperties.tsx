@@ -35,7 +35,7 @@ export function EmojiProperties({ layer }: { layer: EmojiLayer }) {
         <SliderField
           label="Size"
           value={layer.fontSize}
-          min={20}
+          min={10}
           max={500}
           unit="px"
           onChange={(v) => upd({ fontSize: v })}

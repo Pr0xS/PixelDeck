@@ -30,7 +30,6 @@ interface SlideInventory {
   texts: Array<TextEntry & { role: string }>
   hasPhone: boolean
   hasImage: boolean
-  chipLabels: string[]
 }
 
 function collectEntries(
@@ -38,7 +37,7 @@ function collectEntries(
   offsetX: number,
   scale: number,
   texts: TextEntry[],
-  extras: { phoneXs: number[]; imageXs: number[]; chips: Array<{ x: number; labels: string[] }> },
+  extras: { phoneXs: number[]; imageXs: number[] },
 ): void {
   for (const layer of layers) {
     if (layer.visible === false) continue
@@ -84,7 +83,7 @@ function classifyRoles(texts: TextEntry[]): Array<TextEntry & { role: string }> 
  */
 export function buildDesignContext(project: Project, slideGroup: SlideGroup): DesignContext {
   const texts: TextEntry[] = []
-  const extras = { phoneXs: [] as number[], imageXs: [] as number[], chips: [] as Array<{ x: number; labels: string[] }> }
+  const extras = { phoneXs: [] as number[], imageXs: [] as number[] }
   collectEntries(slideGroup.layers, 0, 1, texts, extras)
 
   // Group everything by slide
@@ -92,7 +91,6 @@ export function buildDesignContext(project: Project, slideGroup: SlideGroup): De
     texts: [],
     hasPhone: false,
     hasImage: false,
-    chipLabels: [],
   }))
   const bySlide: TextEntry[][] = Array.from({ length: slideGroup.numSlides }, () => [])
   for (const entry of texts) {
@@ -103,9 +101,6 @@ export function buildDesignContext(project: Project, slideGroup: SlideGroup): De
   })
   for (const x of extras.phoneXs) slides[slideIndexFor(x, slideGroup.slideWidth, slideGroup.numSlides)].hasPhone = true
   for (const x of extras.imageXs) slides[slideIndexFor(x, slideGroup.slideWidth, slideGroup.numSlides)].hasImage = true
-  for (const chip of extras.chips) {
-    slides[slideIndexFor(chip.x, slideGroup.slideWidth, slideGroup.numSlides)].chipLabels.push(...chip.labels)
-  }
 
   // Format
   const roleById: Record<string, string> = {}
@@ -123,7 +118,6 @@ export function buildDesignContext(project: Project, slideGroup: SlideGroup): De
       roleById[t.id] = `${t.role} on slide ${i + 1}`
       lines.push(`  - [${t.role}] "${t.text}"`)
     }
-    if (slide.chipLabels.length > 0) lines.push(`  - feature chips: ${slide.chipLabels.map((l) => `"${l}"`).join(', ')}`)
     if (slide.hasPhone) lines.push('  - device mockup with app screenshot')
     if (slide.hasImage) lines.push('  - decorative image')
   })

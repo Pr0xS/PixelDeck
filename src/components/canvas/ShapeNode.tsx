@@ -94,6 +94,7 @@ function getShapePoints(shapeType: string, w: number, h: number, layer: ShapeLay
     case 'arrow':
       return arrowPoints(w, h)
     default:
+      // Fallback rect points. Note: 'line' was a former ShapeType removed in favour of dedicated shapes.
       return [0, 0, w, 0, w, h, 0, h]
   }
 }
@@ -167,7 +168,7 @@ export function ShapeNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
       onTransformEnd({
         x: group.x() - currentSize.current.w / 2,
         y: group.y() - currentSize.current.h / 2,
-        rotation: group.rotation(),
+        rotation: group.rotation() - arrowRotation,
         width: currentSize.current.w,
         height: currentSize.current.h,
       })

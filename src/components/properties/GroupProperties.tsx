@@ -7,7 +7,7 @@ const LAYER_TYPE_ICON: Record<string, string> = {
   phone: '📱',
   image: '🖼',
   shape: '■',
-  chips: '◉',
+  emoji: '😀',
   brand: '★',
   group: '▣',
   background: '▧',
