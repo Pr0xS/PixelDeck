@@ -1,9 +1,10 @@
-import { useRef, useState } from 'react'
+import { useRef, useState, useCallback } from 'react'
 import { createPortal } from 'react-dom'
 import type { RefObject } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAssetStore } from '@/store/assets'
 import { fileToDataUrl } from '@/utils/files'
+import type { AssetEntry } from '@/store/assets'
 import type { Layer } from '@/types'
 
 interface AssetsSectionProps {
@@ -13,6 +14,73 @@ interface AssetsSectionProps {
   addImage: (filename: string, width: number, height: number) => void
   updateLayer: (layerId: string, patch: Partial<Layer>) => void
 }
+
+// ─── Grouping helpers ────────────────────────────────────────────────────────
+
+interface AssetGroup {
+  /** Empty string = root (no folder) */
+  folder: string
+  /** Display label — e.g. "en", "en > iphone" for deeper nesting */
+  label: string
+  assets: AssetEntry[]
+}
+
+function groupAssets(entries: AssetEntry[]): AssetGroup[] {
+  const rootAssets: AssetEntry[] = []
+  const folderMap = new Map<string, AssetEntry[]>()
+
+  for (const asset of entries) {
+    const segments = asset.filename.split('/')
+    if (segments.length === 1) {
+      rootAssets.push(asset)
+    } else {
+      const folder = segments[0]
+      if (!folderMap.has(folder)) folderMap.set(folder, [])
+      folderMap.get(folder)!.push(asset)
+    }
+  }
+
+  const groups: AssetGroup[] = []
+
+  // Root group first (no header)
+  if (rootAssets.length > 0) {
+    groups.push({ folder: '', label: '', assets: rootAssets })
+  }
+
+  // Named folder groups, alphabetically sorted
+  const sortedFolders = [...folderMap.keys()].sort((a, b) => a.localeCompare(b))
+  for (const folder of sortedFolders) {
+    groups.push({ folder, label: folder, assets: folderMap.get(folder)! })
+  }
+
+  return groups
+}
+
+/** Returns just the basename (last segment after the last `/`) */
+function basename(filename: string): string {
+  const idx = filename.lastIndexOf('/')
+  return idx === -1 ? filename : filename.slice(idx + 1)
+}
+
+// ─── Chevron icon ────────────────────────────────────────────────────────────
+
+function Chevron({ open }: { open: boolean }) {
+  return (
+    <svg
+      xmlns="http://www.w3.org/2000/svg"
+      viewBox="0 0 12 12"
+      width="10"
+      height="10"
+      fill="none"
+      className={`shrink-0 text-[#6b6b7a] transition-transform duration-150 ${open ? 'rotate-90' : ''}`}
+      aria-hidden="true"
+    >
+      <path d="M4 2.5 L8 6 L4 9.5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  )
+}
+
+// ─── Main component ──────────────────────────────────────────────────────────
 
 export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLayer }: AssetsSectionProps) {
   const { addAsset, removeAsset, loadFolder, loadFiles, assets } = useAssetStore(
@@ -26,11 +94,27 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
   )
 
   const screenshotsInputRef = useRef<HTMLInputElement>(null)
+  const folderInputRef = useRef<HTMLInputElement>(null)
   const [assetsCollapsed, setAssetsCollapsed] = useState(false)
   const [assetsModalOpen, setAssetsModalOpen] = useState(false)
 
+  // Per-folder collapse state — tracks which folder keys are collapsed
+  const [collapsedFolders, setCollapsedFolders] = useState<Set<string>>(new Set())
+  const [collapsedModalFolders, setCollapsedModalFolders] = useState<Set<string>>(new Set())
+
+  const toggleFolder = useCallback((folder: string, modal = false) => {
+    const setter = modal ? setCollapsedModalFolders : setCollapsedFolders
+    setter((prev) => {
+      const next = new Set(prev)
+      if (next.has(folder)) next.delete(folder)
+      else next.add(folder)
+      return next
+    })
+  }, [])
+
   const assetEntries = Object.values(assets).sort((a, b) => a.filename.localeCompare(b.filename))
   const assetCount = assetEntries.length
+  const groups = groupAssets(assetEntries)
 
   const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
@@ -49,6 +133,15 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
     e.target.value = ''
   }
 
+  const handleFolderFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const files = Array.from(e.target.files ?? []).filter((file) => file.type.startsWith('image/'))
+    if (files.length > 0) {
+      await loadFiles(files)
+      alert(`Imported ${files.length} screenshot asset(s).`)
+    }
+    e.target.value = ''
+  }
+
   const handleImportScreenshotFolder = async () => {
     try {
       const count = await loadFolder()
@@ -56,7 +149,8 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
     } catch (e: unknown) {
       const err = e as { name?: string; message?: string }
       if (err?.name === 'AbortError') return
-      screenshotsInputRef.current?.click()
+      // Fallback: use a directory input (webkitdirectory) for browsers without File System Access API
+      folderInputRef.current?.click()
     }
   }
 
@@ -107,8 +201,9 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
     event.dataTransfer.setData('text/plain', filename)
   }
 
-  const renderAssetCard = (asset: (typeof assetEntries)[number], large = false) => {
+  const renderAssetCard = (asset: AssetEntry, large = false) => {
     const primaryAction = getAssetPrimaryAction()
+    const displayName = basename(asset.filename)
     return (
       <div
         key={asset.filename}
@@ -140,7 +235,7 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
           </div>
         </button>
         <div className={`flex items-center gap-1 px-1.5 py-1 ${large ? 'py-2' : ''}`}>
-          <span className={`min-w-0 flex-1 truncate text-[#9b9bad] ${large ? 'text-xs' : 'text-[9px]'}`}>{asset.filename}</span>
+          <span className={`min-w-0 flex-1 truncate text-[#9b9bad] ${large ? 'text-xs' : 'text-[9px]'}`}>{displayName}</span>
           <button
             type="button"
             aria-label={`Add ${asset.filename} to canvas`}
@@ -162,6 +257,68 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
         </div>
       </div>
     )
+  }
+
+  // ─── Grouped render ─────────────────────────────────────────────────────────
+
+  const renderGroups = (large = false, modal = false) => {
+    const collapsed = modal ? collapsedModalFolders : collapsedFolders
+    const gap = large ? 'gap-3' : 'gap-2'
+
+    return groups.map((group) => {
+      if (group.folder === '') {
+        // Root group: no header, just the grid
+        return (
+          <div key="__root__">
+            <div className={`grid grid-cols-2 ${gap}`}>
+              {group.assets.map((asset) => renderAssetCard(asset, large))}
+            </div>
+          </div>
+        )
+      }
+
+      const isCollapsed = collapsed.has(group.folder)
+
+      return (
+        <div key={group.folder} className="mt-3 first:mt-0">
+          {/* Folder header */}
+          <button
+            type="button"
+            onClick={() => toggleFolder(group.folder, modal)}
+            aria-expanded={!isCollapsed}
+            aria-label={`${isCollapsed ? 'Expand' : 'Collapse'} folder ${group.label}`}
+            className="group/folder mb-1.5 flex w-full items-center gap-1.5 rounded-md px-1 py-0.5 text-left transition-colors hover:bg-[rgba(255,255,255,0.04)]"
+          >
+            <Chevron open={!isCollapsed} />
+            {/* Folder icon */}
+            <svg
+              xmlns="http://www.w3.org/2000/svg"
+              viewBox="0 0 12 12"
+              width="11"
+              height="11"
+              fill="currentColor"
+              className="shrink-0 text-[#7c6ef6]/70"
+              aria-hidden="true"
+            >
+              <path d="M1 3a1 1 0 0 1 1-1h2.382a1 1 0 0 1 .894.553L5.618 3H10a1 1 0 0 1 1 1v5a1 1 0 0 1-1 1H2a1 1 0 0 1-1-1V3Z" />
+            </svg>
+            <span className={`flex-1 truncate font-medium text-[#c4c0e0] ${large ? 'text-xs' : 'text-[10px]'}`}>
+              {group.label}
+            </span>
+            <span className="shrink-0 rounded-full bg-[rgba(124,110,246,0.14)] px-1.5 py-px text-[9px] tabular-nums text-[#a89cf6]">
+              {group.assets.length}
+            </span>
+          </button>
+
+          {/* Collapsible asset grid */}
+          {!isCollapsed && (
+            <div className={`grid grid-cols-2 ${gap} pl-0.5`}>
+              {group.assets.map((asset) => renderAssetCard(asset, large))}
+            </div>
+          )}
+        </div>
+      )
+    })
   }
 
   return (
@@ -217,12 +374,12 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
               </button>
             </div>
             <input ref={screenshotsInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleScreenshotFiles} />
+            {/* Fallback folder picker for browsers without File System Access API */}
+            <input ref={folderInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFolderFiles} {...{ webkitdirectory: '' }} />
 
             {assetEntries.length > 0 ? (
               <div className="mt-3 max-h-44 overflow-y-auto pr-1">
-                <div className="grid grid-cols-2 gap-2">
-                  {assetEntries.map((asset) => renderAssetCard(asset))}
-                </div>
+                {renderGroups(false, false)}
               </div>
             ) : (
               <p className="mt-3 rounded-lg border border-dashed border-[rgba(255,255,255,0.08)] px-2 py-3 text-center text-[10px] leading-4 text-[#6b6b7a]">
@@ -253,9 +410,7 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
               </button>
             </div>
             <div className="overflow-y-auto p-3">
-              <div className="grid grid-cols-2 gap-3">
-                {assetEntries.map((asset) => renderAssetCard(asset, true))}
-              </div>
+              {renderGroups(true, true)}
             </div>
           </div>
         </div>,

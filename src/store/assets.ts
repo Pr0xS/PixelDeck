@@ -60,25 +60,41 @@ export const useAssetStore = create<AssetStoreState>()(
     const dirHandle = await (window as any).showDirectoryPicker({ mode: 'read' })
     let count = 0
     const { addAsset } = get()
+
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    for await (const [name, handle] of (dirHandle as any).entries()) {
+    async function traverseDir(handle: any, prefix: string): Promise<void> {
       // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      if ((handle as any).kind !== 'file') continue
-      if (!/\.(png|jpg|jpeg|webp)$/i.test(name)) continue
-      // eslint-disable-next-line @typescript-eslint/no-explicit-any
-      const file = await (handle as any).getFile() as File
-      const dataUrl = await fileToDataUrl(file)
-      addAsset(name, dataUrl)
-      count++
+      for await (const [name, entry] of handle.entries() as AsyncIterable<[string, any]>) {
+        if (entry.kind === 'directory') {
+          const subPrefix = prefix ? `${prefix}/${name}` : name
+          await traverseDir(entry, subPrefix)
+        } else if (entry.kind === 'file') {
+          if (!/\.(png|jpg|jpeg|webp)$/i.test(name)) continue
+          const file = await entry.getFile() as File
+          const dataUrl = await fileToDataUrl(file)
+          const assetKey = prefix ? `${prefix}/${name}` : name
+          addAsset(assetKey, dataUrl)
+          count++
+        }
+      }
     }
+
+    await traverseDir(dirHandle, '')
     return count
   },
 
   loadFiles: async (files) => {
     const { addAsset } = get()
     for (const file of files) {
+      if (!/\.(png|jpg|jpeg|webp)$/i.test(file.name)) continue
       const dataUrl = await fileToDataUrl(file)
-      addAsset(file.name, dataUrl)
+      // Preserve folder structure from webkitRelativePath (e.g. "en/screenshot.png")
+      // Strip the top-level folder name (the selected folder itself) to get relative path
+      const relativePath = (file as File & { webkitRelativePath?: string }).webkitRelativePath
+      const assetKey = relativePath
+        ? relativePath.split('/').slice(1).join('/') || file.name
+        : file.name
+      addAsset(assetKey, dataUrl)
     }
   },
 
