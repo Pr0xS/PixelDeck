@@ -8,7 +8,7 @@ import type {
   TextLayer,
   ImageLayer,
   ShapeLayer,
-  ChipsLayer,
+  EmojiLayer,
   BrandLayer,
   GroupLayer,
   PhoneLayer,
@@ -34,7 +34,7 @@ import { BackgroundProperties } from '@/components/properties/BackgroundProperti
 import { PhoneProperties } from '@/components/properties/PhoneProperties'
 import { TextProperties } from '@/components/properties/TextProperties'
 import { ImageProperties } from '@/components/properties/ImageProperties'
-import { ChipsProperties } from '@/components/properties/ChipsProperties'
+import { EmojiProperties } from '@/components/properties/EmojiProperties'
 import { BrandProperties } from '@/components/properties/BrandProperties'
 import { ShapeProperties } from '@/components/properties/ShapeProperties'
 import { GroupProperties } from '@/components/properties/GroupProperties'
@@ -272,7 +272,7 @@ function ContentTab({ layer }: { layer: Layer }) {
   if (layer.type === 'phone') return <PhoneProperties layer={layer as PhoneLayer} />
   if (layer.type === 'text') return <TextProperties layer={layer as TextLayer} />
   if (layer.type === 'image') return <ImageProperties layer={layer as ImageLayer} />
-  if (layer.type === 'chips') return <ChipsProperties layer={layer as ChipsLayer} />
+  if (layer.type === 'emoji') return <EmojiProperties layer={layer as EmojiLayer} />
   if (layer.type === 'brand') return <BrandProperties layer={layer as BrandLayer} />
   if (layer.type === 'shape') return <ShapeProperties layer={layer as ShapeLayer} />
   if (layer.type === 'group') return <GroupProperties layer={layer as GroupLayer} />

@@ -21,7 +21,7 @@ import { LayerContextMenu } from './layers/LayerContextMenu'
 export function LayersPanel() {
   const {
     project, activeSlideGroupId, selection, select,
-    addPhone, addText, addShape, addChipGroup, addBrand, addImage,
+    addPhone, addText, addShape, addEmoji, addChipGroup, addBrand, addImage,
     removeLayer, duplicateLayer, moveLayerUp, moveLayerDown, updateLayer,
     setLayerVisibility, setLayerLocked, reorderLayers, dissolveGroup,
     selectedLayerIds, toggleLayerSelection, setMultiSelection, clearMultiSelection,
@@ -36,6 +36,7 @@ export function LayersPanel() {
     addPhone: s.addPhone,
     addText: s.addText,
     addShape: s.addShape,
+    addEmoji: s.addEmoji,
     addChipGroup: s.addChipGroup,
     addBrand: s.addBrand,
     addImage: s.addImage,
@@ -273,6 +274,7 @@ export function LayersPanel() {
     if (key === 'phone') addPhone()
     else if (key === 'text') addText()
     else if (key === 'shape') addShape()
+    else if (key === 'emoji') addEmoji()
     else if (key === 'chip') addChipGroup()
     else if (key === 'brand') addBrand()
     else if (key === 'image') imageInputRef.current?.click()
@@ -281,6 +283,7 @@ export function LayersPanel() {
     { key: 'phone', icon: '📱', label: 'Phone' },
     { key: 'text', icon: 'T', label: 'Text' },
     { key: 'shape', icon: '▭', label: 'Shape' },
+    { key: 'emoji', icon: '😀', label: 'Emoji' },
     { key: 'chip', icon: '◉', label: 'Chip' },
     { key: 'brand', icon: '🏷', label: 'Brand' },
     { key: 'image', icon: '🖼', label: 'Image' },

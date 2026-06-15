@@ -157,7 +157,7 @@ export interface EditorStore {
   addImage: (src: string, width: number, height: number) => void
   addImageAt: (src: string, width: number, height: number, x: number, y: number) => void
   addShape: () => void
-  addChips: () => void
+  addEmoji: () => void
   addBrand: () => void
 
   // ─ Project persistence

@@ -1,4 +1,4 @@
-import type { ChipsLayer, GroupLayer, Layer, Project, SlideGroup, TextLayer } from '@/types'
+import type { GroupLayer, Layer, Project, SlideGroup, TextLayer } from '@/types'
 
 /**
  * Design context builder.
@@ -61,9 +61,6 @@ function collectEntries(
       extras.phoneXs.push(absX)
     } else if (layer.type === 'image') {
       extras.imageXs.push(absX)
-    } else if (layer.type === 'chips') {
-      const chips = layer as ChipsLayer
-      extras.chips.push({ x: absX, labels: chips.items.map((c) => c.label).filter(Boolean) })
     }
   }
 }

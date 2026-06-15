@@ -87,9 +87,8 @@ export function bakeLayerScale(layer: Layer, s: number): Layer {
       if (scaled.width != null) scaled.width *= s
       if (scaled.height != null) scaled.height *= s
       break
-    case 'chips':
-      scaled.chipFontSize *= s
-      scaled.gap *= s
+    case 'emoji':
+      scaled.fontSize *= s
       break
     case 'brand':
       scaled.logoSize *= s
@@ -117,7 +116,7 @@ export const STYLE_KEYS: Partial<Record<LayerType, string[]>> = {
   background: ['fill', 'accents', 'imageDataUrl', 'imageFit', 'imageBlur', 'imageOverlayColor', 'imageOverlayOpacity', 'noise', 'blur', 'shadow', 'opacity'],
   text: ['fill', 'fontFamily', 'fontSize', 'fontWeight', 'italic', 'underline', 'strikethrough', 'letterSpacing', 'lineHeight', 'align', 'width', 'height', 'verticalAlign', 'blur', 'shadow', 'opacity'],
   shape: ['fill', 'stroke', 'strokeWidth', 'cornerRadius', 'shapeType', 'width', 'height', 'blur', 'shadow', 'opacity'],
-  chips: ['primaryGradientFrom', 'primaryGradientTo', 'primaryTextColor', 'defaultBg', 'defaultTextColor', 'chipFontSize', 'gap', 'direction', 'blur', 'shadow', 'opacity'],
+  emoji: ['emoji', 'fontSize', 'blur', 'shadow', 'opacity'],
   brand: ['nameColor', 'nameFontSize', 'nameFontFamily', 'nameFontWeight', 'logoSize', 'direction', 'gap', 'blur', 'shadow', 'opacity'],
   image: ['cornerRadius', 'blur', 'shadow', 'opacity'],
   phone: ['model', 'scale', 'screenshotFit', 'screenshotOffsetX', 'screenshotOffsetY', 'showStatusBar', 'statusBarTheme', 'statusBarBg', 'statusBarColor', 'border', 'blur', 'shadow', 'opacity'],

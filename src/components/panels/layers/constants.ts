@@ -8,7 +8,7 @@ export const LAYER_ICON: Record<LayerTypeKey, string> = {
   text: 'T',
   image: '🖼',
   shape: '▭',
-  chips: '◉',
+  emoji: '😀',
   brand: '🏷',
   group: '▥',
 }

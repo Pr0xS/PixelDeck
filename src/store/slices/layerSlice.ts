@@ -1,6 +1,6 @@
 import type {
   Layer, GroupLayer,
-  PhoneLayer, TextLayer, ImageLayer, ShapeLayer, ChipsLayer, BrandLayer,
+  PhoneLayer, TextLayer, ImageLayer, ShapeLayer, EmojiLayer, BrandLayer,
 } from '@/types'
 import { getProjectBaseFormat } from '@/utils/canvasFormats'
 import { DEFAULT_TEXT_WIDTH } from '@/utils/textRendering'
@@ -32,7 +32,7 @@ export const createLayerSlice = (
   | 'addImage'
   | 'addImageAt'
   | 'addShape'
-  | 'addChips'
+  | 'addEmoji'
   | 'addBrand'
   | 'addChipGroup'
 > => ({
@@ -285,34 +285,21 @@ export const createLayerSlice = (
     get().addLayer(layer)
   },
 
-  addChips: () => {
+  addEmoji: () => {
     const group = getActiveGroup(get)
     if (!group) return
-    const layer: ChipsLayer = {
+    const layer: EmojiLayer = {
       id: newId(),
-      name: 'Chips',
-      type: 'chips',
-      x: 100,
-      y: 600,
+      name: 'Emoji',
+      type: 'emoji',
+      x: group.slideWidth / 2 - 100,
+      y: group.slideHeight / 2 - 100,
       rotation: 0,
       opacity: 1,
       visible: true,
       locked: false,
-      items: [
-        { label: 'Free plan', primary: true,  variant: 'filled'   },
-        { label: 'Offline',   primary: false, variant: 'outlined' },
-        { label: 'Fast sync', primary: false, variant: 'soft'     },
-        { label: 'Secure',    primary: false, variant: 'dark'     },
-        { label: 'No ads',    primary: false, variant: 'plain'    },
-      ],
-      primaryGradientFrom: '#FF6F61',
-      primaryGradientTo: '#EC4899',
-      primaryTextColor: '#ffffff',
-      defaultBg: 'rgba(255,255,255,0.86)',
-      defaultTextColor: '#56505a',
-      chipFontSize: 31,
-      gap: 18,
-      direction: 'row',
+      emoji: '🚀',
+      fontSize: 200,
     }
     get().addLayer(layer)
   },

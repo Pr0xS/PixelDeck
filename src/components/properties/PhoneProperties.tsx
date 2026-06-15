@@ -164,7 +164,7 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
             onClick={() => upd({ showStatusBar: !(layer.showStatusBar ?? true) })}
             className={`relative h-5 w-9 rounded-full transition-colors ${(layer.showStatusBar ?? true) ? 'bg-[#7c6ef6]' : 'bg-[rgba(255,255,255,0.12)]'}`}
           >
-            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${(layer.showStatusBar ?? true) ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${(layer.showStatusBar ?? true) ? 'translate-x-[18px]' : 'translate-x-0'}`} />
           </button>
         </div>
         {/* Controls — only shown when status bar is on */}
@@ -288,7 +288,7 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
             onClick={() => upd({ border: layer.border ? undefined : { color: '#FFFFFF', width: 2, opacity: 0.5 } })}
             className={`relative h-5 w-9 rounded-full transition-colors ${layer.border ? 'bg-[#7c6ef6]' : 'bg-[rgba(255,255,255,0.12)]'}`}
           >
-            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${layer.border ? 'translate-x-4' : 'translate-x-0.5'}`} />
+            <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${layer.border ? 'translate-x-[18px]' : 'translate-x-0'}`} />
           </button>
         </div>
         {layer.border && (
