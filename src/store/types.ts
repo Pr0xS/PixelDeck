@@ -29,6 +29,8 @@ export interface EditorStore {
 
   // ─ Clipboard (not undoable — lives outside zundo partialize)
   clipboard: Layer[] | null
+  /** Slide group from which the clipboard was copied — used to suppress offset when pasting cross-slide */
+  clipboardSourceGroupId: string | null
   pasteCount: number
 
   // ─ Style clipboard (not undoable)

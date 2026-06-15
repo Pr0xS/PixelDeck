@@ -4,7 +4,7 @@ import { temporal } from 'zundo'
 import type { Layer, LayerType, Selection } from '@/types'
 import { BASE_CANVAS_FORMAT } from '@/utils/canvasFormats'
 import type { EditorStore } from './types'
-import { newProject, migrateProject, assertProjectShape, touchProject } from './helpers'
+import { newProject, migrateProject, assertProjectShape, touchProject, stripDataUrls } from './helpers'
 import { createSelectionSlice } from './slices/selectionSlice'
 import { createLocaleSlice } from './slices/localeSlice'
 import { createFormatSlice } from './slices/formatSlice'
@@ -35,6 +35,7 @@ export const useEditorStore = create<EditorStore>()(
       editingGroupId: null as string | null,
       selectedLayerIds: [] as string[],
       clipboard: null as Layer[] | null,
+      clipboardSourceGroupId: null as string | null,
       pasteCount: 0,
       styleClipboard: null as { layerType: LayerType; style: Record<string, unknown> } | null,
       editingTextId: null as string | null,
@@ -110,7 +111,7 @@ useEditorStore.subscribe((state, prev) => {
   if (typeof localStorage === 'undefined') return
   try {
     localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify({
-      project: state.project,
+      project: stripDataUrls(state.project),
       activeSlideGroupId: state.activeSlideGroupId,
     }))
   } catch (err) {

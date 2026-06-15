@@ -355,6 +355,43 @@ export const patchLayerForFormat = (
   return next
 }
 
+/**
+ * Strip inline base64 data URL fields from every layer in a project before
+ * persisting to localStorage. Assets are stored separately in IndexedDB via
+ * the asset store; stripping avoids QuotaExceededError on large projects.
+ *
+ * Returns a new deep-cloned project — the in-memory store is NOT mutated.
+ */
+export function stripDataUrls(project: Project): Project {
+  const cloned: Project = JSON.parse(JSON.stringify(project))
+  for (const sg of cloned.slideGroups) {
+    sg.layers = sg.layers.map(stripLayerDataUrls)
+  }
+  return cloned
+}
+
+function stripLayerDataUrls(layer: Layer): Layer {
+  // Strip per-type inline data URL fields
+  if (layer.type === 'background') {
+    delete (layer as { imageDataUrl?: string }).imageDataUrl
+  }
+  if (layer.type === 'phone') {
+    delete (layer as { screenshotDataUrl?: string }).screenshotDataUrl
+  }
+  // Strip localeOverrides patches that carry inline data URLs
+  if (layer.localeOverrides) {
+    for (const patch of Object.values(layer.localeOverrides)) {
+      delete patch.screenshotDataUrl
+    }
+  }
+  // Recurse into group children
+  if (layer.type === 'group') {
+    const grp = layer as GroupLayer
+    grp.children = grp.children.map(stripLayerDataUrls)
+  }
+  return layer
+}
+
 export const getActiveGroup = (get: EditorGet) => {
   const { project, activeSlideGroupId } = get()
   return project.slideGroups.find((g) => g.id === activeSlideGroupId)

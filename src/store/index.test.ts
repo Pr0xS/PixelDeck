@@ -17,6 +17,7 @@ beforeEach(() => {
     editingGroupId: null,
     selectedLayerIds: [],
     clipboard: null,
+    clipboardSourceGroupId: null,
     pasteCount: 0,
     selection: null,
   })

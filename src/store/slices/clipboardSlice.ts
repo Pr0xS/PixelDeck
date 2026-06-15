@@ -20,33 +20,35 @@ export const createClipboardSlice = (
 > => ({
   // ─ Clipboard actions
   copyLayers: (layerIds) => {
-    const { selection, selectedLayerIds } = get()
+    const { selection, selectedLayerIds, activeSlideGroupId } = get()
     const group = getActiveGroup(get)
     if (!group) return
     const ids = layerIds ?? (selectedLayerIds.length > 0 ? selectedLayerIds : (selection?.layerId ? [selection.layerId] : []))
     if (ids.length === 0) return
     const toCopy = group.layers.filter((l) => ids.includes(l.id) && l.type !== 'background')
     if (toCopy.length === 0) return
-    set({ clipboard: toCopy.map((l) => JSON.parse(JSON.stringify(l)) as Layer), pasteCount: 0 })
+    set({ clipboard: toCopy.map((l) => JSON.parse(JSON.stringify(l)) as Layer), clipboardSourceGroupId: activeSlideGroupId, pasteCount: 0 })
   },
 
   cutLayers: (layerIds) => {
-    const { selection, selectedLayerIds } = get()
+    const { selection, selectedLayerIds, activeSlideGroupId } = get()
     const group = getActiveGroup(get)
     if (!group) return
     const ids = layerIds ?? (selectedLayerIds.length > 0 ? selectedLayerIds : (selection?.layerId ? [selection.layerId] : []))
     if (ids.length === 0) return
     const toCut = group.layers.filter((l) => ids.includes(l.id) && l.type !== 'background')
     if (toCut.length === 0) return
-    set({ clipboard: toCut.map((l) => JSON.parse(JSON.stringify(l)) as Layer), pasteCount: 0 })
+    set({ clipboard: toCut.map((l) => JSON.parse(JSON.stringify(l)) as Layer), clipboardSourceGroupId: activeSlideGroupId, pasteCount: 0 })
     ids.forEach((id) => get().removeLayer(id))
     get().deselect()
   },
 
   pasteLayers: () => {
-    const { clipboard, pasteCount, activeSlideGroupId } = get()
+    const { clipboard, pasteCount, activeSlideGroupId, clipboardSourceGroupId } = get()
     if (!clipboard || clipboard.length === 0) return
-    const offset = (pasteCount + 1) * 20
+    // Only apply offset when pasting into the same slide group — cross-slide paste preserves exact position
+    const sameSlidePaste = clipboardSourceGroupId === activeSlideGroupId
+    const offset = sameSlidePaste ? (pasteCount + 1) * 20 : 0
     const clones = clipboard.map((l) => {
       const clone = cloneWithNewIds(l)
       clone.x = l.x + offset
@@ -57,7 +59,9 @@ export const createClipboardSlice = (
     mutateActiveGroup(set, (g) => ({ ...g, layers: [...g.layers, ...clones] }))
     set({
       editingGroupId: null,
-      pasteCount: pasteCount + 1,
+      // After a cross-slide paste, update source group so subsequent pastes in this slide get proper offsets
+      clipboardSourceGroupId: activeSlideGroupId,
+      pasteCount: sameSlidePaste ? pasteCount + 1 : 1,
       ...(clones.length === 1
         ? { selection: { slideGroupId: activeSlideGroupId, layerId: clones[0].id }, selectedLayerIds: [] }
         : { selectedLayerIds: clones.map((c) => c.id), selection: null }),
