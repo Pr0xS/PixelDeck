@@ -91,25 +91,66 @@ export function getFormatCanvasDims(
   return { width: preset.width, height: preset.height }
 }
 
-function scaleLayer(layer: Layer, fromW: number, fromH: number, toW: number, toH: number): Layer {
-  const sx = toW / fromW
-  const sy = toH / fromH
-  const uniform = Math.min(sx, sy)
-  const scaled = {
-    ...layer,
-    x: layer.x * sx,
-    y: layer.y * sy,
-  } as Layer
+/**
+ * Compute the uniform fit-center scale factor when mapping from one canvas size
+ * to another. Uses min(sx, sy) so the content fits inside the target canvas
+ * without clipping, with symmetric letterbox margins when aspect ratios differ.
+ */
+function fitCenterScale(fromW: number, fromH: number, toW: number, toH: number): number {
+  return Math.min(toW / fromW, toH / fromH)
+}
+
+/**
+ * Scale a layer using a uniform factor `s` anchored to the canvas centre.
+ *
+ * `anchor` controls how x/y are treated:
+ *  - 'canvas'  (default): x/y are absolute canvas coordinates → apply the
+ *    letterbox translation so the visual centre of the canvas stays centred.
+ *  - 'origin': x/y are relative to a parent (group children) → pure multiply,
+ *    no translation.
+ *
+ * width/height scale by `s` uniformly; fontSize and scale (phone) also use `s`.
+ */
+function scaleLayer(
+  layer: Layer,
+  fromW: number,
+  fromH: number,
+  toW: number,
+  toH: number,
+  s?: number,
+  anchor: 'canvas' | 'origin' = 'canvas',
+): Layer {
+  const factor = s ?? fitCenterScale(fromW, fromH, toW, toH)
+
+  let newX: number
+  let newY: number
+  if (anchor === 'canvas') {
+    // Anchor to canvas centre: translate so the midpoint maps to the new midpoint.
+    newX = toW / 2 + (layer.x - fromW / 2) * factor
+    newY = toH / 2 + (layer.y - fromH / 2) * factor
+  } else {
+    // Relative coordinates (group children): pure scale from origin.
+    newX = layer.x * factor
+    newY = layer.y * factor
+  }
+
+  const scaled = { ...layer, x: newX, y: newY } as Layer
 
   const l = scaled as Layer & { width?: number; height?: number; fontSize?: number; scale?: number }
-  if (typeof l.width === 'number') l.width *= sx
-  if (typeof l.height === 'number') l.height *= sy
-  if (typeof l.fontSize === 'number') l.fontSize *= uniform
-  if (typeof l.scale === 'number' && scaled.type !== 'group') l.scale *= uniform
+  if (typeof l.width === 'number') l.width *= factor
+  if (typeof l.height === 'number') l.height *= factor
+  if (typeof l.fontSize === 'number') l.fontSize *= factor
+  if (typeof l.scale === 'number' && scaled.type !== 'group') l.scale *= factor
 
   if (scaled.type === 'group') {
     const group = scaled as GroupLayer
-    return { ...group, children: group.children.map((child) => scaleLayer(child, fromW, fromH, toW, toH)) }
+    // Group children use 'origin' anchor — their x/y are relative to the group.
+    return {
+      ...group,
+      children: group.children.map((child) =>
+        scaleLayer(child, fromW, fromH, toW, toH, factor, 'origin'),
+      ),
+    }
   }
 
   return scaled
@@ -202,6 +243,9 @@ export function applyCanvasFormat(project: Project, format: CanvasFormatId): Pro
  * Map a layer expressed in a format's coordinate space back into the group's
  * authoring (base) space. Used when adding layers while previewing a non-base
  * format, and when promoting a format adjustment to the shared base.
+ *
+ * Uses the exact reciprocal of the forward fit-center scale factor so that
+ * base → format → base is a lossless round-trip.
  */
 export function mapLayerToAuthoringSpace<T extends Layer>(
   layer: T,
@@ -212,7 +256,11 @@ export function mapLayerToAuthoringSpace<T extends Layer>(
 ): T {
   if (activeFormat === baseFormat) return layer
   const active = getCanvasFormat(activeFormat)
-  return scaleLayer(layer, active.width, active.height, groupW, groupH) as T
+  // Forward factor: s_fwd = min(active.width/groupW, active.height/groupH)
+  // Inverse factor: 1/s_fwd — do NOT recompute min() in the reverse direction.
+  const sFwd = fitCenterScale(groupW, groupH, active.width, active.height)
+  const sInv = 1 / sFwd
+  return scaleLayer(layer, active.width, active.height, groupW, groupH, sInv) as T
 }
 
 function withoutFormatOverride(layer: Layer, format: CanvasFormatId): Layer {
