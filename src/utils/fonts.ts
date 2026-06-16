@@ -125,6 +125,31 @@ export function getFontWeights(family: string): number[] {
 }
 
 /**
+ * Ensure a font family is available in document.fonts so Konva can render it.
+ * For Google Fonts: injects a lazy <link> if not already loaded.
+ * For web-safe fonts: calls document.fonts.load() to force the browser to
+ * register the face in the FontFaceSet (needed for Konva to pick it up).
+ * Returns a promise that resolves when the font is ready (or fails gracefully).
+ */
+export async function ensureFontReady(family: string, weight: number = 400): Promise<void> {
+  const isWebSafe = WEB_SAFE_FONTS.some((f) => f.family === family)
+  if (isWebSafe) {
+    try {
+      // Force the browser to load the system font into document.fonts
+      await document.fonts.load(`${weight} 16px "${family}"`)
+    } catch {
+      // Fail gracefully — font may still render via CSS fallback
+    }
+    return
+  }
+  // Google Font — use the lazy loader
+  const entry = FONT_LIST.find((f) => f.family === family)
+  if (entry) {
+    await loadFont(family, entry.weights)
+  }
+}
+
+/**
  * Injects the Google Fonts stylesheet into the document <head>.
  * Call once on app startup.
  */
