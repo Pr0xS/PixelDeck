@@ -64,8 +64,8 @@ export function buildSingleTranslationPrompt(args: {
     '## Task',
     'Translate the payload.text into payload.targetLocale.',
     'Output contract: return EXACTLY one valid JSON object and nothing else.',
-    'JSON shape: {"translation":"<translated text>"}',
-    'Do not copy the placeholder text from the shape; the value must be the real translation.',
+    'JSON shape: {"translation":"..."}',
+    'Replace the "..." with the actual translated string. Do not copy the placeholder.',
     'Do not include markdown fences, commentary, analysis, notes, or prompt recap.',
     'The translation value must preserve line breaks, emoji, brand names, numbers, and any <mN>…</mN> formatting tags from payload.text.',
     '',
@@ -82,7 +82,8 @@ export function buildSingleTranslationRetryPrompt(): string {
     'Your previous answer did not satisfy the required output contract.',
     'Re-run the original translation task and answer again.',
     'Return EXACTLY one valid JSON object and nothing else.',
-    'JSON shape: {"translation":"<translated text>"}',
+    'JSON shape: {"translation":"..."}',
+    'Replace the "..." with the actual translated string.',
     'Do not include markdown fences, commentary, analysis, notes, or prompt recap.',
   ].join('\n')
 }

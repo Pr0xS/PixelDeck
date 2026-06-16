@@ -164,7 +164,7 @@ export async function chat(options: AiChatOptions): Promise<string> {
     return chatWithAnthropic(baseUrl, apiKey, model, options.messages, options.maxTokens)
   }
   if (config.protocol === 'google') {
-    return chatWithGoogle(baseUrl, apiKey, model, options.messages)
+    return chatWithGoogle(baseUrl, apiKey, model, options.messages, options.maxTokens, options.forceJsonMode)
   }
   return chatWithOpenAiCompatible(
     baseUrl,
@@ -250,17 +250,45 @@ async function chatWithOpenAiCompatible(
           ),
   }))
 
+  // OpenAI o-series reasoning models (o1, o3, o4-mini, …) require
+  // `max_completion_tokens` instead of `max_tokens` — sending `max_tokens`
+  // causes a 400 error. All other OpenAI-compatible models use `max_tokens`.
+  const isOpenAiOModel = provider === 'openai' && /^o\d/i.test(model)
   const body: Record<string, unknown> = {
     model,
     messages: apiMessages,
-    ...(maxTokens ? { max_tokens: maxTokens } : {}),
+    ...(maxTokens
+      ? isOpenAiOModel
+        ? { max_completion_tokens: maxTokens }
+        : { max_tokens: maxTokens }
+      : {}),
   }
 
   // OpenAI and OpenRouter support Chat Completions JSON mode. Do not send this
   // to every OpenAI-compatible endpoint: OpenCode Go and some routed models can
   // reject `response_format`, so those stay prompt-only and rely on parsers.
+  // o-series models support json_object mode too.
   if (forceJsonMode && (provider === 'openai' || provider === 'openrouter')) {
     body.response_format = { type: 'json_object' }
+  }
+
+  // Reasoning models consume their entire token budget on internal chain-of-thought
+  // before generating any output, causing finish_reason=length on JSON tasks.
+  // Disable reasoning for providers/models where it is known to be the default.
+  //
+  // OpenCode Go — DeepSeek (deepseek-*) and other known reasoning models (qwq-*, *-r1, *-thinking)
+  if (provider === 'opencode') {
+    const m = model.toLowerCase()
+    if (m.includes('deepseek') || m.includes('qwq') || m.includes('-r1') || m.includes('thinking')) {
+      body.thinking = { type: 'disabled' }
+    }
+  }
+  // OpenRouter — DeepSeek R1 variants use a different disable key
+  if (provider === 'openrouter') {
+    const m = model.toLowerCase()
+    if (m.includes('deepseek') && (m.includes('r1') || m.includes('reasoner'))) {
+      body.reasoning = { enabled: false }
+    }
   }
 
   let res: Response
@@ -276,8 +304,14 @@ async function chatWithOpenAiCompatible(
   if (!res.ok) throw new Error(`${provider} API error ${res.status}: ${await res.text()}`)
 
   const data = await res.json()
-  const content = data?.choices?.[0]?.message?.content
+  const choice = data?.choices?.[0]
+  const content = choice?.message?.content
+  const finishReason = choice?.finish_reason
   if (typeof content !== 'string') throw new Error(`${provider} returned an empty response.`)
+  if (!content.trim()) {
+    console.error(`[PixelDeck] ${provider} returned empty content. finish_reason=${finishReason}`, data)
+    throw new Error(`${provider} returned empty content (finish_reason: ${finishReason ?? 'unknown'}).`)
+  }
   return content.trim()
 }
 
@@ -399,7 +433,7 @@ async function chatWithAnthropic(
   apiKey: string,
   model: string,
   messages: AiChatMessage[],
-  maxTokens = 1024,
+  maxTokens = 4096,
 ): Promise<string> {
   const system = messages
     .filter((m) => m.role === 'system')
@@ -439,7 +473,11 @@ async function chatWithAnthropic(
   const data = await res.json()
   const textBlock = data?.content?.find?.((part: { type?: string }) => part.type === 'text')
   const content = textBlock?.text ?? data?.content?.[0]?.text
-  if (typeof content !== 'string') throw new Error('Anthropic returned an empty response.')
+  const stopReason = data?.stop_reason
+  if (typeof content !== 'string' || !content.trim()) {
+    console.error(`[PixelDeck] Anthropic returned empty content. stop_reason=${stopReason}`, data)
+    throw new Error(`Anthropic returned an empty response (stop_reason: ${stopReason ?? 'unknown'}).`)
+  }
   return content.trim()
 }
 
@@ -448,6 +486,8 @@ async function chatWithGoogle(
   apiKey: string,
   model: string,
   messages: AiChatMessage[],
+  maxTokens?: number,
+  forceJsonMode = false,
 ): Promise<string> {
   // Google expects a parts array; text messages are flattened with role
   // prefixes, image parts become inline_data blocks.
@@ -476,7 +516,13 @@ async function chatWithGoogle(
     res = await fetch(googleUrl, {
       method: 'POST',
       headers: buildGoogleHeaders(apiKey, { contentType: true, includeApiKey: usesAiProxy() }),
-      body: JSON.stringify({ contents: [{ parts }] }),
+      body: JSON.stringify({
+        contents: [{ parts }],
+        generationConfig: {
+          ...(maxTokens ? { maxOutputTokens: maxTokens } : {}),
+          ...(forceJsonMode ? { responseMimeType: 'application/json' } : {}),
+        },
+      }),
     })
   } catch (error) {
     throw formatAiNetworkError('google', 'generate content', error)
@@ -485,6 +531,10 @@ async function chatWithGoogle(
 
   const data = await res.json()
   const content = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  if (typeof content !== 'string') throw new Error('Google AI returned an empty response.')
+  const finishReason = data?.candidates?.[0]?.finishReason
+  if (typeof content !== 'string' || !content.trim()) {
+    console.error(`[PixelDeck] Google AI returned empty content. finishReason=${finishReason}`, data)
+    throw new Error(`Google AI returned an empty response (finishReason: ${finishReason ?? 'unknown'}).`)
+  }
   return content.trim()
 }

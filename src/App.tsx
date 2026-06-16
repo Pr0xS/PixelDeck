@@ -11,6 +11,7 @@ import { FormatTabs } from '@/components/canvas/FormatTabs'
 import { useThumbnails } from '@/hooks/useThumbnails'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { applyCanvasFormat } from '@/utils/canvasFormats'
+import { registerStage } from '@/utils/stageRegistry'
 
 // Lazy-load the localization view — it's a separate mode and not needed on initial load.
 const LocalizationView = lazy(() =>
@@ -19,6 +20,13 @@ const LocalizationView = lazy(() =>
 
 export default function App() {
   const stageRef = useRef<Konva.Stage>(null)
+
+  // Register the stage in the singleton registry so PropertiesPanel and other
+  // non-canvas components can access it for bounding-box queries (alignment).
+  useEffect(() => {
+    registerStage(stageRef.current)
+    return () => registerStage(null)
+  })
   const { project, activeSlideGroupId, setActiveSlideGroup, exitGroupEdit, editingGroupId } =
     useEditorStore(useShallow((s) => ({
       project: s.project,

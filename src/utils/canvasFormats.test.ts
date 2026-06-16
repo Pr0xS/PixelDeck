@@ -6,7 +6,6 @@ import {
   resolveLayerFormat,
   countFormatAdjustments,
   BASE_CANVAS_FORMAT,
-  getCanvasFormat,
   getProjectActiveFormats,
   getProjectBaseFormat,
   normalizeProjectFormats,
@@ -94,8 +93,10 @@ describe('applyCanvasFormatToGroup', () => {
     const group = makeGroup([makeText({ x: 1290 })], { slideWidth: 1290, slideHeight: 2796 })
     const resolved = applyCanvasFormatToGroup(group, 'android-phone', BASE_CANVAS_FORMAT)
     const layer = resolved.layers[0] as TextLayer
-    // x scales by 1080/1290, so the right edge stays the right edge
-    expect(layer.x).toBeCloseTo(1080)
+    // fit-center: s = min(1080/1290, 1920/2796) ≈ 0.6867
+    // newX = 540 + (1290 - 645) * 0.6867 ≈ 540 + 443.0 ≈ 983.0
+    const s = Math.min(1080 / 1290, 1920 / 2796)
+    expect(layer.x).toBeCloseTo(540 + (1290 - 1290 / 2) * s)
   })
 
   it('non-base format scales x/y/width/height and applies overrides on top', () => {
@@ -103,12 +104,12 @@ describe('applyCanvasFormatToGroup', () => {
     const group = makeGroup([shape])
     const resolved = applyCanvasFormatToGroup(group, 'android-phone', BASE_CANVAS_FORMAT)
     const layer = resolved.layers[0] as ShapeLayer
-    const sx = 1080 / 1320
-    const sy = 1920 / 2868
-    expect(layer.x).toBe(999)                       // override wins
-    expect(layer.y).toBeCloseTo(60 * sy)            // auto-scaled
-    expect(layer.width).toBeCloseTo(300 * sx)
-    expect(layer.height).toBeCloseTo(400 * sy)
+    // fit-center: s = min(1080/1320, 1920/2868) ≈ 0.6694
+    const s = Math.min(1080 / 1320, 1920 / 2868)
+    expect(layer.x).toBe(999)                                                    // override wins
+    expect(layer.y).toBeCloseTo(1920 / 2 + (60 - 2868 / 2) * s)                // auto-scaled, fit-center
+    expect(layer.width).toBeCloseTo(300 * s)                                     // uniform scale
+    expect(layer.height).toBeCloseTo(400 * s)                                    // uniform scale
   })
 
   it('filters out layers hidden in the format', () => {
@@ -145,12 +146,17 @@ describe('resolveLayerFormat — groups', () => {
 
 describe('mapLayerToAuthoringSpace', () => {
   it('x/y round-trip through a format is exact', () => {
-    const android = getCanvasFormat('android-phone')
+    // A layer at the canvas centre of android (540, 960) should map back to
+    // the canvas centre of base (660, 1434) and then forward again to (540, 960).
     const layer = makeText({ x: 540, y: 960 })
     const inBase = mapLayerToAuthoringSpace(layer, 'android-phone', BASE_CANVAS_FORMAT, 1320, 2868)
-    // Map back: base → android = scale by android/base
-    expect(inBase.x * (android.width / 1320)).toBeCloseTo(540)
-    expect(inBase.y * (android.height / 2868)).toBeCloseTo(960)
+    // Centre of base canvas
+    expect(inBase.x).toBeCloseTo(660)
+    expect(inBase.y).toBeCloseTo(1434)
+    // Forward pass: base → android should recover the original position
+    const s = Math.min(1080 / 1320, 1920 / 2868)
+    expect(1080 / 2 + (inBase.x - 1320 / 2) * s).toBeCloseTo(540)
+    expect(1920 / 2 + (inBase.y - 2868 / 2) * s).toBeCloseTo(960)
   })
 
   it('returns the layer unchanged when active format is the base', () => {
@@ -350,9 +356,13 @@ describe('global format slide actions', () => {
       2868,
     ) as ShapeLayer[]
 
+    // fit-center inverse: s_fwd = min(1080/1320, 1920/2868), s_inv = 1/s_fwd
+    const sFwd = Math.min(1080 / 1320, 1920 / 2868)
+    const sInv = 1 / sFwd
+    // x=540 is at the android canvas centre → maps to base canvas centre (660)
     expect(next.formatOverrides).toBeUndefined()
-    expect(next.x).toBeCloseTo(660) // 540 * 1320/1080
-    expect(next.width).toBeCloseTo(264) // 216 * 1320/1080
+    expect(next.x).toBeCloseTo(1320 / 2 + (540 - 1080 / 2) * sInv) // ≈ 660
+    expect(next.width).toBeCloseTo(216 * sInv)
   })
 
   it('makes platform-owned layers shared and maps them back to authoring space', () => {
@@ -366,10 +376,13 @@ describe('global format slide actions', () => {
       2868,
     ) as ShapeLayer[]
 
+    // fit-center inverse: s_fwd = min(1080/1320, 1920/2868), s_inv = 1/s_fwd
+    const sFwd = Math.min(1080 / 1320, 1920 / 2868)
+    const sInv = 1 / sFwd
     expect(next.ownerFormat).toBeUndefined()
-    expect(next.x).toBeCloseTo(660)
-    expect(next.y).toBeCloseTo(1434)
-    expect(next.width).toBeCloseTo(264)
-    expect(next.height).toBeCloseTo(286.8)
+    expect(next.x).toBeCloseTo(1320 / 2 + (540 - 1080 / 2) * sInv) // ≈ 660
+    expect(next.y).toBeCloseTo(2868 / 2 + (960 - 1920 / 2) * sInv) // ≈ 1434
+    expect(next.width).toBeCloseTo(216 * sInv)
+    expect(next.height).toBeCloseTo(192 * sInv)
   })
 })
