@@ -80,8 +80,13 @@ export function readFileAsDataUrl(file: File): Promise<string> {
   })
 }
 
+/**
+ * Build a locale-namespaced asset key.
+ * Format: `locale::{locale}::{slideGroupId}::{layerId}::{fileName}`
+ * Uses `::` as separator so it never collides with nanoid chars or file names.
+ */
 export function buildLocaleAssetKey(locale: string, slideGroupId: string, layerId: string, fileName: string): string {
-  return `locale-${locale}-${slideGroupId}-${layerId}-${fileName}`
+  return `locale::${locale}::${slideGroupId}::${layerId}::${fileName}`
 }
 
 export function truncate(value: string, length = 120): string {
@@ -92,8 +97,17 @@ export function truncate(value: string, length = 120): string {
 export function getFileLabel(value?: string): string {
   if (!value) return 'No image'
   if (value.startsWith('data:')) return 'Embedded image'
-  const parts = value.split('/')
-  return parts[parts.length - 1] || value
+  // Locale-namespaced asset keys: `locale::{locale}::{slideGroupId}::{layerId}::{fileName}`
+  if (value.startsWith('locale::')) {
+    const parts = value.split('::')
+    // parts[0]='locale', [1]=locale, [2]=slideGroupId, [3]=layerId, [4]=fileName
+    return parts[4] || value
+  }
+  // Legacy locale keys used dashes: `locale-{locale}-{slideGroupId}-{layerId}-{fileName}`
+  // These can't be parsed unambiguously (nanoid uses dashes too), so show the raw key.
+  // Plain path: take the last segment after '/'
+  const slashParts = value.split('/')
+  return slashParts[slashParts.length - 1] || value
 }
 
 export function getPlatformBadge(ownerFormat?: CanvasFormatId): { label: string; color: string } | null {

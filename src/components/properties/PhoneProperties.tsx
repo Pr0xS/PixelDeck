@@ -138,7 +138,7 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
 
         return (
           <div className={panelSectionCls}>
-            <label className={labelCls}>Position Preset</label>
+            <label className={labelCls}>Composition</label>
             <div className="grid grid-cols-5 gap-1">
               {presets.map((preset) => (
                 <button

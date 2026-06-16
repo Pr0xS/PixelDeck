@@ -81,7 +81,11 @@ export function TextOverrideCell({
     return (
       <div className="min-h-[80px] rounded-xl border border-[rgba(239,68,68,0.35)] bg-[rgba(239,68,68,0.06)] px-4 py-3 space-y-2">
         <div className="text-xs text-[#f87171]">⚠ Translation failed</div>
-        {cellError && <div className="text-[10px] text-[#f87171]/70 truncate">{cellError}</div>}
+        {cellError && (
+          <div className="text-[10px] text-[#f87171]/70 truncate" title={cellError}>
+            {cellError}
+          </div>
+        )}
         <button
           type="button"
           onClick={onAiTranslate}
