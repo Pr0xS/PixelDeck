@@ -73,8 +73,18 @@ describe('parseSingleTranslationResponse', () => {
     expect(() => parseSingleTranslationResponse('{"translation": "Hola",}')).toThrow()
   })
 
-  it('throws when the "translation" key is absent from the JSON object', () => {
-    expect(() => parseSingleTranslationResponse('{"result": "Hola"}')).toThrow()
+  it('accepts a single-key object even when the key is not "translation"', () => {
+    // Single-key fallback: if the model uses a non-standard key but the value
+    // is a non-empty string, we accept it rather than failing.
+    expect(parseSingleTranslationResponse('{"result": "Hola"}')).toBe('Hola')
+  })
+
+  it('throws when the JSON object has no string values at all', () => {
+    expect(() => parseSingleTranslationResponse('{"result": 42}')).toThrow()
+  })
+
+  it('throws when the JSON object has multiple keys and none match known translation keys', () => {
+    expect(() => parseSingleTranslationResponse('{"foo": "bar", "baz": "qux"}')).toThrow()
   })
 
   it('throws when the "translation" value is an empty string', () => {
@@ -93,8 +103,12 @@ describe('parseSingleTranslationResponse', () => {
     expect(() => parseSingleTranslationResponse('{"translation": 42}')).toThrow()
   })
 
-  it('throws when the model echoes the placeholder instead of translating', () => {
+  it('throws when the model echoes the old angle-bracket placeholder instead of translating', () => {
     expect(() => parseSingleTranslationResponse('{"translation": "<translated text>"}')).toThrow()
+  })
+
+  it('throws when the model echoes the "..." placeholder instead of translating', () => {
+    expect(() => parseSingleTranslationResponse('{"translation": "..."}')).toThrow()
   })
 
   it('handles a literal newline inside the translation value (multiline model output)', () => {

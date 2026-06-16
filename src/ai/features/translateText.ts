@@ -71,12 +71,13 @@ export async function translateLayerText(args: {
   const raw = await chat({
     ...args.auth,
     forceJsonMode: true,
-    maxTokens: 1024,
+    maxTokens: 4096,
     messages,
   })
   const translation = await parseSingleTranslationWithRetry(raw, {
     auth: args.auth,
     messages,
+    targetLocale: args.targetLocale,
   })
   return resolveTranslation(translation, serialized, (args.marks?.length ?? 0) > 0)
 }
@@ -127,7 +128,7 @@ export async function translateGroupTexts(args: {
   const raw = await chat({
     ...args.auth,
     forceJsonMode: true,
-    maxTokens: 4096,
+    maxTokens: 8192,
     messages,
   })
   const translations = await parseBatchTranslationWithRetry(raw, expectedIds, {
@@ -147,22 +148,29 @@ export async function translateGroupTexts(args: {
 
 async function parseSingleTranslationWithRetry(
   raw: string,
-  args: { auth: AiAuth; messages: Parameters<typeof chat>[0]['messages'] },
+  args: { auth: AiAuth; messages: Parameters<typeof chat>[0]['messages']; targetLocale?: string },
 ): Promise<string> {
   try {
-    return parseSingleTranslationResponse(raw)
+    return parseSingleTranslationResponse(raw, args.targetLocale)
   } catch (firstError) {
     const repaired = await retryJsonResponse({
       auth: args.auth,
       messages: args.messages,
       raw,
-      maxTokens: 1024,
+      maxTokens: 4096,
       retryPrompt: buildSingleTranslationRetryPrompt(),
     })
     try {
-      return parseSingleTranslationResponse(repaired)
+      return parseSingleTranslationResponse(repaired, args.targetLocale)
     } catch {
-      throw new Error(`AI returned invalid translation JSON after retry. ${String(firstError)}`)
+      // Log full raw responses to the browser console for diagnosis.
+      console.error('[PixelDeck] Translation JSON parse failed.\nFirst response:', raw, '\nRetry response:', repaired)
+      const preview = (s: string) => s.slice(0, 200).replace(/\n/g, '↵')
+      throw new Error(
+        `AI returned invalid translation JSON after retry. ${String(firstError)}\n` +
+        `First response: ${preview(raw)}\n` +
+        `Retry response: ${preview(repaired)}`,
+      )
     }
   }
 }
@@ -179,7 +187,7 @@ async function parseBatchTranslationWithRetry(
       auth: args.auth,
       messages: args.messages,
       raw,
-      maxTokens: 4096,
+      maxTokens: 8192,
       retryPrompt: buildBatchTranslationRetryPrompt(expectedIds),
     })
     try {
@@ -209,6 +217,66 @@ async function retryJsonResponse(args: {
   })
 }
 
+/** Sentinel values that indicate the model echoed a placeholder instead of translating. */
+const TRANSLATION_SENTINELS = new Set(['<translated text>', '...', '…', '<translation>', '[translation]'])
+
+/**
+ * Extract a non-empty, non-sentinel string from a parsed JSON candidate.
+ * Tolerates common model schema deviations:
+ *   - Canonical:  { "translation": "text" }
+ *   - Plural key: { "translations": "text" }
+ *   - Locale key: { "fr": "text" }  (single-key object whose value is a string)
+ *   - Array:      { "translation": ["text"] }  → join with newline
+ *   - Nested:     { "translation": { "fr": "text" } }  → first string value
+ */
+function extractTranslationString(candidate: unknown, targetLocale?: string): string | null {
+  if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) return null
+  const rec = candidate as Record<string, unknown>
+
+  // Try canonical and common key variants first
+  const keysToTry = ['translation', 'translations', 'translated']
+  if (targetLocale) keysToTry.push(targetLocale)
+
+  for (const key of keysToTry) {
+    const value = rec[key]
+    if (value === undefined) continue
+
+    // Direct string
+    if (typeof value === 'string') {
+      const t = value.trim()
+      if (t && !TRANSLATION_SENTINELS.has(t)) return t
+    }
+
+    // Array of strings → join
+    if (Array.isArray(value)) {
+      const joined = value.filter((v): v is string => typeof v === 'string').join('\n').trim()
+      if (joined && !TRANSLATION_SENTINELS.has(joined)) return joined
+    }
+
+    // Nested object → first non-empty string value
+    if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
+      for (const v of Object.values(value as Record<string, unknown>)) {
+        if (typeof v === 'string') {
+          const t = v.trim()
+          if (t && !TRANSLATION_SENTINELS.has(t)) return t
+        }
+      }
+    }
+  }
+
+  // Last resort: single-key object whose only value is a non-empty string
+  const entries = Object.entries(rec)
+  if (entries.length === 1) {
+    const [, v] = entries[0]
+    if (typeof v === 'string') {
+      const t = v.trim()
+      if (t && !TRANSLATION_SENTINELS.has(t)) return t
+    }
+  }
+
+  return null
+}
+
 /**
  * Parse the JSON object returned by the single translation prompt.
  * Expected shape: { "translation": "..." }.
@@ -217,14 +285,10 @@ async function retryJsonResponse(args: {
  * plain prose as a translation. This prevents model reasoning/prompt recaps from
  * being pasted into the design when a provider ignores instructions.
  */
-export function parseSingleTranslationResponse(raw: string): string {
+export function parseSingleTranslationResponse(raw: string, targetLocale?: string): string {
   for (const candidate of parseJsonObjectCandidates(raw)) {
-    if (typeof candidate !== 'object' || candidate === null || Array.isArray(candidate)) continue
-    const value = (candidate as Record<string, unknown>).translation
-    if (typeof value !== 'string') continue
-    const translation = value.trim()
-    if (!translation || translation === '<translated text>') continue
-    return translation
+    const result = extractTranslationString(candidate, targetLocale)
+    if (result !== null) return result
   }
   throw new Error('Single translation response must be JSON: { "translation": "..." }.')
 }
