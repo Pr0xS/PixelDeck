@@ -40,6 +40,121 @@ import { ShapeProperties } from '@/components/properties/ShapeProperties'
 import { GroupProperties } from '@/components/properties/GroupProperties'
 import { applyCanvasFormat, getCanvasFormat, getFormatCanvasDims, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
 import type { CanvasFormatId } from '@/types'
+import { getLayerBBox, getUnionBBox, computeAlignPatch, type AlignAxis } from '@/utils/alignLayers'
+
+// ─── Alignment Section ────────────────────────────────────────────────────────
+
+/**
+ * Align-to-slide and align-to-selection controls.
+ * Shown in the Layout tab for all non-background layers.
+ *
+ * Single layer selected → align to the current slide's bbox.
+ * Multiple layers selected (selectedLayerIds) → align each to the union bbox
+ * of the selection (align-to-selection mode).
+ */
+function AlignmentSection({
+  layer,
+  slideWidth,
+  slideHeight,
+  slideOffsetX,
+}: {
+  layer: Layer
+  slideWidth: number
+  slideHeight: number
+  slideOffsetX: number
+}) {
+  const { updateLayer, selectedLayerIds, project, activeSlideGroupId, editingGroupId } = useEditorStore(
+    useShallow((s) => ({
+      updateLayer: s.updateLayer,
+      selectedLayerIds: s.selectedLayerIds,
+      project: s.project,
+      activeSlideGroupId: s.activeSlideGroupId,
+      editingGroupId: s.editingGroupId,
+    }))
+  )
+
+  // Determine which layer IDs are in the current selection
+  const isMulti = selectedLayerIds.length >= 2
+  const activeGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+
+  // Resolve the full layer list (handles group-edit mode)
+  const layerList: Layer[] = (() => {
+    if (!activeGroup) return []
+    if (editingGroupId) {
+      const grp = activeGroup.layers.find((l) => l.id === editingGroupId && l.type === 'group') as GroupLayer | undefined
+      return grp?.children ?? []
+    }
+    return activeGroup.layers
+  })()
+
+  const align = (axis: AlignAxis) => {
+    if (isMulti) {
+      // Align each selected layer to the union bbox of the selection
+      const unionBBox = getUnionBBox(selectedLayerIds)
+      if (!unionBBox) return
+      for (const id of selectedLayerIds) {
+        const l = layerList.find((x) => x.id === id)
+        if (!l) continue
+        const bbox = getLayerBBox(id)
+        if (!bbox) continue
+        const patch = computeAlignPatch(l, bbox, unionBBox, axis)
+        if (Object.keys(patch).length > 0) updateLayer(id, patch)
+      }
+    } else {
+      // Align the single selected layer to the slide
+      const slideBBox = { x: slideOffsetX, y: 0, width: slideWidth, height: slideHeight }
+      const bbox = getLayerBBox(layer.id)
+      if (!bbox) return
+      const patch = computeAlignPatch(layer, bbox, slideBBox, axis)
+      if (Object.keys(patch).length > 0) updateLayer(layer.id, patch)
+    }
+  }
+
+  const btnCls = 'flex items-center justify-center rounded border border-[rgba(255,255,255,0.1)] p-1.5 text-[#8f90a3] hover:border-[rgba(124,110,246,0.5)] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.04)] transition-colors'
+
+  // SVG icons for alignment axes
+  const icons: Record<AlignAxis, React.ReactNode> = {
+    'left':     <svg viewBox="0 0 16 16" className="w-4 h-4" fill="currentColor"><rect x="1" y="2" width="2" height="12" rx="0.5"/><rect x="4" y="4" width="8" height="3" rx="0.5"/><rect x="4" y="9" width="11" height="3" rx="0.5"/></svg>,
+    'center-h': <svg viewBox="0 0 16 16" className="w-4 h-4" fill="currentColor"><rect x="7" y="1" width="2" height="14" rx="0.5"/><rect x="3" y="4" width="10" height="3" rx="0.5"/><rect x="1" y="9" width="14" height="3" rx="0.5"/></svg>,
+    'right':    <svg viewBox="0 0 16 16" className="w-4 h-4" fill="currentColor"><rect x="13" y="2" width="2" height="12" rx="0.5"/><rect x="4" y="4" width="8" height="3" rx="0.5"/><rect x="1" y="9" width="11" height="3" rx="0.5"/></svg>,
+    'top':      <svg viewBox="0 0 16 16" className="w-4 h-4" fill="currentColor"><rect x="2" y="1" width="12" height="2" rx="0.5"/><rect x="4" y="4" width="3" height="8" rx="0.5"/><rect x="9" y="4" width="3" height="11" rx="0.5"/></svg>,
+    'center-v': <svg viewBox="0 0 16 16" className="w-4 h-4" fill="currentColor"><rect x="1" y="7" width="14" height="2" rx="0.5"/><rect x="4" y="3" width="3" height="10" rx="0.5"/><rect x="9" y="1" width="3" height="14" rx="0.5"/></svg>,
+    'bottom':   <svg viewBox="0 0 16 16" className="w-4 h-4" fill="currentColor"><rect x="2" y="13" width="12" height="2" rx="0.5"/><rect x="4" y="4" width="3" height="8" rx="0.5"/><rect x="9" y="1" width="3" height="11" rx="0.5"/></svg>,
+  }
+
+  const titles: Record<AlignAxis, string> = {
+    'left':     isMulti ? 'Align left edges' : 'Align to slide left',
+    'center-h': isMulti ? 'Center horizontally' : 'Center on slide (H)',
+    'right':    isMulti ? 'Align right edges' : 'Align to slide right',
+    'top':      isMulti ? 'Align top edges' : 'Align to slide top',
+    'center-v': isMulti ? 'Center vertically' : 'Center on slide (V)',
+    'bottom':   isMulti ? 'Align bottom edges' : 'Align to slide bottom',
+  }
+
+  return (
+    <div className={panelSectionCls}>
+      <label className={labelCls}>
+        {isMulti ? `Align selection (${selectedLayerIds.length})` : 'Align to slide'}
+      </label>
+      <div className="grid grid-cols-6 gap-1">
+        {(['left', 'center-h', 'right', 'top', 'center-v', 'bottom'] as AlignAxis[]).map((axis) => (
+          <button
+            key={axis}
+            type="button"
+            title={titles[axis]}
+            onClick={() => align(axis)}
+            className={btnCls}
+          >
+            {icons[axis]}
+          </button>
+        ))}
+      </div>
+      {isMulti && (
+        <p className="mt-1.5 text-[10px] text-[#525261]">Aligns selected layers to each other</p>
+      )}
+    </div>
+  )
+}
 
 // ─── Layout Tab ───────────────────────────────────────────────────────────────
 
@@ -63,12 +178,21 @@ function LayoutTab({ layer }: { layer: Layer }) {
   const formatDims = activeGroup
     ? getFormatCanvasDims(activeGroup, activeCanvasFormat, getProjectBaseFormat(project))
     : { width: 1080, height: 1920 }
-  const canvasW = formatDims.width * (activeGroup?.numSlides ?? 1)
-  const canvasH = formatDims.height
+  const slideW = formatDims.width
+  const slideH = formatDims.height
+  const canvasW = slideW * (activeGroup?.numSlides ?? 1)
+  const canvasH = slideH
   const xMin = -Math.round(canvasW * 0.25)
   const xMax = Math.round(canvasW * 1.25)
   const yMin = -Math.round(canvasH * 0.25)
   const yMax = Math.round(canvasH * 1.25)
+
+  // Which slide is this layer on? (for pano groups)
+  const layerCenterX = layer.x + (('width' in layer && typeof layer.width === 'number' ? layer.width : 0)) / 2
+  const slideIndex = activeGroup
+    ? Math.min(Math.max(Math.floor(layerCenterX / slideW), 0), (activeGroup.numSlides ?? 1) - 1)
+    : 0
+  const slideOffsetX = slideIndex * slideW
 
   // Raw layer (unresolved) for format overrides and visibility
   const rawGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
@@ -201,6 +325,16 @@ function LayoutTab({ layer }: { layer: Layer }) {
         )}
         <SliderField label="Opacity" value={Math.round(layer.opacity * 100)} min={0} max={100} unit="%" onChange={(v) => upd({ opacity: v / 100 })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} className="!mb-0" />
       </div>
+
+      {/* Alignment — all non-background layers */}
+      {!isBackground && (
+        <AlignmentSection
+          layer={layer}
+          slideWidth={slideW}
+          slideHeight={slideH}
+          slideOffsetX={slideOffsetX}
+        />
+      )}
     </div>
   )
 }
