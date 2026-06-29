@@ -67,6 +67,9 @@ export async function exportProjectImages(
     ? [options.groupIds?.[0] ?? originalGroupId]
     : (options.groupIds?.length ? options.groupIds : project.slideGroups.map((group) => group.id))
   const results: ProjectImageExportResult[] = []
+  // Guard against duplicate relativePaths (e.g. colliding slideNames in pano groups).
+  // If two slides resolve to the same path, append a numeric suffix so no file is silently lost.
+  const usedPaths = new Set<string>()
 
   try {
     for (const locale of locales) {
@@ -91,10 +94,20 @@ export async function exportProjectImages(
           for (const image of images) {
             const groupSlug = safeSegment(resolvedGroup.name)
             const imageSlug = safeSegment(image.name)
-            const fileName = options.scope === 'project' && imageSlug !== groupSlug
+            const baseFileName = options.scope === 'project' && imageSlug !== groupSlug
               ? `${groupSlug}__${imageSlug}`
               : imageSlug
-            const relativePath = [safeSegment(formatId), safeSegment(locale), fileName].join('/')
+            const baseRelativePath = [safeSegment(formatId), safeSegment(locale), baseFileName].join('/')
+            // Deduplicate: if this path was already used, append a counter suffix
+            let relativePath = baseRelativePath
+            let fileName = baseFileName
+            if (usedPaths.has(relativePath)) {
+              let counter = 2
+              while (usedPaths.has(`${baseRelativePath}-${counter}`)) counter++
+              relativePath = `${baseRelativePath}-${counter}`
+              fileName = `${baseFileName}-${counter}`
+            }
+            usedPaths.add(relativePath)
             results.push({
               formatId,
               formatLabel: formatLabel(formatId),
