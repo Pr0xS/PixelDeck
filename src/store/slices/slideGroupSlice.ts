@@ -22,7 +22,7 @@ export const createSlideGroupSlice = (
       name: `Slide ${n}`,
       slideWidth: project.settings.defaultSlideWidth,
       slideHeight: project.settings.defaultSlideHeight,
-      slideNames: [`slide-${String(n).padStart(2, '0')}`],
+      slideNames: ['slide-01'],
     })
     set((s) => ({
       project: touchProject(s.project, { slideGroups: [...s.project.slideGroups, group] }),
