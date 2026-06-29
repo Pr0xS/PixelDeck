@@ -220,12 +220,19 @@ export function applyCanvasFormatToGroup(
 ): SlideGroup {
   const isBase = format === baseFormat
   const target = getFormatCanvasDims(group, format, baseFormat)
+  // For pano groups (numSlides > 1) the authoring canvas is slideWidth × numSlides wide.
+  // Pass the full pano width as fromW/toW so scaleLayer anchors to the true canvas
+  // centre instead of the single-slide centre — otherwise slide 2+ layers are
+  // projected outside the per-slide capture window and export as blank.
+  const n = group.numSlides ?? 1
+  const fromW = group.slideWidth * n
+  const toW = target.width * n
   return {
     ...group,
     slideWidth: target.width,
     slideHeight: target.height,
     layers: group.layers
-      .map((layer) => resolveLayerFormat(layer, format, isBase, group.slideWidth, group.slideHeight, target.width, target.height))
+      .map((layer) => resolveLayerFormat(layer, format, isBase, fromW, group.slideHeight, toW, target.height))
       .filter((layer): layer is Layer => Boolean(layer)),
   }
 }

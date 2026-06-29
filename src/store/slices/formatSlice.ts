@@ -61,7 +61,7 @@ export const createFormatSlice = (
         // the shared base, otherwise the layer jumps in every other format.
         const inTargetSpace = { ...layer, ...patch, id: layer.id, type: layer.type } as Layer
         const mapped = mapLayerToAuthoringSpace(
-          inTargetSpace, targetFormat, baseFormat, g.slideWidth, g.slideHeight,
+          inTargetSpace, targetFormat, baseFormat, g.slideWidth * (g.numSlides ?? 1), g.slideHeight,
         )
         const sharedPatch = pickLayerKeys(mapped, Object.keys(patch))
         return withoutFormatOverride({ ...layer, ...sharedPatch } as Layer, targetFormat)
@@ -111,7 +111,7 @@ export const createFormatSlice = (
           [layer],
           format,
           getProjectBaseFormat(get().project),
-          g.slideWidth,
+          g.slideWidth * (g.numSlides ?? 1),
           g.slideHeight,
         )[0]
       }),
@@ -169,7 +169,7 @@ export const createFormatSlice = (
         if ((FORMAT_LAYOUT_KEYS as readonly string[]).includes(key)) {
           const dummy = { ...layer, [key]: overrideValue } as Layer
           const mapped = mapLayerToAuthoringSpace(
-            dummy, targetFormat, baseFormat, g.slideWidth, g.slideHeight,
+            dummy, targetFormat, baseFormat, g.slideWidth * (g.numSlides ?? 1), g.slideHeight,
           )
           sharedPatch = pickLayerKeys(mapped, [key])
         }
@@ -209,7 +209,7 @@ export const createFormatSlice = (
         g.layers,
         targetFormat,
         baseFormat,
-        g.slideWidth,
+        g.slideWidth * (g.numSlides ?? 1),
         g.slideHeight,
       ),
     }))
@@ -235,7 +235,7 @@ export const createFormatSlice = (
         g.layers,
         targetFormat,
         baseFormat,
-        g.slideWidth,
+        g.slideWidth * (g.numSlides ?? 1),
         g.slideHeight,
       ),
     }))
