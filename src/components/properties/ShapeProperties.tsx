@@ -4,7 +4,7 @@ import { SliderField } from '@/components/properties/PropertyControls'
 import { labelCls, panelSectionCls, pauseTemporal, resumeTemporal } from '@/components/properties/panelConstants'
 
 // Shapes that look best starting square
-const SQUARE_SHAPES = new Set<ShapeLayer['shapeType']>(['triangle', 'diamond', 'star', 'pentagon', 'hexagon', 'cross'])
+const SQUARE_SHAPES = new Set<ShapeLayer['shapeType']>(['triangle', 'diamond', 'star', 'pentagon', 'hexagon', 'cross', 'check'])
 
 const SHAPE_OPTIONS: { type: ShapeLayer['shapeType']; label: string; icon: string }[] = [
   { type: 'rect',     label: 'Rect',     icon: '▭' },
@@ -16,6 +16,7 @@ const SHAPE_OPTIONS: { type: ShapeLayer['shapeType']; label: string; icon: strin
   { type: 'hexagon',  label: 'Hexagon',  icon: '⬡' },
   { type: 'arrow',    label: 'Arrow',    icon: '→' },
   { type: 'cross',    label: 'Cross',    icon: '+' },
+  { type: 'check',    label: 'Check',    icon: '✓' },
 ]
 
 const ARROW_DIRECTIONS: { dir: ShapeLayer['arrowDirection']; label: string }[] = [

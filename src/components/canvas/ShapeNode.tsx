@@ -73,6 +73,66 @@ function arrowPoints(w: number, h: number): number[] {
   ]
 }
 
+function checkPoints(w: number, h: number): number[] {
+  const thickness = Math.min(w, h) * 0.18
+  const half = thickness / 2
+  const start = { x: w * 0.16, y: h * 0.56 }
+  const joint = { x: w * 0.36, y: h * 0.78 }
+  const end = { x: w * 0.86, y: h * 0.22 }
+
+  const normalize = (x: number, y: number) => {
+    const length = Math.hypot(x, y) || 1
+    return { x: x / length, y: y / length }
+  }
+
+  const intersect = (
+    p1: { x: number; y: number },
+    d1: { x: number; y: number },
+    p2: { x: number; y: number },
+    d2: { x: number; y: number },
+  ) => {
+    const cross = d1.x * d2.y - d1.y * d2.x
+    if (Math.abs(cross) < 1e-6) return { x: (p1.x + p2.x) / 2, y: (p1.y + p2.y) / 2 }
+    const dx = p2.x - p1.x
+    const dy = p2.y - p1.y
+    const t = (dx * d2.y - dy * d2.x) / cross
+    return { x: p1.x + d1.x * t, y: p1.y + d1.y * t }
+  }
+
+  const d0 = normalize(joint.x - start.x, joint.y - start.y)
+  const d1 = normalize(end.x - joint.x, end.y - joint.y)
+  const outer0 = { x: -d0.y, y: d0.x }
+  const outer1 = { x: -d1.y, y: d1.x }
+  const inner0 = { x: d0.y, y: -d0.x }
+  const inner1 = { x: d1.y, y: -d1.x }
+
+  const startOuter = { x: start.x + outer0.x * half, y: start.y + outer0.y * half }
+  const startInner = { x: start.x + inner0.x * half, y: start.y + inner0.y * half }
+  const endOuter = { x: end.x + outer1.x * half, y: end.y + outer1.y * half }
+  const endInner = { x: end.x + inner1.x * half, y: end.y + inner1.y * half }
+  const jointOuter = intersect(
+    { x: joint.x + outer0.x * half, y: joint.y + outer0.y * half },
+    d0,
+    { x: joint.x + outer1.x * half, y: joint.y + outer1.y * half },
+    d1,
+  )
+  const jointInner = intersect(
+    { x: joint.x + inner0.x * half, y: joint.y + inner0.y * half },
+    d0,
+    { x: joint.x + inner1.x * half, y: joint.y + inner1.y * half },
+    d1,
+  )
+
+  return [
+    startOuter.x, startOuter.y,
+    jointOuter.x, jointOuter.y,
+    endOuter.x, endOuter.y,
+    endInner.x, endInner.y,
+    jointInner.x, jointInner.y,
+    startInner.x, startInner.y,
+  ]
+}
+
 // ─── Shape point dispatcher ───────────────────────────────────────────────────
 
 function getShapePoints(shapeType: string, w: number, h: number, layer: ShapeLayer): number[] {
@@ -91,6 +151,8 @@ function getShapePoints(shapeType: string, w: number, h: number, layer: ShapeLay
       return starPoints(cx, cy, w / 2, h / 2, layer.starPoints ?? 5, layer.starInnerRatio ?? 0.4)
     case 'cross':
       return crossPoints(cx, cy, w, h, 0.3)
+    case 'check':
+      return checkPoints(w, h)
     case 'arrow':
       return arrowPoints(w, h)
     default:

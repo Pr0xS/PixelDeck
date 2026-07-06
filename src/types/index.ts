@@ -311,7 +311,7 @@ export interface ImageLayer extends BaseLayer {
   cornerRadius: number;
 }
 
-export type ShapeType = 'rect' | 'ellipse' | 'arrow' | 'triangle' | 'star' | 'pentagon' | 'hexagon' | 'diamond' | 'cross';
+export type ShapeType = 'rect' | 'ellipse' | 'arrow' | 'triangle' | 'star' | 'pentagon' | 'hexagon' | 'diamond' | 'cross' | 'check';
 
 export interface ShapeLayer extends BaseLayer {
   type: 'shape';
