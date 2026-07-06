@@ -2,6 +2,7 @@ import type { Layer, LocaleLayerPatch, TextLayer } from '@/types'
 import { effectiveLocalizationMode } from '@/utils/locale'
 import { LocaleRichTextEditor } from '@/components/text/LocaleRichTextEditor'
 import type { CellStatus, LocalizableRow } from './types'
+import type { SlideBackgroundPreview } from './helpers'
 import { truncate } from './helpers'
 
 export interface TextOverrideCellProps {
@@ -9,6 +10,7 @@ export interface TextOverrideCellProps {
   locale: string
   defaultLocale: string
   activeLocale: string
+  backgroundPreview: SlideBackgroundPreview
   cellStatus: CellStatus
   cellError?: string
   /** Optimistic AI result shown before the bulk translation is committed. */
@@ -30,6 +32,7 @@ export function TextOverrideCell({
   locale,
   defaultLocale,
   activeLocale,
+  backgroundPreview,
   cellStatus,
   cellError,
   previewOverride,
@@ -134,68 +137,76 @@ export function TextOverrideCell({
 
   return (
     <div
-      className="min-h-[80px] rounded-xl border px-3 py-3"
+      className="relative min-h-[80px] overflow-hidden rounded-xl border px-3 py-3"
       style={{
         borderColor: cellStatus === 'done'
           ? 'rgba(52,211,153,0.5)'
           : isActiveColumn ? '#7c6ef6' : 'rgba(124,110,246,0.45)',
-        background: cellStatus === 'done'
-          ? 'rgba(52,211,153,0.06)'
-          : isActiveColumn ? 'rgba(124,110,246,0.12)' : 'rgba(124,110,246,0.06)',
+        ...backgroundPreview.style,
       }}
     >
-      {cellStatus === 'done' && (
-        <div className="text-[10px] text-emerald-400 mb-1">✓ AI translated</div>
+      {backgroundPreview.overlayColor && (backgroundPreview.overlayOpacity ?? 0) > 0 && (
+        <div
+          className="pointer-events-none absolute inset-0"
+          style={{ backgroundColor: backgroundPreview.overlayColor, opacity: backgroundPreview.overlayOpacity }}
+        />
       )}
-      <LocaleRichTextEditor
-        baseLayer={baseLayer}
-        text={effectiveText}
-        marks={effectiveMarks}
-        placeholder={isDefaultLocale ? 'Enter base text' : 'Enter localized text'}
-        toolbarSlot={toolbarSlot}
-        onEditingChange={onEditingChange}
-        onCommit={({ text, marks }) => {
-          if (isDefaultLocale) {
-            updateBaseLayer(row.slideGroupId, row.layerId, { text, marks } as Partial<Layer>)
-          } else {
-            setLocaleOverride(row.slideGroupId, row.layerId, locale, { ...(displayOverride ?? {}), text, marks })
-          }
-        }}
-      />
+      <div className="relative">
+        {cellStatus === 'done' && (
+          <div className="text-[10px] text-emerald-400 mb-1">✓ AI translated</div>
+        )}
+        <LocaleRichTextEditor
+          baseLayer={baseLayer}
+          text={effectiveText}
+          marks={effectiveMarks}
+          placeholder={isDefaultLocale ? 'Enter base text' : 'Enter localized text'}
+          toolbarSlot={toolbarSlot}
+          onEditingChange={onEditingChange}
+          onCommit={({ text, marks }) => {
+            if (isDefaultLocale) {
+              updateBaseLayer(row.slideGroupId, row.layerId, { text, marks } as Partial<Layer>)
+            } else {
+              setLocaleOverride(row.slideGroupId, row.layerId, locale, { ...(displayOverride ?? {}), text, marks })
+            }
+          }}
+        />
 
-      {/* Problem visibility: formatting state */}
-      {(formattingLostByAi || formattingMissing) && (
-        <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.07)] px-2 py-1.5">
-          <span className="text-[10px] leading-relaxed text-[#fbbf24]">
-            {formattingLostByAi
-              ? '⚠ AI could not preserve the source formatting — click the text and re-apply it'
-              : '⚠ The source has styled words not applied here — click the text to style it'}
-          </span>
+        {/* Problem visibility: formatting state */}
+        {(formattingLostByAi || formattingMissing) && (
+          <div className="mt-2 flex items-start gap-1.5 rounded-lg border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.07)] px-2 py-1.5">
+            <span className="text-[10px] leading-relaxed text-[#fbbf24]">
+              {formattingLostByAi
+                ? '⚠ AI could not preserve the source formatting — click the text and re-apply it'
+                : '⚠ The source has styled words not applied here — click the text to style it'}
+            </span>
+          </div>
+        )}
+
+        {/* Backdrop plate: the row above sits on the real slide background (by design),
+            but these controls are UI chrome, not part of the contrast test — keep them legible. */}
+        <div className="mt-2 flex items-center justify-between rounded-md bg-[#18181f]/70 px-1.5 py-1 backdrop-blur-sm">
+          {isDefaultLocale ? (
+            <span className="text-[10px] text-[#6b6b7a]">Base content</span>
+          ) : mode === 'auto' && (
+            <button
+              type="button"
+              onClick={onAiTranslate}
+              className="text-[10px] text-[#9d90f8] hover:text-white transition"
+              title="Re-translate with AI"
+            >
+              ✦ Re-translate
+            </button>
+          )}
+          {!isDefaultLocale && (
+            <button
+              type="button"
+              onClick={() => clearLocaleOverride(row.slideGroupId, row.layerId, locale)}
+              className="ml-auto text-xs font-medium text-[#b9b6c9] transition hover:text-white"
+            >
+              × Clear
+            </button>
+          )}
         </div>
-      )}
-
-      <div className="mt-2 flex justify-between items-center">
-        {isDefaultLocale ? (
-          <span className="text-[10px] text-[#6b6b7a]">Base content</span>
-        ) : mode === 'auto' && (
-          <button
-            type="button"
-            onClick={onAiTranslate}
-            className="text-[10px] text-[#9d90f8] hover:text-white transition"
-            title="Re-translate with AI"
-          >
-            ✦ Re-translate
-          </button>
-        )}
-        {!isDefaultLocale && (
-          <button
-            type="button"
-            onClick={() => clearLocaleOverride(row.slideGroupId, row.layerId, locale)}
-            className="ml-auto text-xs font-medium text-[#b9b6c9] transition hover:text-white"
-          >
-            × Clear
-          </button>
-        )}
       </div>
     </div>
   )

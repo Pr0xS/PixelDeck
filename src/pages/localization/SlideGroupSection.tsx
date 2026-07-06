@@ -1,9 +1,10 @@
-import type { Layer, LocaleLayerPatch, LocalizationMode, SlideGroup } from '@/types'
+import { useMemo } from 'react'
+import type { BrandColor, Layer, LocaleLayerPatch, LocalizationMode, SlideGroup } from '@/types'
 import { effectiveLocalizationMode, getLanguageName } from '@/utils/locale'
 import { ModeSelector } from './ModeSelector'
 import { TextOverrideCell } from './TextOverrideCell'
 import { ImageOverrideCell } from './ImageOverrideCell'
-import { isOverrideComplete, getPlatformBadge } from './helpers'
+import { isOverrideComplete, getPlatformBadge, getSlideBackgroundPreview } from './helpers'
 import type { CellKey, CellStatus, LocalizableRow } from './types'
 import { cellKey } from './types'
 
@@ -14,6 +15,7 @@ export interface SlideGroupSectionProps {
   onToggleCollapse: () => void
   activeLocale: string
   defaultLocale: string
+  brandColors: BrandColor[]
   locales: string[]
   gridTemplateColumns: string
   cellStatus: Map<CellKey, CellStatus>
@@ -39,6 +41,7 @@ export function SlideGroupSection({
   onToggleCollapse,
   activeLocale,
   defaultLocale,
+  brandColors,
   locales,
   gridTemplateColumns,
   cellStatus,
@@ -58,6 +61,10 @@ export function SlideGroupSection({
 }: SlideGroupSectionProps) {
   const activeProgress = rows.filter((row) => isOverrideComplete(row, activeLocale, defaultLocale)).length
   const eligibleRows = rows.filter((r) => effectiveLocalizationMode(r.layer) !== 'skip')
+  const backgroundPreview = useMemo(
+    () => getSlideBackgroundPreview(slideGroup, brandColors),
+    [slideGroup, brandColors],
+  )
 
   return (
     <section
@@ -188,6 +195,7 @@ export function SlideGroupSection({
                             locale={locale}
                             defaultLocale={defaultLocale}
                             activeLocale={activeLocale}
+                            backgroundPreview={backgroundPreview}
                             cellStatus={cellStatus.get(cellKey(row.layerId, locale)) ?? 'idle'}
                             cellError={cellError.get(cellKey(row.layerId, locale))}
                             previewOverride={previewOverrides.get(cellKey(row.layerId, locale))}

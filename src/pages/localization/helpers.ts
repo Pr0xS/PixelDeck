@@ -1,8 +1,58 @@
-import type { GroupLayer, Layer, SlideGroup, TextLayer, PhoneLayer, ImageLayer } from '@/types'
+import type { CSSProperties } from 'react'
+import type { BackgroundLayer, BrandColor, GroupLayer, Layer, SlideGroup, TextLayer, PhoneLayer, ImageLayer } from '@/types'
 import { effectiveLocalizationMode } from '@/utils/locale'
 import { CANVAS_FORMAT_PRESETS } from '@/utils/canvasFormats'
 import type { CanvasFormatId } from '@/types'
+import { resolveFill } from '@/utils/brandColors'
+import { fillToCss } from '@/utils/gradients'
 import type { LocalizableRow } from './types'
+
+export interface SlideBackgroundPreview {
+  /** Base surface: background-color and/or background-image (gradient or slide image) + sizing. */
+  style: CSSProperties
+  /** Tint overlay color drawn above the background image (BackgroundLayer.imageOverlayColor), if any. */
+  overlayColor?: string
+  overlayOpacity?: number
+}
+
+/**
+ * Approximates a SlideGroup's real background as CSS, for contrast-checking text
+ * previews in the Localization view. Reads BackgroundLayer directly (fill + optional
+ * image) — no Konva capture involved. Accents/noise/imageBlur are intentionally skipped
+ * (this is a contrast smell-test, not a pixel-perfect preview).
+ */
+export function getSlideBackgroundPreview(
+  slideGroup: SlideGroup,
+  brandColors: BrandColor[],
+): SlideBackgroundPreview {
+  const bgLayer = slideGroup.layers.find((l): l is BackgroundLayer => l.type === 'background')
+  if (!bgLayer) return { style: { backgroundColor: '#1a1a2e' } }
+
+  const resolvedFill = resolveFill(bgLayer.fill, brandColors)
+  const fillCss = fillToCss(resolvedFill)
+  const isSolidFill = typeof resolvedFill === 'string'
+
+  if (bgLayer.imageDataUrl) {
+    const fit = bgLayer.imageFit ?? 'cover'
+    return {
+      style: {
+        backgroundColor: isSolidFill ? fillCss : undefined,
+        backgroundImage: `url(${bgLayer.imageDataUrl})`,
+        backgroundSize: fit === 'fill' ? '100% 100%' : fit,
+        backgroundPosition: 'center',
+        backgroundRepeat: 'no-repeat',
+      },
+      overlayColor: (bgLayer.imageOverlayOpacity ?? 0) > 0 ? (bgLayer.imageOverlayColor ?? '#000000') : undefined,
+      overlayOpacity: bgLayer.imageOverlayOpacity,
+    }
+  }
+
+  return {
+    style: isSolidFill
+      ? { backgroundColor: fillCss }
+      : { backgroundImage: fillCss },
+  }
+}
 
 export function findLayerById(
   layers: Layer[],

@@ -61,6 +61,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
   const { provider, getActiveKey, getActiveModel } = useApiKeysStore()
 
   const defaultLocale = project.settings.defaultLocale
+  const brandColors = useMemo(() => project.settings.brandColors ?? [], [project.settings.brandColors])
   const locales = useMemo(() => {
     const defined = project.settings.locales ?? [defaultLocale]
     return [defaultLocale, ...defined.filter((l) => l !== defaultLocale)]
@@ -480,6 +481,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
                   onToggleCollapse={() => setCollapsedSections((prev) => ({ ...prev, [slideGroup.id]: !(prev[slideGroup.id] ?? false) }))}
                   activeLocale={activeLocale}
                   defaultLocale={defaultLocale}
+                  brandColors={brandColors}
                   locales={locales}
                   gridTemplateColumns={gridTemplateColumns}
                   cellStatus={cellStatus}
