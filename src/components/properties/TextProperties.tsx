@@ -8,7 +8,6 @@ import { useFontStore } from '@/store/fontStore'
 import {
   inputCls,
   labelCls,
-  fieldCls,
   panelSectionCls,
   pauseTemporal,
   resumeTemporal,
@@ -291,8 +290,6 @@ export function TextProperties({ layer }: { layer: TextLayer }) {
   const removeFont = useFontStore((s) => s.removeFont)
   const customFonts = project.customFonts ?? []
 
-  const availableWeights = getFontWeights(layer.fontFamily)
-
   return (
     <div className="space-y-4">
 
@@ -381,21 +378,9 @@ export function TextProperties({ layer }: { layer: TextLayer }) {
           </button>
         )}
 
-        {/* Size + Weight */}
+        {/* Size */}
         <div className="mt-3">
           <SliderField label="Size" value={layer.fontSize} min={6} max={300} unit="px" onChange={(v) => upd({ fontSize: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} />
-          <div className={fieldCls}>
-            <label className={labelCls}>Weight</label>
-            <select
-              value={layer.fontWeight}
-              onChange={(e) => upd({ fontWeight: Number(e.target.value) })}
-              className={inputCls}
-            >
-              {availableWeights.map((w) => (
-                <option key={w} value={w}>{w}</option>
-              ))}
-            </select>
-          </div>
         </div>
 
         {/* Spacing */}

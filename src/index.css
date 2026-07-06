@@ -18,6 +18,9 @@ body {
   color: #e8e8f0;
   font-family: 'Inter', system-ui, sans-serif;
   overflow: hidden;
+  /* Hints the OS/browser to theme native controls (select popups, checkboxes,
+     scrollbars) dark instead of defaulting to a light popup on a dark app. */
+  color-scheme: dark;
 }
 
 /* Custom scrollbar */

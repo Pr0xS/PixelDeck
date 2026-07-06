@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import type React from 'react'
 import { useEditorStore } from '@/store'
+import { getFontWeights } from '@/utils/fonts'
 import { fillToCss } from '@/utils/gradients'
 import { FillControl } from '@/components/properties/PropertyControls'
 import { toggleBoolPatch, type RichTextEditorApi } from './useRichTextEditor'
@@ -26,6 +27,7 @@ export function RichTextToolbar({
 }) {
   const [fillOpen, setFillOpen] = useState(false)
   const { layer, rangeStyle } = api
+  const weights = getFontWeights(layer.fontFamily)
   // Keep the editor focus/selection when clicking toolbar buttons
   const keepFocus = (e: React.MouseEvent) => e.preventDefault()
 
@@ -87,6 +89,20 @@ export function RichTextToolbar({
         >
           ⌫
         </button>
+      </div>
+
+      <div className="mt-2 flex items-center gap-2">
+        <label className="text-[10px] text-[#6b6b7a] uppercase tracking-wider">Weight</label>
+        <select
+          value={rangeStyle.fontWeight === 'mixed' ? '' : rangeStyle.fontWeight}
+          onChange={(e) => api.applyPatch({ fontWeight: Number(e.target.value) })}
+          className="h-7 rounded-md border border-[rgba(255,255,255,0.1)] bg-[#0f0f13] px-2 text-xs text-[#e8e8f0]"
+        >
+          {rangeStyle.fontWeight === 'mixed' && <option value="">Mixed</option>}
+          {weights.map((w) => (
+            <option key={w} value={w}>{w}</option>
+          ))}
+        </select>
       </div>
 
       {fillOpen && (
