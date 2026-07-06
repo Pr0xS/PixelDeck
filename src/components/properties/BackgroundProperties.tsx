@@ -162,8 +162,8 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
               (layer.noise ?? 0) > 0 ? 'bg-[#7c6ef6]' : 'bg-[rgba(255,255,255,0.12)]'
             }`}
           >
-            <span className={`absolute top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-              (layer.noise ?? 0) > 0 ? 'translate-x-[18px]' : 'translate-x-0'
+            <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
+              (layer.noise ?? 0) > 0 ? 'translate-x-4' : 'translate-x-0'
             }`} />
           </button>
         </div>
