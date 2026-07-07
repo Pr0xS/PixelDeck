@@ -59,9 +59,11 @@ export const createClipboardSlice = (
     mutateActiveGroup(set, (g) => ({ ...g, layers: [...g.layers, ...clones] }))
     set({
       editingGroupId: null,
-      // After a cross-slide paste, update source group so subsequent pastes in this slide get proper offsets
+      // After a cross-slide paste, update source group so subsequent pastes in this slide get proper offsets.
+      // pasteCount resets to 0 (not 1) because the cross-slide paste itself used offset 0 — it hasn't
+      // consumed a cascade step yet, so the next same-slide paste should start the 20/40/60... stepping fresh.
       clipboardSourceGroupId: activeSlideGroupId,
-      pasteCount: sameSlidePaste ? pasteCount + 1 : 1,
+      pasteCount: sameSlidePaste ? pasteCount + 1 : 0,
       ...(clones.length === 1
         ? { selection: { slideGroupId: activeSlideGroupId, layerId: clones[0].id }, selectedLayerIds: [] }
         : { selectedLayerIds: clones.map((c) => c.id), selection: null }),

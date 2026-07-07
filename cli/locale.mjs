@@ -3,7 +3,7 @@ import { resolve } from 'path'
 
 // ─── Pure locale manifest logic (mirrors src/utils/locale.ts) ─────────────────
 
-function buildLocaleManifest(project) {
+export function buildLocaleManifest(project) {
   const { defaultLocale = 'en', locales = [defaultLocale] } = project.settings
   const nonDefaultLocales = locales.filter((l) => l !== defaultLocale)
 
@@ -47,7 +47,7 @@ function collectManifestEntries(layers, groupName, locales, result) {
   }
 }
 
-function applyLocaleManifest(project, manifest) {
+export function applyLocaleManifest(project, manifest) {
   const overrideMap = new Map()
   for (const group of manifest.groups) {
     for (const entry of group.layers) {
