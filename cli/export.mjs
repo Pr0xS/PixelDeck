@@ -74,7 +74,7 @@ async function startServer(port = DEFAULTS.port) {
 
 // ─── Load screenshots folder ─────────────────────────────────────────────────
 
-function collectAssetRefsFromProject(project) {
+export function collectAssetRefsFromProject(project) {
   const refs = new Set()
   const visitLayer = (layer) => {
     if (!layer) return
@@ -96,6 +96,16 @@ function collectAssetRefsFromProject(project) {
     for (const layer of group.layers ?? []) visitLayer(layer)
   }
   return refs
+}
+
+export function resolveAssetAliases(refs, files) {
+  const aliases = {}
+  for (const ref of refs) {
+    const file = files.find((candidate) =>
+      ref === candidate || ref.endsWith(`-${candidate}`) || ref.endsWith(`/${candidate}`))
+    if (file) aliases[ref] = file
+  }
+  return aliases
 }
 
 async function loadScreenshots(screenshotsDir, projectJson) {
@@ -120,10 +130,8 @@ async function loadScreenshots(screenshotsDir, projectJson) {
   // Locale uploads created in the GUI are stored with stable synthetic keys like
   // "locale-es-<group>-<layer>-screenshot.png". The screenshots folder usually
   // contains the original basename, so create aliases expected by the project.
-  for (const ref of collectAssetRefsFromProject(projectJson)) {
-    if (assets[ref]) continue
-    const file = files.find((candidate) => ref === candidate || ref.endsWith(`-${candidate}`) || ref.endsWith(`/${candidate}`))
-    if (file) assets[ref] = assets[file]
+  for (const [ref, file] of Object.entries(resolveAssetAliases(collectAssetRefsFromProject(projectJson), files))) {
+    if (!assets[ref]) assets[ref] = assets[file]
   }
 
   console.log(`[CLI] Loaded ${files.length} screenshots from ${absDir}`)

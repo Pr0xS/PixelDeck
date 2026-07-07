@@ -6,6 +6,7 @@ import { applyCanvasFormat, CANVAS_FORMAT_PRESETS, countFormatAdjustments, getPr
 import { exportProjectImages, type ProjectExportScope, type ProjectImageExportResult } from '@/utils/multiFormatExport'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
 import { downloadDataUrl } from '@/utils/export'
+import { buildExportZipBlob, zipFileNameFor } from '@/utils/exportZip'
 import type { CanvasFormatId } from '@/types'
 
 interface ExportModalProps {
@@ -136,18 +137,11 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
   }
 
   const downloadZip = async (results: ProjectImageExportResult[]) => {
-    const { default: JSZip } = await import('jszip')
-    const zip = new JSZip()
-    for (const item of results) {
-      const res = await fetch(item.dataUrl)
-      const blob = await res.blob()
-      zip.file(`${item.relativePath}.png`, blob)
-    }
-    const zipBlob = await zip.generateAsync({ type: 'blob' })
+    const zipBlob = await buildExportZipBlob(results)
     const url = URL.createObjectURL(zipBlob)
     const a = document.createElement('a')
     a.href = url
-    a.download = `${project.name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'pixeldeck'}-export.zip`
+    a.download = zipFileNameFor(project.name)
     a.click()
     a.remove()
     setTimeout(() => URL.revokeObjectURL(url), 10_000)
