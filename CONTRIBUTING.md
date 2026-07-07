@@ -67,6 +67,17 @@ Examples:
 - No unrelated cleanup mixed with bug fixes.
 - Avoid broad rewrites unless the issue or proposal explicitly calls for one.
 
+## Branching & releases
+
+PixelDeck follows **GitHub Flow** — `main` is the only long-lived branch (there is no `dev`).
+
+- Create a short-lived branch per change, open a PR against `main`, delete the branch after merge.
+- `main` is protected: PRs only, no direct pushes (no exceptions, including for maintainers). Required checks: `Quality · Node 20.x`/`22.x` (lint, typecheck, build, test), `CLI smoke test`, and `Conventional PR title`. Linear history is required, so PRs are **squash-merged** using the PR title as the resulting commit message — keep PR titles as valid Conventional Commits (`feat: ...`, `fix: ...`, etc.), the same rule as [Commit style](#commit-style) above. This is enforced automatically by `.github/workflows/pr-title-lint.yml`.
+- **Releases are automated** via [release-please](https://github.com/googleapis/release-please) (`.github/workflows/release-please.yml`). Merging Conventional Commits to `main` keeps a standing "release PR" up to date with the next version bump and `CHANGELOG.md` entries; merging that PR creates the git tag and GitHub Release. Do not manually bump the version in `package.json` or hand-edit `CHANGELOG.md` — release-please owns both.
+- **Dependabot** (`.github/dependabot.yml`) opens grouped update PRs: `npm` weekly, `github-actions` monthly. Major version bumps are never opened automatically — upgrade those manually when ready.
+  - `dependency-type: development` patch/minor updates auto-merge once CI is green (`.github/workflows/dependabot-auto-merge.yml`).
+  - `dependency-type: production` updates — including Dependabot security updates — always require manual review and merge. The app has no automated visual-regression coverage for the Konva canvas, so a blind auto-merge on a runtime dependency (Konva, React, etc.) is not considered safe, even for a patch-level security fix.
+
 ## Adding a new layer type
 
 Follow the 6-step recipe in [`AGENTS.md`](./AGENTS.md#how-to-add-a-new-layer-type). It covers the domain type, store factory/action, canvas renderer, layer router, properties panel, and toolbar entry.
