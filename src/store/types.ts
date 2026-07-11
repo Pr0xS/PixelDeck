@@ -4,6 +4,8 @@ import type {
   ProjectSettings, LocaleLayerPatch,
   LocaleOverrideBatchEntry,
   CanvasFormatId,
+  CustomCanvasFormat,
+  CustomFormatId,
   Template,
   PanoSettings,
 } from '@/types'
@@ -89,6 +91,9 @@ export interface EditorStore {
   setLayerOnlyInFormat: (layerId: string, format?: CanvasFormatId) => void
   clearLayerFormatVisibility: (layerId: string) => void
   toggleActiveFormat: (format: CanvasFormatId) => void
+  addCustomFormat: (label: string, width: number, height: number) => void
+  removeCustomFormat: (id: CustomFormatId) => void
+  updateCustomFormat: (id: CustomFormatId, patch: Partial<Pick<CustomCanvasFormat, 'label' | 'width' | 'height'>>) => void
   clearLayerFormatOverrideKey: (layerId: string, key: string, format?: CanvasFormatId) => void
   applyLayerFormatKeyToShared: (layerId: string, key: string, format?: CanvasFormatId) => void
   resetActiveFormatLayout: (format?: CanvasFormatId) => void

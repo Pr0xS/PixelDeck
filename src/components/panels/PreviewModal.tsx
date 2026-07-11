@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
 import { getLanguageName } from '@/utils/locale'
-import { BASE_CANVAS_FORMAT, CANVAS_FORMAT_PRESETS, getFormatCanvasDims, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat } from '@/utils/canvasFormats'
 import type { BackgroundLayer, CanvasFormatId } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
@@ -39,8 +39,7 @@ export function PreviewModal({
   const updatePanoSettings = useEditorStore((s) => s.updatePanoSettings)
 
   const locales = project.settings.locales ?? [project.settings.defaultLocale]
-  // Preview shows export targets only — 'base' is the shared authoring canvas.
-  const platformFormats = getProjectActiveFormats(project).filter((f) => f !== BASE_CANVAS_FORMAT)
+  const platformFormats = getExportTargets(project)
 
   const totalSlides = project.slideGroups.reduce((n, g) => n + g.numSlides, 0)
 
@@ -72,7 +71,7 @@ export function PreviewModal({
       }
       if (initialLocale) s.setActiveLocale(initialLocale)
       // Ensure a platform (export) format is active — the editor may be on Base.
-      const formats = getProjectActiveFormats(s.project).filter((f) => f !== BASE_CANVAS_FORMAT)
+      const formats = getExportTargets(s.project)
       if (!formats.includes(s.activeCanvasFormat) && formats.length > 0) {
         s.setActiveCanvasFormat(formats[0])
       }
@@ -162,7 +161,6 @@ export function PreviewModal({
             {platformFormats.length > 1 && (
               <div className="flex items-center gap-0.5 rounded-lg border border-[rgba(255,255,255,0.1)] p-1">
                 {platformFormats.map((format) => {
-                  const preset = CANVAS_FORMAT_PRESETS.find((f) => f.id === format)
                   const selected = activeCanvasFormat === format
                   return (
                     <button
@@ -175,7 +173,7 @@ export function PreviewModal({
                         fontWeight: selected ? 700 : 500,
                       }}
                     >
-                      {preset?.label ?? format}
+                      {getFormatLabel(format, project.settings.customFormats)}
                     </button>
                   )
                 })}
@@ -260,7 +258,7 @@ export function PreviewModal({
                 const fallbackFill = fillToCss(bgLayer?.fill ?? group.background?.fill ?? '#171724')
                 // Use format-specific dims so the container aspect ratio matches the captured image.
                 const baseFormat = getProjectBaseFormat(project)
-                const dims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat)
+                const dims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat, project.settings.customFormats)
                 const slideW = Math.round((dims.width / dims.height) * SLIDE_H)
                 const isPanoContinuation = !isFirstInGroup && group.numSlides > 1
                 const seamGap = isPanoContinuation && panoSettings.compensate

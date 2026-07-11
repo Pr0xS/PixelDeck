@@ -13,8 +13,13 @@ import {
   promoteFormatOverridesToSharedInLayerTree,
   resetFormatOverridesInLayerTree,
   resetFormatVisibilityInLayerTree,
+  applyCanvasFormat,
+  getCanvasFormat,
+  getExportTargets,
+  getFormatPlatform,
+  normalizeActiveFormats,
 } from './canvasFormats'
-import type { Layer, PhoneLayer, Project, SlideGroup, TextLayer, ShapeLayer } from '@/types'
+import type { CustomCanvasFormat, Layer, PhoneLayer, Project, SlideGroup, TextLayer, ShapeLayer } from '@/types'
 
 const makeText = (partial?: Partial<TextLayer>): TextLayer => ({
   id: 't1', name: 'Title', type: 'text',
@@ -48,6 +53,52 @@ const makeProject = (settings?: Partial<Project['settings']>): Project => ({
     ...settings,
   },
   slideGroups: [makeGroup([])],
+})
+
+const customFormat: CustomCanvasFormat = {
+  id: 'custom:square', label: 'Square', width: 1080, height: 1080,
+}
+
+describe('custom canvas formats', () => {
+  it('resolves a custom format and throws for an unknown format', () => {
+    expect(getCanvasFormat(customFormat.id, [customFormat])).toBe(customFormat)
+    expect(() => getCanvasFormat('custom:missing', [customFormat])).toThrow('Unknown canvas format: custom:missing')
+  })
+
+  it('uses custom dimensions independently of the group dimensions', () => {
+    const group = makeGroup([], { slideWidth: 500, slideHeight: 900 })
+    expect(getFormatCanvasDims(group, customFormat.id, BASE_CANVAS_FORMAT, [customFormat]))
+      .toEqual({ width: 1080, height: 1080 })
+  })
+
+  it('normalizes undefined, explicit empty, legacy, and dangling format lists', () => {
+    expect(normalizeActiveFormats(undefined)).toEqual(['iphone-69', 'android-phone'])
+    expect(normalizeActiveFormats([])).toEqual([])
+    expect(normalizeActiveFormats(['iphone-69'], 'iphone-69')).toEqual(['iphone-69', 'android-phone'])
+    expect(normalizeActiveFormats(['android-phone', 'custom:missing'], undefined, [customFormat])).toEqual(['android-phone'])
+    expect(normalizeActiveFormats([customFormat.id], undefined, [customFormat])).toEqual([customFormat.id])
+  })
+
+  it('resolves platforms only for built-in formats', () => {
+    expect(getFormatPlatform(customFormat.id)).toBeNull()
+    expect(getFormatPlatform('iphone-69')).toBe('ios')
+    expect(getFormatPlatform('android-phone')).toBe('android')
+  })
+
+  it('returns active custom export targets and falls back to base when empty', () => {
+    expect(getExportTargets(makeProject({ activeFormats: [customFormat.id], customFormats: [customFormat] })))
+      .toEqual([customFormat.id])
+    expect(getExportTargets(makeProject({ activeFormats: [], customFormats: [customFormat] }))).toEqual(['base'])
+  })
+
+  it('applies a project custom format without throwing', () => {
+    const project = makeProject({ activeFormats: [customFormat.id], customFormats: [customFormat] })
+    expect(() => applyCanvasFormat(project, customFormat.id)).not.toThrow()
+    expect(applyCanvasFormat(project, customFormat.id).slideGroups[0]).toMatchObject({
+      slideWidth: 1080,
+      slideHeight: 1080,
+    })
+  })
 })
 
 describe('project format settings migration', () => {

@@ -1,4 +1,14 @@
-import type { CanvasFormatId, GroupLayer, Layer, PhoneLayer, Project, SlideGroup } from '@/types'
+import type {
+  BuiltInFormatId,
+  CanvasFormatId,
+  CustomCanvasFormat,
+  CustomFormatId,
+  GroupLayer,
+  Layer,
+  PhoneLayer,
+  Project,
+  SlideGroup,
+} from '@/types'
 import { getModelForPlatform } from '@/assets/mockups/specs'
 
 export const CANVAS_FORMAT_PRESETS = [
@@ -21,7 +31,7 @@ const PLATFORM_FORMAT_IDS = new Set<CanvasFormatId>(CANVAS_FORMAT_PRESETS.map((f
 export const FORMAT_LAYOUT_KEYS = ['x', 'y', 'width', 'height', 'fontSize', 'scale', 'rotation'] as const
 
 /** Which platform each format targets — drives phone model auto-swap. */
-export const FORMAT_PLATFORM: Record<CanvasFormatId, 'ios' | 'android'> = {
+export const FORMAT_PLATFORM: Record<BuiltInFormatId, 'ios' | 'android'> = {
   'base': 'ios',
   'iphone-69': 'ios',
   'ipad-13': 'ios',
@@ -32,9 +42,33 @@ export const FORMAT_PLATFORM: Record<CanvasFormatId, 'ios' | 'android'> = {
 /** Layout keys + model — model forks per format (auto-swap + manual override). */
 export const FORMAT_FORK_KEYS = [...FORMAT_LAYOUT_KEYS, 'model'] as const
 
-export function getCanvasFormat(id: CanvasFormatId) {
+export function isCustomFormatId(id: CanvasFormatId): id is CustomFormatId {
+  return id.startsWith('custom:')
+}
+
+export function getCanvasFormat(id: CanvasFormatId, customFormats?: CustomCanvasFormat[]) {
   if (id === 'base') return CANVAS_FORMAT_PRESETS.find((f) => f.id === 'iphone-69')!
-  return CANVAS_FORMAT_PRESETS.find((format) => format.id === id) ?? CANVAS_FORMAT_PRESETS[0]
+  const format = isCustomFormatId(id)
+    ? customFormats?.find((customFormat) => customFormat.id === id)
+    : CANVAS_FORMAT_PRESETS.find((preset) => preset.id === id)
+  if (!format) throw new Error(`Unknown canvas format: ${id}`)
+  return format
+}
+
+export function getFormatPlatform(id: CanvasFormatId): 'ios' | 'android' | null {
+  return isCustomFormatId(id) ? null : FORMAT_PLATFORM[id]
+}
+
+export function getFormatLabel(id: CanvasFormatId, customFormats?: CustomCanvasFormat[]): string {
+  if (isCustomFormatId(id)) return customFormats?.find((format) => format.id === id)?.label ?? id
+  const labels: Record<BuiltInFormatId, string> = {
+    base: 'Base',
+    'iphone-69': 'iPhone',
+    'android-phone': 'Android',
+    'ipad-13': 'iPad',
+    'android-tablet': 'Android Tab',
+  }
+  return labels[id]
 }
 
 export function getProjectBaseFormat(project: Project): CanvasFormatId {
@@ -43,15 +77,26 @@ export function getProjectBaseFormat(project: Project): CanvasFormatId {
 }
 
 export function getProjectActiveFormats(project: Project): CanvasFormatId[] {
-  return normalizeActiveFormats(project.settings.activeFormats, project.settings.baseCanvasFormat)
+  return normalizeActiveFormats(
+    project.settings.activeFormats,
+    project.settings.baseCanvasFormat,
+    project.settings.customFormats,
+  )
 }
 
 export function normalizeActiveFormats(
   activeFormats?: CanvasFormatId[],
   legacyBaseFormat?: CanvasFormatId,
+  customFormats?: CustomCanvasFormat[],
 ): CanvasFormatId[] {
-  const formats = (activeFormats ?? [])
-    .filter((format) => format !== BASE_CANVAS_FORMAT && PLATFORM_FORMAT_IDS.has(format))
+  const formats = (activeFormats ?? []).filter((format) =>
+    format !== BASE_CANVAS_FORMAT && (
+      PLATFORM_FORMAT_IDS.has(format)
+      || (isCustomFormatId(format) && customFormats?.some((customFormat) => customFormat.id === format))
+    ),
+  )
+
+  if (activeFormats !== undefined && activeFormats.length === 0) return []
 
   // Legacy projects used iphone-69 as the "base". A saved activeFormats list of
   // only iphone-69 therefore means "base only", not "the user removed Android".
@@ -63,6 +108,11 @@ export function normalizeActiveFormats(
   }
 
   return Array.from(new Set(formats))
+}
+
+export function getExportTargets(project: Project): CanvasFormatId[] {
+  const formats = getProjectActiveFormats(project)
+  return formats.length > 0 ? formats : [BASE_CANVAS_FORMAT]
 }
 
 export function normalizeProjectFormats<T extends Project>(project: T): T {
@@ -85,9 +135,10 @@ export function getFormatCanvasDims(
   group: SlideGroup,
   format: CanvasFormatId,
   baseFormat: CanvasFormatId,
+  customFormats?: CustomCanvasFormat[],
 ): { width: number; height: number } {
   if (format === baseFormat || format === 'base') return { width: group.slideWidth, height: group.slideHeight }
-  const preset = getCanvasFormat(format)
+  const preset = getCanvasFormat(format, customFormats)
   return { width: preset.width, height: preset.height }
 }
 
@@ -171,6 +222,7 @@ export function resolveLayerFormat(
   fromH: number,
   toW: number,
   toH: number,
+  customFormats?: CustomCanvasFormat[],
 ): Layer | null {
   // If layer is owned by a specific format, only show it in that format
   if (layer.ownerFormat !== undefined && layer.ownerFormat !== format) return null
@@ -186,9 +238,9 @@ export function resolveLayerFormat(
     // model to the equivalent device for the target platform.
     let effectiveLayer: Layer = layer
     if (layer.type === 'phone') {
-      const targetPlatform = FORMAT_PLATFORM[format]
+      const targetPlatform = getFormatPlatform(format)
       const phoneLayer = layer as PhoneLayer
-      if ((layer.formatOverrides?.[format] as Record<string, unknown> | undefined)?.model === undefined) {
+      if (targetPlatform !== null && (layer.formatOverrides?.[format] as Record<string, unknown> | undefined)?.model === undefined) {
         const swappedModel = getModelForPlatform(phoneLayer.model, targetPlatform)
         if (swappedModel !== phoneLayer.model) {
           effectiveLayer = { ...layer, model: swappedModel } as Layer
@@ -205,7 +257,7 @@ export function resolveLayerFormat(
     return {
       ...(resolved as GroupLayer),
       children: original.children
-        .map((child) => resolveLayerFormat(child, format, isBase, fromW, fromH, toW, toH))
+        .map((child) => resolveLayerFormat(child, format, isBase, fromW, fromH, toW, toH, customFormats))
         .filter((child): child is Layer => Boolean(child)),
     }
   }
@@ -217,9 +269,10 @@ export function applyCanvasFormatToGroup(
   group: SlideGroup,
   format: CanvasFormatId,
   baseFormat: CanvasFormatId,
+  customFormats?: CustomCanvasFormat[],
 ): SlideGroup {
   const isBase = format === baseFormat
-  const target = getFormatCanvasDims(group, format, baseFormat)
+  const target = getFormatCanvasDims(group, format, baseFormat, customFormats)
   // For pano groups (numSlides > 1) the authoring canvas is slideWidth × numSlides wide.
   // Pass the full pano width as fromW/toW so scaleLayer anchors to the true canvas
   // centre instead of the single-slide centre — otherwise slide 2+ layers are
@@ -232,7 +285,7 @@ export function applyCanvasFormatToGroup(
     slideWidth: target.width,
     slideHeight: target.height,
     layers: group.layers
-      .map((layer) => resolveLayerFormat(layer, format, isBase, fromW, group.slideHeight, toW, target.height))
+      .map((layer) => resolveLayerFormat(layer, format, isBase, fromW, group.slideHeight, toW, target.height, customFormats))
       .filter((layer): layer is Layer => Boolean(layer)),
   }
 }
@@ -242,7 +295,9 @@ export function applyCanvasFormat(project: Project, format: CanvasFormatId): Pro
   const baseFormat = getProjectBaseFormat(project)
   return {
     ...project,
-    slideGroups: project.slideGroups.map((group) => applyCanvasFormatToGroup(group, format, baseFormat)),
+    slideGroups: project.slideGroups.map((group) =>
+      applyCanvasFormatToGroup(group, format, baseFormat, project.settings.customFormats),
+    ),
   }
 }
 
@@ -260,9 +315,10 @@ export function mapLayerToAuthoringSpace<T extends Layer>(
   baseFormat: CanvasFormatId,
   groupW: number,
   groupH: number,
+  customFormats?: CustomCanvasFormat[],
 ): T {
   if (activeFormat === baseFormat) return layer
-  const active = getCanvasFormat(activeFormat)
+  const active = getCanvasFormat(activeFormat, customFormats)
   // Forward factor: s_fwd = min(active.width/groupW, active.height/groupH)
   // Inverse factor: 1/s_fwd — do NOT recompute min() in the reverse direction.
   const sFwd = fitCenterScale(groupW, groupH, active.width, active.height)
@@ -314,6 +370,7 @@ export function promoteFormatOverridesToSharedInLayerTree(
   baseFormat: CanvasFormatId,
   groupW: number,
   groupH: number,
+  customFormats?: CustomCanvasFormat[],
 ): Layer[] {
   if (format === baseFormat) return layers
 
@@ -332,6 +389,7 @@ export function promoteFormatOverridesToSharedInLayerTree(
       baseFormat,
       groupW,
       groupH,
+      customFormats,
     ) as unknown as Record<string, unknown>
     const sharedPatch: Record<string, unknown> = {}
     for (const key of Object.keys(patch)) sharedPatch[key] = mapped[key]
@@ -351,11 +409,12 @@ export function makeOwnedFormatLayersSharedInLayerTree(
   baseFormat: CanvasFormatId,
   groupW: number,
   groupH: number,
+  customFormats?: CustomCanvasFormat[],
 ): Layer[] {
   function makeShared(layer: Layer): Layer {
     const mapped = format === baseFormat
       ? layer
-      : mapLayerToAuthoringSpace(layer, format, baseFormat, groupW, groupH)
+      : mapLayerToAuthoringSpace(layer, format, baseFormat, groupW, groupH, customFormats)
     return withoutFormatVisibility({ ...mapped, ownerFormat: undefined } as Layer, format)
   }
 

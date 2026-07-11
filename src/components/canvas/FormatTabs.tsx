@@ -4,22 +4,12 @@ import {
   BASE_CANVAS_FORMAT,
   CANVAS_FORMAT_PRESETS,
   countFormatAdjustments,
+  getFormatLabel,
   getProjectActiveFormats,
   getProjectBaseFormat,
+  isCustomFormatId,
 } from '@/utils/canvasFormats'
 import type { CanvasFormatId } from '@/types'
-
-/** Short human label for a CanvasFormatId. */
-function shortFormatLabel(id: CanvasFormatId): string {
-  const map: Record<CanvasFormatId, string> = {
-    'base': 'Base',
-    'iphone-69': 'iPhone',
-    'android-phone': 'Android',
-    'ipad-13': 'iPad',
-    'android-tablet': 'Android Tab',
-  }
-  return map[id] ?? id
-}
 
 export function FormatTabs() {
   const project = useEditorStore((s) => s.project)
@@ -27,7 +17,8 @@ export function FormatTabs() {
   const setActiveCanvasFormat = useEditorStore((s) => s.setActiveCanvasFormat)
   const activeSlideGroupId = useEditorStore((s) => s.activeSlideGroupId)
   const toggleActiveFormat = useEditorStore((s) => s.toggleActiveFormat)
-  const updateSlideGroup = useEditorStore((s) => s.updateSlideGroup)
+  const addCustomFormat = useEditorStore((s) => s.addCustomFormat)
+  const removeCustomFormat = useEditorStore((s) => s.removeCustomFormat)
   const resetActiveFormatLayout = useEditorStore((s) => s.resetActiveFormatLayout)
   const shareActiveFormatOwnedLayers = useEditorStore((s) => s.shareActiveFormatOwnedLayers)
   const resetActiveFormatVisibility = useEditorStore((s) => s.resetActiveFormatVisibility)
@@ -46,6 +37,7 @@ export function FormatTabs() {
   const [actionsOpen, setActionsOpen] = useState(false)
   const actionsRef = useRef<HTMLDivElement>(null)
   const [showCustomInput, setShowCustomInput] = useState(false)
+  const [customLabel, setCustomLabel] = useState('')
   const [customW, setCustomW] = useState('')
   const [customH, setCustomH] = useState('')
 
@@ -88,7 +80,11 @@ export function FormatTabs() {
 
   const handleRemoveFormat = (id: CanvasFormatId, e: React.MouseEvent) => {
     e.stopPropagation()
-    toggleActiveFormat(id)
+    if (isCustomFormatId(id)) {
+      removeCustomFormat(id)
+    } else {
+      toggleActiveFormat(id)
+    }
     // If we removed the currently active format, switch back to base
     if (activeCanvasFormat === id) {
       setActiveCanvasFormat(baseFormat)
@@ -107,7 +103,7 @@ export function FormatTabs() {
   }
 
   const handlePromoteLayout = () => {
-    const label = shortFormatLabel(activeCanvasFormat)
+    const label = getFormatLabel(activeCanvasFormat, project.settings.customFormats)
     const ok = window.confirm(
       `Use ${label} layout as shared for this slide?\n\n` +
       'This promotes all layout/model overrides from this platform into Base, so other platforms may move. Content stays shared.',
@@ -154,9 +150,9 @@ export function FormatTabs() {
                 className={`flex items-center gap-1 pl-3 pr-1 h-full text-xs font-medium transition-colors whitespace-nowrap ${
                   isActive ? '' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
                 }`}
-                title={`${shortFormatLabel(fmtId)} format · ${count} layout adjustment${count !== 1 ? 's' : ''}`}
+                title={`${getFormatLabel(fmtId, project.settings.customFormats)} format · ${count} layout adjustment${count !== 1 ? 's' : ''}`}
               >
-                {shortFormatLabel(fmtId)}
+                {getFormatLabel(fmtId, project.settings.customFormats)}
                 {count > 0 && (
                   <span
                     className="ml-0.5 text-[10px] font-semibold"
@@ -171,7 +167,7 @@ export function FormatTabs() {
               <button
                 onClick={(e) => handleRemoveFormat(fmtId, e)}
                 className="self-center mb-[2px] mr-0.5 w-4 h-4 flex items-center justify-center rounded text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.08)] opacity-0 group-hover/tab:opacity-100 transition-opacity text-[10px] leading-none"
-                title={`Remove ${shortFormatLabel(fmtId)} tab`}
+                title={`Remove ${getFormatLabel(fmtId, project.settings.customFormats)} tab`}
               >
                 ×
               </button>
@@ -192,7 +188,7 @@ export function FormatTabs() {
           {dropdownOpen && (
             <div className="absolute top-full left-0 mt-1 z-50 bg-[#1e1e2a] border border-[rgba(255,255,255,0.1)] rounded-lg shadow-xl overflow-hidden min-w-[176px]">
               {inactiveFormats.length === 0 ? (
-                <p className="px-3 py-2 text-xs text-[#6b6b7a]">All formats active</p>
+                <p className="px-3 py-2 text-xs text-[#6b6b7a]">All presets active</p>
               ) : (
                 inactiveFormats.map((fmt) => (
                   <button
@@ -200,7 +196,7 @@ export function FormatTabs() {
                     onClick={() => handleToggleAdd(fmt.id as CanvasFormatId)}
                     className="w-full text-left px-3 py-2 text-xs text-[#a0a0b0] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e8e8f0] transition-colors"
                   >
-                    {shortFormatLabel(fmt.id as CanvasFormatId)}
+                    {getFormatLabel(fmt.id as CanvasFormatId, project.settings.customFormats)}
                     <span className="ml-1.5 text-[10px] opacity-50">
                       {fmt.width}×{fmt.height}
                     </span>
@@ -219,7 +215,14 @@ export function FormatTabs() {
 
           {showCustomInput && (
             <div className="absolute top-full left-0 mt-1 z-50 bg-[#1e1e2a] border border-[rgba(255,255,255,0.1)] rounded-lg shadow-xl p-3 min-w-[200px]">
-              <p className="text-[10px] text-[#6b6b7a] mb-2">Custom canvas size (base)</p>
+              <p className="text-[10px] text-[#6b6b7a] mb-2">Custom canvas format</p>
+              <input
+                type="text"
+                placeholder="Label (optional)"
+                value={customLabel}
+                onChange={(e) => setCustomLabel(e.target.value)}
+                className="w-full mb-2 bg-[#0f0f13] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-xs text-[#e8e8f0] focus:outline-none"
+              />
               <div className="flex items-center gap-2 mb-2">
                 <input
                   type="number"
@@ -242,10 +245,11 @@ export function FormatTabs() {
                   onClick={() => {
                     const w = parseInt(customW)
                     const h = parseInt(customH)
-                    if (w >= 100 && w <= 9999 && h >= 100 && h <= 9999 && activeSlideGroupId) {
-                      updateSlideGroup(activeSlideGroupId, { slideWidth: w, slideHeight: h })
+                    if (w >= 100 && w <= 9999 && h >= 100 && h <= 9999) {
+                      addCustomFormat(customLabel.trim() || `Custom ${w}×${h}`, w, h)
                     }
                     setShowCustomInput(false)
+                    setCustomLabel('')
                     setCustomW('')
                     setCustomH('')
                   }}
@@ -254,7 +258,7 @@ export function FormatTabs() {
                   Apply
                 </button>
                 <button
-                  onClick={() => { setShowCustomInput(false); setCustomW(''); setCustomH('') }}
+                  onClick={() => { setShowCustomInput(false); setCustomLabel(''); setCustomW(''); setCustomH('') }}
                   className="text-xs text-[#6b6b7a] hover:text-[#e8e8f0] px-2 py-1"
                 >
                   Cancel
@@ -286,9 +290,9 @@ export function FormatTabs() {
           }}
         >
           <span className="text-xs" style={{ color: '#fbbf24' }}>
-            ⚠ <strong>{shortFormatLabel(activeCanvasFormat)}</strong> tab · Layers added here belong only to{' '}
-            <strong>{shortFormatLabel(activeCanvasFormat)}</strong> · Layout adjustments only affect{' '}
-            <strong>{shortFormatLabel(activeCanvasFormat)}</strong> · Content (text, colors) is shared
+            ⚠ <strong>{getFormatLabel(activeCanvasFormat, project.settings.customFormats)}</strong> tab · Layers added here belong only to{' '}
+            <strong>{getFormatLabel(activeCanvasFormat, project.settings.customFormats)}</strong> · Layout adjustments only affect{' '}
+            <strong>{getFormatLabel(activeCanvasFormat, project.settings.customFormats)}</strong> · Content (text, colors) is shared
           </span>
           <div className="ml-4 flex shrink-0 items-center gap-2">
             <button
@@ -303,7 +307,7 @@ export function FormatTabs() {
                 onClick={() => setActionsOpen((v) => !v)}
                 className="rounded border border-[rgba(245,158,11,0.25)] px-2 py-0.5 text-xs transition-colors hover:bg-[rgba(245,158,11,0.12)]"
                 style={{ color: '#fbbf24' }}
-                title={`Global actions for this ${shortFormatLabel(activeCanvasFormat)} slide`}
+                title={`Global actions for this ${getFormatLabel(activeCanvasFormat, project.settings.customFormats)} slide`}
               >
                 Actions ▾
               </button>
@@ -311,7 +315,7 @@ export function FormatTabs() {
                 <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#1c1c26] shadow-xl">
                   <div className="border-b border-[rgba(255,255,255,0.08)] px-3 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#fbbf24]">
-                      {shortFormatLabel(activeCanvasFormat)} slide actions
+                      {getFormatLabel(activeCanvasFormat, project.settings.customFormats)} slide actions
                     </p>
                     <p className="mt-0.5 text-[10px] text-[#6b6b7a]">
                       {activeAdjustmentCount} platform adjustment{activeAdjustmentCount !== 1 ? 's' : ''} on this slide

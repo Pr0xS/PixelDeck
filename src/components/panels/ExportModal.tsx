@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import type Konva from 'konva'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
-import { applyCanvasFormat, CANVAS_FORMAT_PRESETS, countFormatAdjustments, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { applyCanvasFormat, countFormatAdjustments, getCanvasFormat, getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat } from '@/utils/canvasFormats'
 import { exportProjectImages, type ProjectExportScope, type ProjectImageExportResult } from '@/utils/multiFormatExport'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
 import { downloadDataUrl } from '@/utils/export'
@@ -45,8 +45,7 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
   const viewProject = applyCanvasFormat(project, activeCanvasFormat)
   const activeGroup = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
   const baseFormat = getProjectBaseFormat(project)
-  const activeFormats: CanvasFormatId[] = getProjectActiveFormats(project)
-  const exportableFormats = activeFormats.filter((f) => f !== baseFormat)
+  const exportableFormats = getExportTargets(project)
   const projectLocales = Array.from(new Set(project.settings.locales?.length
     ? project.settings.locales
     : [project.settings.defaultLocale ?? 'en']))
@@ -257,13 +256,17 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
             <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#6b6b7a] mb-3">Export formats</p>
             {exportableFormats.length === 0 ? (
               <p className="text-[10px] leading-snug text-[#6b6b7a]">
-                No export formats are enabled yet. Add an iPhone, Android, iPad, or tablet format from the format switcher above the canvas.
+                No export formats are enabled yet. Add an iPhone, Android, iPad, tablet, or Custom size format from the format switcher above the canvas.
               </p>
             ) : (
               <div className="flex flex-col gap-1">
                 {exportableFormats.map((formatId) => {
-                  const preset = CANVAS_FORMAT_PRESETS.find((p) => p.id === formatId)
-                  if (!preset) return null
+                  // getCanvasFormat('base') resolves to a legacy iPhone-preset stub, not the
+                  // group's real authoring size — use getFormatCanvasDims (group-aware) so the
+                  // checklist shows the actual export size when Base is the sole export target.
+                  const format = rawActiveGroup
+                    ? getFormatCanvasDims(rawActiveGroup, formatId, baseFormat, project.settings.customFormats)
+                    : getCanvasFormat(formatId, project.settings.customFormats)
                   const isChecked = selectedExportFormats.includes(formatId)
                   const adjustments = rawActiveGroup
                     ? countFormatAdjustments(rawActiveGroup, formatId, baseFormat)
@@ -284,10 +287,10 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
                         className="accent-[#7c6ef6] w-3 h-3 shrink-0"
                       />
                       <span className="text-[11px] text-[#e8e8f0] flex-1 truncate">
-                        {preset.label}
+                        {getFormatLabel(formatId, project.settings.customFormats)}
                       </span>
                       <span className="text-[10px] text-[#6b6b7a] shrink-0">
-                        {preset.width}×{preset.height}
+                        {format.width}×{format.height}
                       </span>
                       {adjustments > 0 ? (
                         <span className="text-[9px] text-[#f59e0b] bg-[rgba(245,158,11,0.1)] rounded px-1 py-px shrink-0">

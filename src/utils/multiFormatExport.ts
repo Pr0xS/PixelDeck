@@ -1,7 +1,7 @@
 import type Konva from 'konva'
 import type { CanvasFormatId } from '@/types'
 import { exportGroupImages, type PanoExportMode } from './export'
-import { applyCanvasFormat, CANVAS_FORMAT_PRESETS } from './canvasFormats'
+import { applyCanvasFormat, getFormatLabel, isCustomFormatId } from './canvasFormats'
 import { applyLocale } from './locale'
 import { acquireCaptureLock, waitForStageCaptureReady } from './stageCapture'
 import { useEditorStore } from '@/store'
@@ -41,10 +41,6 @@ function safeSegment(value: string): string {
   return value.trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'untitled'
 }
 
-function formatLabel(formatId: CanvasFormatId): string {
-  return CANVAS_FORMAT_PRESETS.find((p) => p.id === formatId)?.label ?? formatId
-}
-
 export async function exportProjectImages(
   stage: Konva.Stage,
   options: ProjectImageExportOptions,
@@ -56,6 +52,7 @@ export async function exportProjectImages(
   const originalLocale = store.activeLocale
   const projectPano = store.project.settings.pano ?? { gapPx: 24, compensate: false }
   const project = store.project
+  const customFormats = project.settings.customFormats
   const formatIds = options.formatIds.length ? options.formatIds : [originalFormat]
   const locales = options.locales.length ? options.locales : [project.settings.defaultLocale ?? originalLocale]
   const panoMode = options.panoMode ?? 'split'
@@ -97,7 +94,10 @@ export async function exportProjectImages(
             const baseFileName = options.scope === 'project' && imageSlug !== groupSlug
               ? `${groupSlug}__${imageSlug}`
               : imageSlug
-            const baseRelativePath = [safeSegment(formatId), safeSegment(locale), baseFileName].join('/')
+            const formatSegment = isCustomFormatId(formatId)
+              ? getFormatLabel(formatId, customFormats)
+              : formatId
+            const baseRelativePath = [safeSegment(formatSegment), safeSegment(locale), baseFileName].join('/')
             // Deduplicate: if this path was already used, append a counter suffix
             let relativePath = baseRelativePath
             let fileName = baseFileName
@@ -110,7 +110,7 @@ export async function exportProjectImages(
             usedPaths.add(relativePath)
             results.push({
               formatId,
-              formatLabel: formatLabel(formatId),
+              formatLabel: getFormatLabel(formatId, customFormats),
               locale,
               groupId,
               groupName: resolvedGroup.name,
