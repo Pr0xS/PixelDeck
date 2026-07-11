@@ -26,7 +26,6 @@ import {
   panelSectionCls,
   pauseTemporal,
   resumeTemporal,
-  shortFormatLabel,
   type PanelTab,
 } from '@/components/properties/panelConstants'
 import { ShadowControls } from '@/components/properties/shared'
@@ -38,7 +37,7 @@ import { EmojiProperties } from '@/components/properties/EmojiProperties'
 import { BrandProperties } from '@/components/properties/BrandProperties'
 import { ShapeProperties } from '@/components/properties/ShapeProperties'
 import { GroupProperties } from '@/components/properties/GroupProperties'
-import { applyCanvasFormat, getCanvasFormat, getFormatCanvasDims, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { applyCanvasFormat, getCanvasFormat, getFormatCanvasDims, getFormatLabel, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
 import type { CanvasFormatId } from '@/types'
 import { getLayerBBox, getUnionBBox, computeAlignPatch, type AlignAxis } from '@/utils/alignLayers'
 
@@ -176,7 +175,7 @@ function LayoutTab({ layer }: { layer: Layer }) {
   // Dynamic ranges based on the active format's canvas dimensions
   const activeGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
   const formatDims = activeGroup
-    ? getFormatCanvasDims(activeGroup, activeCanvasFormat, getProjectBaseFormat(project))
+    ? getFormatCanvasDims(activeGroup, activeCanvasFormat, getProjectBaseFormat(project), project.settings.customFormats)
     : { width: 1080, height: 1920 }
   const slideW = formatDims.width
   const slideH = formatDims.height
@@ -274,7 +273,7 @@ function LayoutTab({ layer }: { layer: Layer }) {
                       : 'border-[rgba(255,255,255,0.06)] text-[#555665] line-through'
                   }`}
                 >
-                  {shortFormatLabel(fmtId)}
+                  {getFormatLabel(fmtId, project.settings.customFormats)}
                 </button>
               )
             })}
@@ -511,7 +510,7 @@ export function PropertiesPanel() {
   }
 
   const baseCanvasFormat = getProjectBaseFormat(project)
-  const activeFormatInfo = getCanvasFormat(activeCanvasFormat)
+  const activeFormatInfo = getCanvasFormat(activeCanvasFormat, project.settings.customFormats)
   const isBaseFormat = activeCanvasFormat === baseCanvasFormat
   const selectedHasFormatOverride = Boolean(rawSelectedLayer?.formatOverrides?.[activeCanvasFormat])
   const isBackgroundSelected = selectedLayer?.type === 'background'

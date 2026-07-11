@@ -72,7 +72,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>) {
     const { gapPx, compensate } = getEffectivePano(currentProject.settings.pano, currentOverride)
     const effectivePanoCompensationPx = compensate ? gapPx : 0
     const baseFormat = getProjectBaseFormat(project)
-    const dims = getFormatCanvasDims(group, format, baseFormat)
+    const dims = getFormatCanvasDims(group, format, baseFormat, currentProject.settings.customFormats)
 
     setThumbnails((prev) => ({
       ...prev,
@@ -169,7 +169,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>) {
           await waitForStageCaptureReady(stage)
           if (previewAbortRef.current) break
 
-          const groupDims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat)
+          const groupDims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat, project.settings.customFormats)
           const key = getGroupPreviewKey(group, activeCanvasFormat, useEditorStore.getState().activeLocale, effectivePano)
           const thumbs = withIdentityTransform(stage, () =>
             Array.from({ length: group.numSlides }, (_, i) =>

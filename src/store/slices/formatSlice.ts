@@ -1,7 +1,7 @@
-import type { Layer, CanvasFormatId } from '@/types'
+import { nanoid } from 'nanoid'
+import type { Layer, CanvasFormatId, GroupLayer } from '@/types'
 import {
   BASE_CANVAS_FORMAT,
-  CANVAS_FORMAT_PRESETS,
   FORMAT_LAYOUT_KEYS,
   getProjectActiveFormats,
   getProjectBaseFormat,
@@ -19,6 +19,17 @@ import {
   pickLayerKeys,
 } from '../helpers'
 
+function clearOwnerFormatInLayerTree(layers: Layer[], format: CanvasFormatId): Layer[] {
+  return layers.map((layer) => {
+    const withChildren = layer.type === 'group'
+      ? { ...layer, children: clearOwnerFormatInLayerTree((layer as GroupLayer).children, format) }
+      : layer
+    return withChildren.ownerFormat === format
+      ? { ...withChildren, ownerFormat: undefined } as Layer
+      : withChildren as Layer
+  })
+}
+
 export const createFormatSlice = (
   set: EditorSet,
   get: EditorGet,
@@ -32,6 +43,9 @@ export const createFormatSlice = (
   | 'setLayerOnlyInFormat'
   | 'clearLayerFormatVisibility'
   | 'toggleActiveFormat'
+  | 'addCustomFormat'
+  | 'removeCustomFormat'
+  | 'updateCustomFormat'
   | 'clearLayerFormatOverrideKey'
   | 'applyLayerFormatKeyToShared'
   | 'resetActiveFormatLayout'
@@ -62,6 +76,7 @@ export const createFormatSlice = (
         const inTargetSpace = { ...layer, ...patch, id: layer.id, type: layer.type } as Layer
         const mapped = mapLayerToAuthoringSpace(
           inTargetSpace, targetFormat, baseFormat, g.slideWidth * (g.numSlides ?? 1), g.slideHeight,
+          get().project.settings.customFormats,
         )
         const sharedPatch = pickLayerKeys(mapped, Object.keys(patch))
         return withoutFormatOverride({ ...layer, ...sharedPatch } as Layer, targetFormat)
@@ -83,12 +98,13 @@ export const createFormatSlice = (
 
   setLayerOnlyInFormat: (layerId, format) => {
     const targetFormat = format ?? get().activeCanvasFormat
+    const activeFormats = getProjectActiveFormats(get().project)
     mutateActiveGroup(set, (g) => ({
       ...g,
       layers: mapLayerById(g.layers, layerId, (layer) => ({
         ...layer,
         formatVisibility: Object.fromEntries(
-          CANVAS_FORMAT_PRESETS.map((preset) => [preset.id, preset.id === targetFormat]),
+          activeFormats.map((activeFormat) => [activeFormat, activeFormat === targetFormat]),
         ),
       } as Layer)),
     }))
@@ -113,6 +129,7 @@ export const createFormatSlice = (
           getProjectBaseFormat(get().project),
           g.slideWidth * (g.numSlides ?? 1),
           g.slideHeight,
+          get().project.settings.customFormats,
         )[0]
       }),
     }))
@@ -131,6 +148,63 @@ export const createFormatSlice = (
       newList = [...currentFormats, format]
     }
     get().updateSettings({ baseCanvasFormat: BASE_CANVAS_FORMAT, activeFormats: newList })
+  },
+
+  addCustomFormat: (label, width, height) => {
+    const id = `custom:${nanoid()}` as const
+    const { project } = get()
+    const activeFormats = getProjectActiveFormats(project)
+    get().updateSettings({
+      customFormats: [...(project.settings.customFormats ?? []), { id, label, width, height }],
+      activeFormats: [...activeFormats, id],
+    })
+    set({ activeCanvasFormat: id })
+  },
+
+  removeCustomFormat: (id) => {
+    const { project, activeCanvasFormat } = get()
+    const customFormats = project.settings.customFormats ?? []
+    if (!customFormats.some((format) => format.id === id)) return
+    const baseFormat = getProjectBaseFormat(project)
+    const slideGroups = project.slideGroups.map((group) => {
+      const shared = makeOwnedFormatLayersSharedInLayerTree(
+        group.layers,
+        id,
+        baseFormat,
+        group.slideWidth * (group.numSlides ?? 1),
+        group.slideHeight,
+        customFormats,
+      )
+      return {
+        ...group,
+        layers: clearOwnerFormatInLayerTree(resetFormatVisibilityInLayerTree(
+          resetFormatOverridesInLayerTree(shared, id),
+          id,
+        ), id),
+      }
+    })
+    set({
+      project: {
+        ...project,
+        updatedAt: new Date().toISOString(),
+        settings: {
+          ...project.settings,
+          customFormats: customFormats.filter((format) => format.id !== id),
+          activeFormats: getProjectActiveFormats(project).filter((format) => format !== id),
+        },
+        slideGroups,
+      },
+      ...(activeCanvasFormat === id ? { activeCanvasFormat: baseFormat } : {}),
+    })
+  },
+
+  updateCustomFormat: (id, patch) => {
+    const { project } = get()
+    get().updateSettings({
+      customFormats: (project.settings.customFormats ?? []).map((format) =>
+        format.id === id ? { ...format, ...patch } : format,
+      ),
+    })
   },
 
   clearLayerFormatOverrideKey: (layerId, key, format) => {
@@ -170,6 +244,7 @@ export const createFormatSlice = (
           const dummy = { ...layer, [key]: overrideValue } as Layer
           const mapped = mapLayerToAuthoringSpace(
             dummy, targetFormat, baseFormat, g.slideWidth * (g.numSlides ?? 1), g.slideHeight,
+            project.settings.customFormats,
           )
           sharedPatch = pickLayerKeys(mapped, [key])
         }
@@ -211,6 +286,7 @@ export const createFormatSlice = (
         baseFormat,
         g.slideWidth * (g.numSlides ?? 1),
         g.slideHeight,
+        get().project.settings.customFormats,
       ),
     }))
   },
@@ -237,6 +313,7 @@ export const createFormatSlice = (
         baseFormat,
         g.slideWidth * (g.numSlides ?? 1),
         g.slideHeight,
+        get().project.settings.customFormats,
       ),
     }))
   },

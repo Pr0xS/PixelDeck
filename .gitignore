@@ -17,6 +17,7 @@ dist-ssr/
 .opencode/
 .cursorrules
 .aider*
+.slim/deepwork/
 
 # ─── User-generated runtime dirs ──────────────────────────────────────────────
 # Local workspace data — not part of the source. The CLI creates these on demand.

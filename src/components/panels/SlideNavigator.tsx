@@ -7,9 +7,9 @@ import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove 
 import { CSS } from '@dnd-kit/utilities'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
-import { applyCanvasFormat, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { applyCanvasFormat, getExportTargets } from '@/utils/canvasFormats'
 import { MAX_PANO_COMPENSATION_PX } from '@/utils/panoGeometry'
-import type { BackgroundLayer, CanvasFormatId, SlideGroup } from '@/types'
+import type { BackgroundLayer, SlideGroup } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
 import { ExportModal } from './ExportModal'
 
@@ -236,10 +236,8 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   const activeGroup = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
 
   // The formats currently active for this project
-  const baseFormat = getProjectBaseFormat(project)
-  const activeFormats: CanvasFormatId[] = getProjectActiveFormats(project)
-  // Non-base (exportable) formats — used to disable the Export button when nothing to export
-  const exportableFormats = activeFormats.filter((f) => f !== baseFormat)
+  // Export targets — Base is used when no platform or custom formats are active.
+  const exportableFormats = getExportTargets(project)
 
   // Close context menu on outside click
   useEffect(() => {

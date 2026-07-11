@@ -4,7 +4,6 @@
  */
 
 import { useEditorStore } from '@/store'
-import type { CanvasFormatId } from '@/types'
 
 // ─── Temporal pause/resume helpers ───────────────────────────────────────────
 export const pauseTemporal = () => useEditorStore.temporal.getState().pause()
@@ -22,15 +21,3 @@ export const subtleButtonCls =
 
 // ─── Panel tab type ───────────────────────────────────────────────────────
 export type PanelTab = 'layout' | 'style' | 'content'
-
-// ─── Format label helper ─────────────────────────────────────────────────
-export function shortFormatLabel(id: CanvasFormatId): string {
-  const map: Record<CanvasFormatId, string> = {
-    'base': 'Base',
-    'iphone-69': 'iPhone',
-    'android-phone': 'Android',
-    'ipad-13': 'iPad',
-    'android-tablet': 'Android Tab',
-  }
-  return map[id] ?? id
-}

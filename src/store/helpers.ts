@@ -222,6 +222,7 @@ export function newProject(): Project {
       brandName: 'My App',
       baseCanvasFormat: BASE_CANVAS_FORMAT,
       activeFormats: ['iphone-69', 'android-phone'],
+      customFormats: [],
       pano: { gapPx: 24, compensate: false },
     },
     slideGroups: [newSlideGroup({ name: 'Slide 1' })],

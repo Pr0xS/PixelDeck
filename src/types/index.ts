@@ -58,7 +58,16 @@ export type PhoneModel = 'iphone-16-pro' | 'iphone-16-pro-plain' | 'pixel-9' | '
 
 // ─── Canvas Formats ──────────────────────────────────────────────────────────
 
-export type CanvasFormatId = 'base' | 'iphone-69' | 'android-phone' | 'ipad-13' | 'android-tablet';
+export type BuiltInFormatId = 'base' | 'iphone-69' | 'android-phone' | 'ipad-13' | 'android-tablet'
+export type CustomFormatId = `custom:${string}`
+export type CanvasFormatId = BuiltInFormatId | CustomFormatId
+
+export interface CustomCanvasFormat {
+  id: CustomFormatId
+  label: string
+  width: number
+  height: number
+}
 
 /** Screen area within the mockup frame (all in "phone canvas" pixels) */
 export interface PhoneScreenRect {
@@ -412,6 +421,7 @@ export interface ProjectSettings {
   baseCanvasFormat?: CanvasFormatId;
   /** Exportable platform formats the user has opted into. Default = iPhone + Android. */
   activeFormats?: CanvasFormatId[];
+  customFormats?: CustomCanvasFormat[];
   pano?: PanoSettings;
 }
 

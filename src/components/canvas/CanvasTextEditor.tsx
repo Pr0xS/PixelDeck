@@ -62,7 +62,7 @@ export function CanvasTextEditor({ stageRef }: CanvasTextEditorProps) {
   // Content edits still flow to the shared base via updateLayer's format routing.
   const rawGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
   const group = rawGroup
-    ? applyCanvasFormatToGroup(rawGroup, activeCanvasFormat, getProjectBaseFormat(project))
+    ? applyCanvasFormatToGroup(rawGroup, activeCanvasFormat, getProjectBaseFormat(project), project.settings.customFormats)
     : undefined
   const found = editingTextId && group ? findTextLayer(group.layers, editingTextId) : null
   const layerId = found?.layer.id
