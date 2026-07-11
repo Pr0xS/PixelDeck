@@ -5,6 +5,12 @@ All notable changes to PixelDeck are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.4.1](https://github.com/Pr0xS/PixelDeck/compare/v0.4.0...v0.4.1) (2026-07-12)
+
+### Bug Fixes
+
+* support multiple simultaneous custom canvas formats ([#37](https://github.com/Pr0xS/PixelDeck/pull/37)) ([f3e8280](https://github.com/Pr0xS/PixelDeck/commit/f3e8280a0b9074e7704486592ad48aacc255f8f2))
+
 ## [0.4.0](https://github.com/Pr0xS/PixelDeck/compare/v0.3.3...v0.4.0) (2026-07-07)
 
 
