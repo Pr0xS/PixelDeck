@@ -42,7 +42,7 @@ export const createSlideGroupSlice = (
     })
   },
 
-  setActiveSlideGroup: (id) => set({ activeSlideGroupId: id, selection: null, editingGroupId: null }),
+  setActiveSlideGroup: (id) => set({ activeSlideGroupId: id, selection: null, editingGroupId: null, selectedAccentIndex: null }),
 
   updateSlideGroup: (id, patch) => {
     set((s) => ({

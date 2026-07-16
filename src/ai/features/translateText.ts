@@ -16,6 +16,7 @@ export interface AiAuth {
   provider: AiProvider
   apiKey: string
   model?: string
+  baseUrl?: string
 }
 
 export interface TranslationResult {
@@ -321,8 +322,8 @@ export function parseBatchTranslationResponse(
  * Repair unescaped control characters (U+0000–U+001F) that appear inside JSON
  * string literals. The JSON spec forbids bare newlines, carriage returns, tabs,
  * and other control chars inside string values — they must be escaped as \n,
- * \r, \t, or \uXXXX.  Models that don't use forceJsonMode (Anthropic, Google,
- * OpenCode) frequently return multiline marketing copy with literal newlines
+ * \r, \t, or \uXXXX. Models that don't use forceJsonMode frequently return
+ * multiline marketing copy with literal newlines
  * inside the JSON string, causing JSON.parse to throw.
  *
  * The function walks the slice character-by-character, tracking

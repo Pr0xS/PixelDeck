@@ -27,6 +27,7 @@ export const useEditorStore = create<EditorStore>()(
       project: newProject(),
       activeSlideGroupId: '',
       selection: null as Selection | null,
+      selectedAccentIndex: null as number | null,
       zoom: 0.28,
       viewportX: 0,
       viewportY: 0,

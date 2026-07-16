@@ -54,7 +54,7 @@ export const createFormatSlice = (
   | 'promoteActiveFormatLayoutToShared'
 > => ({
   // ─ Canvas format actions
-  setActiveCanvasFormat: (format) => set({ activeCanvasFormat: format, selection: null, editingGroupId: null, selectedLayerIds: [] }),
+  setActiveCanvasFormat: (format) => set({ activeCanvasFormat: format, selection: null, editingGroupId: null, selectedLayerIds: [], selectedAccentIndex: null }),
 
   clearLayerFormatOverride: (layerId, format) => {
     const targetFormat = format ?? get().activeCanvasFormat

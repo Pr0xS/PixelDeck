@@ -1,10 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import {
-  buildAnthropicHeaders,
-  buildGoogleHeaders,
-  buildOpenAiCompatibleHeaders,
-  getAiRequestOrigin,
-} from './headers'
+import { buildOpenAiCompatibleHeaders, getAiRequestOrigin } from './headers'
 
 describe('AI auth headers', () => {
   beforeEach(() => {
@@ -33,22 +28,6 @@ describe('AI auth headers', () => {
       Authorization: 'Bearer sk-or-test',
       'HTTP-Referer': 'http://localhost:5173',
       'X-OpenRouter-Title': 'PixelDeck',
-    })
-  })
-
-  it('builds Anthropic direct API headers', () => {
-    expect(buildAnthropicHeaders('sk-ant-test', { contentType: true })).toEqual({
-      'Content-Type': 'application/json',
-      'x-api-key': 'sk-ant-test',
-      'anthropic-version': '2023-06-01',
-      'anthropic-dangerous-direct-browser-access': 'true',
-    })
-  })
-
-  it('includes Google API key only when requested', () => {
-    expect(buildGoogleHeaders('AIza-test')).toEqual({})
-    expect(buildGoogleHeaders('AIza-test', { includeApiKey: true })).toEqual({
-      'x-goog-api-key': 'AIza-test',
     })
   })
 

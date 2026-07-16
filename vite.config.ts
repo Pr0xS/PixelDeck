@@ -26,35 +26,6 @@ export default defineConfig({
     __GIT_HASH__: JSON.stringify(getGitHash()),
   },
   plugins: [react(), tailwindcss()],
-  server: {
-    proxy: {
-      '/api/ai-proxy/openrouter': {
-        target: 'https://openrouter.ai',
-        changeOrigin: true,
-        rewrite: (proxyPath) => proxyPath.replace(/^\/api\/ai-proxy\/openrouter/, '/api/v1'),
-      },
-      '/api/ai-proxy/opencode': {
-        target: 'https://opencode.ai',
-        changeOrigin: true,
-        rewrite: (proxyPath) => proxyPath.replace(/^\/api\/ai-proxy\/opencode/, '/zen/go/v1'),
-      },
-      '/api/ai-proxy/openai': {
-        target: 'https://api.openai.com',
-        changeOrigin: true,
-        rewrite: (proxyPath) => proxyPath.replace(/^\/api\/ai-proxy\/openai/, '/v1'),
-      },
-      '/api/ai-proxy/anthropic': {
-        target: 'https://api.anthropic.com',
-        changeOrigin: true,
-        rewrite: (proxyPath) => proxyPath.replace(/^\/api\/ai-proxy\/anthropic/, '/v1'),
-      },
-      '/api/ai-proxy/google': {
-        target: 'https://generativelanguage.googleapis.com',
-        changeOrigin: true,
-        rewrite: (proxyPath) => proxyPath.replace(/^\/api\/ai-proxy\/google/, '/v1beta'),
-      },
-    },
-  },
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),

@@ -1,0 +1,1251 @@
+{
+  "id": "tpl-deep-focus",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Deep Focus",
+  "description": "Clean light productivity set: minimal hero, self-organizing pano, capture checklist, streaks duo and an indigo CTA. Brand Kit wired.",
+  "category": "Productivity",
+  "author": "PixelDeck",
+  "createdAt": "2026-07-16T00:00:00.000Z",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "Flowly",
+    "brandColors": [
+      {
+        "id": "prdprimary",
+        "name": "Primary",
+        "value": "#6366F1"
+      },
+      {
+        "id": "prdaccent",
+        "name": "Accent",
+        "value": "#F59E0B"
+      }
+    ]
+  },
+  "slideGroups": [
+    {
+      "name": "Hero",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-01"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 165,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#F8FAFC"
+              },
+              {
+                "offset": 0.5,
+                "color": "#EEF2FF"
+              },
+              {
+                "offset": 1.0,
+                "color": "#E0E7FF"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(99,102,241,0.16)",
+              "cx": 85,
+              "cy": 8,
+              "rx": 800,
+              "ry": 700
+            },
+            {
+              "color": "rgba(245,158,11,0.10)",
+              "cx": 8,
+              "cy": 85,
+              "rx": 850,
+              "ry": 750
+            }
+          ],
+          "noise": 0.03
+        },
+        {
+          "id": "l1",
+          "name": "Brand",
+          "type": "brand",
+          "x": 100,
+          "y": 96,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "appName": "Flowly",
+          "logoSize": 64,
+          "nameColor": "{brand:prdprimary}",
+          "nameFontSize": 40,
+          "nameFontFamily": "Space Grotesk",
+          "nameFontWeight": 700,
+          "direction": "row",
+          "gap": 18
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 270,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Get more done,\nstress less",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 118,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 15,
+              "end": 26,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#6366F1"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#8B5CF6"
+                  }
+                ]
+              },
+              "fontWeight": 700
+            }
+          ]
+        },
+        {
+          "id": "l3",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 610,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "One inbox for tasks, notes and plans",
+          "fontFamily": "Inter",
+          "fontSize": 48,
+          "fontWeight": 500,
+          "fill": "#64748B",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l4",
+          "name": "Chip Tasks",
+          "type": "shape",
+          "x": 228,
+          "y": 760,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 159,
+          "height": 92,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#6366F1"
+              },
+              {
+                "offset": 1.0,
+                "color": "#8B5CF6"
+              }
+            ]
+          },
+          "cornerRadius": 46
+        },
+        {
+          "id": "l5",
+          "name": "Chip label Tasks",
+          "type": "text",
+          "x": 228,
+          "y": 785,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Tasks",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 159
+        },
+        {
+          "id": "l6",
+          "name": "Chip Notes",
+          "type": "shape",
+          "x": 408,
+          "y": 760,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 159,
+          "height": 92,
+          "fill": "rgba(15,23,42,0.06)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l7",
+          "name": "Chip label Notes",
+          "type": "text",
+          "x": 408,
+          "y": 785,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Notes",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#334155",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 159
+        },
+        {
+          "id": "l8",
+          "name": "Chip Reminders",
+          "type": "shape",
+          "x": 590,
+          "y": 760,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 235,
+          "height": 92,
+          "fill": "rgba(15,23,42,0.06)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l9",
+          "name": "Chip label Reminders",
+          "type": "text",
+          "x": 590,
+          "y": 785,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Reminders",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#334155",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 235
+        },
+        {
+          "id": "l10",
+          "name": "Chip Projects",
+          "type": "shape",
+          "x": 846,
+          "y": 760,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 216,
+          "height": 92,
+          "fill": "rgba(15,23,42,0.06)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l11",
+          "name": "Chip label Projects",
+          "type": "text",
+          "x": 846,
+          "y": 785,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Projects",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#334155",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 216
+        },
+        {
+          "id": "l12",
+          "name": "Phone",
+          "type": "phone",
+          "x": 177,
+          "y": 950,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.4,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#1E1B4B",
+            "blur": 80,
+            "offsetX": 0,
+            "offsetY": 45,
+            "opacity": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "name": "Schedule Pano",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-02",
+        "slide-03"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 115,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#EEF2FF"
+              },
+              {
+                "offset": 0.5,
+                "color": "#F8FAFC"
+              },
+              {
+                "offset": 1.0,
+                "color": "#FEF3C7"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(99,102,241,0.14)",
+              "cx": 20,
+              "cy": 12,
+              "rx": 860,
+              "ry": 760
+            },
+            {
+              "color": "rgba(245,158,11,0.12)",
+              "cx": 82,
+              "cy": 82,
+              "rx": 820,
+              "ry": 720
+            }
+          ],
+          "noise": 0.03
+        },
+        {
+          "id": "l1",
+          "name": "Headline Left",
+          "type": "text",
+          "x": 95,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your day,\nself-organized",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 114,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 10,
+              "end": 24,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#6366F1"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#8B5CF6"
+                  }
+                ]
+              },
+              "fontWeight": 700
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle Left",
+          "type": "text",
+          "x": 145,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Smart scheduling fills your calendar",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#64748B",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l3",
+          "name": "Emoji ⚡",
+          "type": "emoji",
+          "x": 150,
+          "y": 790,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "⚡",
+          "fontSize": 120
+        },
+        {
+          "id": "l4",
+          "name": "Headline Right",
+          "type": "text",
+          "x": 1385,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Focus when\nit matters",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 114,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 11,
+              "end": 21,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#F59E0B"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#F97316"
+                  }
+                ]
+              },
+              "fontWeight": 700
+            }
+          ]
+        },
+        {
+          "id": "l5",
+          "name": "Subtitle Right",
+          "type": "text",
+          "x": 1435,
+          "y": 620,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Auto-silence pings during deep work",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#64748B",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l6",
+          "name": "Emoji 🧠",
+          "type": "emoji",
+          "x": 2060,
+          "y": 800,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "🧠",
+          "fontSize": 120
+        },
+        {
+          "id": "l7",
+          "name": "Phone",
+          "type": "phone",
+          "x": 724,
+          "y": 690,
+          "rotation": -8,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.9,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#1E1B4B",
+            "blur": 80,
+            "offsetX": 0,
+            "offsetY": 45,
+            "opacity": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "name": "Capture",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-04"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 180,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#FFFFFF"
+              },
+              {
+                "offset": 1.0,
+                "color": "#F1F5F9"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(99,102,241,0.12)",
+              "cx": 82,
+              "cy": 10,
+              "rx": 780,
+              "ry": 680
+            }
+          ],
+          "noise": 0.02
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 250,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Capture\neverything",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 118,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 8,
+              "end": 18,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#6366F1"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#8B5CF6"
+                  }
+                ]
+              },
+              "fontWeight": 700
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "name": "Emoji 📝",
+          "type": "emoji",
+          "x": 1050,
+          "y": 70,
+          "rotation": 8,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "📝",
+          "fontSize": 100
+        },
+        {
+          "id": "l3",
+          "name": "Check 1",
+          "type": "shape",
+          "x": 330,
+          "y": 644,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "check",
+          "width": 52,
+          "height": 44,
+          "fill": "{brand:prdprimary}",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l4",
+          "name": "Feature 1",
+          "type": "text",
+          "x": 420,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Type, dictate or snap it",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#334155",
+          "letterSpacing": 0,
+          "lineHeight": 1.2,
+          "align": "left",
+          "width": 700
+        },
+        {
+          "id": "l5",
+          "name": "Check 2",
+          "type": "shape",
+          "x": 330,
+          "y": 748,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "check",
+          "width": 52,
+          "height": 44,
+          "fill": "{brand:prdprimary}",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l6",
+          "name": "Feature 2",
+          "type": "text",
+          "x": 420,
+          "y": 744,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Auto-sorted into projects",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#334155",
+          "letterSpacing": 0,
+          "lineHeight": 1.2,
+          "align": "left",
+          "width": 700
+        },
+        {
+          "id": "l7",
+          "name": "Check 3",
+          "type": "shape",
+          "x": 330,
+          "y": 852,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "check",
+          "width": 52,
+          "height": 44,
+          "fill": "{brand:prdprimary}",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l8",
+          "name": "Feature 3",
+          "type": "text",
+          "x": 420,
+          "y": 848,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Synced on every device",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#334155",
+          "letterSpacing": 0,
+          "lineHeight": 1.2,
+          "align": "left",
+          "width": 700
+        },
+        {
+          "id": "l9",
+          "name": "Phone",
+          "type": "phone",
+          "x": 216,
+          "y": 1000,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.2,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#1E1B4B",
+            "blur": 80,
+            "offsetX": 0,
+            "offsetY": 45,
+            "opacity": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "name": "Streaks",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-05"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 200,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#F8FAFC"
+              },
+              {
+                "offset": 1.0,
+                "color": "#EEF2FF"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(245,158,11,0.14)",
+              "cx": 15,
+              "cy": 12,
+              "rx": 820,
+              "ry": 720
+            }
+          ],
+          "noise": 0.03
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 240,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Build streaks\nthat stick",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 114,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 6,
+              "end": 13,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#F59E0B"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#F97316"
+                  }
+                ]
+              },
+              "fontWeight": 700
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 580,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Daily goals with gentle nudges",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#64748B",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l3",
+          "name": "Emoji 🔥",
+          "type": "emoji",
+          "x": 1050,
+          "y": 580,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "🔥",
+          "fontSize": 110
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 95,
+          "y": 780,
+          "rotation": -5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 1.95,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#1E1B4B",
+            "blur": 80,
+            "offsetX": 0,
+            "offsetY": 45,
+            "opacity": 0.3
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Phone",
+          "type": "phone",
+          "x": 440,
+          "y": 920,
+          "rotation": 4,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 1.95,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#1E1B4B",
+            "blur": 80,
+            "offsetX": 0,
+            "offsetY": 45,
+            "opacity": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "name": "CTA",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-06"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#312E81"
+              },
+              {
+                "offset": 0.5,
+                "color": "#4338CA"
+              },
+              {
+                "offset": 1.0,
+                "color": "#6366F1"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(139,92,246,0.30)",
+              "cx": 80,
+              "cy": 12,
+              "rx": 820,
+              "ry": 720
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Star 1",
+          "type": "shape",
+          "x": 445,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l2",
+          "name": "Star 2",
+          "type": "shape",
+          "x": 529,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l3",
+          "name": "Star 3",
+          "type": "shape",
+          "x": 613,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l4",
+          "name": "Star 4",
+          "type": "shape",
+          "x": 697,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l5",
+          "name": "Star 5",
+          "type": "shape",
+          "x": 781,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l6",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 350,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Find your flow\ntoday",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 120,
+          "fontWeight": 700,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 10,
+              "end": 14,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#F59E0B"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#F97316"
+                  }
+                ]
+              },
+              "fontWeight": 700
+            }
+          ]
+        },
+        {
+          "id": "l7",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 690,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Free forever. Upgrade when you're ready.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C7D2FE",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l8",
+          "name": "CTA Pill",
+          "type": "shape",
+          "x": 385,
+          "y": 830,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 520,
+          "height": 110,
+          "fill": "#FFFFFF",
+          "cornerRadius": 55
+        },
+        {
+          "id": "l9",
+          "name": "CTA Label",
+          "type": "text",
+          "x": 385,
+          "y": 862,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Try Flowly free",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 44,
+          "fontWeight": 700,
+          "fill": "#4338CA",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 520
+        },
+        {
+          "id": "l10",
+          "name": "Phone",
+          "type": "phone",
+          "x": 158,
+          "y": 1050,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.5,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#000000",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          }
+        }
+      ]
+    }
+  ]
+}

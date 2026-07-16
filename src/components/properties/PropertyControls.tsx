@@ -23,6 +23,10 @@ function normalizeHexColor(value: string, fallback = '#ffffff') {
     const [, r, g, b] = withHash
     return `#${r}${r}${g}${g}${b}${b}`.toUpperCase()
   }
+  const rgbMatch = raw.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)/i)
+  if (rgbMatch) {
+    return rgbToHex(Number(rgbMatch[1]), Number(rgbMatch[2]), Number(rgbMatch[3]))
+  }
   return fallback.toUpperCase()
 }
 

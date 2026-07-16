@@ -6,6 +6,7 @@ export const createSelectionSlice = (
 ): Pick<
   EditorStore,
   | 'select'
+  | 'selectAccent'
   | 'deselect'
   | 'toggleLayerSelection'
   | 'clearMultiSelection'
@@ -32,10 +33,13 @@ export const createSelectionSlice = (
       selection: layerId ? { slideGroupId: activeSlideGroupId, layerId } : null,
       selectedLayerIds: [],
       editingGroupId: null,
+      selectedAccentIndex: null,
     })
   },
 
-  deselect: () => set({ selection: null, editingGroupId: null, selectedLayerIds: [] }),
+  selectAccent: (index) => set({ selectedAccentIndex: index }),
+
+  deselect: () => set({ selection: null, editingGroupId: null, selectedLayerIds: [], selectedAccentIndex: null }),
 
   toggleLayerSelection: (layerId) => {
     set((s) => {
@@ -43,14 +47,14 @@ export const createSelectionSlice = (
       const selectedLayerIds = exists
         ? s.selectedLayerIds.filter((id) => id !== layerId)
         : [...s.selectedLayerIds, layerId]
-      return { selectedLayerIds }
+      return { selectedLayerIds, selectedAccentIndex: null }
     })
   },
 
   clearMultiSelection: () => set({ selectedLayerIds: [] }),
 
   setMultiSelection: (ids) =>
-    set({ selectedLayerIds: ids, selection: null, editingGroupId: null }),
+    set({ selectedLayerIds: ids, selection: null, editingGroupId: null, selectedAccentIndex: null }),
 
   // ─ Canvas helpers
   setZoom: (zoom) => set({ zoom: Math.max(0.05, Math.min(4, zoom)) }),
@@ -66,6 +70,7 @@ export const createSelectionSlice = (
       // layerId = null means: group entered, no child selected yet
       selection: { slideGroupId: activeSlideGroupId, layerId: null },
       selectedLayerIds: [],
+      selectedAccentIndex: null,
     })
   },
 
@@ -77,6 +82,7 @@ export const createSelectionSlice = (
       selection: editingGroupId
         ? { slideGroupId: activeSlideGroupId, layerId: editingGroupId }
         : null,
+      selectedAccentIndex: null,
     })
   },
 
@@ -85,6 +91,7 @@ export const createSelectionSlice = (
     // In the new model: editingGroupId tracks the group; selection.layerId IS the child
     set({
       selection: { slideGroupId: activeSlideGroupId, layerId: childId },
+      selectedAccentIndex: null,
     })
   },
 })

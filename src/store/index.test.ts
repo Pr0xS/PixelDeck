@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useEditorStore } from './index'
-import type { TextLayer, GroupLayer, Template } from '@/types'
+import { useAssetStore } from '@/store/assets'
+import type { TextLayer, GroupLayer, Template, PhoneLayer } from '@/types'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -12,6 +13,7 @@ function getActiveGroup() {
 // ─── Setup ───────────────────────────────────────────────────────────────────
 
 beforeEach(() => {
+  useAssetStore.getState().clearAssets()
   useEditorStore.getState().resetProject()
   useEditorStore.setState({
     editingGroupId: null,
@@ -490,5 +492,48 @@ describe('addTemplateSlideGroups', () => {
     const before = useEditorStore.getState().project.slideGroups.length
     useEditorStore.getState().addTemplateSlideGroups(makeTemplate())
     expect(useEditorStore.getState().project.slideGroups.length).toBe(before + 1)
+  })
+
+  it('moves inline phone screenshots into the asset store', () => {
+    const tpl = makeTemplate()
+    tpl.slideGroups[0].layers.push({
+      id: 'l1', name: 'Phone', type: 'phone', x: 0, y: 0, rotation: 0,
+      opacity: 1, visible: true, locked: false, model: 'iphone-16-pro', scale: 1,
+      screenshotDataUrl: 'data:image/png;base64,dGVtcGxhdGU=', screenshotFit: 'cover',
+      screenshotOffsetX: 0, screenshotOffsetY: 0,
+    })
+
+    useEditorStore.getState().addTemplateSlideGroups(tpl)
+    const phone = getActiveGroup().layers.find((layer) => layer.type === 'phone') as PhoneLayer
+    expect(phone.screenshotPath).toBeDefined()
+    expect(phone.screenshotDataUrl).toBeUndefined()
+    expect(useAssetStore.getState().assets[phone.screenshotPath!]?.dataUrl)
+      .toBe('data:image/png;base64,dGVtcGxhdGU=')
+  })
+})
+
+describe('importTemplateAsNewProject', () => {
+  it('moves inline phone screenshots into the asset store', () => {
+    const dataUrl = 'data:image/jpeg;base64,dGVtcGxhdGU='
+    const tpl: Template = {
+      id: 'tpl-import', kind: 'template', schemaVersion: 1, name: 'Import Template',
+      description: '',
+      slideGroups: [{
+        name: 'Slide', numSlides: 1, slideWidth: 1290, slideHeight: 2796,
+        slideNames: ['slide'],
+        layers: [{
+          id: 'l0', name: 'Phone', type: 'phone', x: 0, y: 0, rotation: 0,
+          opacity: 1, visible: true, locked: false, model: 'iphone-16-pro', scale: 1,
+          screenshotDataUrl: dataUrl, screenshotFit: 'cover', screenshotOffsetX: 0,
+          screenshotOffsetY: 0,
+        }],
+      }],
+    }
+
+    useEditorStore.getState().importTemplateAsNewProject(tpl)
+    const phone = getActiveGroup().layers[0] as PhoneLayer
+    expect(phone.screenshotPath).toBe('template-import-template-1.jpg')
+    expect(phone.screenshotDataUrl).toBeUndefined()
+    expect(useAssetStore.getState().assets[phone.screenshotPath!]?.dataUrl).toBe(dataUrl)
   })
 })

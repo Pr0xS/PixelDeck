@@ -2,48 +2,39 @@
   "schemaVersion": 1,
   "templates": [
     {
-      "slug": "bold-beats",
-      "name": "Bold Beats",
-      "description": "8-slide music set: vibrant hero, panoramic 2-slide carousel, four feature slides and a closing CTA. Brand Kit wired.",
-      "category": "Music",
-      "file": "/templates/bold-beats.template.json",
-      "slides": 8,
+      "slug": "nutrition-coach",
+      "name": "Nutrition Coach",
+      "description": "Warm nutrition-tracker set: dark hero with a feature list, AI pano spread, planner and progress slides. Swap in your own screenshots.",
+      "category": "Health & Fitness",
+      "file": "/templates/nutrition-coach.template.json",
+      "slides": 7,
       "previewSize": "1290×2796"
     },
     {
-      "slug": "playful-learning",
-      "name": "Playful Learning",
-      "description": "Bright, friendly green layout with playful copy and gold streak chips.",
-      "category": "Education",
-      "file": "/templates/playful-learning.template.json",
-      "slides": 5,
-      "previewSize": "1290×2796"
-    },
-    {
-      "slug": "mindful-calm",
-      "name": "Mindful Calm",
-      "description": "Soothing twilight gradient with soft glows and serene copy.",
-      "category": "Wellness",
-      "file": "/templates/mindful-calm.template.json",
-      "slides": 5,
-      "previewSize": "1290×2796"
-    },
-    {
-      "slug": "social-glow",
-      "name": "Social Glow",
-      "description": "Vibrant purple-to-orange gradient with a panoramic phone crossing two slides.",
-      "category": "Social",
-      "file": "/templates/social-glow.template.json",
-      "slides": 4,
-      "previewSize": "1290×2796"
-    },
-    {
-      "slug": "fintech-night",
-      "name": "Fintech Night",
-      "description": "Sleek midnight navy with violet glows and a tilted device.",
+      "slug": "ledger-dark",
+      "name": "Ledger Dark",
+      "description": "Sleek midnight finance set: gradient hero, 2-slide account pano, security and auto-invest slides, social-proof CTA. Brand Kit wired.",
       "category": "Finance",
-      "file": "/templates/fintech-night.template.json",
-      "slides": 5,
+      "file": "/templates/ledger-dark.template.json",
+      "slides": 7,
+      "previewSize": "1290×2796"
+    },
+    {
+      "slug": "wanderlight",
+      "name": "Wanderlight",
+      "description": "Sun-washed travel set: sky-blue hero, sunset itinerary pano, curated explore chips, group planning and a deep-blue ratings CTA.",
+      "category": "Travel",
+      "file": "/templates/wanderlight.template.json",
+      "slides": 6,
+      "previewSize": "1290×2796"
+    },
+    {
+      "slug": "deep-focus",
+      "name": "Deep Focus",
+      "description": "Clean light productivity set: minimal hero, self-organizing pano, capture checklist, streaks duo and an indigo CTA. Brand Kit wired.",
+      "category": "Productivity",
+      "file": "/templates/deep-focus.template.json",
+      "slides": 6,
       "previewSize": "1290×2796"
     }
   ]

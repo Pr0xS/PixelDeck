@@ -113,7 +113,7 @@ describe('parseSingleTranslationResponse', () => {
 
   it('handles a literal newline inside the translation value (multiline model output)', () => {
     // A real \n character (not the escape sequence) inside the JSON string —
-    // this is invalid JSON per spec but common in Anthropic/Google/OpenCode responses.
+    // this is invalid JSON per spec but common in prompt-only JSON responses.
     const raw = '{"translation": "line1\nline2"}'
     const result = parseSingleTranslationResponse(raw)
     expect(result).toBe('line1\nline2')
@@ -212,7 +212,7 @@ describe('parseBatchTranslationResponse', () => {
 
   it('handles literal newlines inside batch translation values (multiline model output)', () => {
     // Real \n characters inside JSON strings — invalid per spec but common from
-    // Anthropic/Google/OpenCode models that skip forceJsonMode.
+    // Models that skip forceJsonMode.
     const raw = '{"a": "line1\nline2", "b": "Mundo", "c": "Adiós"}'
     const result = parseBatchTranslationResponse(raw, ids)
     expect(result).toEqual({ a: 'line1\nline2', b: 'Mundo', c: 'Adiós' })

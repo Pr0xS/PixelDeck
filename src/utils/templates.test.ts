@@ -4,8 +4,9 @@ import {
   isTemplate,
   projectToTemplate,
   applyTemplate,
+  extractInlineScreenshots,
 } from './templates'
-import type { Project, PhoneLayer, TextLayer, Layer, SlideGroup } from '@/types'
+import type { Project, PhoneLayer, TextLayer, Layer, SlideGroup, GroupLayer } from '@/types'
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -246,5 +247,93 @@ describe('applyTemplate', () => {
     const { settings } = applyTemplate(tpl)
     expect(settings).toBeDefined()
     expect(settings?.defaultLocale).toBe('en')
+  })
+})
+
+describe('extractInlineScreenshots', () => {
+  const dataUrl = 'data:image/png;base64,cG5n'
+
+  const groupsWith = (...layers: Layer[]): SlideGroup[] => [{
+    ...makeProject().slideGroups[0],
+    layers,
+  }]
+
+  const makePhone = (id: string, screenshotDataUrl?: string): PhoneLayer => ({
+    id,
+    name: id,
+    type: 'phone',
+    x: 0,
+    y: 0,
+    rotation: 0,
+    opacity: 1,
+    visible: true,
+    locked: false,
+    model: 'iphone-16-pro',
+    scale: 1,
+    screenshotDataUrl,
+    screenshotFit: 'cover',
+    screenshotOffsetX: 0,
+    screenshotOffsetY: 0,
+  })
+
+  it('replaces a base screenshotDataUrl with a screenshotPath asset reference', () => {
+    const result = extractInlineScreenshots('Nutrition Coach', groupsWith(makePhone('p1', dataUrl)))
+    const phone = result.slideGroups[0].layers[0] as PhoneLayer
+
+    expect(phone.screenshotDataUrl).toBeUndefined()
+    expect(phone.screenshotPath).toBe('template-nutrition-coach-1.png')
+    expect(result.assets).toEqual([{ filename: phone.screenshotPath, dataUrl }])
+  })
+
+  it('deduplicates identical screenshots across base layers and locale overrides', () => {
+    const first = makePhone('p1', dataUrl)
+    const second = makePhone('p2')
+    second.localeOverrides = { es: { screenshotDataUrl: dataUrl } }
+
+    const result = extractInlineScreenshots('Dedupe', groupsWith(first, second))
+    const phones = result.slideGroups[0].layers as PhoneLayer[]
+    expect(phones[0].screenshotPath).toBe(phones[1].localeOverrides?.es.screenshotPath)
+    expect(result.assets).toHaveLength(1)
+  })
+
+  it('extracts locale override screenshots and detects jpeg extensions', () => {
+    const phone = makePhone('p1')
+    const jpeg = 'data:image/jpeg;base64,anBlZw=='
+    phone.localeOverrides = { fr: { screenshotDataUrl: jpeg } }
+
+    const result = extractInlineScreenshots('Photo Set', groupsWith(phone))
+    const patch = (result.slideGroups[0].layers[0] as PhoneLayer).localeOverrides?.fr
+    expect(patch?.screenshotDataUrl).toBeUndefined()
+    expect(patch?.screenshotPath).toBe('template-photo-set-1.jpg')
+    expect(result.assets[0]).toEqual({ filename: 'template-photo-set-1.jpg', dataUrl: jpeg })
+  })
+
+  it('leaves layers without inline screenshots untouched', () => {
+    const phone = makePhone('p1')
+    phone.screenshotPath = 'existing.png'
+    const result = extractInlineScreenshots('Untouched', groupsWith(phone))
+
+    expect(result.slideGroups[0].layers[0]).toEqual(phone)
+    expect(result.assets).toEqual([])
+  })
+
+  it('recurses into group children', () => {
+    const group: GroupLayer = {
+      id: 'g1', name: 'Group', type: 'group', x: 0, y: 0, rotation: 0,
+      opacity: 1, visible: true, locked: false, children: [makePhone('p1', dataUrl)],
+    }
+    const result = extractInlineScreenshots('Nested', groupsWith(group))
+    const nested = (result.slideGroups[0].layers[0] as GroupLayer).children[0] as PhoneLayer
+
+    expect(nested.screenshotPath).toBe('template-nested-1.png')
+    expect(nested.screenshotDataUrl).toBeUndefined()
+  })
+
+  it('does not mutate the input groups', () => {
+    const input = groupsWith(makePhone('p1', dataUrl))
+    extractInlineScreenshots('Clone', input)
+
+    expect((input[0].layers[0] as PhoneLayer).screenshotDataUrl).toBe(dataUrl)
+    expect((input[0].layers[0] as PhoneLayer).screenshotPath).toBeUndefined()
   })
 })
