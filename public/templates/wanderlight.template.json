@@ -1,0 +1,1147 @@
+{
+  "id": "tpl-wanderlight",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Wanderlight",
+  "description": "Sun-washed travel set: sky-blue hero, sunset itinerary pano, curated explore chips, group planning and a deep-blue ratings CTA.",
+  "category": "Travel",
+  "author": "PixelDeck",
+  "createdAt": "2026-07-16T00:00:00.000Z",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "Wander",
+    "brandColors": [
+      {
+        "id": "trvprimary",
+        "name": "Primary",
+        "value": "#0EA5E9"
+      },
+      {
+        "id": "trvsunset",
+        "name": "Sunset",
+        "value": "#FF7E5F"
+      }
+    ]
+  },
+  "slideGroups": [
+    {
+      "name": "Hero",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-01"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 170,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#0EA5E9"
+              },
+              {
+                "offset": 0.5,
+                "color": "#7DD3FC"
+              },
+              {
+                "offset": 1.0,
+                "color": "#E0F2FE"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(255,255,255,0.35)",
+              "cx": 80,
+              "cy": 12,
+              "rx": 700,
+              "ry": 600
+            },
+            {
+              "color": "rgba(255,126,95,0.25)",
+              "cx": 15,
+              "cy": 90,
+              "rx": 800,
+              "ry": 700
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Brand",
+          "type": "brand",
+          "x": 100,
+          "y": 96,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "appName": "Wander",
+          "logoSize": 64,
+          "nameColor": "#FFFFFF",
+          "nameFontSize": 40,
+          "nameFontFamily": "Bricolage Grotesque",
+          "nameFontWeight": 700,
+          "direction": "row",
+          "gap": 18
+        },
+        {
+          "id": "l2",
+          "name": "Emoji ✈️",
+          "type": "emoji",
+          "x": 1020,
+          "y": 130,
+          "rotation": -15,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "✈️",
+          "fontSize": 120
+        },
+        {
+          "id": "l3",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 280,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "The world,\nbooked in seconds",
+          "fontFamily": "Bricolage Grotesque",
+          "fontSize": 120,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 4,
+              "end": 10,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#FF7E5F"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#FEB47B"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l4",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 630,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Flights, stays and experiences in one tap",
+          "fontFamily": "Figtree",
+          "fontSize": 48,
+          "fontWeight": 500,
+          "fill": "#F0F9FF",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l5",
+          "name": "Phone",
+          "type": "phone",
+          "x": 177,
+          "y": 900,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.4,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#0C4A6E",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.45
+          }
+        }
+      ]
+    },
+    {
+      "name": "Itinerary Pano",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-02",
+        "slide-03"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 115,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#FF7E5F"
+              },
+              {
+                "offset": 0.5,
+                "color": "#FEB47B"
+              },
+              {
+                "offset": 1.0,
+                "color": "#FDE68A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(255,255,255,0.30)",
+              "cx": 25,
+              "cy": 10,
+              "rx": 850,
+              "ry": 720
+            },
+            {
+              "color": "rgba(255,255,255,0.22)",
+              "cx": 80,
+              "cy": 85,
+              "rx": 800,
+              "ry": 700
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Headline Left",
+          "type": "text",
+          "x": 95,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "One itinerary,\nzero stress",
+          "fontFamily": "Bricolage Grotesque",
+          "fontSize": 116,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 15,
+              "end": 26,
+              "fill": "#7C2D12",
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle Left",
+          "type": "text",
+          "x": 145,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Auto-built day by day, with offline maps",
+          "fontFamily": "Figtree",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#FFF7ED",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l3",
+          "name": "Emoji 🌴",
+          "type": "emoji",
+          "x": 140,
+          "y": 800,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "🌴",
+          "fontSize": 130
+        },
+        {
+          "id": "l4",
+          "name": "Headline Right",
+          "type": "text",
+          "x": 1385,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Everything\nin its place",
+          "fontFamily": "Bricolage Grotesque",
+          "fontSize": 116,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 11,
+              "end": 23,
+              "fill": "#7C2D12",
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l5",
+          "name": "Subtitle Right",
+          "type": "text",
+          "x": 1435,
+          "y": 620,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Tickets, bookings and docs — offline",
+          "fontFamily": "Figtree",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#FFF7ED",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l6",
+          "name": "Emoji 🧳",
+          "type": "emoji",
+          "x": 2060,
+          "y": 820,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "🧳",
+          "fontSize": 130
+        },
+        {
+          "id": "l7",
+          "name": "Phone",
+          "type": "phone",
+          "x": 724,
+          "y": 700,
+          "rotation": 8,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.9,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#000000",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "name": "Explore",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-04"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 180,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#F0F9FF"
+              },
+              {
+                "offset": 0.5,
+                "color": "#E0F2FE"
+              },
+              {
+                "offset": 1.0,
+                "color": "#BAE6FD"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(14,165,233,0.18)",
+              "cx": 85,
+              "cy": 10,
+              "rx": 800,
+              "ry": 700
+            }
+          ],
+          "noise": 0.03
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 250,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Hidden gems,\ncurated for you",
+          "fontFamily": "Bricolage Grotesque",
+          "fontSize": 116,
+          "fontWeight": 800,
+          "fill": "#0C4A6E",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 13,
+              "end": 20,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#FF7E5F"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#FEB47B"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "name": "Emoji 📍",
+          "type": "emoji",
+          "x": 1050,
+          "y": 60,
+          "rotation": 10,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "📍",
+          "fontSize": 100
+        },
+        {
+          "id": "l3",
+          "name": "Chip Beaches",
+          "type": "shape",
+          "x": 170,
+          "y": 650,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 197,
+          "height": 92,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#FF7E5F"
+              },
+              {
+                "offset": 1.0,
+                "color": "#FEB47B"
+              }
+            ]
+          },
+          "cornerRadius": 46
+        },
+        {
+          "id": "l4",
+          "name": "Chip label Beaches",
+          "type": "text",
+          "x": 170,
+          "y": 675,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Beaches",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 197
+        },
+        {
+          "id": "l5",
+          "name": "Chip Food tours",
+          "type": "shape",
+          "x": 390,
+          "y": 650,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 254,
+          "height": 92,
+          "fill": "rgba(12,74,110,0.08)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l6",
+          "name": "Chip label Food tours",
+          "type": "text",
+          "x": 390,
+          "y": 675,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Food tours",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#0C4A6E",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 254
+        },
+        {
+          "id": "l7",
+          "name": "Chip Nightlife",
+          "type": "shape",
+          "x": 666,
+          "y": 650,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 235,
+          "height": 92,
+          "fill": "rgba(12,74,110,0.08)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l8",
+          "name": "Chip label Nightlife",
+          "type": "text",
+          "x": 666,
+          "y": 675,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Nightlife",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#0C4A6E",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 235
+        },
+        {
+          "id": "l9",
+          "name": "Chip Museums",
+          "type": "shape",
+          "x": 922,
+          "y": 650,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 197,
+          "height": 92,
+          "fill": "rgba(12,74,110,0.08)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l10",
+          "name": "Chip label Museums",
+          "type": "text",
+          "x": 922,
+          "y": 675,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Museums",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#0C4A6E",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 197
+        },
+        {
+          "id": "l11",
+          "name": "Phone",
+          "type": "phone",
+          "x": 187,
+          "y": 860,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.35,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#0C4A6E",
+            "blur": 80,
+            "offsetX": 0,
+            "offsetY": 45,
+            "opacity": 0.35
+          }
+        }
+      ]
+    },
+    {
+      "name": "Plan Together",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-05"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 200,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#E0F2FE"
+              },
+              {
+                "offset": 1.0,
+                "color": "#F0F9FF"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(255,126,95,0.20)",
+              "cx": 15,
+              "cy": 12,
+              "rx": 820,
+              "ry": 720
+            }
+          ],
+          "noise": 0.03
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 240,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Plan together,\nin real time",
+          "fontFamily": "Bricolage Grotesque",
+          "fontSize": 114,
+          "fontWeight": 800,
+          "fill": "#0C4A6E",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 5,
+              "end": 14,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#0EA5E9"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#2563EB"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 580,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Vote on stays, split costs, share docs",
+          "fontFamily": "Figtree",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#475569",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l3",
+          "name": "Emoji 🤝",
+          "type": "emoji",
+          "x": 1050,
+          "y": 600,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "🤝",
+          "fontSize": 110
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 95,
+          "y": 780,
+          "rotation": -5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 1.95,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#0C4A6E",
+            "blur": 70,
+            "offsetX": 0,
+            "offsetY": 40,
+            "opacity": 0.3
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Phone",
+          "type": "phone",
+          "x": 440,
+          "y": 920,
+          "rotation": 4,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 1.95,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#0C4A6E",
+            "blur": 70,
+            "offsetX": 0,
+            "offsetY": 40,
+            "opacity": 0.3
+          }
+        }
+      ]
+    },
+    {
+      "name": "CTA",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-06"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 170,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#0EA5E9"
+              },
+              {
+                "offset": 0.5,
+                "color": "#0369A1"
+              },
+              {
+                "offset": 1.0,
+                "color": "#0C4A6E"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(255,255,255,0.25)",
+              "cx": 75,
+              "cy": 8,
+              "rx": 750,
+              "ry": 650
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Star 1",
+          "type": "shape",
+          "x": 445,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l2",
+          "name": "Star 2",
+          "type": "shape",
+          "x": 529,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l3",
+          "name": "Star 3",
+          "type": "shape",
+          "x": 613,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l4",
+          "name": "Star 4",
+          "type": "shape",
+          "x": 697,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l5",
+          "name": "Star 5",
+          "type": "shape",
+          "x": 781,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l6",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 350,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Rated 4.9\nby travelers",
+          "fontFamily": "Bricolage Grotesque",
+          "fontSize": 120,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.08,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 6,
+              "end": 9,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#FF7E5F"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#FEB47B"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l7",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 690,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Join 5M+ explorers around the globe",
+          "fontFamily": "Figtree",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#BAE6FD",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l8",
+          "name": "CTA Pill",
+          "type": "shape",
+          "x": 385,
+          "y": 830,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 520,
+          "height": 110,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#FF7E5F"
+              },
+              {
+                "offset": 1.0,
+                "color": "#FEB47B"
+              }
+            ]
+          },
+          "cornerRadius": 55
+        },
+        {
+          "id": "l9",
+          "name": "CTA Label",
+          "type": "text",
+          "x": 385,
+          "y": 862,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Start exploring",
+          "fontFamily": "Bricolage Grotesque",
+          "fontSize": 44,
+          "fontWeight": 700,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 520
+        },
+        {
+          "id": "l10",
+          "name": "Phone",
+          "type": "phone",
+          "x": 158,
+          "y": 1050,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.5,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#000000",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          }
+        }
+      ]
+    }
+  ]
+}

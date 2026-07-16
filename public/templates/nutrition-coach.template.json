@@ -1,0 +1,983 @@
+{
+  "id": "tpl-nutrition-coach",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Nutrition Coach",
+  "description": "Warm nutrition-tracker set: dark hero with a feature list, AI pano spread, planner and progress slides. Swap in your own screenshots.",
+  "slideGroups": [
+    {
+      "name": "Hero",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-01"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#1c1c2e"
+              },
+              {
+                "offset": 0.5,
+                "color": "#2d3561"
+              },
+              {
+                "offset": 1,
+                "color": "#0d0d1a"
+              }
+            ]
+          },
+          "accents": []
+        },
+        {
+          "id": "l1",
+          "name": "iPhone 16 Pro",
+          "type": "phone",
+          "x": 218.96345645887135,
+          "y": 817.7768478485498,
+          "rotation": -7.572540587806123,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.2596691791594217,
+          "screenshotFit": "fill",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "solid",
+          "statusBarColor": "#f5f3f0",
+          "formatOverrides": {
+            "android-phone": {
+              "x": 212.24757261925168,
+              "y": 544.3214359800975,
+              "rotation": -7.572540587806123,
+              "scale": 1.7267254724500412
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Feature List",
+          "type": "text",
+          "x": 214.28960968712056,
+          "y": 93.43947827445089,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Calories\nMacros\nBarcode scans\nMeal plans\nSmart insights",
+          "fontFamily": "Nunito",
+          "fontSize": 109,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "left",
+          "width": 1053.575525783888,
+          "marks": [
+            {
+              "start": 0,
+              "end": 8,
+              "fill": "#fedfc6"
+            },
+            {
+              "start": 9,
+              "end": 15,
+              "fill": "#fedfc6"
+            },
+            {
+              "start": 16,
+              "end": 29,
+              "fill": "#fedfc6"
+            },
+            {
+              "start": 30,
+              "end": 40,
+              "fill": "#fedfc6"
+            },
+            {
+              "start": 41,
+              "end": 55,
+              "fill": "#fedfc6"
+            }
+          ],
+          "blur": 0
+        },
+        {
+          "id": "l3",
+          "name": "Shape",
+          "type": "shape",
+          "x": 81.76188614633476,
+          "y": 551.6963931897476,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "arrow",
+          "width": 101.71466459259486,
+          "height": 67.80977639506312,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFECD2"
+              },
+              {
+                "offset": 1,
+                "color": "#FCB69F"
+              }
+            ]
+          },
+          "cornerRadius": 40
+        },
+        {
+          "id": "l4",
+          "name": "Shape",
+          "type": "shape",
+          "x": 81.76188614633476,
+          "y": 447.29883386073084,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "arrow",
+          "width": 101.71466459259486,
+          "height": 67.80977639506312,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFECD2"
+              },
+              {
+                "offset": 1,
+                "color": "#FCB69F"
+              }
+            ]
+          },
+          "cornerRadius": 40
+        },
+        {
+          "id": "l5",
+          "name": "Shape",
+          "type": "shape",
+          "x": 81.76188614633476,
+          "y": 333.1658133668345,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "arrow",
+          "width": 101.71466459259486,
+          "height": 67.80977639506312,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFECD2"
+              },
+              {
+                "offset": 1,
+                "color": "#FCB69F"
+              }
+            ]
+          },
+          "cornerRadius": 40
+        },
+        {
+          "id": "l6",
+          "name": "Shape",
+          "type": "shape",
+          "x": 81.76188614633476,
+          "y": 230.23730925091468,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "arrow",
+          "width": 101.71466459259486,
+          "height": 67.80977639506312,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFECD2"
+              },
+              {
+                "offset": 1,
+                "color": "#FCB69F"
+              }
+            ]
+          },
+          "cornerRadius": 40
+        },
+        {
+          "id": "l7",
+          "name": "Shape",
+          "type": "shape",
+          "x": 91.39997766131616,
+          "y": 105.69967277775984,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "arrow",
+          "width": 101.71466459259486,
+          "height": 67.80977639506312,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFECD2"
+              },
+              {
+                "offset": 1,
+                "color": "#FCB69F"
+              }
+            ]
+          },
+          "cornerRadius": 40
+        }
+      ]
+    },
+    {
+      "name": "AI Pano",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-02",
+        "slide-03"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "radial",
+            "cx": 0.24,
+            "cy": 0.19,
+            "radius": 0.87,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFF5F5"
+              },
+              {
+                "offset": 1,
+                "color": "#E7D1CB"
+              }
+            ]
+          },
+          "accents": []
+        },
+        {
+          "id": "l1",
+          "name": "iPhone 16 Pro",
+          "type": "phone",
+          "x": 322.9764816739903,
+          "y": 777.8435139267343,
+          "rotation": -15.228011692760045,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.3388300928486574,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "formatOverrides": {
+            "android-phone": {
+              "x": 329.008573569181,
+              "y": 450.2418615390127,
+              "rotation": -15.228011692759877,
+              "scale": 1.8607384228113277
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "iPhone 16 Pro",
+          "type": "phone",
+          "x": 1433.3484748659025,
+          "y": 224.39206389874948,
+          "rotation": -15,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "pixel-9",
+          "scale": 2.338830092848659,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "formatOverrides": {
+            "android-phone": {
+              "x": 1149.5243298477126,
+              "y": -25.31496006450766,
+              "rotation": -15.000000000000018,
+              "scale": 1.903296401369826
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Headline Left",
+          "type": "text",
+          "x": 144,
+          "y": 172.36963824564765,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Photo or text\nthe AI\ndoes the rest",
+          "fontFamily": "Lexend",
+          "fontSize": 138,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 1002,
+          "marks": [
+            {
+              "start": 0,
+              "end": 13,
+              "fill": "#1c1c2e",
+              "fontWeight": 400
+            },
+            {
+              "start": 14,
+              "end": 17,
+              "fill": "#1c1c2e"
+            },
+            {
+              "start": 18,
+              "end": 20,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#00DBDE"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#FC00FF"
+                  }
+                ]
+              },
+              "fontWeight": 700
+            },
+            {
+              "start": 21,
+              "end": 34,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#FE7856"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#FBB628"
+                  }
+                ]
+              },
+              "fontWeight": 700
+            }
+          ],
+          "blur": 0,
+          "formatOverrides": {
+            "android-phone": {
+              "x": 157.41329917612637,
+              "y": 95.87653661942272
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Headline Right",
+          "type": "text",
+          "x": 1647.1037246348653,
+          "y": 2350.2950277355267,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your meals\nunderstood",
+          "fontFamily": "Lexend",
+          "fontSize": 138,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "letterSpacing": -4,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 721,
+          "marks": [
+            {
+              "start": 0,
+              "end": 10,
+              "fill": "#1c1c2e"
+            },
+            {
+              "start": 10,
+              "end": 11,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#FE7856"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#FBB628"
+                  }
+                ]
+              }
+            },
+            {
+              "start": 11,
+              "end": 21,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#FE7856"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#FBB628"
+                  }
+                ]
+              },
+              "fontWeight": 700
+            }
+          ],
+          "blur": 0,
+          "formatOverrides": {
+            "android-phone": {
+              "x": 1385.5620581563307,
+              "y": 1610.72380256089
+            }
+          },
+          "height": 315,
+          "verticalAlign": "middle"
+        }
+      ]
+    },
+    {
+      "name": "History",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-04"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "radial",
+            "cx": 0.24,
+            "cy": 0.19,
+            "radius": 0.87,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFF5F5"
+              },
+              {
+                "offset": 1,
+                "color": "#E7D1CB"
+              }
+            ]
+          },
+          "accents": []
+        },
+        {
+          "id": "l1",
+          "name": "iPhone 16 Pro",
+          "type": "phone",
+          "x": 153.47566943059456,
+          "y": 601,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.5206375926636175,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "formatOverrides": {
+            "android-phone": {
+              "x": 197,
+              "y": 412.70386266094397,
+              "rotation": 0,
+              "scale": 1.80693929262192
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 12.03310110355335,
+          "y": 172.36963824564765,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your history at a glance",
+          "fontFamily": "Lexend",
+          "fontSize": 138,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 1247,
+          "marks": [
+            {
+              "start": 0,
+              "end": 24,
+              "fill": "#1c1c2e"
+            }
+          ],
+          "blur": 0,
+          "formatOverrides": {
+            "android-phone": {
+              "x": 119,
+              "y": 95.87653661942272,
+              "rotation": 0,
+              "width": 842.2781337675968
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Weekly Plan",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-05"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "radial",
+            "cx": 0.24,
+            "cy": 0.19,
+            "radius": 0.87,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFF5F5"
+              },
+              {
+                "offset": 1,
+                "color": "#E7D1CB"
+              }
+            ]
+          },
+          "accents": []
+        },
+        {
+          "id": "l1",
+          "name": "iPhone 16 Pro",
+          "type": "phone",
+          "x": 153.47566943059456,
+          "y": 601,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.5206375926636175,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "formatOverrides": {
+            "android-phone": {
+              "x": 197,
+              "y": 413,
+              "rotation": 0,
+              "scale": 1.8,
+              "model": "pixel-9"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 138.5013792126481,
+          "y": 127.27559790866064,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Plan your week",
+          "fontFamily": "Lexend",
+          "fontSize": 100,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 1002,
+          "marks": [
+            {
+              "start": 0,
+              "end": 14,
+              "fill": "#1c1c2e"
+            }
+          ],
+          "blur": 0,
+          "formatOverrides": {
+            "android-phone": {
+              "x": 196,
+              "y": 97.17482769519901
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Subheadline",
+          "type": "text",
+          "x": 41.25068960632393,
+          "y": 351.18348114751245,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Schedule recurring meals",
+          "fontFamily": "Lexend",
+          "fontSize": 100,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 1202,
+          "marks": [
+            {
+              "start": 0,
+              "end": 24,
+              "fill": "#1c1c2e"
+            }
+          ],
+          "blur": 0,
+          "formatOverrides": {
+            "android-phone": {
+              "x": 127,
+              "y": 251.6558290485694
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Progress",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-06"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "radial",
+            "cx": 0.24,
+            "cy": 0.19,
+            "radius": 0.87,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFF5F5"
+              },
+              {
+                "offset": 1,
+                "color": "#E7D1CB"
+              }
+            ]
+          },
+          "accents": []
+        },
+        {
+          "id": "l1",
+          "name": "iPhone 16 Pro",
+          "type": "phone",
+          "x": 39.41915607827116,
+          "y": 646.1814173969698,
+          "rotation": -3.0383136666704718,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.303876677376159,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "formatOverrides": {
+            "android-phone": {
+              "x": 43.01740561144027,
+              "y": 436.1153280145618,
+              "rotation": -3.038313666670832,
+              "scale": 1.6937360694393109
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "iPhone 16 Pro",
+          "type": "phone",
+          "x": 337.4821075479843,
+          "y": 600.3697683776339,
+          "rotation": 2.769136375032686,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.365789195863215,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "formatOverrides": {
+            "android-phone": {
+              "x": 378.36907857854425,
+              "y": 424.2226867711946,
+              "rotation": 2.769136375032949,
+              "scale": 1.7176792955807008
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Headline",
+          "type": "text",
+          "x": 31.918749999999932,
+          "y": 139.62020645203438,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Watch your progress grow",
+          "fontFamily": "Lexend",
+          "fontSize": 138,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 1226.567532299063,
+          "marks": [
+            {
+              "start": 0,
+              "end": 24,
+              "fill": "#1c1c2e"
+            }
+          ],
+          "blur": 0
+        }
+      ]
+    },
+    {
+      "name": "Habits",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-07"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "radial",
+            "cx": 0.24,
+            "cy": 0.19,
+            "radius": 0.87,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFF5F5"
+              },
+              {
+                "offset": 1,
+                "color": "#E7D1CB"
+              }
+            ]
+          },
+          "accents": []
+        },
+        {
+          "id": "l1",
+          "name": "iPhone 16 Pro",
+          "type": "phone",
+          "x": 153.47566943059456,
+          "y": 601,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.5206375926636175,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000"
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 31.918749999999932,
+          "y": 139.62020645203438,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Build lasting habits",
+          "fontFamily": "Lexend",
+          "fontSize": 138,
+          "fontWeight": 400,
+          "fill": "#ffffff",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 1226.567532299063,
+          "marks": [
+            {
+              "start": 0,
+              "end": 20,
+              "fill": "#1c1c2e"
+            }
+          ],
+          "blur": 0
+        }
+      ]
+    }
+  ],
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "NutriCoach",
+    "brandColors": [
+      {
+        "id": "O6e3oqKtrK",
+        "name": "primary",
+        "value": "#821E03"
+      }
+    ]
+  },
+  "createdAt": "2026-07-16T00:00:00.000Z",
+  "category": "Health & Fitness",
+  "author": "PixelDeck"
+}

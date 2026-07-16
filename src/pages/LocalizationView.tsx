@@ -58,7 +58,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     updateLayerInSlideGroup: s.updateLayerInSlideGroup,
   })))
   const { addAsset, getAsset } = useAssetStore(useShallow((s) => ({ addAsset: s.addAsset, getAsset: s.getAsset })))
-  const { provider, getActiveKey, getActiveModel } = useApiKeysStore()
+  const { provider, getActiveKey, getActiveModel, getActiveBaseUrl } = useApiKeysStore()
 
   const defaultLocale = project.settings.defaultLocale
   const brandColors = useMemo(() => project.settings.brandColors ?? [], [project.settings.brandColors])
@@ -206,7 +206,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     if (!row.defaultText) return
     const slideGroup = project.slideGroups.find((g) => g.id === row.slideGroupId)
     if (!slideGroup) return
-    const auth: AiAuth = { provider, apiKey, model }
+    const auth: AiAuth = { provider, apiKey, model, baseUrl: getActiveBaseUrl() }
     setCellStatus((m) => new Map(m).set(key, 'translating'))
     try {
       const result = await translateLayerText({
@@ -225,7 +225,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       setCellError((m) => new Map(m).set(key, getErrorMessage(e)))
       setCellStatus((m) => new Map(m).set(key, 'error'))
     }
-  }, [getActiveKey, getActiveModel, markFormattingLost, project, provider, setLocaleOverride])
+  }, [getActiveBaseUrl, getActiveKey, getActiveModel, markFormattingLost, project, provider, setLocaleOverride])
 
   // TODO: AI image generation disabled temporarily — re-enable when ready.
   // Handler and import are preserved in git history. See localizeImage.ts + editImage() in client.ts.
@@ -240,7 +240,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     if (!apiKey || isBulkRunning) return
 
     const nonDefaultLocales = locales.filter((l) => l !== defaultLocale)
-    const auth: AiAuth = { provider, apiKey, model }
+    const auth: AiAuth = { provider, apiKey, model, baseUrl: getActiveBaseUrl() }
 
     // Build batch jobs: one per (slide group × locale)
     interface BatchJob {
@@ -376,7 +376,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     setBulkPreviewOverrides(new Map())
 
     setIsBulkRunning(false)
-  }, [defaultLocale, getActiveKey, getActiveModel, groups, isBulkRunning, locales, markFormattingLost, overwriteExisting, project, provider, setLocaleOverridesBatch])
+  }, [defaultLocale, getActiveBaseUrl, getActiveKey, getActiveModel, groups, isBulkRunning, locales, markFormattingLost, overwriteExisting, project, provider, setLocaleOverridesBatch])
 
   // ─ Mode update
   const handleModeUpdate = useCallback((row: LocalizableRow, mode: LocalizationMode | undefined) => {

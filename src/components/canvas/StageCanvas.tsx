@@ -7,10 +7,11 @@ import { useAssetStore } from '@/store/assets'
 import { fileToDataUrl } from '@/utils/files'
 import { applyLocale } from '@/utils/locale'
 import { applyCanvasFormat } from '@/utils/canvasFormats'
+import { updateBackgroundAccentAt } from '@/utils/backgroundAccents'
 import { getPanoGapPx, getPanoSlideX, getPanoTotalWidth, getEffectivePano } from '@/utils/panoGeometry'
 import { LayerNode } from './LayerNode'
 import { CanvasTextEditor } from './CanvasTextEditor'
-import type { Layer as AppLayer } from '@/types'
+import type { Layer as AppLayer, BackgroundLayer } from '@/types'
 
 function useCtrlKey() {
   const ref = useRef(false)
@@ -36,16 +37,17 @@ interface StageLayerItemProps {
   canvasWidth: number
   canvasHeight: number
   ctrlRef: React.RefObject<boolean>
+  selectedAccentIndex: number | null
 }
 
 /**
  * Memo boundary between the (frequently re-rendering) StageCanvas and the
- * Konva node tree of each layer. All handlers read store state via
- * `getState()` so their identity is stable across renders — pan/zoom and
+ * Konva node tree of each layer. Handlers are memoized so pan/zoom and
  * unrelated selection changes skip reconciling untouched layer subtrees.
  */
 const StageLayerItem = memo(function StageLayerItem({
   layer, isSelected, isEditing, selectedChildId, canvasWidth, canvasHeight, ctrlRef,
+  selectedAccentIndex,
 }: StageLayerItemProps) {
   const layerId = layer.id
 
@@ -86,6 +88,25 @@ const StageLayerItem = memo(function StageLayerItem({
     useEditorStore.getState().updateChildLayer(layerId, childId, attrs)
   }, [layerId])
 
+  const handleSelectAccent = useCallback((index: number) => {
+    if (layer.type !== 'background') return
+    useEditorStore.getState().selectAccent(index)
+  }, [layer])
+
+  const handleAccentDragEnd = useCallback((index: number, cx: number, cy: number) => {
+    if (layer.type !== 'background') return
+    useEditorStore.getState().updateLayer(layerId, {
+      accents: updateBackgroundAccentAt(layer.accents, index, { cx, cy }),
+    } as Partial<AppLayer>)
+  }, [layer, layerId])
+
+  const handleAccentTransformEnd = useCallback((index: number, rx: number, ry: number) => {
+    if (layer.type !== 'background') return
+    useEditorStore.getState().updateLayer(layerId, {
+      accents: updateBackgroundAccentAt(layer.accents, index, { rx, ry }),
+    } as Partial<AppLayer>)
+  }, [layer, layerId])
+
   return (
     <LayerNode
       layer={layer}
@@ -95,6 +116,10 @@ const StageLayerItem = memo(function StageLayerItem({
       onTransformEnd={handleTransformEnd}
       canvasWidth={canvasWidth}
       canvasHeight={canvasHeight}
+      selectedAccentIndex={selectedAccentIndex}
+      onSelectAccent={handleSelectAccent}
+      onAccentDragEnd={handleAccentDragEnd}
+      onAccentTransformEnd={handleAccentTransformEnd}
       isEditing={isEditing}
       selectedChildId={selectedChildId}
       onEnterEdit={isGroup ? handleEnterEdit : undefined}
@@ -107,6 +132,7 @@ const StageLayerItem = memo(function StageLayerItem({
 
 export function StageCanvas({ stageRef }: StageCanvasProps) {
   const transformerRef = useRef<Konva.Transformer>(null)
+  const accentTransformerRef = useRef<Konva.Transformer>(null)
   const groupOutlineRef = useRef<Konva.Transformer>(null)
   const containerRef = useRef<HTMLDivElement>(null)
   const rbRef = useRef<{ x1: number; y1: number; x2: number; y2: number } | null>(null)
@@ -147,6 +173,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     showGrid,
     showSeamGuides,
     selection,
+    selectedAccentIndex,
     select,
     deselect,
     updateLayer,
@@ -172,6 +199,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     showGrid: s.showGrid,
     showSeamGuides: s.showSeamGuides,
     selection: s.selection,
+    selectedAccentIndex: s.selectedAccentIndex,
     select: s.select,
     deselect: s.deselect,
     updateLayer: s.updateLayer,
@@ -215,6 +243,13 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     }
     return false
   }, [group, selection?.layerId])
+
+  const selectedBackgroundLayer = useMemo(() => {
+    const layerId = selection?.layerId
+    if (!group || !layerId || editingGroupId || selectedLayerIds.length > 0) return null
+    const layer = group.layers.find((l) => l.id === layerId)
+    return layer?.type === 'background' ? (layer as BackgroundLayer) : null
+  }, [group, selection?.layerId, editingGroupId, selectedLayerIds.length])
 
   // ─── Container ResizeObserver ──────────────────────────────────────────────
 
@@ -289,11 +324,33 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
       const childNode = stage.findOne(`#layer-${selection.layerId}`)
       tr.nodes(childNode ? [childNode] : [])
     } else {
-      const node = stage.findOne(`#layer-${selection.layerId}`)
-      tr.nodes(node ? [node] : [])
+      const selectedLayer = group?.layers.find((layer) => layer.id === selection.layerId)
+      if (selectedLayer?.type === 'background') {
+        tr.nodes([])
+      } else {
+        const node = stage.findOne(`#layer-${selection.layerId}`)
+        tr.nodes(node ? [node] : [])
+      }
     }
     tr.getLayer()?.batchDraw()
-  }, [selection, editingGroupId, stageRef, selectedLayerIds, editingTextId])
+  }, [selection, editingGroupId, stageRef, selectedLayerIds, editingTextId, group])
+
+  // ─── Attach accent transformer to the selected background glow ────────────
+
+  useEffect(() => {
+    if (!accentTransformerRef.current || !stageRef.current) return
+    const tr = accentTransformerRef.current
+    if (!selectedBackgroundLayer || selectedAccentIndex == null) {
+      tr.nodes([])
+      tr.getLayer()?.batchDraw()
+      return
+    }
+    const node = stageRef.current.findOne(
+      `#accent-glow-${selectedBackgroundLayer.id}-${selectedAccentIndex}`,
+    )
+    tr.nodes(node ? [node] : [])
+    tr.getLayer()?.batchDraw()
+  }, [selectedBackgroundLayer, selectedAccentIndex, stageRef])
 
   // ─── Wheel: Ctrl+scroll = zoom-to-cursor; scroll = pan ────────────────────
 
@@ -771,6 +828,20 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   const displayWidth = totalWidth * zoom
   const displayHeight = totalHeight * zoom
 
+  const renderStageLayerItem = (layer: AppLayer) => (
+    <StageLayerItem
+      key={layer.id}
+      layer={layer}
+      isSelected={selection?.layerId === layer.id && !editingGroupId}
+      isEditing={layer.type === 'group' && editingGroupId === layer.id}
+      selectedChildId={editingGroupId === layer.id ? (selection?.layerId ?? null) : null}
+      canvasWidth={totalWidth}
+      canvasHeight={totalHeight}
+      ctrlRef={ctrlRef}
+      selectedAccentIndex={selection?.layerId === layer.id ? selectedAccentIndex : null}
+    />
+  )
+
   return (
     <div
       ref={containerRef}
@@ -832,24 +903,19 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
               {gridLines}
             </Layer>
 
-            {/* ── Content layer — all user layers ── */}
+            {/* Background stays visually below content but gets pointer priority while edited. */}
+            <Layer>
+              {group.layers.filter((layer) => layer.type === 'background').map(renderStageLayerItem)}
+            </Layer>
+
+            {/* Content remains visible but does not intercept background-accent editing. */}
             <Layer
+              listening={!selectedBackgroundLayer}
               onDragStart={handleContentLayerDragStart}
               onDragMove={handleContentLayerDragMove}
               onDragEnd={handleContentLayerDragEnd}
             >
-              {group.layers.map((layer) => (
-                <StageLayerItem
-                  key={layer.id}
-                  layer={layer}
-                  isSelected={selection?.layerId === layer.id && !editingGroupId}
-                  isEditing={layer.type === 'group' && editingGroupId === layer.id}
-                  selectedChildId={editingGroupId === layer.id ? (selection?.layerId ?? null) : null}
-                  canvasWidth={totalWidth}
-                  canvasHeight={totalHeight}
-                  ctrlRef={ctrlRef}
-                />
-              ))}
+              {group.layers.filter((layer) => layer.type !== 'background').map(renderStageLayerItem)}
             </Layer>
 
             {/* ── UI layer: transformer ── */}
@@ -900,6 +966,22 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
                 anchorSize={10}
                 anchorCornerRadius={3}
                 rotateAnchorOffset={40}
+              />
+              <Transformer
+                ref={accentTransformerRef}
+                keepRatio={false}
+                enabledAnchors={[
+                  'top-left', 'top-center', 'top-right',
+                  'middle-right', 'middle-left',
+                  'bottom-left', 'bottom-center', 'bottom-right',
+                ]}
+                rotateEnabled={false}
+                borderStroke="rgba(124,110,246,0.9)"
+                borderStrokeWidth={2}
+                anchorFill="#7c6ef6"
+                anchorStroke="#ffffff"
+                anchorSize={10}
+                anchorCornerRadius={3}
               />
             </Layer>
           </Stage>

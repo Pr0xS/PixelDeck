@@ -5,6 +5,29 @@ All notable changes to PixelDeck are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.1.0/),
 versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [Unreleased]
+
+## [0.5.1](https://github.com/Pr0xS/PixelDeck/compare/v0.4.1...v0.5.1) - 2026-07-16
+
+### Added
+
+- Editable background accent glows with independent color, opacity, blur, position, size, direct canvas manipulation, and overlap-aware selection.
+- OpenAI-compatible custom provider support with shared provider/model settings for OpenAI, OpenRouter, Google Gemini, and custom endpoints.
+- Four new bundled template sets for nutrition, finance, travel, and productivity.
+
+### Changed
+
+- Template phone screenshots are extracted into the IndexedDB asset store during import to avoid localStorage quota failures.
+- AI requests now use a unified OpenAI-compatible client and Google Gemini's compatibility endpoint.
+- Background and content interaction layers are separated while editing accents, preserving visual stacking and direct manipulation.
+
+### Fixed
+
+- Removed clipped edges and white halos from blurred canvas elements by padding filter caches and using native canvas blur filters.
+- Preserved project export filenames that already include non-PNG extensions.
+- Prevented project-library saves from persisting large inline screenshot data URLs.
+- Prevented template exports from including project screenshots, image layers, background images, or brand logos.
+
 ## [0.4.1](https://github.com/Pr0xS/PixelDeck/compare/v0.4.0...v0.4.1) (2026-07-12)
 
 ### Bug Fixes
@@ -26,8 +49,6 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 * correct noise toggle knob alignment in Background properties ([688f34f](https://github.com/Pr0xS/PixelDeck/commit/688f34fd5fb0a23b01e4213b49bfa17902e44871))
 * cross-slide paste offset cascade + add test coverage for export/import and geometry ([#35](https://github.com/Pr0xS/PixelDeck/issues/35)) ([5b048e5](https://github.com/Pr0xS/PixelDeck/commit/5b048e53ccd6f407e3afdf42b154d22dd17b0eac))
 * keep release-please tags on bare vX.Y.Z format ([#33](https://github.com/Pr0xS/PixelDeck/issues/33)) ([1459d94](https://github.com/Pr0xS/PixelDeck/commit/1459d94465c7b6f5975fa20c1e69228b339dc183))
-
-## [Unreleased]
 
 ## [0.2.3] - 2026-06-14
 
@@ -120,7 +141,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Preview modal: full-project filmstrip preview with high-res thumbnail capture
 - Slide navigator: thumbnail-based navigation with per-slide index
 
-[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.2...HEAD
+[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.5.1...HEAD
 [0.2.2]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Pr0xS/PixelDeck/compare/v0.1.0...v0.2.0

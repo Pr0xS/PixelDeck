@@ -104,7 +104,7 @@ jobs:
       - name: Export sample project
         run: |
           node cli/index.mjs export \
-            --project=public/templates/fintech-night.template.json \
+            --project=public/templates/ledger-dark.template.json \
             --output=/tmp/pixeldeck-smoke
       - name: Assert PNGs were produced
         run: test "$(find /tmp/pixeldeck-smoke -name '*.png' | wc -l)" -gt 0

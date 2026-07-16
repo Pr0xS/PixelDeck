@@ -1,5 +1,40 @@
 import type { FillValue, LinearGradient, RadialGradient, GradientStop } from '@/types'
 
+/** Extract the alpha (0–1) from an rgba() string. Other inputs are opaque. */
+export function parseColorAlpha(color: string): number {
+  const match = color.match(/^rgba\(\s*\d+\s*,\s*\d+\s*,\s*\d+\s*,\s*([\d.]+)\s*\)$/)
+  if (!match) return 1
+
+  const alpha = Number.parseFloat(match[1])
+  return Number.isFinite(alpha) ? Math.min(1, Math.max(0, alpha)) : 1
+}
+
+/** Replace a parseable CSS color's alpha channel, leaving unknown formats unchanged. */
+export function withAlpha(color: string, alpha: number): string {
+  const clampedAlpha = Math.min(1, Math.max(0, alpha))
+  const hexMatch = color.match(/^#([0-9a-fA-F]{3}|[0-9a-fA-F]{6})$/)
+
+  if (hexMatch) {
+    const hex = hexMatch[1].length === 3
+      ? [...hexMatch[1]].map((nibble) => nibble + nibble).join('')
+      : hexMatch[1]
+    const red = Number.parseInt(hex.slice(0, 2), 16)
+    const green = Number.parseInt(hex.slice(2, 4), 16)
+    const blue = Number.parseInt(hex.slice(4, 6), 16)
+    return `rgba(${red},${green},${blue},${clampedAlpha})`
+  }
+
+  const rgbMatch = color.match(/^rgba?\(\s*(\d+)\s*,\s*(\d+)\s*,\s*(\d+)\s*(?:,\s*[\d.]+\s*)?\)$/)
+  if (!rgbMatch) return color
+
+  return `rgba(${rgbMatch[1]},${rgbMatch[2]},${rgbMatch[3]},${clampedAlpha})`
+}
+
+/** Return a parseable CSS color with a fully transparent alpha channel. */
+export function toTransparentColor(color: string): string {
+  return withAlpha(color, 0)
+}
+
 /**
  * Convert angle in degrees to [startPoint, endPoint] for Konva linearGradient.
  * Konva expects points relative to the shape's local coordinate space.

@@ -1,6 +1,4 @@
-export type AiProvider = 'openrouter' | 'opencode' | 'openai' | 'anthropic' | 'google'
-
-export type AiProtocol = 'openai' | 'anthropic' | 'google'
+export type AiProvider = 'openai' | 'openrouter' | 'google' | 'custom'
 
 export interface AiModel {
   id: string
@@ -16,7 +14,6 @@ export interface AiProviderConfig {
   description: string
   placeholder: string
   keyUrl: string
-  protocol: AiProtocol
   baseUrl: string
   modelsUrl?: string
   defaultModel: string
@@ -24,64 +21,48 @@ export interface AiProviderConfig {
 
 export const AI_PROVIDERS: AiProviderConfig[] = [
   {
-    id: 'openrouter',
-    label: 'OpenRouter',
-    shortLabel: 'OpenRouter',
-    description: 'One key for Claude, GPT, Gemini and open models.',
-    placeholder: 'sk-or-…',
-    keyUrl: 'https://openrouter.ai/keys',
-    protocol: 'openai',
-    baseUrl: 'https://openrouter.ai/api/v1',
-    modelsUrl: 'https://openrouter.ai/api/v1/models',
-    defaultModel: 'anthropic/claude-3.5-haiku',
-  },
-  {
-    id: 'opencode',
-    label: 'OpenCode Go',
-    shortLabel: 'OpenCode Go',
-    description: 'Subscription access to selected open models.',
-    placeholder: 'sk-…',
-    keyUrl: 'https://opencode.ai',
-    protocol: 'openai',
-    baseUrl: 'https://opencode.ai/zen/go/v1',
-    modelsUrl: 'https://opencode.ai/zen/go/v1/models',
-    defaultModel: 'kimi-k2.6',
-  },
-  {
     id: 'openai',
     label: 'OpenAI',
     shortLabel: 'OpenAI',
     description: 'Direct BYOK for OpenAI platform keys.',
     placeholder: 'sk-…',
     keyUrl: 'https://platform.openai.com/api-keys',
-    protocol: 'openai',
     baseUrl: 'https://api.openai.com/v1',
     modelsUrl: 'https://api.openai.com/v1/models',
     defaultModel: 'gpt-4o-mini',
   },
   {
-    id: 'anthropic',
-    label: 'Claude (Anthropic)',
-    shortLabel: 'Claude',
-    description: 'Direct BYOK for Anthropic API keys.',
-    placeholder: 'sk-ant-…',
-    keyUrl: 'https://console.anthropic.com',
-    protocol: 'anthropic',
-    baseUrl: 'https://api.anthropic.com/v1',
-    modelsUrl: 'https://api.anthropic.com/v1/models',
-    defaultModel: 'claude-haiku-4-5',
+    id: 'openrouter',
+    label: 'OpenRouter',
+    shortLabel: 'OpenRouter',
+    description: 'One key for Claude, GPT, Gemini and open models.',
+    placeholder: 'sk-or-…',
+    keyUrl: 'https://openrouter.ai/keys',
+    baseUrl: 'https://openrouter.ai/api/v1',
+    modelsUrl: 'https://openrouter.ai/api/v1/models',
+    defaultModel: 'anthropic/claude-3.5-haiku',
   },
   {
     id: 'google',
-    label: 'Google AI',
-    shortLabel: 'Google',
-    description: 'Direct BYOK for Gemini API keys.',
+    label: 'Google Gemini',
+    shortLabel: 'Gemini',
+    description: "Direct BYOK using Gemini's OpenAI-compatible endpoint.",
     placeholder: 'AIza…',
     keyUrl: 'https://aistudio.google.com/app/apikey',
-    protocol: 'google',
-    baseUrl: 'https://generativelanguage.googleapis.com/v1beta',
-    modelsUrl: 'https://generativelanguage.googleapis.com/v1beta/models',
+    baseUrl: 'https://generativelanguage.googleapis.com/v1beta/openai',
+    modelsUrl: 'https://generativelanguage.googleapis.com/v1beta/openai/models',
     defaultModel: 'gemini-2.0-flash',
+  },
+  {
+    id: 'custom',
+    label: 'Custom (OpenAI-compatible)',
+    shortLabel: 'Custom',
+    description: 'Any provider that speaks the OpenAI Chat Completions API.',
+    placeholder: 'sk-…',
+    keyUrl: '',
+    baseUrl: '',
+    modelsUrl: undefined,
+    defaultModel: '',
   },
 ]
 

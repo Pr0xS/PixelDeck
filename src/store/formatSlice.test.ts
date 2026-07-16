@@ -25,7 +25,7 @@ describe('setActiveCanvasFormat', () => {
     useEditorStore.getState().addText()
     const layerId = getActiveGroup().layers.find((l) => l.type === 'text')!.id
     useEditorStore.getState().select(layerId)
-    useEditorStore.setState({ selectedLayerIds: [layerId], editingGroupId: 'group-1' })
+    useEditorStore.setState({ selectedLayerIds: [layerId], editingGroupId: 'group-1', selectedAccentIndex: 1 })
 
     useEditorStore.getState().setActiveCanvasFormat('iphone-69')
 
@@ -33,6 +33,7 @@ describe('setActiveCanvasFormat', () => {
     expect(useEditorStore.getState().selection).toBeNull()
     expect(useEditorStore.getState().selectedLayerIds).toEqual([])
     expect(useEditorStore.getState().editingGroupId).toBeNull()
+    expect(useEditorStore.getState().selectedAccentIndex).toBeNull()
   })
 })
 

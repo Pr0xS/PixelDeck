@@ -28,6 +28,8 @@ export interface EditorStore {
   editingGroupId: string | null
   /** Multi-selection for grouping operations */
   selectedLayerIds: string[]
+  /** Index into the selected BackgroundLayer's accents[] currently being edited. Only meaningful while a background layer is the sole selection. */
+  selectedAccentIndex: number | null
 
   // ─ Clipboard (not undoable — lives outside zundo partialize)
   clipboard: Layer[] | null
@@ -127,6 +129,7 @@ export interface EditorStore {
 
   // ─ Selection
   select: (layerId: string | null) => void
+  selectAccent: (index: number | null) => void
   deselect: () => void
   toggleLayerSelection: (layerId: string) => void
   clearMultiSelection: () => void

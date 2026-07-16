@@ -15,6 +15,7 @@ beforeEach(() => {
     clipboardSourceGroupId: null,
     pasteCount: 0,
     selection: null,
+    selectedAccentIndex: null,
   })
   useEditorStore.temporal.getState().clear()
 })
@@ -150,5 +151,29 @@ describe('single selection', () => {
     expect(useEditorStore.getState().selection).toBeNull()
     expect(useEditorStore.getState().selectedLayerIds).toEqual([])
     expect(useEditorStore.getState().editingGroupId).toBeNull()
+  })
+})
+
+describe('accent selection', () => {
+  it('selects an accent index', () => {
+    useEditorStore.getState().selectAccent(2)
+
+    expect(useEditorStore.getState().selectedAccentIndex).toBe(2)
+  })
+
+  it('clears the selected accent when another layer is selected', () => {
+    useEditorStore.getState().selectAccent(2)
+
+    useEditorStore.getState().select('other-layer')
+
+    expect(useEditorStore.getState().selectedAccentIndex).toBeNull()
+  })
+
+  it('clears the selected accent when selection is cleared', () => {
+    useEditorStore.getState().selectAccent(2)
+
+    useEditorStore.getState().deselect()
+
+    expect(useEditorStore.getState().selectedAccentIndex).toBeNull()
   })
 })

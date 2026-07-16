@@ -68,6 +68,7 @@ describe('project persistence', () => {
       selection: { slideGroupId: useEditorStore.getState().activeSlideGroupId, layerId: null },
       editingGroupId: 'editing-group',
       selectedLayerIds: ['selected-layer'],
+      selectedAccentIndex: 1,
       activeLocale: 'es',
       activeCanvasFormat: 'android-phone',
     })
@@ -79,6 +80,7 @@ describe('project persistence', () => {
     expect(state.selection).toBeNull()
     expect(state.editingGroupId).toBeNull()
     expect(state.selectedLayerIds).toHaveLength(0)
+    expect(state.selectedAccentIndex).toBeNull()
     expect(state.activeLocale).toBe('fr')
     expect(state.activeCanvasFormat).toBe(BASE_CANVAS_FORMAT)
   })

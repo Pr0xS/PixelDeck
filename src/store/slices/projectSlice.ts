@@ -1,7 +1,8 @@
 import type { BrandColor, Template } from '@/types'
 import { normalizeProjectFormats, BASE_CANVAS_FORMAT } from '@/utils/canvasFormats'
-import { projectToTemplate, applyTemplate } from '@/utils/templates'
+import { projectToTemplate, applyTemplate, extractInlineScreenshots } from '@/utils/templates'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
+import { useAssetStore } from '../assets'
 import {
   newId,
   newProject,
@@ -83,6 +84,7 @@ export const createProjectSlice = (
       selection: null,
       editingGroupId: null,
       selectedLayerIds: [],
+      selectedAccentIndex: null,
       activeLocale: project.settings.defaultLocale ?? 'en',
       activeCanvasFormat: BASE_CANVAS_FORMAT,
     })
@@ -98,6 +100,7 @@ export const createProjectSlice = (
       selection: null,
       editingGroupId: null,
       selectedLayerIds: [],
+      selectedAccentIndex: null,
       activeLocale: 'en',
       activeCanvasFormat: BASE_CANVAS_FORMAT,
     })
@@ -111,6 +114,8 @@ export const createProjectSlice = (
 
   importTemplateAsNewProject: (tpl: Template) => {
     const { slideGroups, settings } = applyTemplate(tpl)
+    const extracted = extractInlineScreenshots(tpl.name, slideGroups)
+    extracted.assets.forEach((asset) => useAssetStore.getState().addAsset(asset.filename, asset.dataUrl))
     const now = new Date().toISOString()
     const base = newProject()
     const project = normalizeProjectFormats({
@@ -119,14 +124,15 @@ export const createProjectSlice = (
       createdAt: now,
       updatedAt: now,
       settings: { ...base.settings, ...settings },
-      slideGroups,
+      slideGroups: extracted.slideGroups,
     })
     set({
       project,
-      activeSlideGroupId: slideGroups[0]?.id ?? '',
+      activeSlideGroupId: extracted.slideGroups[0]?.id ?? '',
       selection: null,
       editingGroupId: null,
       selectedLayerIds: [],
+      selectedAccentIndex: null,
       activeLocale: project.settings.defaultLocale ?? 'en',
       activeCanvasFormat: BASE_CANVAS_FORMAT,
     })
@@ -136,6 +142,8 @@ export const createProjectSlice = (
 
   addTemplateSlideGroups: (tpl: Template) => {
     const { slideGroups, settings } = applyTemplate(tpl)
+    const extracted = extractInlineScreenshots(tpl.name, slideGroups)
+    extracted.assets.forEach((asset) => useAssetStore.getState().addAsset(asset.filename, asset.dataUrl))
     set((s) => {
       // Merge template brand colors into the current palette so {brand:id}
       // tokens in the appended layers resolve. Existing ids win (never
@@ -148,9 +156,9 @@ export const createProjectSlice = (
           settings: incoming.length > 0
             ? { ...s.project.settings, brandColors: [...existing, ...incoming] }
             : s.project.settings,
-          slideGroups: [...s.project.slideGroups, ...slideGroups],
+          slideGroups: [...s.project.slideGroups, ...extracted.slideGroups],
         }),
-        activeSlideGroupId: slideGroups[0]?.id ?? s.activeSlideGroupId,
+        activeSlideGroupId: extracted.slideGroups[0]?.id ?? s.activeSlideGroupId,
       }
     })
   },

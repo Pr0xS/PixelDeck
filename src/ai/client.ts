@@ -1,7 +1,6 @@
 import { formatAiNetworkError } from '@/ai/errors'
-import { buildAnthropicHeaders, buildGoogleHeaders, buildOpenAiCompatibleHeaders } from '@/ai/headers'
+import { buildOpenAiCompatibleHeaders } from '@/ai/headers'
 import { getDefaultModel, getProviderConfig } from '@/ai/providers'
-import { getAiApiBaseUrl, isAiProviderBlockedInStaticBrowser, usesAiProxy } from '@/ai/urls'
 import type { AiProvider } from '@/ai/providers'
 
 /** A multimodal content part: plain text or an image as a data URL. */
@@ -14,16 +13,7 @@ export interface AiChatMessage {
   content: string | AiContentPart[]
 }
 
-/** Flatten message content to plain text (drops images). */
-function contentToText(content: string | AiContentPart[]): string {
-  if (typeof content === 'string') return content
-  return content
-    .filter((p): p is Extract<AiContentPart, { type: 'text' }> => p.type === 'text')
-    .map((p) => p.text)
-    .join('\n')
-}
-
-/** Split a data URL into media type + base64 payload (for Anthropic/Google). */
+/** Split a data URL into media type + base64 payload. */
 function splitDataUrl(dataUrl: string): { mediaType: string; data: string } {
   const match = /^data:([^;,]+);base64,(.*)$/s.exec(dataUrl)
   if (!match) throw new Error('Image must be a base64 data URL (data:image/…;base64,…).')
@@ -49,7 +39,7 @@ function extractGeneratedImageDataUrl(data: unknown): string {
 }
 
 /**
- * For chat-based image paths (OpenRouter, OpenCode Go):
+ * For chat-based image paths:
  * 1. Try to find an image in the response.
  * 2. If no image, check whether the model returned a JSON {error} object.
  * 3. Otherwise throw a generic error.
@@ -136,6 +126,7 @@ function findImageDataUrl(value: unknown): string | null {
 export interface AiChatOptions {
   provider: AiProvider
   apiKey: string
+  baseUrl?: string
   model?: string
   messages: AiChatMessage[]
   maxTokens?: number
@@ -146,6 +137,7 @@ export interface AiChatOptions {
 export interface AiImageEditOptions {
   provider: AiProvider
   apiKey: string
+  baseUrl?: string
   model?: string
   prompt: string
   imageDataUrl: string
@@ -154,18 +146,9 @@ export interface AiImageEditOptions {
 export async function chat(options: AiChatOptions): Promise<string> {
   const apiKey = options.apiKey.trim()
   if (!apiKey) throw new Error('No API key configured. Open AI Settings in the toolbar.')
-  assertProviderAvailableInBrowser(options.provider)
-
-  const config = getProviderConfig(options.provider)
-  const baseUrl = getAiApiBaseUrl(options.provider, config.baseUrl)
+  const baseUrl = resolveBaseUrl(options.provider, options.baseUrl)
+  if (!baseUrl) throw new Error('No custom API base URL configured. Open AI Settings in the toolbar.')
   const model = options.model?.trim() || getDefaultModel(options.provider)
-
-  if (config.protocol === 'anthropic') {
-    return chatWithAnthropic(baseUrl, apiKey, model, options.messages, options.maxTokens)
-  }
-  if (config.protocol === 'google') {
-    return chatWithGoogle(baseUrl, apiKey, model, options.messages, options.maxTokens, options.forceJsonMode)
-  }
   return chatWithOpenAiCompatible(
     baseUrl,
     apiKey,
@@ -180,24 +163,14 @@ export async function chat(options: AiChatOptions): Promise<string> {
 export async function editImage(options: AiImageEditOptions): Promise<string> {
   const apiKey = options.apiKey.trim()
   if (!apiKey) throw new Error('No API key configured. Open AI Settings in the toolbar.')
-  assertProviderAvailableInBrowser(options.provider)
-
-  const config = getProviderConfig(options.provider)
-  const baseUrl = getAiApiBaseUrl(options.provider, config.baseUrl)
+  const baseUrl = resolveBaseUrl(options.provider, options.baseUrl)
+  if (!baseUrl) throw new Error('No custom API base URL configured. Open AI Settings in the toolbar.')
   const model = options.model?.trim() || getDefaultModel(options.provider)
-
-  // Anthropic has no image generation endpoint in PixelDeck
-  if (options.provider === 'anthropic') {
-    throw new Error('Claude (Anthropic) does not support image generation in PixelDeck. Use OpenAI, Google, or OpenRouter with an image-capable model.')
-  }
 
   if (options.provider === 'openai') {
     return editImageWithOpenAi(baseUrl, apiKey, model, options.prompt, options.imageDataUrl)
   }
-  if (options.provider === 'google') {
-    return editImageWithGoogle(baseUrl, apiKey, model, options.prompt, options.imageDataUrl)
-  }
-  // OpenRouter and OpenCode Go: attempt via chat completions with image modality.
+  // Other compatible providers attempt image editing via chat completions.
   // The model itself signals unsupported via the JSON error contract in the prompt.
   return editImageWithOpenAiCompatibleImageChat(options.provider, baseUrl, apiKey, model, options.prompt, options.imageDataUrl)
 }
@@ -207,23 +180,17 @@ export async function editImage(options: AiImageEditOptions): Promise<string> {
  * known to support image generation. Used to show/hide warnings — NOT a
  * hard gate. The actual capability is determined at call time.
  */
-export function supportsImageEditing(provider: AiProvider, model: string): boolean {
-  if (isAiProviderBlockedInStaticBrowser(provider)) return false
-  if (provider === 'anthropic') return false
-  if (provider === 'openai') return model.toLowerCase().startsWith('gpt-image')
-  if (provider === 'google') {
-    const id = model.toLowerCase()
-    return id.includes('image') || id.includes('imagen') || id.includes('nano-banana')
-  }
-  // OpenRouter and OpenCode Go: optimistically true — the model decides at runtime
-  return true
+/** Resolve the effective base URL for a provider, stripping trailing slashes. */
+function resolveBaseUrl(provider: AiProvider, baseUrlOverride?: string): string | undefined {
+  const raw = provider === 'custom' ? baseUrlOverride?.trim() : getProviderConfig(provider).baseUrl
+  return raw ? raw.replace(/\/+$/, '') : undefined
 }
 
-function assertProviderAvailableInBrowser(provider: AiProvider): void {
-  if (!isAiProviderBlockedInStaticBrowser(provider)) return
-  throw new Error(
-    'OpenCode Go does not allow direct browser requests from GitHub Pages. Use OpenRouter, OpenAI, Anthropic, or Google AI for the static web app.',
-  )
+export function supportsImageEditing(provider: AiProvider, model: string): boolean {
+  if (provider === 'openai') return model.toLowerCase().startsWith('gpt-image')
+  if (provider === 'google') return false
+  // OpenRouter and custom providers are optimistic; runtime decides.
+  return true
 }
 
 async function chatWithOpenAiCompatible(
@@ -264,11 +231,12 @@ async function chatWithOpenAiCompatible(
       : {}),
   }
 
-  // OpenAI and OpenRouter support Chat Completions JSON mode. Do not send this
-  // to every OpenAI-compatible endpoint: OpenCode Go and some routed models can
-  // reject `response_format`, so those stay prompt-only and rely on parsers.
+  // OpenAI, OpenRouter, and Google's OpenAI-compat endpoint all support Chat
+  // Completions JSON mode. Do not send this to `custom` endpoints: unknown
+  // OpenAI-compatible servers/routed models can reject `response_format`, so
+  // those stay prompt-only and rely on the parser/retry machinery.
   // o-series models support json_object mode too.
-  if (forceJsonMode && (provider === 'openai' || provider === 'openrouter')) {
+  if (forceJsonMode && (provider === 'openai' || provider === 'openrouter' || provider === 'google')) {
     body.response_format = { type: 'json_object' }
   }
 
@@ -276,13 +244,6 @@ async function chatWithOpenAiCompatible(
   // before generating any output, causing finish_reason=length on JSON tasks.
   // Disable reasoning for providers/models where it is known to be the default.
   //
-  // OpenCode Go — DeepSeek (deepseek-*) and other known reasoning models (qwq-*, *-r1, *-thinking)
-  if (provider === 'opencode') {
-    const m = model.toLowerCase()
-    if (m.includes('deepseek') || m.includes('qwq') || m.includes('-r1') || m.includes('thinking')) {
-      body.thinking = { type: 'disabled' }
-    }
-  }
   // OpenRouter — DeepSeek R1 variants use a different disable key
   if (provider === 'openrouter') {
     const m = model.toLowerCase()
@@ -347,7 +308,7 @@ async function editImageWithOpenAi(
 }
 
 async function editImageWithOpenAiCompatibleImageChat(
-  provider: Extract<AiProvider, 'openrouter' | 'opencode'>,
+  provider: AiProvider,
   baseUrl: string,
   apiKey: string,
   model: string,
@@ -356,16 +317,10 @@ async function editImageWithOpenAiCompatibleImageChat(
 ): Promise<string> {
   const headers = buildOpenAiCompatibleHeaders(provider, apiKey, { contentType: true })
 
-  // OpenRouter supports the multimodal image_url content part and the modalities field.
-  // OpenCode Go routes to various backends (DeepSeek, Kimi, …) that may reject image_url
-  // with a 400 before the model sees the prompt. For OpenCode we send the image as a
-  // base64 data URL embedded in the text part so the router never sees image_url.
-  const userContent = provider === 'openrouter'
-    ? [
-        { type: 'text', text: prompt },
-        { type: 'image_url', image_url: { url: imageDataUrl } },
-      ]
-    : [{ type: 'text', text: `${prompt}\n\n[Source image attached as base64]\n${imageDataUrl}` }]
+  const userContent = [
+    { type: 'text', text: prompt },
+    { type: 'image_url', image_url: { url: imageDataUrl } },
+  ]
 
   let res: Response
   try {
@@ -386,155 +341,4 @@ async function editImageWithOpenAiCompatibleImageChat(
 
   const dataJson = await res.json()
   return extractImageOrThrowModelError(dataJson)
-}
-
-async function editImageWithGoogle(
-  baseUrl: string,
-  apiKey: string,
-  model: string,
-  prompt: string,
-  imageDataUrl: string,
-): Promise<string> {
-  const { mediaType, data } = splitDataUrl(imageDataUrl)
-  const googleUrl = usesAiProxy()
-    ? `${baseUrl}/models/${model}:generateContent`
-    : `${baseUrl}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
-
-  let res: Response
-  try {
-    res = await fetch(googleUrl, {
-      method: 'POST',
-      headers: buildGoogleHeaders(apiKey, { contentType: true, includeApiKey: usesAiProxy() }),
-      body: JSON.stringify({
-        contents: [
-          {
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: mediaType, data } },
-            ],
-          },
-        ],
-        generationConfig: {
-          responseModalities: ['TEXT', 'IMAGE'],
-        },
-      }),
-    })
-  } catch (error) {
-    throw formatAiNetworkError('google', 'generate image', error)
-  }
-  if (!res.ok) throw new Error(`Google AI image API error ${res.status}: ${await res.text()}`)
-
-  const dataJson = await res.json()
-  return extractGeneratedImageDataUrl(dataJson)
-}
-
-async function chatWithAnthropic(
-  baseUrl: string,
-  apiKey: string,
-  model: string,
-  messages: AiChatMessage[],
-  maxTokens = 4096,
-): Promise<string> {
-  const system = messages
-    .filter((m) => m.role === 'system')
-    .map((m) => contentToText(m.content))
-    .join('\n\n')
-  const anthropicMessages = messages
-    .filter((m) => m.role !== 'system')
-    .map((m) => ({
-      role: m.role,
-      content:
-        typeof m.content === 'string'
-          ? m.content
-          : m.content.map((part) => {
-              if (part.type === 'text') return { type: 'text' as const, text: part.text }
-              const { mediaType, data } = splitDataUrl(part.dataUrl)
-              return { type: 'image' as const, source: { type: 'base64' as const, media_type: mediaType, data } }
-            }),
-    }))
-
-  let res: Response
-  try {
-    res = await fetch(`${baseUrl}/messages`, {
-      method: 'POST',
-      headers: buildAnthropicHeaders(apiKey, { contentType: true }),
-      body: JSON.stringify({
-        model,
-        max_tokens: maxTokens,
-        ...(system ? { system } : {}),
-        messages: anthropicMessages.length ? anthropicMessages : [{ role: 'user', content: '' }],
-      }),
-    })
-  } catch (error) {
-    throw formatAiNetworkError('anthropic', 'call messages', error)
-  }
-  if (!res.ok) throw new Error(`Anthropic API error ${res.status}: ${await res.text()}`)
-
-  const data = await res.json()
-  const textBlock = data?.content?.find?.((part: { type?: string }) => part.type === 'text')
-  const content = textBlock?.text ?? data?.content?.[0]?.text
-  const stopReason = data?.stop_reason
-  if (typeof content !== 'string' || !content.trim()) {
-    console.error(`[PixelDeck] Anthropic returned empty content. stop_reason=${stopReason}`, data)
-    throw new Error(`Anthropic returned an empty response (stop_reason: ${stopReason ?? 'unknown'}).`)
-  }
-  return content.trim()
-}
-
-async function chatWithGoogle(
-  baseUrl: string,
-  apiKey: string,
-  model: string,
-  messages: AiChatMessage[],
-  maxTokens?: number,
-  forceJsonMode = false,
-): Promise<string> {
-  // Google expects a parts array; text messages are flattened with role
-  // prefixes, image parts become inline_data blocks.
-  const parts: Array<{ text: string } | { inline_data: { mime_type: string; data: string } }> = []
-  for (const m of messages) {
-    if (typeof m.content === 'string') {
-      parts.push({ text: `${m.role.toUpperCase()}: ${m.content}` })
-      continue
-    }
-    for (const part of m.content) {
-      if (part.type === 'text') {
-        parts.push({ text: `${m.role.toUpperCase()}: ${part.text}` })
-      } else {
-        const { mediaType, data } = splitDataUrl(part.dataUrl)
-        parts.push({ inline_data: { mime_type: mediaType, data } })
-      }
-    }
-  }
-
-  const googleUrl = usesAiProxy()
-    ? `${baseUrl}/models/${model}:generateContent`
-    : `${baseUrl}/models/${model}:generateContent?key=${encodeURIComponent(apiKey)}`
-
-  let res: Response
-  try {
-    res = await fetch(googleUrl, {
-      method: 'POST',
-      headers: buildGoogleHeaders(apiKey, { contentType: true, includeApiKey: usesAiProxy() }),
-      body: JSON.stringify({
-        contents: [{ parts }],
-        generationConfig: {
-          ...(maxTokens ? { maxOutputTokens: maxTokens } : {}),
-          ...(forceJsonMode ? { responseMimeType: 'application/json' } : {}),
-        },
-      }),
-    })
-  } catch (error) {
-    throw formatAiNetworkError('google', 'generate content', error)
-  }
-  if (!res.ok) throw new Error(`Google AI API error ${res.status}: ${await res.text()}`)
-
-  const data = await res.json()
-  const content = data?.candidates?.[0]?.content?.parts?.[0]?.text
-  const finishReason = data?.candidates?.[0]?.finishReason
-  if (typeof content !== 'string' || !content.trim()) {
-    console.error(`[PixelDeck] Google AI returned empty content. finishReason=${finishReason}`, data)
-    throw new Error(`Google AI returned an empty response (finishReason: ${finishReason ?? 'unknown'}).`)
-  }
-  return content.trim()
 }

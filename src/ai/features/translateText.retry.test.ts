@@ -31,7 +31,7 @@ const project: Project = {
   slideGroups: [slideGroup],
 } as Project
 
-const auth = { provider: 'opencode' as const, apiKey: 'sk-test', model: 'kimi-k2.6' }
+const auth = { provider: 'openrouter' as const, apiKey: 'sk-test', model: 'gpt-4o-mini' }
 
 beforeEach(() => {
   mockedChat.mockReset()

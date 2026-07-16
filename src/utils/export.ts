@@ -100,12 +100,14 @@ export async function exportGroupImages(
 }
 
 /**
- * Download a data URL as a PNG file using a temporary anchor tag.
+ * Download a data URL as a file using a temporary anchor tag.
+ * Filenames that already carry an extension (.png, .json, …) are kept as-is;
+ * extensionless names default to .png for backwards compatibility.
  */
 export function downloadDataUrl(dataUrl: string, filename: string) {
   const a = document.createElement('a')
   a.href = dataUrl
-  a.download = filename.endsWith('.png') ? filename : `${filename}.png`
+  a.download = /\.[a-z0-9]+$/i.test(filename) ? filename : `${filename}.png`
   a.click()
   a.remove()
 }

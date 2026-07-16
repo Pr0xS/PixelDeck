@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
 import type {
-  Layer, SlideGroup, GroupLayer, PhoneLayer,
+  Layer, SlideGroup, GroupLayer,
   Template, Project, ProjectSettings,
   CanvasBackground, BackgroundLayer,
 } from '@/types'
@@ -37,36 +37,44 @@ export function deterministicIds(layers: Layer[]): Layer[] {
 
 // ─── Asset scrubbing ─────────────────────────────────────────────────────────
 
-/**
- * Strip screenshotPath (asset-store keys) from PhoneLayers and locale overrides.
- * screenshotDataUrl (inline base64) is kept — callers may include stock images there.
- */
+const IMAGE_SOURCE_FIELDS = [
+  'screenshotPath',
+  'screenshotDataUrl',
+  'src',
+  'imageDataUrl',
+  'logoDataUrl',
+] as const
+
+function stripImageSourceFields<T>(value: T): T {
+  const next = { ...value } as T & Record<(typeof IMAGE_SOURCE_FIELDS)[number], unknown>
+  for (const field of IMAGE_SOURCE_FIELDS) delete next[field]
+  return next
+}
+
+/** Strip project images while preserving the template's layer geometry and styling. */
 function stripFromLayer(layer: Layer): Layer {
-  let next = { ...layer } as Layer
+  let next = stripImageSourceFields(layer) as Layer
 
-  // Strip screenshotPath from phone layers (it's a store reference, useless elsewhere)
-  if (next.type === 'phone') {
-    const phone = next as PhoneLayer
-    if (phone.screenshotPath !== undefined) {
-      const { screenshotPath: _drop, ...rest } = phone
-      void _drop
-      next = rest as Layer
-    }
-  }
+  // ImageLayer.src is required by the domain type. Keep an empty placeholder so
+  // the layout survives and the user can replace the image after importing.
+  if (next.type === 'image') next = { ...next, src: '' }
 
-  // Strip screenshotPath from locale overrides (any layer type)
   if (next.localeOverrides) {
     const lo: NonNullable<typeof next.localeOverrides> = {}
     for (const [locale, patch] of Object.entries(next.localeOverrides)) {
-      if (patch.screenshotPath !== undefined) {
-        const { screenshotPath: _drop, ...restPatch } = patch
-        void _drop
-        lo[locale] = restPatch
-      } else {
-        lo[locale] = patch
-      }
+      lo[locale] = stripImageSourceFields(patch)
     }
     next = { ...next, localeOverrides: lo }
+  }
+
+  if (next.formatOverrides) {
+    const formatOverrides = Object.fromEntries(
+      Object.entries(next.formatOverrides).map(([format, patch]) => [
+        format,
+        patch ? stripImageSourceFields(patch) : patch,
+      ]),
+    ) as typeof next.formatOverrides
+    next = { ...next, formatOverrides }
   }
 
   if (next.type === 'group') {
@@ -76,8 +84,80 @@ function stripFromLayer(layer: Layer): Layer {
   return next
 }
 
-export function stripScreenshotPaths(layers: Layer[]): Layer[] {
+export function stripLayerImages(layers: Layer[]): Layer[] {
   return layers.map(stripFromLayer)
+}
+
+export interface ExtractedScreenshotsResult {
+  slideGroups: SlideGroup[]
+  assets: Array<{ filename: string; dataUrl: string }>
+}
+
+/**
+ * Walk cloned template groups (including group children and locale overrides),
+ * replacing inline phone screenshots with deduplicated asset-store keys.
+ * BackgroundLayer.imageDataUrl and ImageLayer.src are intentionally untouched.
+ * Pure: callers must register every returned asset with the asset store.
+ */
+export function extractInlineScreenshots(
+  templateName: string,
+  slideGroups: SlideGroup[],
+): ExtractedScreenshotsResult {
+  const cloned = JSON.parse(JSON.stringify(slideGroups)) as SlideGroup[]
+  const slug = templateName
+    .toLowerCase()
+    .replace(/\s+/g, '-')
+    .replace(/[^a-z0-9-]/g, '')
+  const filenamesByDataUrl = new Map<string, string>()
+  const assets: Array<{ filename: string; dataUrl: string }> = []
+
+  const filenameFor = (dataUrl: string): string => {
+    const existing = filenamesByDataUrl.get(dataUrl)
+    if (existing) return existing
+
+    const mime = dataUrl.match(/^data:image\/([^;,]+)/i)?.[1]?.toLowerCase()
+    const ext = mime === 'jpeg' || mime === 'jpg'
+      ? 'jpg'
+      : mime === 'webp'
+        ? 'webp'
+        : 'png'
+    const filename = `template-${slug}-${assets.length + 1}.${ext}`
+    filenamesByDataUrl.set(dataUrl, filename)
+    assets.push({ filename, dataUrl })
+    return filename
+  }
+
+  const walk = (layer: Layer): void => {
+    if (layer.type === 'phone' && layer.screenshotDataUrl) {
+      if (layer.screenshotPath) {
+        if (!filenamesByDataUrl.has(layer.screenshotDataUrl)) {
+          filenamesByDataUrl.set(layer.screenshotDataUrl, layer.screenshotPath)
+        }
+      } else {
+        layer.screenshotPath = filenameFor(layer.screenshotDataUrl)
+      }
+      delete layer.screenshotDataUrl
+    }
+
+    if (layer.localeOverrides) {
+      for (const patch of Object.values(layer.localeOverrides)) {
+        if (!patch.screenshotDataUrl) continue
+        if (patch.screenshotPath) {
+          if (!filenamesByDataUrl.has(patch.screenshotDataUrl)) {
+            filenamesByDataUrl.set(patch.screenshotDataUrl, patch.screenshotPath)
+          }
+        } else {
+          patch.screenshotPath = filenameFor(patch.screenshotDataUrl)
+        }
+        delete patch.screenshotDataUrl
+      }
+    }
+
+    if (layer.type === 'group') layer.children.forEach(walk)
+  }
+
+  for (const group of cloned) group.layers.forEach(walk)
+  return { slideGroups: cloned, assets }
 }
 
 // ─── Export: Project → Template ──────────────────────────────────────────────
@@ -98,7 +178,7 @@ export function projectToTemplate(project: Project, opts: ExportTemplateOpts): T
   const slideGroups: Omit<SlideGroup, 'id'>[] = groups.map((g) => {
     const { id: _id, ...rest } = g
     void _id
-    const layers = deterministicIds(stripScreenshotPaths(g.layers))
+    const layers = deterministicIds(stripLayerImages(g.layers))
     return { ...rest, layers }
   })
 

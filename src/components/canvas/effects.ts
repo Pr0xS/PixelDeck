@@ -27,9 +27,13 @@ export function useKonvaBlur(
     node.clearCache()
 
     if (blurRadius > 0) {
-      node.cache()
-      node.filters([Konva.Filters.Blur])
-      ;(node as Konva.Node & { blurRadius: (radius: number) => void }).blurRadius(blurRadius)
+      // CSS blur(Npx) has a Gaussian tail that extends well beyond N px
+      // (sigma = N/2, visible spread ≈ 3×sigma ≈ 1.5×N). Pad generously so the
+      // cache canvas doesn't hard-clip the tail at its own boundary.
+      node.cache({ offset: Math.ceil(blurRadius * 3) })
+      // Native CSS blur avoids Konva.Filters.Blur's known white-halo artifact on
+      // anti-aliased transparent edges (konvajs/konva#428, #1799).
+      node.filters([`blur(${blurRadius}px)`])
     } else {
       node.filters([])
     }

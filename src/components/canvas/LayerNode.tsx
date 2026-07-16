@@ -19,6 +19,10 @@ interface LayerNodeProps {
   canvasWidth?: number
   canvasHeight?: number
   forceNotDraggable?: boolean
+  selectedAccentIndex?: number | null
+  onSelectAccent?: (index: number) => void
+  onAccentDragEnd?: (index: number, cx: number, cy: number) => void
+  onAccentTransformEnd?: (index: number, rx: number, ry: number) => void
   // Group editing props (only used when layer.type === 'group')
   isEditing?: boolean
   selectedChildId?: string | null
@@ -33,6 +37,7 @@ interface LayerNodeProps {
 export function LayerNode({
   layer, isSelected, onSelect, onDragEnd, onTransformEnd,
   canvasWidth, canvasHeight, forceNotDraggable,
+  selectedAccentIndex, onSelectAccent, onAccentDragEnd, onAccentTransformEnd,
   isEditing, selectedChildId, onEnterEdit, onSelectChild, onChildDragEnd, onChildTransformEnd,
 }: LayerNodeProps) {
   switch (layer.type) {
@@ -42,6 +47,11 @@ export function LayerNode({
           layer={layer as BackgroundLayer}
           canvasWidth={canvasWidth ?? 1290}
           canvasHeight={canvasHeight ?? 2796}
+          isSelected={isSelected}
+          selectedAccentIndex={selectedAccentIndex ?? null}
+          onSelectAccent={onSelectAccent ?? (() => {})}
+          onAccentDragEnd={onAccentDragEnd ?? (() => {})}
+          onAccentTransformEnd={onAccentTransformEnd ?? (() => {})}
         />
       )
     case 'phone':

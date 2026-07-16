@@ -1,0 +1,1525 @@
+{
+  "id": "tpl-ledger-dark",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Ledger Dark",
+  "description": "Sleek midnight finance set: gradient hero, 2-slide account pano, security and auto-invest slides, social-proof CTA. Brand Kit wired.",
+  "category": "Finance",
+  "author": "PixelDeck",
+  "createdAt": "2026-07-16T00:00:00.000Z",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "Ledgr",
+    "brandColors": [
+      {
+        "id": "finprimary",
+        "name": "Primary",
+        "value": "#7C3AED"
+      },
+      {
+        "id": "finaccent",
+        "name": "Accent",
+        "value": "#34D399"
+      }
+    ]
+  },
+  "slideGroups": [
+    {
+      "name": "Hero",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-01"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#070A1F"
+              },
+              {
+                "offset": 0.5,
+                "color": "#10173A"
+              },
+              {
+                "offset": 1.0,
+                "color": "#1B2350"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(124,58,237,0.30)",
+              "cx": 82,
+              "cy": 10,
+              "rx": 850,
+              "ry": 760
+            },
+            {
+              "color": "rgba(59,130,246,0.22)",
+              "cx": 10,
+              "cy": 85,
+              "rx": 900,
+              "ry": 800
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Brand",
+          "type": "brand",
+          "x": 100,
+          "y": 96,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "appName": "Ledgr",
+          "logoSize": 64,
+          "nameColor": "#A78BFA",
+          "nameFontSize": 40,
+          "nameFontFamily": "Sora",
+          "nameFontWeight": 800,
+          "direction": "row",
+          "gap": 18
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 270,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your money,\non autopilot",
+          "fontFamily": "Sora",
+          "fontSize": 120,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.06,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 15,
+              "end": 24,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#7C3AED"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#3B82F6"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l3",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 590,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Spend, save and invest — all in one place",
+          "fontFamily": "Inter",
+          "fontSize": 48,
+          "fontWeight": 500,
+          "fill": "#94A3B8",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l4",
+          "name": "Chip Instant alerts",
+          "type": "shape",
+          "x": 166,
+          "y": 742,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 330,
+          "height": 92,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#7C3AED"
+              },
+              {
+                "offset": 1.0,
+                "color": "#3B82F6"
+              }
+            ]
+          },
+          "cornerRadius": 46
+        },
+        {
+          "id": "l5",
+          "name": "Chip label Instant alerts",
+          "type": "text",
+          "x": 166,
+          "y": 767,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Instant alerts",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 330
+        },
+        {
+          "id": "l6",
+          "name": "Chip Smart budgets",
+          "type": "shape",
+          "x": 518,
+          "y": 742,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 311,
+          "height": 92,
+          "fill": "rgba(255,255,255,0.08)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l7",
+          "name": "Chip label Smart budgets",
+          "type": "text",
+          "x": 518,
+          "y": 767,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Smart budgets",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#C7CCE8",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 311
+        },
+        {
+          "id": "l8",
+          "name": "Chip Auto-invest",
+          "type": "shape",
+          "x": 851,
+          "y": 742,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 273,
+          "height": 92,
+          "fill": "rgba(255,255,255,0.08)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l9",
+          "name": "Chip label Auto-invest",
+          "type": "text",
+          "x": 851,
+          "y": 767,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Auto-invest",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#C7CCE8",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 273
+        },
+        {
+          "id": "l10",
+          "name": "Phone",
+          "type": "phone",
+          "x": 177,
+          "y": 950,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.4,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#000000",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "name": "Accounts Pano",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-02",
+        "slide-03"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 115,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#0B1030"
+              },
+              {
+                "offset": 0.5,
+                "color": "#171F4A"
+              },
+              {
+                "offset": 1.0,
+                "color": "#0B1030"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(124,58,237,0.25)",
+              "cx": 30,
+              "cy": 15,
+              "rx": 900,
+              "ry": 780
+            },
+            {
+              "color": "rgba(52,211,153,0.16)",
+              "cx": 75,
+              "cy": 80,
+              "rx": 850,
+              "ry": 760
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline Left",
+          "type": "text",
+          "x": 95,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Every account,\none timeline",
+          "fontFamily": "Sora",
+          "fontSize": 116,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.06,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 15,
+              "end": 27,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#7C3AED"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#3B82F6"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle Left",
+          "type": "text",
+          "x": 145,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Banks, cards and crypto together",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#94A3B8",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l3",
+          "name": "Emoji 💸",
+          "type": "emoji",
+          "x": 150,
+          "y": 790,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "💸",
+          "fontSize": 130
+        },
+        {
+          "id": "l4",
+          "name": "Headline Right",
+          "type": "text",
+          "x": 1385,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Insights that\nfind you",
+          "fontFamily": "Sora",
+          "fontSize": 116,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.06,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 14,
+              "end": 22,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#34D399"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#3B82F6"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l5",
+          "name": "Subtitle Right",
+          "type": "text",
+          "x": 1435,
+          "y": 620,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Weekly digests, zero spreadsheets",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#94A3B8",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l6",
+          "name": "Emoji 📊",
+          "type": "emoji",
+          "x": 2050,
+          "y": 800,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "📊",
+          "fontSize": 130
+        },
+        {
+          "id": "l7",
+          "name": "Phone",
+          "type": "phone",
+          "x": 724,
+          "y": 700,
+          "rotation": -8,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.9,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#000000",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "name": "Budgets",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-04"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 200,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#070A1F"
+              },
+              {
+                "offset": 1.0,
+                "color": "#131A3E"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(124,58,237,0.22)",
+              "cx": 18,
+              "cy": 10,
+              "rx": 800,
+              "ry": 700
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 250,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Budgets that\nadapt to you",
+          "fontFamily": "Sora",
+          "fontSize": 116,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.06,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 13,
+              "end": 25,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#7C3AED"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#3B82F6"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "name": "Emoji 🎯",
+          "type": "emoji",
+          "x": 1060,
+          "y": 60,
+          "rotation": 12,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "🎯",
+          "fontSize": 110
+        },
+        {
+          "id": "l3",
+          "name": "Chip Groceries",
+          "type": "shape",
+          "x": 246,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 235,
+          "height": 92,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#7C3AED"
+              },
+              {
+                "offset": 1.0,
+                "color": "#3B82F6"
+              }
+            ]
+          },
+          "cornerRadius": 46
+        },
+        {
+          "id": "l4",
+          "name": "Chip label Groceries",
+          "type": "text",
+          "x": 246,
+          "y": 665,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Groceries",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 235
+        },
+        {
+          "id": "l5",
+          "name": "Chip Rent",
+          "type": "shape",
+          "x": 504,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 140,
+          "height": 92,
+          "fill": "rgba(255,255,255,0.08)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l6",
+          "name": "Chip label Rent",
+          "type": "text",
+          "x": 504,
+          "y": 665,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Rent",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#C7CCE8",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 140
+        },
+        {
+          "id": "l7",
+          "name": "Chip Travel",
+          "type": "shape",
+          "x": 666,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 178,
+          "height": 92,
+          "fill": "rgba(255,255,255,0.08)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l8",
+          "name": "Chip label Travel",
+          "type": "text",
+          "x": 666,
+          "y": 665,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Travel",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#C7CCE8",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 178
+        },
+        {
+          "id": "l9",
+          "name": "Chip Coffee",
+          "type": "shape",
+          "x": 866,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 178,
+          "height": 92,
+          "fill": "rgba(255,255,255,0.08)",
+          "cornerRadius": 46
+        },
+        {
+          "id": "l10",
+          "name": "Chip label Coffee",
+          "type": "text",
+          "x": 866,
+          "y": 665,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Coffee",
+          "fontFamily": "Inter",
+          "fontSize": 34,
+          "fontWeight": 600,
+          "fill": "#C7CCE8",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 178
+        },
+        {
+          "id": "l11",
+          "name": "Phone",
+          "type": "phone",
+          "x": 187,
+          "y": 850,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.35,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#000000",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "name": "Security",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-05"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "radial",
+            "cx": 0.5,
+            "cy": 0.28,
+            "radius": 0.9,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#141B3F"
+              },
+              {
+                "offset": 1.0,
+                "color": "#070A1F"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(52,211,153,0.14)",
+              "cx": 50,
+              "cy": 20,
+              "rx": 800,
+              "ry": 700
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Emoji 🔒",
+          "type": "emoji",
+          "x": 570,
+          "y": 190,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "🔒",
+          "fontSize": 150
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 420,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Bank-grade\nsecurity",
+          "fontFamily": "Sora",
+          "fontSize": 116,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.06,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 11,
+              "end": 19,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#34D399"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#3B82F6"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l3",
+          "name": "Check 1",
+          "type": "shape",
+          "x": 330,
+          "y": 764,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "check",
+          "width": 52,
+          "height": 44,
+          "fill": "{brand:finaccent}",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l4",
+          "name": "Feature 1",
+          "type": "text",
+          "x": 420,
+          "y": 760,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Face ID & passkeys",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#E2E8F0",
+          "letterSpacing": 0,
+          "lineHeight": 1.2,
+          "align": "left",
+          "width": 700
+        },
+        {
+          "id": "l5",
+          "name": "Check 2",
+          "type": "shape",
+          "x": 330,
+          "y": 868,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "check",
+          "width": 52,
+          "height": 44,
+          "fill": "{brand:finaccent}",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l6",
+          "name": "Feature 2",
+          "type": "text",
+          "x": 420,
+          "y": 864,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "256-bit encryption",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#E2E8F0",
+          "letterSpacing": 0,
+          "lineHeight": 1.2,
+          "align": "left",
+          "width": 700
+        },
+        {
+          "id": "l7",
+          "name": "Check 3",
+          "type": "shape",
+          "x": 330,
+          "y": 972,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "check",
+          "width": 52,
+          "height": 44,
+          "fill": "{brand:finaccent}",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l8",
+          "name": "Feature 3",
+          "type": "text",
+          "x": 420,
+          "y": 968,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Real-time fraud alerts",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#E2E8F0",
+          "letterSpacing": 0,
+          "lineHeight": 1.2,
+          "align": "left",
+          "width": 700
+        },
+        {
+          "id": "l9",
+          "name": "Phone",
+          "type": "phone",
+          "x": 235,
+          "y": 1140,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.1,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "border": {
+            "color": "{brand:finaccent}",
+            "width": 3,
+            "opacity": 0.5
+          },
+          "shadow": {
+            "color": "#000000",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "name": "Auto-invest",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-06"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#0B1030"
+              },
+              {
+                "offset": 1.0,
+                "color": "#1B2350"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(124,58,237,0.24)",
+              "cx": 85,
+              "cy": 12,
+              "rx": 820,
+              "ry": 720
+            },
+            {
+              "color": "rgba(59,130,246,0.18)",
+              "cx": 12,
+              "cy": 80,
+              "rx": 860,
+              "ry": 760
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 240,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Save and invest\nautomatically",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.06,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 16,
+              "end": 29,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#7C3AED"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#3B82F6"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 570,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Round-ups, recurring buys and goals",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#94A3B8",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l3",
+          "name": "Emoji 📈",
+          "type": "emoji",
+          "x": 1040,
+          "y": 620,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "📈",
+          "fontSize": 110
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 95,
+          "y": 800,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 1.95,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#000000",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Phone",
+          "type": "phone",
+          "x": 440,
+          "y": 940,
+          "rotation": 5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 1.95,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#000000",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          }
+        }
+      ]
+    },
+    {
+      "name": "CTA",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-07"
+      ],
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 180,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#10173A"
+              },
+              {
+                "offset": 0.5,
+                "color": "#2A1B5E"
+              },
+              {
+                "offset": 1.0,
+                "color": "#4C1D95"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "rgba(59,130,246,0.20)",
+              "cx": 80,
+              "cy": 15,
+              "rx": 820,
+              "ry": 720
+            }
+          ],
+          "noise": 0.06
+        },
+        {
+          "id": "l1",
+          "name": "Star 1",
+          "type": "shape",
+          "x": 445,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l2",
+          "name": "Star 2",
+          "type": "shape",
+          "x": 529,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l3",
+          "name": "Star 3",
+          "type": "shape",
+          "x": 613,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l4",
+          "name": "Star 4",
+          "type": "shape",
+          "x": 697,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l5",
+          "name": "Star 5",
+          "type": "shape",
+          "x": 781,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 64,
+          "height": 64,
+          "fill": "#FBBF24",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l6",
+          "name": "Headline",
+          "type": "text",
+          "x": 95,
+          "y": 350,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Loved by 2M+\nsavers",
+          "fontFamily": "Sora",
+          "fontSize": 120,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.06,
+          "align": "center",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 9,
+              "end": 12,
+              "fill": {
+                "type": "linear",
+                "angle": 135,
+                "stops": [
+                  {
+                    "offset": 0.0,
+                    "color": "#34D399"
+                  },
+                  {
+                    "offset": 1.0,
+                    "color": "#3B82F6"
+                  }
+                ]
+              },
+              "fontWeight": 800
+            }
+          ]
+        },
+        {
+          "id": "l7",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 690,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Free to start. No hidden fees.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C7CCE8",
+          "letterSpacing": 0,
+          "lineHeight": 1.35,
+          "align": "center",
+          "width": 1000
+        },
+        {
+          "id": "l8",
+          "name": "CTA Pill",
+          "type": "shape",
+          "x": 385,
+          "y": 830,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 520,
+          "height": 110,
+          "fill": {
+            "type": "linear",
+            "angle": 135,
+            "stops": [
+              {
+                "offset": 0.0,
+                "color": "#7C3AED"
+              },
+              {
+                "offset": 1.0,
+                "color": "#3B82F6"
+              }
+            ]
+          },
+          "cornerRadius": 55
+        },
+        {
+          "id": "l9",
+          "name": "CTA Label",
+          "type": "text",
+          "x": 385,
+          "y": 862,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Get Ledgr free",
+          "fontFamily": "Sora",
+          "fontSize": 44,
+          "fontWeight": 700,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1,
+          "align": "center",
+          "width": 520
+        },
+        {
+          "id": "l10",
+          "name": "Phone",
+          "type": "phone",
+          "x": 158,
+          "y": 1050,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2.5,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "shadow": {
+            "color": "#000000",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          }
+        }
+      ]
+    }
+  ]
+}

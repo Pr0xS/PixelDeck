@@ -9,6 +9,7 @@
 
 import { create } from 'zustand'
 import { useEditorStore } from './index'
+import { stripDataUrls } from './helpers'
 
 // ─── Keys ──────────────────────────────────────────────────────────────────────
 
@@ -110,7 +111,7 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
       : [...projects, meta]
 
     try {
-      localStorage.setItem(projectKey(project.id), JSON.stringify(project))
+      localStorage.setItem(projectKey(project.id), JSON.stringify(stripDataUrls(project)))
       localStorage.setItem(ACTIVE_KEY, project.id)
       localStorage.setItem(LIST_KEY, JSON.stringify(updated))
     } catch (err) {

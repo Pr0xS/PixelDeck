@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { fillToCss } from './gradients'
+import { fillToCss, parseColorAlpha, toTransparentColor, withAlpha } from './gradients'
 import type { LinearGradient, RadialGradient } from '@/types'
 
 describe('fillToCss', () => {
@@ -76,5 +76,37 @@ describe('fillToCss', () => {
     // cx=0.25 → 25%, cy=0.75 → 75%
     expect(result).toContain('25%')
     expect(result).toContain('75%')
+  })
+})
+
+describe('color alpha helpers', () => {
+  it('applies alpha to six-digit hex colors', () => {
+    expect(withAlpha('#7c6ef6', 0.25)).toBe('rgba(124,110,246,0.25)')
+  })
+
+  it('expands three-digit hex colors before applying alpha', () => {
+    expect(withAlpha('#f0a', 0.5)).toBe('rgba(255,0,170,0.5)')
+  })
+
+  it('applies alpha to rgb colors', () => {
+    expect(withAlpha('rgb(12, 34, 56)', 0.4)).toBe('rgba(12,34,56,0.4)')
+  })
+
+  it('replaces the alpha in rgba colors', () => {
+    expect(withAlpha('rgba(12, 34, 56, 0.2)', 0.8)).toBe('rgba(12,34,56,0.8)')
+  })
+
+  it('passes unparseable colors through unchanged', () => {
+    expect(withAlpha('brand:accent', 0.5)).toBe('brand:accent')
+  })
+
+  it('extracts rgba alpha and treats hex and rgb colors as opaque', () => {
+    expect(parseColorAlpha('rgba(124, 58, 237, 0.28)')).toBe(0.28)
+    expect(parseColorAlpha('#7c6ef6')).toBe(1)
+    expect(parseColorAlpha('rgb(124, 58, 237)')).toBe(1)
+  })
+
+  it('makes a color transparent without changing its RGB channels', () => {
+    expect(toTransparentColor('rgba(124, 58, 237, 0.28)')).toBe('rgba(124,58,237,0)')
   })
 })

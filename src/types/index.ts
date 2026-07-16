@@ -186,8 +186,12 @@ export type LayerType = 'background' | 'phone' | 'text' | 'image' | 'shape' | 'e
 
 export interface BackgroundAccent {
   color: string;
+  /** Independent opacity. Undefined preserves legacy alpha encoded in color. */
+  opacity?: number;
   cx: number; cy: number;  // % of canvas size
   rx: number; ry: number;  // absolute px radii
+  /** Konva blur radius in px applied to the glow. Undefined/0 = no blur. */
+  blur?: number;
 }
 
 export interface BackgroundLayer extends BaseLayer {

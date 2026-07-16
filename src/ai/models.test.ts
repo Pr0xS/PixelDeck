@@ -1,42 +1,35 @@
 import { afterEach, describe, expect, it, vi } from 'vitest'
+import { listModels } from './models'
 
 describe('AI model listing', () => {
   afterEach(() => {
     vi.restoreAllMocks()
     vi.unstubAllGlobals()
-    vi.unstubAllEnvs()
-    vi.resetModules()
   })
 
-  it('blocks OpenCode model loading in no-proxy production before fetch', async () => {
-    vi.stubEnv('DEV', false)
-    const fetchMock = vi.fn()
+  it('requires a custom API base URL', async () => {
+    await expect(listModels('custom', 'sk-test')).rejects.toThrow(/no custom api base url/i)
+  })
+
+  it('loads custom models from the provided base URL', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: true,
+      json: () => Promise.resolve({ data: [{ id: 'custom-model' }] }),
+    })
     vi.stubGlobal('fetch', fetchMock)
-    const { listModels } = await import('./models')
-
-    await expect(listModels('opencode', 'sk-test')).rejects.toThrow(/does not allow direct browser requests from GitHub Pages/i)
-
-    expect(fetchMock).not.toHaveBeenCalled()
+    await expect(listModels('custom', 'sk-test', 'https://my-proxy.example.com/v1')).resolves.toEqual([
+      { id: 'custom-model', name: 'custom-model', description: undefined, contextLength: undefined },
+    ])
+    expect(fetchMock.mock.calls[0][0]).toBe('https://my-proxy.example.com/v1/models')
   })
 
-  it('surfaces OpenCode network errors instead of using hardcoded fallbacks', async () => {
-    vi.stubEnv('DEV', true)
-    vi.stubGlobal('fetch', vi.fn().mockRejectedValue(new TypeError('Failed to fetch')))
-    const { listModels } = await import('./models')
-
-    await expect(listModels('opencode', 'sk-test')).rejects.toThrow(/Could not load models for opencode/i)
-  })
-
-  it('still surfaces non-network provider errors instead of falling back', async () => {
-    vi.stubEnv('DEV', false)
+  it('surfaces non-network provider errors', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue({
       ok: false,
       status: 401,
       statusText: 'Unauthorized',
       text: () => Promise.resolve('Invalid API key'),
     }))
-    const { listModels } = await import('./models')
-
     await expect(listModels('openai', 'sk-test')).rejects.toThrow('Invalid API key')
   })
 })
