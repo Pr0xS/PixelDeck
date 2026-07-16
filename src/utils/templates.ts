@@ -1,6 +1,6 @@
 import { nanoid } from 'nanoid'
 import type {
-  Layer, SlideGroup, GroupLayer, PhoneLayer,
+  Layer, SlideGroup, GroupLayer,
   Template, Project, ProjectSettings,
   CanvasBackground, BackgroundLayer,
 } from '@/types'
@@ -37,36 +37,44 @@ export function deterministicIds(layers: Layer[]): Layer[] {
 
 // ─── Asset scrubbing ─────────────────────────────────────────────────────────
 
-/**
- * Strip screenshotPath (asset-store keys) from PhoneLayers and locale overrides.
- * screenshotDataUrl (inline base64) is kept — callers may include stock images there.
- */
+const IMAGE_SOURCE_FIELDS = [
+  'screenshotPath',
+  'screenshotDataUrl',
+  'src',
+  'imageDataUrl',
+  'logoDataUrl',
+] as const
+
+function stripImageSourceFields<T>(value: T): T {
+  const next = { ...value } as T & Record<(typeof IMAGE_SOURCE_FIELDS)[number], unknown>
+  for (const field of IMAGE_SOURCE_FIELDS) delete next[field]
+  return next
+}
+
+/** Strip project images while preserving the template's layer geometry and styling. */
 function stripFromLayer(layer: Layer): Layer {
-  let next = { ...layer } as Layer
+  let next = stripImageSourceFields(layer) as Layer
 
-  // Strip screenshotPath from phone layers (it's a store reference, useless elsewhere)
-  if (next.type === 'phone') {
-    const phone = next as PhoneLayer
-    if (phone.screenshotPath !== undefined) {
-      const { screenshotPath: _drop, ...rest } = phone
-      void _drop
-      next = rest as Layer
-    }
-  }
+  // ImageLayer.src is required by the domain type. Keep an empty placeholder so
+  // the layout survives and the user can replace the image after importing.
+  if (next.type === 'image') next = { ...next, src: '' }
 
-  // Strip screenshotPath from locale overrides (any layer type)
   if (next.localeOverrides) {
     const lo: NonNullable<typeof next.localeOverrides> = {}
     for (const [locale, patch] of Object.entries(next.localeOverrides)) {
-      if (patch.screenshotPath !== undefined) {
-        const { screenshotPath: _drop, ...restPatch } = patch
-        void _drop
-        lo[locale] = restPatch
-      } else {
-        lo[locale] = patch
-      }
+      lo[locale] = stripImageSourceFields(patch)
     }
     next = { ...next, localeOverrides: lo }
+  }
+
+  if (next.formatOverrides) {
+    const formatOverrides = Object.fromEntries(
+      Object.entries(next.formatOverrides).map(([format, patch]) => [
+        format,
+        patch ? stripImageSourceFields(patch) : patch,
+      ]),
+    ) as typeof next.formatOverrides
+    next = { ...next, formatOverrides }
   }
 
   if (next.type === 'group') {
@@ -76,7 +84,7 @@ function stripFromLayer(layer: Layer): Layer {
   return next
 }
 
-export function stripScreenshotPaths(layers: Layer[]): Layer[] {
+export function stripLayerImages(layers: Layer[]): Layer[] {
   return layers.map(stripFromLayer)
 }
 
@@ -170,7 +178,7 @@ export function projectToTemplate(project: Project, opts: ExportTemplateOpts): T
   const slideGroups: Omit<SlideGroup, 'id'>[] = groups.map((g) => {
     const { id: _id, ...rest } = g
     void _id
-    const layers = deterministicIds(stripScreenshotPaths(g.layers))
+    const layers = deterministicIds(stripLayerImages(g.layers))
     return { ...rest, layers }
   })
 

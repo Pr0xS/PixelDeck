@@ -6,7 +6,17 @@ import {
   applyTemplate,
   extractInlineScreenshots,
 } from './templates'
-import type { Project, PhoneLayer, TextLayer, Layer, SlideGroup, GroupLayer } from '@/types'
+import type {
+  Project,
+  PhoneLayer,
+  TextLayer,
+  Layer,
+  SlideGroup,
+  GroupLayer,
+  ImageLayer,
+  BrandLayer,
+  BackgroundLayer,
+} from '@/types'
 
 // ─── Fixtures ────────────────────────────────────────────────────────────────
 
@@ -160,6 +170,61 @@ describe('projectToTemplate', () => {
     const phoneLayer = tpl.slideGroups[0].layers.find((l) => l.type === 'phone') as PhoneLayer | undefined
     expect(phoneLayer).toBeDefined()
     expect(phoneLayer!.screenshotPath).toBeUndefined()
+  })
+
+  it('strips all project images from base layers, variants, and nested groups', () => {
+    const project = makeProject()
+    const background = project.slideGroups[0].layers[0]
+    const phone = project.slideGroups[0].layers[1] as PhoneLayer
+    if (background.type === 'background') {
+      background.imageDataUrl = 'data:image/png;base64,background'
+    }
+    phone.screenshotDataUrl = 'data:image/png;base64,phone'
+    phone.localeOverrides = {
+      es: { screenshotPath: 'es.png', screenshotDataUrl: 'data:image/png;base64,es' },
+    }
+    phone.formatOverrides = {
+      'iphone-69': { screenshotPath: 'format.png', screenshotDataUrl: 'data:image/png;base64,format' },
+    } as unknown as PhoneLayer['formatOverrides']
+
+    const image: ImageLayer = {
+      id: 'image1', name: 'Photo', type: 'image', x: 10, y: 20, rotation: 0,
+      opacity: 1, visible: true, locked: false, src: 'data:image/png;base64,image',
+      width: 300, height: 200, cornerRadius: 12,
+      localeOverrides: { es: { src: 'data:image/png;base64,image-es' } },
+      formatOverrides: {
+        'iphone-69': { src: 'data:image/png;base64,image-format' },
+      } as unknown as ImageLayer['formatOverrides'],
+    }
+    const brand: BrandLayer = {
+      id: 'brand1', name: 'Brand', type: 'brand', x: 0, y: 0, rotation: 0,
+      opacity: 1, visible: true, locked: false, appName: 'TestApp',
+      logoDataUrl: 'data:image/png;base64,logo', logoSize: 64, nameColor: '#fff',
+      nameFontSize: 32, nameFontFamily: 'Inter', nameFontWeight: 700,
+      direction: 'row', gap: 8,
+    }
+    const group: GroupLayer = {
+      id: 'group1', name: 'Group', type: 'group', x: 0, y: 0, rotation: 0,
+      opacity: 1, visible: true, locked: false, children: [brand],
+    }
+    project.slideGroups[0].layers.push(image, group)
+
+    const tpl = projectToTemplate(project, { name: 'Image-free' })
+    const exportedPhone = tpl.slideGroups[0].layers.find((layer) => layer.type === 'phone') as PhoneLayer
+    const exportedImage = tpl.slideGroups[0].layers.find((layer) => layer.type === 'image') as ImageLayer
+    const exportedGroup = tpl.slideGroups[0].layers.find((layer) => layer.type === 'group') as GroupLayer
+    const exportedBrand = exportedGroup.children[0] as BrandLayer
+
+    expect((tpl.slideGroups[0].layers[0] as BackgroundLayer).imageDataUrl).toBeUndefined()
+    expect(exportedPhone.screenshotPath).toBeUndefined()
+    expect(exportedPhone.screenshotDataUrl).toBeUndefined()
+    expect(exportedPhone.localeOverrides?.es).toEqual({})
+    expect(exportedPhone.formatOverrides?.['iphone-69']).toEqual({})
+    expect(exportedImage.src).toBe('')
+    expect(exportedImage.localeOverrides?.es).toEqual({})
+    expect(exportedImage.formatOverrides?.['iphone-69']).toEqual({})
+    expect(exportedBrand.logoDataUrl).toBeUndefined()
+    expect(JSON.stringify(tpl)).not.toContain('data:image')
   })
 
   it('does not include outputPath or brandLogoDataUrl in settings', () => {
