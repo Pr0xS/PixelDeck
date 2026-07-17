@@ -3,10 +3,14 @@ import { Text, Image as KonvaImage } from 'react-konva'
 import type Konva from 'konva'
 import type { TextLayer } from '@/types'
 import { resolveFill } from '@/utils/brandColors'
-import { fillToKonvaProps } from '@/utils/gradients'
+import { layerFillToKonvaProps } from '@/utils/konvaFill'
 import { DEFAULT_TEXT_WIDTH, renderSpansToCanvas, spansRenderKey } from '@/utils/textRendering'
 import { useEditorStore } from '@/store'
-import { getShadowProps, useKonvaBlur } from './effects'
+import { useBrandColors } from '@/hooks/useBrandColors'
+import { useLayerEffects } from '@/hooks/useLayerEffects'
+import { useLayerInteraction } from '@/hooks/useLayerInteraction'
+import { useLayerTransform } from '@/hooks/useLayerTransform'
+import { useKonvaBlur } from './effects'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -74,7 +78,7 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
   // position when only width changes (prevents y-jump from Transformer's scaleY adjustment).
   const transformStartRef = useRef<{ y: number; offsetY: number } | null>(null)
 
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const brandColors = useBrandColors()
   // Hide the node while the in-canvas overlay editor is open for this layer
   const isTextEditing = useEditorStore((s) => s.editingTextId === layer.id)
   const resolvedLayer: TextLayer = {
@@ -115,9 +119,63 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
   const renderKey = spansRenderKey(resolvedLayer)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const spanCanvas = useMemo(() => hasRichText ? renderSpansToCanvas(resolvedLayer) : null, [renderKey])
-  const shadowProps = getShadowProps(layer.shadow)
-  useKonvaBlur(textRef, hasRichText ? 0 : layer.blur, renderKey)
+  const shadowProps = useLayerEffects(textRef, layer, renderKey, hasRichText ? 0 : layer.blur)
   useKonvaBlur(imageRef, hasRichText ? layer.blur : 0, renderKey)
+
+  const richInteractionProps = useLayerInteraction({
+    nodeRef: imageRef,
+    locked: layer.locked,
+    onSelect,
+    onDragEnd,
+    getDragPosition: (node) => ({
+      x: node.x() - (layer.width ?? DEFAULT_TEXT_WIDTH) / 2,
+      y: node.y() - (spanCanvas?.height ?? 0) / 2,
+    }),
+  })
+  const plainInteractionProps = useLayerInteraction({
+    nodeRef: textRef,
+    locked: layer.locked,
+    onSelect,
+    onDragEnd,
+    getDragPosition: (node) => ({
+      x: node.x() - (layer.width ?? DEFAULT_TEXT_WIDTH) / 2,
+      y: node.y() - estimateTextHeight() / 2,
+    }),
+  })
+  const handleRichTransformEnd = useLayerTransform({
+    nodeRef: imageRef,
+    onChange: onTransformEnd,
+    buildPatch: (node): Partial<TextLayer> => {
+      const width = node.width()
+      const patch: Partial<TextLayer> = {
+        width: Math.round(width),
+        rotation: node.rotation(),
+        x: node.x() - width / 2,
+        y: node.y() - node.height() / 2,
+      }
+      if (layer.height != null || heightEstablished.current) patch.height = Math.round(node.height())
+      return patch
+    },
+    beforeChange: () => { heightEstablished.current = false },
+  })
+  const handlePlainTransformEnd = useLayerTransform({
+    nodeRef: textRef,
+    onChange: onTransformEnd,
+    buildPatch: (node): Partial<TextLayer> => {
+      const patch: Partial<TextLayer> = {
+        rotation: node.rotation(),
+        x: node.x() - node.offsetX(),
+        y: node.y() - node.offsetY(),
+      }
+      if (layer.width != null || widthEstablished.current) patch.width = node.width()
+      if (layer.height != null || heightEstablished.current) patch.height = Math.round(node.height())
+      return patch
+    },
+    beforeChange: () => {
+      widthEstablished.current = false
+      heightEstablished.current = false
+    },
+  })
 
   // ── Double-click → in-canvas WYSIWYG editor (overlay mounted by StageCanvas)
   const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
@@ -151,15 +209,8 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
         visible={layer.visible && !isTextEditing}
         draggable={!forceNotDraggable && !layer.locked}
         {...shadowProps}
-        onClick={() => { if (!layer.locked) onSelect() }}
-        onTap={() => { if (!layer.locked) onSelect() }}
+        {...richInteractionProps}
         onDblClick={handleDblClick}
-        onDragStart={() => { if (!layer.locked) onSelect() }}
-        onDragEnd={() => {
-          const node = imageRef.current
-          if (!node) return
-          onDragEnd(node.x() - (layer.width ?? DEFAULT_TEXT_WIDTH) / 2, node.y() - spanCanvas.height / 2)
-        }}
         onTransformStart={() => {
           const node = imageRef.current
           if (!node) return
@@ -201,24 +252,7 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
           }
           // vertical/corner: the Transformer already positioned the node for the new size.
         }}
-        onTransformEnd={() => {
-          const node = imageRef.current
-          if (!node) return
-          node.scaleX(1)
-          node.scaleY(1)
-          const w = node.width()
-          const patch: Partial<TextLayer> = {
-            width: Math.round(w),
-            rotation: node.rotation(),
-            x: node.x() - w / 2,
-            y: node.y() - node.height() / 2,
-          }
-          if (layer.height != null || heightEstablished.current) {
-            patch.height = Math.round(node.height())
-          }
-          heightEstablished.current = false
-          onTransformEnd(patch)
-        }}
+        onTransformEnd={handleRichTransformEnd}
       />
     )
   }
@@ -228,11 +262,10 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
     ? `italic ${layer.fontWeight}`
     : String(layer.fontWeight)
 
-  const fillProps = fillToKonvaProps(
-    resolveFill(layer.fill, brandColors),
-    layer.width ?? DEFAULT_TEXT_WIDTH,
-    layer.fontSize * 1.5,
-  )
+  const fillProps = layerFillToKonvaProps(layer.fill, brandColors, {
+    width: layer.width ?? DEFAULT_TEXT_WIDTH,
+    height: layer.fontSize * 1.5,
+  })
 
   return (
     <Text
@@ -259,14 +292,7 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
       {...fillProps}
       {...shadowProps}
       textDecoration={[layer.underline ? 'underline' : '', layer.strikethrough ? 'line-through' : ''].filter(Boolean).join(' ') || undefined}
-      onClick={() => { if (!layer.locked) onSelect() }}
-      onTap={() => { if (!layer.locked) onSelect() }}
-      onDragStart={() => { if (!layer.locked) onSelect() }}
-      onDragEnd={() => {
-        const node = textRef.current
-        if (!node) return
-        onDragEnd(node.x() - (layer.width ?? DEFAULT_TEXT_WIDTH) / 2, node.y() - estimateTextHeight() / 2)
-      }}
+      {...plainInteractionProps}
       onTransformStart={() => {
         const node = textRef.current
         if (!node) return
@@ -302,27 +328,8 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
           widthEstablished.current = true
         }
       }}
-      onTransformEnd={() => {
-        const node = textRef.current
-        if (!node) return
-        node.scaleX(1)
-        node.scaleY(1)
-        const w = node.width()
-        // layer.x / layer.y are the top-left corner of the box. offsetX/offsetY
-        // hold the current half-size, so node position minus offset = top-left.
-        // For width-only drags Y was restored to the gesture-start snapshot,
-        // which keeps the top edge pinned while text reflows downward.
-        const patch: Partial<TextLayer> = {
-          rotation: node.rotation(),
-          x: node.x() - node.offsetX(),
-          y: node.y() - node.offsetY(),
-        }
-        if (layer.width != null || widthEstablished.current) patch.width = w
-        if (layer.height != null || heightEstablished.current) patch.height = Math.round(node.height())
-        widthEstablished.current = false
-        heightEstablished.current = false
-        onTransformEnd(patch)
-      }}
+      // layer.x/y are the box top-left; the handler persists node position minus offset.
+      onTransformEnd={handlePlainTransformEnd}
       onDblClick={handleDblClick}
     />
   )

@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { useEditorStore } from '@/store'
+import { useBrandColors } from '@/hooks/useBrandColors'
 import type { BrandColor } from '@/types'
 
 const inputCls = 'bg-[#0f0f13] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-sm text-[#e8e8f0] w-full focus:outline-none focus:border-[rgba(124,110,246,0.5)]'
@@ -15,7 +16,7 @@ export function BrandColorList({ compact = false }: BrandColorListProps) {
   const [newValue, setNewValue] = useState('#FF5A5F')
   const [adding, setAdding] = useState(false)
 
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const brandColors = useBrandColors()
   const addBrandColor = useEditorStore((s) => s.addBrandColor)
   const updateBrandColor = useEditorStore((s) => s.updateBrandColor)
   const removeBrandColor = useEditorStore((s) => s.removeBrandColor)

@@ -2,10 +2,12 @@ import { useRef } from 'react'
 import { Group, Image, Text } from 'react-konva'
 import useImage from 'use-image'
 import type Konva from 'konva'
-import { useEditorStore } from '@/store'
 import type { BrandLayer } from '@/types'
 import { resolveBrandColor } from '@/utils/brandColors'
-import { getShadowProps, useKonvaBlur } from './effects'
+import { useBrandColors } from '@/hooks/useBrandColors'
+import { useLayerEffects } from '@/hooks/useLayerEffects'
+import { useLayerInteraction } from '@/hooks/useLayerInteraction'
+import { useLayerTransform } from '@/hooks/useLayerTransform'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -22,7 +24,7 @@ interface BrandNodeProps {
 
 export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: BrandNodeProps) {
   const groupRef = useRef<Konva.Group>(null)
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const brandColors = useBrandColors()
   const [logoImage] = useImage(layer.logoDataUrl ?? '')
 
   const hasLogo = Boolean(layer.logoDataUrl && logoImage)
@@ -38,8 +40,23 @@ export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
   const height = layer.direction === 'row'
     ? Math.max(hasLogo ? layer.logoSize : 0, layer.nameFontSize)
     : (hasLogo ? layer.logoSize + layer.gap : 0) + layer.nameFontSize
-  useKonvaBlur(groupRef, layer.blur, `${layer.logoDataUrl}:${layer.logoSize}:${layer.appName}:${layer.nameFontSize}:${layer.nameFontFamily}:${layer.nameFontWeight}:${layer.nameColor}:${layer.direction}:${layer.gap}`)
-  const shadowProps = getShadowProps(layer.shadow)
+  const shadowProps = useLayerEffects(groupRef, layer, `${layer.logoDataUrl}:${layer.logoSize}:${layer.appName}:${layer.nameFontSize}:${layer.nameFontFamily}:${layer.nameFontWeight}:${layer.nameColor}:${layer.direction}:${layer.gap}`)
+  const interactionProps = useLayerInteraction({
+    nodeRef: groupRef,
+    locked: layer.locked,
+    onSelect,
+    onDragEnd,
+    getDragPosition: (node) => ({ x: node.x() - width / 2, y: node.y() - height / 2 }),
+  })
+  const handleTransformEnd = useLayerTransform({
+    nodeRef: groupRef,
+    onChange: onTransformEnd,
+    buildPatch: (node): Partial<BrandLayer> => ({
+      x: node.x() - width / 2,
+      y: node.y() - height / 2,
+      rotation: node.rotation(),
+    }),
+  })
 
   return (
     <Group
@@ -53,23 +70,8 @@ export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
       opacity={layer.opacity}
       visible={layer.visible}
       draggable={!forceNotDraggable && !layer.locked}
-      onClick={() => { if (!layer.locked) onSelect() }}
-      onTap={() => { if (!layer.locked) onSelect() }}
-      onDragStart={() => { if (!layer.locked) onSelect() }}
-      onDragEnd={(e: Konva.KonvaEventObject<DragEvent>) => {
-        const node = e.target
-        onDragEnd(node.x() - width / 2, node.y() - height / 2)
-      }}
-      onTransformEnd={(e) => {
-        const node = e.target
-        node.scaleX(1)
-        node.scaleY(1)
-        onTransformEnd({
-          x: node.x() - width / 2,
-          y: node.y() - height / 2,
-          rotation: node.rotation(),
-        })
-      }}
+      {...interactionProps}
+      onTransformEnd={handleTransformEnd}
     >
       {hasLogo && (
         <Image

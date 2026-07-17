@@ -1,8 +1,9 @@
-import { useRef } from 'react'
 import { useEditorStore } from '@/store'
 import type { BrandLayer, Layer } from '@/types'
 import { fileToDataUrl } from '@/utils/files'
 import { ColorField, SliderField } from '@/components/properties/PropertyControls'
+import { FileUploadButton } from '@/components/ui/FileUploadButton'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import {
   inputCls,
   labelCls,
@@ -16,7 +17,6 @@ import {
 export function BrandProperties({ layer }: { layer: BrandLayer }) {
   const updateLayer = useEditorStore((s) => s.updateLayer)
   const upd = (patch: Partial<BrandLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
-  const logoInputRef = useRef<HTMLInputElement>(null)
 
   return (
     <div className="space-y-4">
@@ -29,22 +29,18 @@ export function BrandProperties({ layer }: { layer: BrandLayer }) {
         <label className={labelCls}>Logo</label>
         <div className="flex items-center gap-3">
           {layer.logoDataUrl && <img src={layer.logoDataUrl} alt="Logo" className="h-10 w-10 rounded-lg object-contain bg-[#0f0f13]" />}
-          <button type="button" onClick={() => logoInputRef.current?.click()} className={subtleButtonCls}>
-            {layer.logoDataUrl ? 'Change Logo' : 'Upload Logo'}
-          </button>
-          <input
-            ref={logoInputRef}
-            type="file"
+          <FileUploadButton
             accept="image/*"
-            className="hidden"
-            onChange={async (e) => {
-              const file = e.target.files?.[0]
+            className={subtleButtonCls}
+            onFiles={async (files) => {
+              const file = files[0]
               if (!file) return
               const dataUrl = await fileToDataUrl(file)
               upd({ logoDataUrl: dataUrl })
-              e.target.value = ''
             }}
-          />
+          >
+            {layer.logoDataUrl ? 'Change Logo' : 'Upload Logo'}
+          </FileUploadButton>
         </div>
       </div>
 
@@ -80,18 +76,16 @@ export function BrandProperties({ layer }: { layer: BrandLayer }) {
 
       <div className={panelSectionCls}>
         <label className={labelCls}>Direction</label>
-        <div className="grid grid-cols-2 gap-2 mb-3">
-          {(['row', 'column'] as const).map((dir) => (
-            <button
-              key={dir}
-              type="button"
-              onClick={() => upd({ direction: dir })}
-              className={`rounded-lg border px-3 py-2 text-xs transition-colors ${layer.direction === dir ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white' : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e8e8f0]'}`}
-            >
-              {dir === 'row' ? 'Horizontal' : 'Vertical'}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          value={layer.direction}
+          options={[
+            { value: 'row', label: 'Horizontal' },
+            { value: 'column', label: 'Vertical' },
+          ]}
+          onChange={(dir) => upd({ direction: dir })}
+          className="grid grid-cols-2 gap-2 mb-3"
+          optionClassName="rounded-lg border px-3 py-2 text-xs transition-colors"
+        />
         <SliderField label="Gap" value={layer.gap} min={0} max={200} unit="px" onChange={(v) => upd({ gap: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} className="!mb-0" />
       </div>
     </div>

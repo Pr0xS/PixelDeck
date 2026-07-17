@@ -1,5 +1,5 @@
 import { nanoid } from 'nanoid'
-import type { Layer, CanvasFormatId, GroupLayer } from '@/types'
+import type { Layer, CanvasFormatId } from '@/types'
 import {
   BASE_CANVAS_FORMAT,
   FORMAT_LAYOUT_KEYS,
@@ -13,21 +13,31 @@ import {
 } from '@/utils/canvasFormats'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
 import {
-  mapLayerById,
+  mapLayerTree,
   mutateActiveGroup,
+  touchProject,
+  updateLayerInTree,
   withoutFormatOverride,
   pickLayerKeys,
 } from '../helpers'
 
 function clearOwnerFormatInLayerTree(layers: Layer[], format: CanvasFormatId): Layer[] {
-  return layers.map((layer) => {
-    const withChildren = layer.type === 'group'
-      ? { ...layer, children: clearOwnerFormatInLayerTree((layer as GroupLayer).children, format) }
-      : layer
-    return withChildren.ownerFormat === format
-      ? { ...withChildren, ownerFormat: undefined } as Layer
-      : withChildren as Layer
-  })
+  return mapLayerTree(layers, (layer) => layer.ownerFormat === format
+    ? { ...layer, ownerFormat: undefined } as Layer
+    : layer)
+}
+
+function withoutFormatOverrideKey(layer: Layer, format: CanvasFormatId, key: string): Layer {
+  const existing = layer.formatOverrides?.[format] as Record<string, unknown> | undefined
+  if (!existing || !(key in existing)) return layer
+  const { [key]: _removed, ...restPatch } = existing
+  void _removed
+  const { [format]: _old, ...otherOverrides } = layer.formatOverrides ?? {}
+  void _old
+  const formatOverrides = Object.keys(restPatch).length
+    ? { ...otherOverrides, [format]: restPatch }
+    : (Object.keys(otherOverrides).length ? otherOverrides : undefined)
+  return { ...layer, formatOverrides } as Layer
 }
 
 export const createFormatSlice = (
@@ -58,7 +68,7 @@ export const createFormatSlice = (
 
   clearLayerFormatOverride: (layerId, format) => {
     const targetFormat = format ?? get().activeCanvasFormat
-    mutateActiveGroup(set, (g) => ({ ...g, layers: mapLayerById(g.layers, layerId, (l) => withoutFormatOverride(l, targetFormat)) }))
+    mutateActiveGroup(set, (g) => ({ ...g, layers: updateLayerInTree(g.layers, layerId, (l) => withoutFormatOverride(l, targetFormat)) }))
   },
 
   syncLayerFormatToShared: (layerId, format) => {
@@ -67,7 +77,7 @@ export const createFormatSlice = (
     if (targetFormat === baseFormat) return
     mutateActiveGroup(set, (g) => ({
       ...g,
-      layers: mapLayerById(g.layers, layerId, (layer) => {
+      layers: updateLayerInTree(g.layers, layerId, (layer) => {
         const patch = layer.formatOverrides?.[targetFormat]
         if (!patch) return layer
         // Override values live in the target format's coordinate space.
@@ -87,7 +97,7 @@ export const createFormatSlice = (
   setLayerFormatVisibility: (layerId, format, visible) => {
     mutateActiveGroup(set, (g) => ({
       ...g,
-      layers: mapLayerById(g.layers, layerId, (layer) => {
+      layers: updateLayerInTree(g.layers, layerId, (layer) => {
         const next = { ...(layer.formatVisibility ?? {}) }
         if (visible === undefined) delete next[format]
         else next[format] = visible
@@ -101,7 +111,7 @@ export const createFormatSlice = (
     const activeFormats = getProjectActiveFormats(get().project)
     mutateActiveGroup(set, (g) => ({
       ...g,
-      layers: mapLayerById(g.layers, layerId, (layer) => ({
+      layers: updateLayerInTree(g.layers, layerId, (layer) => ({
         ...layer,
         formatVisibility: Object.fromEntries(
           activeFormats.map((activeFormat) => [activeFormat, activeFormat === targetFormat]),
@@ -113,14 +123,14 @@ export const createFormatSlice = (
   clearLayerFormatVisibility: (layerId) => {
     mutateActiveGroup(set, (g) => ({
       ...g,
-      layers: mapLayerById(g.layers, layerId, (layer) => ({ ...layer, formatVisibility: undefined } as Layer)),
+      layers: updateLayerInTree(g.layers, layerId, (layer) => ({ ...layer, formatVisibility: undefined } as Layer)),
     }))
   },
 
   makeLayerShared: (layerId) => {
     mutateActiveGroup(set, (g) => ({
       ...g,
-      layers: mapLayerById(g.layers, layerId, (layer) => {
+      layers: updateLayerInTree(g.layers, layerId, (layer) => {
         if (!layer.ownerFormat) return layer
         const format = layer.ownerFormat
         return makeOwnedFormatLayersSharedInLayerTree(
@@ -184,16 +194,14 @@ export const createFormatSlice = (
       }
     })
     set({
-      project: {
-        ...project,
-        updatedAt: new Date().toISOString(),
+      project: touchProject(project, {
         settings: {
           ...project.settings,
           customFormats: customFormats.filter((format) => format.id !== id),
           activeFormats: getProjectActiveFormats(project).filter((format) => format !== id),
         },
         slideGroups,
-      },
+      }),
       ...(activeCanvasFormat === id ? { activeCanvasFormat: baseFormat } : {}),
     })
   },
@@ -211,19 +219,7 @@ export const createFormatSlice = (
     const targetFormat = format ?? get().activeCanvasFormat
     mutateActiveGroup(set, (g) => ({
       ...g,
-      layers: mapLayerById(g.layers, layerId, (layer) => {
-        const existing = layer.formatOverrides?.[targetFormat] as Record<string, unknown> | undefined
-        if (!existing || !(key in existing)) return layer
-        const { [key]: _removed, ...restPatch } = existing
-        void _removed
-        const newPatch = Object.keys(restPatch).length > 0 ? restPatch : undefined
-        const { [targetFormat]: _old, ...otherOverrides } = layer.formatOverrides ?? {}
-        void _old
-        const newFormatOverrides = newPatch
-          ? { ...otherOverrides, [targetFormat]: newPatch }
-          : (Object.keys(otherOverrides).length > 0 ? otherOverrides : undefined)
-        return { ...layer, formatOverrides: newFormatOverrides } as Layer
-      }),
+      layers: updateLayerInTree(g.layers, layerId, (layer) => withoutFormatOverrideKey(layer, targetFormat, key)),
     }))
   },
 
@@ -234,7 +230,7 @@ export const createFormatSlice = (
     if (targetFormat === baseFormat) return
     mutateActiveGroup(set, (g) => ({
       ...g,
-      layers: mapLayerById(g.layers, layerId, (layer) => {
+      layers: updateLayerInTree(g.layers, layerId, (layer) => {
         const existing = layer.formatOverrides?.[targetFormat] as Record<string, unknown> | undefined
         if (!existing || !(key in existing)) return layer
         const overrideValue = existing[key]
@@ -249,17 +245,7 @@ export const createFormatSlice = (
           sharedPatch = pickLayerKeys(mapped, [key])
         }
         // Apply value to base layer
-        const updated = { ...layer, ...sharedPatch } as Layer
-        // Remove key from format override
-        const { [key]: _removed, ...restPatch } = existing
-        void _removed
-        const newPatch = Object.keys(restPatch).length > 0 ? restPatch : undefined
-        const { [targetFormat]: _old, ...otherOverrides } = layer.formatOverrides ?? {}
-        void _old
-        const newFormatOverrides = newPatch
-          ? { ...otherOverrides, [targetFormat]: newPatch }
-          : (Object.keys(otherOverrides).length > 0 ? otherOverrides : undefined)
-        return { ...updated, formatOverrides: newFormatOverrides } as Layer
+        return withoutFormatOverrideKey({ ...layer, ...sharedPatch } as Layer, targetFormat, key)
       }),
     }))
   },

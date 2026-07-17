@@ -12,9 +12,10 @@
  */
 
 import type {
-  Project, Layer, GroupLayer, SlideGroup,
+  Project, Layer, GroupLayer,
   LocaleLayerPatch, LocalizationMode, TextLayer, PhoneLayer, ImageLayer, TextMark, TextSpan,
 } from '@/types'
+import { mapLayerTree } from '@/utils/layerTree'
 
 // ─── Core resolver ────────────────────────────────────────────────────────────
 
@@ -80,23 +81,11 @@ export function applyLocale(project: Project, locale: string): Project {
   if (locale === project.settings.defaultLocale) return project
   return {
     ...project,
-    slideGroups: project.slideGroups.map((g) => applyLocaleToGroup(g, locale)),
+    slideGroups: project.slideGroups.map((g) => ({
+      ...g,
+      layers: mapLayerTree(g.layers, (layer) => resolveLayerLocale(layer, locale)),
+    })),
   }
-}
-
-function applyLocaleToGroup(group: SlideGroup, locale: string): SlideGroup {
-  return { ...group, layers: group.layers.map((l) => applyLocaleToLayer(l, locale)) }
-}
-
-function applyLocaleToLayer(layer: Layer, locale: string): Layer {
-  const resolved = resolveLayerLocale(layer, locale)
-  if (resolved.type === 'group') {
-    return {
-      ...resolved,
-      children: (resolved as GroupLayer).children.map((c) => applyLocaleToLayer(c, locale)),
-    }
-  }
-  return resolved
 }
 
 // ─── Localizable layer discovery ──────────────────────────────────────────────
@@ -271,18 +260,10 @@ export function applyLocaleManifest(project: Project, manifest: LocaleManifest):
     }
   }
 
-  function patchLayer(layer: Layer): Layer {
-    const patched = overrideMap.has(layer.id)
+  const patchLayer = (layer: Layer): Layer =>
+    overrideMap.has(layer.id)
       ? { ...layer, localeOverrides: overrideMap.get(layer.id) }
       : layer
-    if (patched.type === 'group') {
-      return {
-        ...patched,
-        children: (patched as GroupLayer).children.map(patchLayer),
-      } as Layer
-    }
-    return patched
-  }
 
   return {
     ...project,
@@ -293,7 +274,7 @@ export function applyLocaleManifest(project: Project, manifest: LocaleManifest):
     },
     slideGroups: project.slideGroups.map((g) => ({
       ...g,
-      layers: g.layers.map(patchLayer),
+      layers: mapLayerTree(g.layers, patchLayer),
     })),
   }
 }

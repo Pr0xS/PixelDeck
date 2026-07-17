@@ -2,8 +2,10 @@ import { useEffect, useRef, useState } from 'react'
 import type { PointerEvent, ReactNode } from 'react'
 import type { FillValue, GradientStop, LinearGradient, RadialGradient } from '@/types'
 import { useEditorStore } from '@/store'
+import { useBrandColors } from '@/hooks/useBrandColors'
 import { isBrandToken, parseBrandToken, resolveBrandColor, toBrandToken } from '@/utils/brandColors'
 import { fillToCss } from '@/utils/gradients'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
 const inputCls =
   'bg-[#0f0f13] border border-[rgba(255,255,255,0.1)] rounded px-2 py-1 text-sm text-[#e8e8f0] w-full focus:outline-none focus:border-[rgba(124,110,246,0.5)]'
@@ -131,7 +133,7 @@ export function ColorField({
   onInteractionStart?: () => void
   onInteractionEnd?: () => void
 }) {
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const brandColors = useBrandColors()
   const resolvedValue = resolveBrandColor(value, brandColors)
   const safeValue = normalizeHexColor(resolvedValue)
   const activeBrand = isBrandToken(value) ? brandColors.find((c) => c.id === (parseBrandToken(value) ?? '')) : undefined
@@ -210,35 +212,6 @@ export function ColorField({
           placeholder={placeholder}
         />
       </div>
-    </div>
-  )
-}
-
-function SegmentedButtons<T extends string>({
-  value,
-  options,
-  onChange,
-}: {
-  value: T
-  options: Array<{ value: T; label: string }>
-  onChange: (value: T) => void
-}) {
-  return (
-    <div className="grid grid-cols-3 gap-1 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#121219] p-1">
-      {options.map((option) => (
-        <button
-          key={option.value}
-          type="button"
-          onClick={() => onChange(option.value)}
-          className={`rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors ${
-            value === option.value
-              ? 'bg-[#7c6ef6] text-white shadow-[0_8px_24px_rgba(124,110,246,0.35)]'
-              : 'text-[#6b6b7a] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e8e8f0]'
-          }`}
-        >
-          {option.label}
-        </button>
-      ))}
     </div>
   )
 }
@@ -358,7 +331,7 @@ function AddBrandColorButton({ currentColor }: { currentColor: string }) {
 }
 
 export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, onInteractionEnd = () => {} }: GradientEditorProps) {
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const brandColors = useBrandColors()
   const savedGradients = useEditorStore((s) => s.project.savedGradients) ?? []
   const updateProject = useEditorStore((s) => s.updateProject)
   const [selectedStopIndex, setSelectedStopIndex] = useState(0)
@@ -458,7 +431,7 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
 
   return (
     <div className="space-y-3">
-      <SegmentedButtons
+      <SegmentedControl
         value={mode}
         options={[
           { value: 'solid', label: 'Solid' },
@@ -466,6 +439,10 @@ export function GradientEditor({ fill, onChange, onInteractionStart = () => {}, 
           { value: 'radial', label: 'Radial' },
         ]}
         onChange={switchMode}
+        className="grid grid-cols-3 gap-1 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#121219] p-1"
+        optionClassName="rounded-md px-2 py-1.5 text-[11px] font-medium transition-colors"
+        activeClassName="bg-[#7c6ef6] text-white shadow-[0_8px_24px_rgba(124,110,246,0.35)]"
+        inactiveClassName="text-[#6b6b7a] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e8e8f0]"
       />
 
       {/* ── Swatches tray (all modes) ── */}

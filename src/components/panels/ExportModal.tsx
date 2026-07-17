@@ -8,6 +8,9 @@ import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCo
 import { downloadDataUrl } from '@/utils/export'
 import { buildExportZipBlob, zipFileNameFor } from '@/utils/exportZip'
 import type { CanvasFormatId } from '@/types'
+import { ModalShell } from '@/components/ui/ModalShell'
+import { NumberInput } from '@/components/ui/NumberInput'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 
 interface ExportModalProps {
   open: boolean
@@ -73,14 +76,6 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
   useEffect(() => {
     setStageReady(Boolean(stageRef.current))
   }, [stageRef, activeGroup])
-
-  // Escape key closes modal
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [open, onClose])
 
   // Auto-dismiss export errors
   useEffect(() => {
@@ -198,34 +193,18 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
     }
   }
 
-  if (!open) return null
-
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm"
-      style={{ background: 'rgba(0,0,0,0.65)' }}
-      onClick={onClose}
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      closeLabel="Close export"
+      maxWidth="max-w-5xl"
+      backdropClassName="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm"
+      panelClassName="relative rounded-2xl border shadow-2xl w-full mx-4 h-[85vh] flex flex-col overflow-hidden"
+      header={<div className="px-5 py-4 border-b border-[rgba(255,255,255,0.06)] shrink-0"><h2 className="text-base font-semibold text-[#e8e8f0]">Export Images</h2><p className="text-xs text-[#6b6b7a] mt-0.5">{exportSummary}</p></div>}
+      footerClassName="px-6 py-4 border-t border-[rgba(255,255,255,0.06)] shrink-0"
+      footer={<><button disabled={!canRunExport} onClick={handleRunExport} className="w-full rounded-lg bg-[#7c6ef6] px-3 py-2.5 text-sm font-medium text-white hover:bg-[#6c5ed6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">{isExporting ? 'Exporting…' : 'Export PNGs'}</button>{exportError ? <p className="mt-2 rounded border border-[rgba(248,113,113,0.35)] bg-[rgba(248,113,113,0.08)] px-2 py-1.5 text-[10px] leading-snug text-[#fca5a5]">{exportError}</p> : <p className="text-[10px] leading-snug text-[#6b6b7a] mt-2">ZIP and Folder preserve the <span className="text-[#8f90a3]">format/locale/file.png</span> structure.</p>}</>}
     >
-      <div
-        className="relative rounded-2xl border shadow-2xl w-full max-w-5xl mx-4 h-[85vh] flex flex-col overflow-hidden"
-        style={{ background: '#18181f', borderColor: 'rgba(255,255,255,0.1)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 text-[#6b6b7a] hover:text-[#e8e8f0] transition-colors text-lg w-7 h-7 flex items-center justify-center rounded hover:bg-[rgba(255,255,255,0.06)]"
-          aria-label="Close export"
-        >
-          ✕
-        </button>
-
-        {/* Header */}
-        <div className="px-5 py-4 border-b border-[rgba(255,255,255,0.06)] shrink-0">
-          <h2 className="text-base font-semibold text-[#e8e8f0]">Export Images</h2>
-          <p className="text-xs text-[#6b6b7a] mt-0.5">{exportSummary}</p>
-        </div>
-
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
           {/* Scope */}
@@ -338,20 +317,19 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
               <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#6b6b7a] mb-3">Pano groups</p>
               <div className="rounded border border-[rgba(255,255,255,0.08)] bg-[rgba(255,255,255,0.03)] px-3 py-2">
                 <label className="flex items-center gap-2 text-[11px] text-[#a6a7b8]">
-                  <input
-                    type="checkbox"
+                  <ToggleSwitch
+                    variant="checkbox"
                     checked={compensatePanoExport}
-                    onChange={(e) => setCompensatePanoExport(e.target.checked)}
-                    className="h-3 w-3 accent-[#7c6ef6]"
+                    onChange={setCompensatePanoExport}
+                    checkboxClassName="h-3 w-3 accent-[#7c6ef6]"
                   />
                   <span className="flex-1">Compensate store gap</span>
-                  <input
-                    type="number"
+                  <NumberInput
                     min={0}
                     max={MAX_PANO_COMPENSATION_PX}
                     value={panoCompensationInput}
                     disabled={!compensatePanoExport}
-                    onChange={(e) => setPanoCompensationInput(e.target.value)}
+                    onValueChange={(_value, raw) => setPanoCompensationInput(raw)}
                     onBlur={() => {
                       const next = normalizePanoCompensationPx(parseInt(panoCompensationInput, 10) || 0)
                       setPanoCompensationInput(String(next || DEFAULT_PANO_COMPENSATION_PX))
@@ -396,26 +374,6 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
           </div>
         </div>
 
-        {/* Footer */}
-        <div className="px-6 py-4 border-t border-[rgba(255,255,255,0.06)] shrink-0">
-          <button
-            disabled={!canRunExport}
-            onClick={handleRunExport}
-            className="w-full rounded-lg bg-[#7c6ef6] px-3 py-2.5 text-sm font-medium text-white hover:bg-[#6c5ed6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
-          >
-            {isExporting ? 'Exporting…' : 'Export PNGs'}
-          </button>
-          {exportError ? (
-            <p className="mt-2 rounded border border-[rgba(248,113,113,0.35)] bg-[rgba(248,113,113,0.08)] px-2 py-1.5 text-[10px] leading-snug text-[#fca5a5]">
-              {exportError}
-            </p>
-          ) : (
-            <p className="text-[10px] leading-snug text-[#6b6b7a] mt-2">
-              ZIP and Folder preserve the <span className="text-[#8f90a3]">format/locale/file.png</span> structure.
-            </p>
-          )}
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

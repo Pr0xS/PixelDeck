@@ -1,11 +1,13 @@
 import { useEffect, useRef } from 'react'
 import { Rect, Ellipse, Group, Line } from 'react-konva'
 import type Konva from 'konva'
-import { useEditorStore } from '@/store'
 import type { ShapeLayer } from '@/types'
-import { resolveBrandColor, resolveFill } from '@/utils/brandColors'
-import { fillToKonvaProps } from '@/utils/gradients'
-import { getShadowProps, useKonvaBlur } from './effects'
+import { resolveBrandColor } from '@/utils/brandColors'
+import { layerFillToKonvaProps } from '@/utils/konvaFill'
+import { useBrandColors } from '@/hooks/useBrandColors'
+import { useLayerEffects } from '@/hooks/useLayerEffects'
+import { useLayerInteraction } from '@/hooks/useLayerInteraction'
+import { useLayerTransform } from '@/hooks/useLayerTransform'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -164,15 +166,15 @@ function getShapePoints(shapeType: string, w: number, h: number, layer: ShapeLay
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function ShapeNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: ShapeNodeProps) {
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
-  const fillProps = fillToKonvaProps(resolveFill(layer.fill, brandColors), layer.width, layer.height)
+  const brandColors = useBrandColors()
+  const fillProps = layerFillToKonvaProps(layer.fill, brandColors, { width: layer.width, height: layer.height })
   const groupRef = useRef<Konva.Group>(null)
   const rectRef = useRef<Konva.Rect>(null)
   const ellipseRef = useRef<Konva.Ellipse>(null)
   const lineRef = useRef<Konva.Line>(null)
   const currentSize = useRef({ w: layer.width, h: layer.height })
   useEffect(() => { currentSize.current = { w: layer.width, h: layer.height } }, [layer.width, layer.height])
-  useKonvaBlur(groupRef, layer.blur, `${layer.shapeType}:${layer.width}:${layer.height}:${layer.cornerRadius}:${JSON.stringify(layer.fill)}:${layer.stroke}:${layer.strokeWidth}`)
+  const shadowProps = useLayerEffects(groupRef, layer, `${layer.shapeType}:${layer.width}:${layer.height}:${layer.cornerRadius}:${JSON.stringify(layer.fill)}:${layer.stroke}:${layer.strokeWidth}`)
 
   const arrowRotation = layer.shapeType === 'arrow' ? (
     layer.arrowDirection === 'up' ? -90
@@ -180,6 +182,28 @@ export function ShapeNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
     : layer.arrowDirection === 'left' ? 180
     : 0
   ) : 0
+
+  const interactionProps = useLayerInteraction({
+    nodeRef: groupRef,
+    locked: layer.locked,
+    onSelect,
+    onDragEnd,
+    getDragPosition: (node) => ({
+      x: node.x() - currentSize.current.w / 2,
+      y: node.y() - currentSize.current.h / 2,
+    }),
+  })
+  const handleTransformEnd = useLayerTransform({
+    nodeRef: groupRef,
+    onChange: onTransformEnd,
+    buildPatch: (group): Partial<ShapeLayer> => ({
+      x: group.x() - currentSize.current.w / 2,
+      y: group.y() - currentSize.current.h / 2,
+      rotation: group.rotation() - arrowRotation,
+      width: currentSize.current.w,
+      height: currentSize.current.h,
+    }),
+  })
 
   const groupProps = {
     id: `layer-${layer.id}`,
@@ -191,11 +215,7 @@ export function ShapeNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
     visible: layer.visible,
     draggable: !forceNotDraggable && !layer.locked,
     rotation: layer.rotation,
-    onDragStart: () => { if (!layer.locked) onSelect() },
-    onDragEnd: (e: Konva.KonvaEventObject<DragEvent>) => {
-      const node = e.target
-      onDragEnd(node.x() - currentSize.current.w / 2, node.y() - currentSize.current.h / 2)
-    },
+    ...interactionProps,
     onTransform: () => {
       const group = groupRef.current
       if (!group) return
@@ -222,28 +242,14 @@ export function ShapeNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
         lineRef.current.points(getShapePoints(layer.shapeType, w, h, layer))
       }
     },
-    onTransformEnd: () => {
-      const group = groupRef.current
-      if (!group) return
-      group.scaleX(1)
-      group.scaleY(1)
-      onTransformEnd({
-        x: group.x() - currentSize.current.w / 2,
-        y: group.y() - currentSize.current.h / 2,
-        rotation: group.rotation() - arrowRotation,
-        width: currentSize.current.w,
-        height: currentSize.current.h,
-      })
-    },
+    onTransformEnd: handleTransformEnd,
   }
 
   const shapeProps = {
     stroke: layer.stroke ? resolveBrandColor(layer.stroke, brandColors) : layer.stroke,
     strokeWidth: layer.strokeWidth,
-    onClick: () => { if (!layer.locked) onSelect() },
-    onTap: () => { if (!layer.locked) onSelect() },
     ...fillProps,
-    ...getShadowProps(layer.shadow),
+    ...shadowProps,
   }
 
   if (layer.shapeType === 'ellipse') {

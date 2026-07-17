@@ -2,8 +2,8 @@ import { useRef } from 'react'
 import { Group } from 'react-konva'
 import type Konva from 'konva'
 import type { GroupLayer, Layer } from '@/types'
+import { useLayerEffects } from '@/hooks/useLayerEffects'
 import { LayerNode } from './LayerNode'
-import { getShadowProps, useKonvaBlur } from './effects'
 import { estimateGroupBox } from './GroupNode.geometry'
 
 interface GroupNodeProps {
@@ -65,7 +65,7 @@ export function GroupNode({
       node = node.getParent() as Konva.Node | null
     }
   }
-  useKonvaBlur(groupRef, layer.blur, `${JSON.stringify(layer.children)}:${isEditing}:${scale}`)
+  const shadowProps = useLayerEffects(groupRef, layer, `${JSON.stringify(layer.children)}:${isEditing}:${scale}`)
 
   return (
     <Group
@@ -81,7 +81,7 @@ export function GroupNode({
       opacity={layer.opacity}
       visible={layer.visible}
       draggable={!layer.locked && !isEditing}
-      {...getShadowProps(layer.shadow)}
+      {...shadowProps}
       onClick={handleClick}
       onTap={handleClick}
       onDblClick={handleDblClick}

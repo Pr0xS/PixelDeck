@@ -57,6 +57,12 @@ node cli/index.mjs --help
 
 Save your project from the GUI using the **Save** button (or the Projects panel). The resulting `.json` file is the input for `--project`.
 
+## Output filenames
+
+Exported PNGs are written as `<output>/<locale>/<group>__<slide>.png` (when the slide name differs from the group name; otherwise just `<slide>.png`). Names are sanitized — characters outside `a-z A-Z 0-9 . _ -` become `-` — and collisions get a numeric suffix (`-2`, `-3`, …).
+
+> Changed in v0.4.x: filenames were previously the raw slide name (`slide-1.png`). The group prefix was added because two groups with identical slide names silently overwrote each other's files. Update any automation that matches on exact filenames.
+
 ## Locale export
 
 Export a single locale:

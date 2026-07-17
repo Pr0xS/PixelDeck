@@ -38,6 +38,21 @@ beforeEach(() => {
 })
 
 describe('translateLayerText JSON retry', () => {
+  it('propagates transport errors without using the JSON repair retry', async () => {
+    mockedChat.mockRejectedValueOnce(new Error('Network unavailable'))
+
+    await expect(translateLayerText({
+      auth,
+      project,
+      slideGroup,
+      layerId: 'txt1',
+      text: 'Tu comida entendida',
+      targetLocale: 'en',
+    })).rejects.toThrow('Network unavailable')
+
+    expect(mockedChat).toHaveBeenCalledTimes(1)
+  })
+
   it('retries once when the first response is plain text instead of JSON', async () => {
     mockedChat
       .mockResolvedValueOnce('Your food understood')

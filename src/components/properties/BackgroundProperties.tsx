@@ -1,5 +1,6 @@
 import { useRef } from 'react'
 import { useEditorStore } from '@/store'
+import { useBrandColors } from '@/hooks/useBrandColors'
 import type { BackgroundAccent, BackgroundLayer, Layer } from '@/types'
 import { fileToDataUrl } from '@/utils/files'
 import { resolveBrandColor } from '@/utils/brandColors'
@@ -17,6 +18,9 @@ import {
   resumeTemporal,
   subtleButtonCls,
 } from '@/components/properties/panelConstants'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { FileUploadButton } from '@/components/ui/FileUploadButton'
 
 const ACCENT_PRESETS = [
   { cx: 50, cy: 20, rx: 500, ry: 450 },
@@ -31,7 +35,7 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
   const updateLayer = useEditorStore((s) => s.updateLayer)
   const selectedAccentIndex = useEditorStore((s) => s.selectedAccentIndex)
   const selectAccent = useEditorStore((s) => s.selectAccent)
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const brandColors = useBrandColors()
   const upd = (patch: Partial<BackgroundLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
   const bgImageInputRef = useRef<HTMLInputElement>(null)
 
@@ -72,25 +76,16 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
       {/* Background type toggle */}
       <div>
         <label className={labelCls}>Background Type</label>
-        <div className="grid grid-cols-2 gap-2">
-          {(['gradient', 'image'] as const).map((mode) => (
-            <button
-              key={mode}
-              type="button"
-              onClick={() => {
+        <SegmentedControl
+          value={hasImage ? 'image' : 'gradient'}
+          options={[{ value: 'gradient', label: '🎨 Gradient' }, { value: 'image', label: '🖼 Image' }]}
+          onChange={(mode) => {
                 if (mode === 'image') bgImageInputRef.current?.click()
                 else upd({ imageDataUrl: undefined })
-              }}
-              className={`rounded-lg border px-3 py-2 text-xs transition-colors ${
-                (mode === 'image') === hasImage
-                  ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white'
-                  : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)]'
-              }`}
-            >
-              {mode === 'gradient' ? '🎨 Gradient' : '🖼 Image'}
-            </button>
-          ))}
-        </div>
+          }}
+          className="grid grid-cols-2 gap-2"
+          optionClassName="rounded-lg border px-3 py-2 text-xs transition-colors"
+        />
       </div>
 
       {/* Gradient fill — shown when no image */}
@@ -166,17 +161,7 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
           <div>
             <div className="flex items-center justify-between mb-2">
               <label className={labelCls + ' !mb-0'}>Color Overlay</label>
-              <button
-                type="button"
-                onClick={() => upd({ imageOverlayOpacity: (layer.imageOverlayOpacity ?? 0) > 0 ? 0 : 0.4 })}
-                className={`relative h-5 w-9 rounded-full transition-colors ${
-                  (layer.imageOverlayOpacity ?? 0) > 0 ? 'bg-[#7c6ef6]' : 'bg-[rgba(255,255,255,0.12)]'
-                }`}
-              >
-                <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-                  (layer.imageOverlayOpacity ?? 0) > 0 ? 'translate-x-[18px]' : 'translate-x-0'
-                }`} />
-              </button>
+              <ToggleSwitch checked={(layer.imageOverlayOpacity ?? 0) > 0} onChange={(checked) => upd({ imageOverlayOpacity: checked ? 0.4 : 0 })} ariaLabel="Toggle color overlay" />
             </div>
             {(layer.imageOverlayOpacity ?? 0) > 0 && (
               <div className="space-y-2">
@@ -205,17 +190,7 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
       <div>
         <div className="flex items-center justify-between mb-1">
           <label className={labelCls + ' !mb-0'}>Noise Texture</label>
-          <button
-            type="button"
-            onClick={() => upd({ noise: (layer.noise ?? 0) > 0 ? 0 : 0.05 })}
-            className={`relative h-5 w-9 rounded-full transition-colors ${
-              (layer.noise ?? 0) > 0 ? 'bg-[#7c6ef6]' : 'bg-[rgba(255,255,255,0.12)]'
-            }`}
-          >
-            <span className={`absolute left-0.5 top-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${
-              (layer.noise ?? 0) > 0 ? 'translate-x-4' : 'translate-x-0'
-            }`} />
-          </button>
+          <ToggleSwitch checked={(layer.noise ?? 0) > 0} onChange={(checked) => upd({ noise: checked ? 0.05 : 0 })} checkedKnobClassName="translate-x-4" ariaLabel="Toggle noise texture" />
         </div>
         {(layer.noise ?? 0) > 0 && (
           <SliderField
@@ -366,18 +341,16 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
         </div>
       </div>
 
-      <input
+      <FileUploadButton
         ref={bgImageInputRef}
-        type="file"
         accept="image/*"
         className="hidden"
-        onChange={async (e) => {
-          const file = e.target.files?.[0]
+        onFiles={async (files) => {
+          const file = files[0]
           if (!file) return
           await handleImageFile(file)
-          e.target.value = ''
         }}
-      />
+      >Upload background</FileUploadButton>
     </div>
   )
 }

@@ -1,5 +1,6 @@
 import type { TextLayer, TextMark, FillValue } from '@/types'
 import { createCanvasGradient } from '@/utils/gradients'
+import { segmentMarks } from '@/utils/richText'
 
 /** Default text box width (px) when a TextLayer has no explicit `width`. */
 export const DEFAULT_TEXT_WIDTH = 1000
@@ -35,12 +36,40 @@ function buildFontString(weight: number, italic: boolean, fontSize: number, font
  * Measure rendered pixel-width of `text` including letterSpacing.
  * Assumes ctx.font is already set.
  */
-function measureWidth(ctx: CanvasRenderingContext2D, text: string, letterSpacing: number): number {
+export function makeMeasureCache(
+  measure: (font: string, text: string) => number,
+  limit = 2000,
+): (font: string, text: string) => number {
+  const cache = new Map<string, number>()
+  const maxSize = Math.max(1, limit)
+
+  return (font, text) => {
+    const key = `${font.length}:${font}${text}`
+    const cached = cache.get(key)
+    if (cached !== undefined) {
+      cache.delete(key)
+      cache.set(key, cached)
+      return cached
+    }
+
+    const width = measure(font, text)
+    cache.set(key, width)
+    if (cache.size > maxSize) cache.delete(cache.keys().next().value!)
+    return width
+  }
+}
+
+function measureWidth(
+  font: string,
+  text: string,
+  letterSpacing: number,
+  measure: (font: string, text: string) => number,
+): number {
   if (!text) return 0
-  if (letterSpacing === 0) return ctx.measureText(text).width
+  if (letterSpacing === 0) return measure(font, text)
   let w = 0
   for (const char of text) {
-    w += ctx.measureText(char).width + letterSpacing
+    w += measure(font, char) + letterSpacing
   }
   return Math.max(0, w - letterSpacing)
 }
@@ -128,34 +157,16 @@ function marksToLines(
 ): ResolvedFragment[][] {
   if (!text) return [[]]
 
-  // Collect all boundary offsets within [0, text.length]
-  const boundarySet = new Set<number>([0, text.length])
-  for (const m of marks) {
-    const s = Math.max(0, Math.min(m.start, text.length))
-    const e = Math.max(0, Math.min(m.end, text.length))
-    if (s < e) {
-      boundarySet.add(s)
-      boundarySet.add(e)
-    }
-  }
-  const boundaries = [...boundarySet].sort((a, b) => a - b)
-
-  // For each segment between boundaries, find first covering mark
   const lines: ResolvedFragment[][] = [[]]
-  for (let i = 0; i < boundaries.length - 1; i++) {
-    const segStart = boundaries[i]
-    const segEnd = boundaries[i + 1]
-    const segText = text.slice(segStart, segEnd)
+  for (const segment of segmentMarks(marks, text.length)) {
+    const segText = text.slice(segment.start, segment.end)
     if (!segText) continue
 
-    // Collect all marks that fully cover this segment, then merge them
-    // (last mark in array wins per property — later marks override earlier ones).
-    const covering = marks.filter((m) => m.start <= segStart && m.end >= segEnd)
-    const fill          = covering.reduce<FillValue>((v, m) => m.fill          ?? v, defaults.fill)
-    const weight        = covering.reduce<number>   ((v, m) => m.fontWeight    ?? v, defaults.weight)
-    const italic        = covering.reduce<boolean>  ((v, m) => m.italic        ?? v, defaults.italic)
-    const underline     = covering.reduce<boolean>  ((v, m) => m.underline     ?? v, defaults.underline)
-    const strikethrough = covering.reduce<boolean>  ((v, m) => m.strikethrough ?? v, defaults.strikethrough)
+    const fill = segment.style.fill ?? defaults.fill
+    const weight = segment.style.fontWeight ?? defaults.weight
+    const italic = segment.style.italic ?? defaults.italic
+    const underline = segment.style.underline ?? defaults.underline
+    const strikethrough = segment.style.strikethrough ?? defaults.strikethrough
 
     // Split on \n within the segment
     const parts = segText.split('\n')
@@ -277,9 +288,13 @@ export function renderSpansToCanvas(layer: TextLayer): HTMLCanvasElement {
   // ── Measure setup ─────────────────────────────────────────────────────────
   const measureCanvas = document.createElement('canvas')
   const mc = measureCanvas.getContext('2d')!
+  const measureText = makeMeasureCache((font, text) => {
+    mc.font = font
+    return mc.measureText(text).width
+  })
   const measureFrag = (text: string, frag: ResolvedFragment) => {
-    mc.font = buildFontString(frag.weight, frag.italic, fontSize, fontFamily)
-    return measureWidth(mc, text, letterSpacing)
+    const font = buildFontString(frag.weight, frag.italic, fontSize, fontFamily)
+    return measureWidth(font, text, letterSpacing, measureText)
   }
 
   // ── Resolve lines and word-wrap them to the box width ─────────────────────
@@ -288,8 +303,8 @@ export function renderSpansToCanvas(layer: TextLayer): HTMLCanvasElement {
   const layoutLines: LayoutLine[] = lines.map((lineFragments) => {
     let x = 0
     const fragments: PositionedFragment[] = lineFragments.map((frag) => {
-      mc.font = buildFontString(frag.weight, frag.italic, fontSize, fontFamily)
-      const w = measureWidth(mc, frag.text, letterSpacing)
+      const font = buildFontString(frag.weight, frag.italic, fontSize, fontFamily)
+      const w = measureWidth(font, frag.text, letterSpacing, measureText)
       const positioned: PositionedFragment = { ...frag, x, width: w }
       x += w
       return positioned
@@ -337,7 +352,7 @@ export function renderSpansToCanvas(layer: TextLayer): HTMLCanvasElement {
         let xPos = fragX
         for (const char of frag.text) {
           ctx.fillText(char, xPos, baseline)
-          xPos += ctx.measureText(char).width + letterSpacing
+          xPos += measureText(ctx.font, char) + letterSpacing
         }
       }
 

@@ -4,7 +4,9 @@ import useImage from 'use-image'
 import type Konva from 'konva'
 import type { ImageLayer } from '@/types'
 import { useAssetStore } from '@/store/assets'
-import { getShadowProps, useKonvaBlur } from './effects'
+import { useLayerEffects } from '@/hooks/useLayerEffects'
+import { useLayerInteraction } from '@/hooks/useLayerInteraction'
+import { useLayerTransform } from '@/hooks/useLayerTransform'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -27,11 +29,30 @@ export function ImageNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
   const currentSize = useRef({ w: layer.width, h: layer.height })
   useEffect(() => { currentSize.current = { w: layer.width, h: layer.height } }, [layer.width, layer.height])
 
-  useKonvaBlur(nodeRef, layer.blur, `${imageSrc}:${layer.width}:${layer.height}:${layer.cornerRadius}`)
-
-  const shadowProps = getShadowProps(layer.shadow)
+  const shadowProps = useLayerEffects(nodeRef, layer, `${imageSrc}:${layer.width}:${layer.height}:${layer.cornerRadius}`)
   const cx = layer.x + layer.width / 2
   const cy = layer.y + layer.height / 2
+  const interactionProps = useLayerInteraction({
+    nodeRef,
+    locked: layer.locked,
+    onSelect,
+    onDragEnd,
+    getDragPosition: (node) => ({
+      x: node.x() - layer.width / 2,
+      y: node.y() - layer.height / 2,
+    }),
+  })
+  const handleTransformEnd = useLayerTransform({
+    nodeRef,
+    onChange: onTransformEnd,
+    buildPatch: (node): Partial<ImageLayer> => ({
+      x: node.x() - currentSize.current.w / 2,
+      y: node.y() - currentSize.current.h / 2,
+      rotation: node.rotation(),
+      width: currentSize.current.w,
+      height: currentSize.current.h,
+    }),
+  })
 
   return (
     <Image
@@ -50,13 +71,7 @@ export function ImageNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
       visible={layer.visible}
       draggable={!forceNotDraggable && !layer.locked}
       {...shadowProps}
-      onClick={() => { if (!layer.locked) onSelect() }}
-      onTap={() => { if (!layer.locked) onSelect() }}
-      onDragStart={() => { if (!layer.locked) onSelect() }}
-      onDragEnd={(e: Konva.KonvaEventObject<DragEvent>) => {
-        const node = e.target
-        onDragEnd(node.x() - layer.width / 2, node.y() - layer.height / 2)
-      }}
+      {...interactionProps}
       onTransform={() => {
         const node = nodeRef.current
         if (!node) return
@@ -73,19 +88,7 @@ export function ImageNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
         node.offsetX(currentSize.current.w / 2)
         node.offsetY(currentSize.current.h / 2)
       }}
-      onTransformEnd={() => {
-        const node = nodeRef.current
-        if (!node) return
-        node.scaleX(1)
-        node.scaleY(1)
-        onTransformEnd({
-          x: node.x() - currentSize.current.w / 2,
-          y: node.y() - currentSize.current.h / 2,
-          rotation: node.rotation(),
-          width: currentSize.current.w,
-          height: currentSize.current.h,
-        })
-      }}
+      onTransformEnd={handleTransformEnd}
     />
   )
 }

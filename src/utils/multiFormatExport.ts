@@ -1,11 +1,10 @@
 import type Konva from 'konva'
 import type { CanvasFormatId } from '@/types'
 import { exportGroupImages, type PanoExportMode } from './export'
-import { applyCanvasFormat, getFormatLabel, isCustomFormatId } from './canvasFormats'
-import { applyLocale } from './locale'
 import { acquireCaptureLock, waitForStageCaptureReady } from './stageCapture'
 import { useEditorStore } from '@/store'
 import { normalizePanoCompensationPx } from './panoGeometry'
+import { buildExportFileTarget, buildExportPlan } from './exportPlan'
 
 export interface FormatExportResult {
   formatId: CanvasFormatId
@@ -37,10 +36,6 @@ export interface ProjectImageExportResult {
   dataUrl: string
 }
 
-function safeSegment(value: string): string {
-  return value.trim().replace(/[^a-z0-9._-]+/gi, '-').replace(/^-+|-+$/g, '') || 'untitled'
-}
-
 export async function exportProjectImages(
   stage: Konva.Stage,
   options: ProjectImageExportOptions,
@@ -52,7 +47,6 @@ export async function exportProjectImages(
   const originalLocale = store.activeLocale
   const projectPano = store.project.settings.pano ?? { gapPx: 24, compensate: false }
   const project = store.project
-  const customFormats = project.settings.customFormats
   const formatIds = options.formatIds.length ? options.formatIds : [originalFormat]
   const locales = options.locales.length ? options.locales : [project.settings.defaultLocale ?? originalLocale]
   const panoMode = options.panoMode ?? 'split'
@@ -63,63 +57,50 @@ export async function exportProjectImages(
   const groupIds = options.scope === 'current-group'
     ? [options.groupIds?.[0] ?? originalGroupId]
     : (options.groupIds?.length ? options.groupIds : project.slideGroups.map((group) => group.id))
+  const plan = buildExportPlan(project, {
+    formatIds,
+    locales,
+    scope: options.scope,
+    groupIds,
+    panoMode,
+  })
   const results: ProjectImageExportResult[] = []
-  // Guard against duplicate relativePaths (e.g. colliding slideNames in pano groups).
-  // If two slides resolve to the same path, append a numeric suffix so no file is silently lost.
-  const usedPaths = new Set<string>()
+  const usedRelativePaths = new Set<string>()
 
   try {
-    for (const locale of locales) {
-      useEditorStore.getState().setActiveLocale(locale)
-      for (const formatId of formatIds) {
-        useEditorStore.getState().setActiveCanvasFormat(formatId)
-        const resolvedProject = applyCanvasFormat(applyLocale(project, locale), formatId)
+    for (const batch of plan.batches) {
+      useEditorStore.getState().setActiveLocale(batch.locale)
+      useEditorStore.getState().setActiveCanvasFormat(batch.formatId)
+      options.onProgress?.({ formatId: batch.formatId, locale: batch.locale, groupName: batch.group.name })
+      useEditorStore.getState().setActiveSlideGroup(batch.group.id)
+      useEditorStore.getState().setPanoRenderOverride({
+        gapPx: options.panoCompensationPx ?? projectPano.gapPx,
+        compensate: batch.group.numSlides > 1 && panoCompensate,
+      })
+      await waitForStageCaptureReady(stage)
 
-        for (const groupId of groupIds) {
-          const resolvedGroup = resolvedProject.slideGroups.find((group) => group.id === groupId)
-          if (!resolvedGroup) continue
-
-          options.onProgress?.({ formatId, locale, groupName: resolvedGroup.name })
-          useEditorStore.getState().setActiveSlideGroup(groupId)
-          useEditorStore.getState().setPanoRenderOverride({
-            gapPx: options.panoCompensationPx ?? projectPano.gapPx,
-            compensate: resolvedGroup.numSlides > 1 && panoCompensate,
-          })
-          await waitForStageCaptureReady(stage)
-
-          const images = await exportGroupImages(stage, resolvedGroup, panoMode, panoCompensationPx)
-          for (const image of images) {
-            const groupSlug = safeSegment(resolvedGroup.name)
-            const imageSlug = safeSegment(image.name)
-            const baseFileName = options.scope === 'project' && imageSlug !== groupSlug
-              ? `${groupSlug}__${imageSlug}`
-              : imageSlug
-            const formatSegment = isCustomFormatId(formatId)
-              ? getFormatLabel(formatId, customFormats)
-              : formatId
-            const baseRelativePath = [safeSegment(formatSegment), safeSegment(locale), baseFileName].join('/')
-            // Deduplicate: if this path was already used, append a counter suffix
-            let relativePath = baseRelativePath
-            let fileName = baseFileName
-            if (usedPaths.has(relativePath)) {
-              let counter = 2
-              while (usedPaths.has(`${baseRelativePath}-${counter}`)) counter++
-              relativePath = `${baseRelativePath}-${counter}`
-              fileName = `${baseFileName}-${counter}`
-            }
-            usedPaths.add(relativePath)
-            results.push({
-              formatId,
-              formatLabel: getFormatLabel(formatId, customFormats),
-              locale,
-              groupId,
-              groupName: resolvedGroup.name,
-              name: fileName,
-              relativePath,
-              dataUrl: image.dataUrl,
-            })
-          }
-        }
+      const images = await exportGroupImages(stage, batch.group, panoMode, panoCompensationPx)
+      for (const image of images) {
+        const target = buildExportFileTarget({
+          formatId: batch.formatId,
+          formatLabel: batch.formatLabel,
+          locale: batch.locale,
+          groupName: batch.group.name,
+          sourceName: image.name,
+          scope: options.scope,
+          usedRelativePaths,
+        })
+        usedRelativePaths.add(target.relativePath)
+        results.push({
+          formatId: batch.formatId,
+          formatLabel: batch.formatLabel,
+          locale: batch.locale,
+          groupId: batch.group.id,
+          groupName: batch.group.name,
+          name: target.name,
+          relativePath: target.relativePath,
+          dataUrl: image.dataUrl,
+        })
       }
     }
   } finally {

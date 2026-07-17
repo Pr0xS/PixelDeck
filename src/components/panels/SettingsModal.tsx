@@ -1,7 +1,11 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { useEditorStore } from '@/store'
+import { useBrandColors } from '@/hooks/useBrandColors'
 import { AiProviderSettings } from '@/components/ai/AiProviderSettings'
 import { BrandColorList } from '@/components/common/BrandColorList'
+import { ModalShell } from '@/components/ui/ModalShell'
+import { NumberInput } from '@/components/ui/NumberInput'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 
 interface SettingsModalProps {
   open: boolean
@@ -32,7 +36,7 @@ const TABS: TabMeta[] = [
 // ─── Brand tab content ────────────────────────────────────────────────────────
 
 function BrandSettingsContent() {
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const brandColors = useBrandColors()
 
   return (
     <div>
@@ -74,13 +78,12 @@ function PanoSettingsContent() {
             Gap used when compensation is enabled. Simulates the bezel gap shown in app stores.
           </p>
           <div className="flex items-center gap-3">
-            <input
-              type="number"
+            <NumberInput
               min={0}
               max={300}
               value={panoSettings.gapPx ?? 24}
-              onChange={(e) =>
-                updatePanoSettings({ gapPx: Math.max(0, Math.min(300, Number(e.target.value))) })
+              onValueChange={(value) =>
+                updatePanoSettings({ gapPx: Math.max(0, Math.min(300, value)) })
               }
               className="bg-[#0f0f13] border border-[rgba(255,255,255,0.1)] rounded px-3 py-2 text-sm text-[#e8e8f0] w-24 focus:outline-none focus:border-[rgba(124,110,246,0.5)]"
             />
@@ -99,12 +102,12 @@ function PanoSettingsContent() {
         {/* Compensate checkbox */}
         <div className="rounded-xl border border-[rgba(255,255,255,0.08)] p-4 bg-[rgba(255,255,255,0.02)]">
           <div className="flex items-start gap-3">
-            <input
-              type="checkbox"
+            <ToggleSwitch
+              variant="checkbox"
               id="pano-compensate"
               checked={panoSettings.compensate ?? false}
-              onChange={(e) => updatePanoSettings({ compensate: e.target.checked })}
-              className="mt-0.5 accent-[#7c6ef6] w-4 h-4 shrink-0 cursor-pointer"
+              onChange={(checked) => updatePanoSettings({ compensate: checked })}
+              checkboxClassName="mt-0.5 accent-[#7c6ef6] w-4 h-4 shrink-0 cursor-pointer"
             />
             <div>
               <label
@@ -141,47 +144,29 @@ function PanoSettingsContent() {
 export function SettingsModal({ open, onClose }: SettingsModalProps) {
   const [tab, setTab] = useState<Tab>('ai')
 
-  // Escape key closes
-  useEffect(() => {
-    if (!open) return
-    const handler = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handler)
-    return () => window.removeEventListener('keydown', handler)
-  }, [open, onClose])
-
-  if (!open) return null
-
   const sections = ['GLOBAL', 'PROJECT'] as const
   const tabsBySection = (section: (typeof sections)[number]) =>
     TABS.filter((t) => t.section === section)
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
-      style={{ background: 'rgba(0,0,0,0.65)' }}
-      onClick={onClose}
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      title="Settings"
+      closeLabel="Close settings"
+      maxWidth="max-w-5xl"
+      panelClassName="relative rounded-2xl border shadow-2xl w-full mx-4 h-[85vh] flex flex-col overflow-hidden"
+      footerClassName="shrink-0 px-5 py-2.5 border-t border-[rgba(255,255,255,0.06)] flex items-center gap-3"
+      footer={(
+        <>
+          <span className="text-[11px] text-[#4a4a5a] font-mono select-all">v{__APP_VERSION__}</span>
+          <span className="text-[#2a2a3a]">·</span>
+          <span className="text-[11px] text-[#4a4a5a] font-mono select-all" title="Git commit hash">{__GIT_HASH__}</span>
+          <span className="flex-1" />
+          <a href="https://github.com/Pr0xS/PixelDeck" target="_blank" rel="noopener noreferrer" className="text-[11px] text-[#4a4a5a] hover:text-[#7c6ef6] transition-colors">github.com/Pr0xS/PixelDeck</a>
+        </>
+      )}
     >
-      <div
-        className="relative rounded-2xl border shadow-2xl w-full max-w-5xl mx-4 h-[85vh] flex flex-col overflow-hidden"
-        style={{ background: '#18181f', borderColor: 'rgba(255,255,255,0.1)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Close button */}
-        <button
-          onClick={onClose}
-          className="absolute top-4 right-4 z-10 text-[#6b6b7a] hover:text-[#e8e8f0] transition-colors text-lg w-7 h-7 flex items-center justify-center rounded hover:bg-[rgba(255,255,255,0.06)]"
-          aria-label="Close settings"
-        >
-          ✕
-        </button>
-
-        {/* Modal header */}
-        <div className="px-5 py-4 border-b border-[rgba(255,255,255,0.06)] shrink-0">
-          <h2 className="text-base font-semibold text-[#e8e8f0]">Settings</h2>
-        </div>
-
         {/* Body: sidebar + content */}
         <div className="flex flex-1 min-h-0">
           {/* Sidebar */}
@@ -230,29 +215,6 @@ export function SettingsModal({ open, onClose }: SettingsModalProps) {
           </div>
         </div>
 
-        {/* Footer — version info */}
-        <div
-          className="shrink-0 px-5 py-2.5 border-t border-[rgba(255,255,255,0.06)] flex items-center gap-3"
-          style={{ background: 'rgba(0,0,0,0.15)' }}
-        >
-          <span className="text-[11px] text-[#4a4a5a] font-mono select-all">
-            v{__APP_VERSION__}
-          </span>
-          <span className="text-[#2a2a3a]">·</span>
-          <span className="text-[11px] text-[#4a4a5a] font-mono select-all" title="Git commit hash">
-            {__GIT_HASH__}
-          </span>
-          <span className="flex-1" />
-          <a
-            href="https://github.com/Pr0xS/PixelDeck"
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[11px] text-[#4a4a5a] hover:text-[#7c6ef6] transition-colors"
-          >
-            github.com/Pr0xS/PixelDeck
-          </a>
-        </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

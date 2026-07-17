@@ -8,11 +8,13 @@ import { IPHONE_16_PRO_SVG } from '@/assets/mockups/iphone-16-pro'
 import { IPHONE_16_PRO_PLAIN_SVG } from '@/assets/mockups/iphone-16-pro-plain'
 import { PIXEL_9_SVG } from '@/assets/mockups/pixel-9'
 import { PIXEL_9_PLAIN_SVG } from '@/assets/mockups/pixel-9-plain'
-import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
 import { resolveBrandColor } from '@/utils/brandColors'
+import { useBrandColors } from '@/hooks/useBrandColors'
+import { useLayerEffects } from '@/hooks/useLayerEffects'
+import { useLayerInteraction } from '@/hooks/useLayerInteraction'
+import { useLayerTransform } from '@/hooks/useLayerTransform'
 import { PhoneStatusBar } from './PhoneStatusBar'
-import { getShadowProps, useKonvaBlur } from './effects'
 import { calcScreenshotLayout } from './PhoneNode.geometry'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -62,7 +64,7 @@ function drawRoundedRectClip(
 
 export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: PhoneNodeProps) {
   const groupRef = useRef<Konva.Group>(null)
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const brandColors = useBrandColors()
   const spec = getPhoneSpec(layer.model)
   const scale = layer.scale
 
@@ -116,10 +118,29 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
     )
   }, [screenshotImage, sw, shotClipH, layer.screenshotFit, layer.screenshotOffsetX, layer.screenshotOffsetY])
 
-  useKonvaBlur(groupRef, layer.blur, `${layer.model}:${scale}:${screenshotSrc}:${layer.screenshotFit}:${layer.screenshotOffsetX}:${layer.screenshotOffsetY}:${layer.border?.width ?? 0}:${layer.showStatusBar}`)
-
-  // Shadow props
-  const shadowProps = getShadowProps(layer.shadow)
+  const shadowProps = useLayerEffects(groupRef, layer, `${layer.model}:${scale}:${screenshotSrc}:${layer.screenshotFit}:${layer.screenshotOffsetX}:${layer.screenshotOffsetY}:${layer.border?.width ?? 0}:${layer.showStatusBar}`)
+  const interactionProps = useLayerInteraction({
+    nodeRef: groupRef,
+    locked: layer.locked,
+    onSelect,
+    onDragEnd,
+    getDragPosition: (node) => ({ x: node.x() - fw / 2, y: node.y() - fh / 2 }),
+  })
+  const handleTransformEnd = useLayerTransform({
+    nodeRef: groupRef,
+    onChange: onTransformEnd,
+    buildPatch: (node, { scaleX }): Partial<PhoneLayer> => {
+      const nextScale = Math.max(0.1, layer.scale * scaleX)
+      const nextFw = spec.frameWidth * nextScale
+      const nextFh = spec.frameHeight * nextScale
+      return {
+        x: node.x() - nextFw / 2,
+        y: node.y() - nextFh / 2,
+        rotation: node.rotation(),
+        scale: nextScale,
+      }
+    },
+  })
 
   return (
     <Group
@@ -135,28 +156,8 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
       draggable={!forceNotDraggable && !layer.locked}
       width={fw}
       height={fh}
-      onClick={() => { if (!layer.locked) onSelect() }}
-      onTap={() => { if (!layer.locked) onSelect() }}
-      onDragStart={() => { if (!layer.locked) onSelect() }}
-      onDragEnd={(e) => {
-        const node = e.target
-        onDragEnd(node.x() - fw / 2, node.y() - fh / 2)
-      }}
-      onTransformEnd={(e) => {
-        const node = e.target
-        const scaleX = node.scaleX()
-        node.scaleX(1)
-        node.scaleY(1)
-        const nextScale = Math.max(0.1, layer.scale * scaleX)
-        const nextFw = spec.frameWidth * nextScale
-        const nextFh = spec.frameHeight * nextScale
-        onTransformEnd({
-          x: node.x() - nextFw / 2,
-          y: node.y() - nextFh / 2,
-          rotation: node.rotation(),
-          scale: nextScale,
-        })
-      }}
+      {...interactionProps}
+      onTransformEnd={handleTransformEnd}
       {...shadowProps}
     >
       {/* Screen background */}

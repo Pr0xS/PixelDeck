@@ -12,48 +12,11 @@ import {
 } from '@/utils/canvasFormats'
 import type { EditorSet, EditorGet } from './types'
 
+export { findLayerInTree, mapLayerTree, updateLayerInTree } from '@/utils/layerTree'
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function newId() { return nanoid(10) }
-
-/**
- * Set or clear a single locale override on a layer (or inside a group child).
- * patch=null removes the locale entry entirely.
- */
-export function patchLayerLocale(
-  layer: Layer,
-  layerId: string,
-  locale: string,
-  patch: LocaleLayerPatch | null,
-): Layer {
-  if (layer.id === layerId) {
-    const existing = layer.localeOverrides ?? {}
-    if (patch === null) {
-      const updated = { ...existing }
-      delete updated[locale]
-      return { ...layer, localeOverrides: Object.keys(updated).length > 0 ? updated : undefined }
-    }
-    return { ...layer, localeOverrides: { ...existing, [locale]: patch } }
-  }
-  if (layer.type === 'group') {
-    const grp = layer as GroupLayer
-    return {
-      ...grp,
-      children: grp.children.map((c) => patchLayerLocale(c, layerId, locale, patch)),
-    } as Layer
-  }
-  return layer
-}
-
-/** Patch a layer in a known slide group without applying canvas-format indirection. */
-export function patchLayerBase(layer: Layer, layerId: string, patch: Partial<Layer>): Layer {
-  if (layer.id === layerId) return { ...layer, ...patch } as Layer
-  if (layer.type === 'group') {
-    const grp = layer as GroupLayer
-    return { ...grp, children: grp.children.map((c) => patchLayerBase(c, layerId, patch)) } as Layer
-  }
-  return layer
-}
 
 /**
  * Bake a group's uniform scale into a child layer's own properties.
@@ -287,15 +250,6 @@ export const touchProject = (p: Project, patch: Partial<Project>): Project => ({
 /** Same as touchProject, for nested ProjectSettings patches. */
 export const touchSettings = (p: Project, patch: Partial<ProjectSettings>): Project =>
   touchProject(p, { settings: { ...p.settings, ...patch } })
-
-export const mapLayerById = (layers: Layer[], layerId: string, fn: (layer: Layer) => Layer): Layer[] =>
-  layers.map((layer) => {
-    if (layer.id === layerId) return fn(layer)
-    if (layer.type === 'group') {
-      return { ...layer, children: mapLayerById((layer as GroupLayer).children, layerId, fn) } as Layer
-    }
-    return layer
-  })
 
 /**
  * Split a layer patch into layout keys (stored per-format) and content keys

@@ -40,7 +40,30 @@ export function isEmptyStyle(s: MarkStyle): boolean {
 }
 
 function sameStyle(a: MarkStyle, b: MarkStyle): boolean {
-  return STYLE_KEYS.every((k) => JSON.stringify(a[k] ?? null) === JSON.stringify(b[k] ?? null))
+  return STYLE_KEYS.every((k) => sameStyleValue(a[k], b[k]))
+}
+
+function sameFill(a: FillValue | undefined, b: FillValue | undefined): boolean {
+  if (a === b) return true
+  if (a === undefined || b === undefined || typeof a === 'string' || typeof b === 'string') return false
+  if (a.type !== b.type || a.stops.length !== b.stops.length) return false
+  if (a.type === 'linear') {
+    if (b.type !== 'linear' || a.angle !== b.angle) return false
+  } else if (b.type !== 'radial' || a.cx !== b.cx || a.cy !== b.cy || a.radius !== b.radius) {
+    return false
+  }
+  return a.stops.every((stop, index) => {
+    const other = b.stops[index]
+    return stop.offset === other.offset && stop.color === other.color
+  })
+}
+
+function sameStyleValue(a: MarkStyle[keyof MarkStyle] | undefined, b: MarkStyle[keyof MarkStyle] | undefined): boolean {
+  if (a === b) return true
+  if (typeof a === 'object' && a !== null && typeof b === 'object' && b !== null) {
+    return sameFill(a, b)
+  }
+  return false
 }
 
 // ─── Segmentation ─────────────────────────────────────────────────────────────
@@ -49,6 +72,47 @@ export interface StyledSegment {
   start: number
   end: number
   style: MarkStyle
+}
+
+interface IndexedMark {
+  mark: TextMark
+  start: number
+  end: number
+  index: number
+}
+
+interface StyleHeapEntry {
+  index: number
+  end: number
+  value: unknown
+}
+
+function heapPush(heap: StyleHeapEntry[], entry: StyleHeapEntry): void {
+  heap.push(entry)
+  let child = heap.length - 1
+  while (child > 0) {
+    const parent = Math.floor((child - 1) / 2)
+    if (heap[parent].index >= entry.index) break
+    heap[child] = heap[parent]
+    child = parent
+  }
+  heap[child] = entry
+}
+
+function heapPop(heap: StyleHeapEntry[]): void {
+  const last = heap.pop()
+  if (!last || heap.length === 0) return
+  let parent = 0
+  while (true) {
+    const left = parent * 2 + 1
+    if (left >= heap.length) break
+    const right = left + 1
+    const child = right < heap.length && heap[right].index > heap[left].index ? right : left
+    if (heap[child].index <= last.index) break
+    heap[parent] = heap[child]
+    parent = child
+  }
+  heap[parent] = last
 }
 
 /**
@@ -65,31 +129,50 @@ export function segmentMarks(
   if (textLength <= 0) return []
 
   const bounds = new Set<number>([0, textLength])
-  for (const m of marks) {
+  const indexedMarks: IndexedMark[] = []
+  for (let index = 0; index < marks.length; index++) {
+    const m = marks[index]
     const s = Math.max(0, Math.min(m.start, textLength))
     const e = Math.max(0, Math.min(m.end, textLength))
     if (s < e) {
       bounds.add(s)
       bounds.add(e)
+      indexedMarks.push({ mark: m, start: s, end: e, index })
     }
   }
   for (const b of extraBoundaries) {
     if (b > 0 && b < textLength) bounds.add(b)
   }
   const sorted = [...bounds].sort((a, b) => a - b)
+  indexedMarks.sort((a, b) => a.start - b.start || a.index - b.index)
+
+  const heaps: Record<(typeof STYLE_KEYS)[number], StyleHeapEntry[]> = {
+    fill: [],
+    fontWeight: [],
+    italic: [],
+    underline: [],
+    strikethrough: [],
+  }
+  let nextMark = 0
 
   const segments: StyledSegment[] = []
   for (let i = 0; i < sorted.length - 1; i++) {
     const start = sorted[i]
     const end = sorted[i + 1]
-    const covering = marks.filter((m) => m.start <= start && m.end >= end)
+    while (nextMark < indexedMarks.length && indexedMarks[nextMark].start <= start) {
+      const active = indexedMarks[nextMark++]
+      for (const k of STYLE_KEYS) {
+        const value = active.mark[k]
+        if (value !== undefined) heapPush(heaps[k], { index: active.index, end: active.end, value })
+      }
+    }
     const style: MarkStyle = {}
     for (const k of STYLE_KEYS) {
-      const v = covering.reduce<MarkStyle[typeof k]>(
-        (acc, m) => (m[k] !== undefined ? (m[k] as never) : acc),
-        undefined,
-      )
-      if (v !== undefined) (style as Record<string, unknown>)[k] = v
+      const heap = heaps[k]
+      while (heap.length > 0 && heap[0].end <= start) heapPop(heap)
+      if (heap.length > 0 && heap[0].end >= end) {
+        ;(style as Record<string, unknown>)[k] = heap[0].value
+      }
     }
     segments.push({ start, end, style })
   }
@@ -221,7 +304,7 @@ export function getRangeStyle(
       continue
     }
     for (const k of STYLE_KEYS) {
-      if (JSON.stringify(result[k]) !== JSON.stringify(effective[k])) {
+      if (!sameStyleValue(result[k], effective[k])) {
         ;(result as Record<string, unknown>)[k] = 'mixed'
       }
     }

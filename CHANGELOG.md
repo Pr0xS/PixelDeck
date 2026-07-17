@@ -7,6 +7,27 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.5.2](https://github.com/Pr0xS/PixelDeck/compare/v0.5.1...v0.5.2) - 2026-07-17
+
+### Added
+
+- Shared UI primitives for modals, numeric inputs, toggles, segmented controls, file uploads, and inline labels.
+- Reusable layer-tree walkers, Konva fill conversion, layer interaction/effect hooks, and a pure browser/headless export plan.
+- AI transport and export-plan tests covering timeouts, retries, collision-safe filenames, nested layers, and gradients.
+
+### Changed
+
+- Split the canvas stage into focused viewport, selection, drop-target, transformer, geometry, and overlay modules.
+- Unified browser and headless export enumeration and made CLI output names collision-safe with `<group>__<slide>.png` naming.
+- Improved rich-text segmentation from quadratic scans to a sweep-line implementation and cached text measurements.
+- Narrowed Zustand selectors and consolidated repeated layer, property-panel, and modal behavior.
+
+### Fixed
+
+- Added AI request timeouts and transient retries while preventing non-idempotent image generation from retrying after transport failures.
+- Added consistent CLI validation and error reporting with non-zero exit codes.
+- Preserved project update timestamps when clearing format-specific state.
+
 ## [0.5.1](https://github.com/Pr0xS/PixelDeck/compare/v0.4.1...v0.5.1) - 2026-07-16
 
 ### Added

@@ -10,6 +10,7 @@ import type {
   SlideGroup,
 } from '@/types'
 import { getModelForPlatform } from '@/assets/mockups/specs'
+import { mapLayerTree } from '@/utils/layerTree'
 
 export const CANVAS_FORMAT_PRESETS = [
   { id: 'iphone-69', label: 'iPhone 6.9"', width: 1320, height: 2868 },
@@ -71,12 +72,12 @@ export function getFormatLabel(id: CanvasFormatId, customFormats?: CustomCanvasF
   return labels[id]
 }
 
-export function getProjectBaseFormat(project: Project): CanvasFormatId {
+export function getProjectBaseFormat(project: Pick<Project, 'settings'>): CanvasFormatId {
   void project
   return BASE_CANVAS_FORMAT
 }
 
-export function getProjectActiveFormats(project: Project): CanvasFormatId[] {
+export function getProjectActiveFormats(project: Pick<Project, 'settings'>): CanvasFormatId[] {
   return normalizeActiveFormats(
     project.settings.activeFormats,
     project.settings.baseCanvasFormat,
@@ -110,7 +111,7 @@ export function normalizeActiveFormats(
   return Array.from(new Set(formats))
 }
 
-export function getExportTargets(project: Project): CanvasFormatId[] {
+export function getExportTargets(project: Pick<Project, 'settings'>): CanvasFormatId[] {
   const formats = getProjectActiveFormats(project)
   return formats.length > 0 ? formats : [BASE_CANVAS_FORMAT]
 }
@@ -338,15 +339,6 @@ function withoutFormatVisibility(layer: Layer, format: CanvasFormatId): Layer {
   const { [format]: _removed, ...rest } = layer.formatVisibility
   void _removed
   return { ...layer, formatVisibility: Object.keys(rest).length ? rest : undefined } as Layer
-}
-
-function mapLayerTree(layers: Layer[], fn: (layer: Layer) => Layer): Layer[] {
-  return layers.map((layer) => {
-    const withChildren = layer.type === 'group'
-      ? ({ ...layer, children: mapLayerTree((layer as GroupLayer).children, fn) } as Layer)
-      : layer
-    return fn(withChildren)
-  })
 }
 
 /** Remove every layout/model override for a format in one slide group. */

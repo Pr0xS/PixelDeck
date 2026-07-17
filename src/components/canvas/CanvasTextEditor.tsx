@@ -2,6 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import type Konva from 'konva'
 import { useEditorStore } from '@/store'
+import { useBrandColors } from '@/hooks/useBrandColors'
 import type { GroupLayer, Layer, TextLayer } from '@/types'
 import { useRichTextEditor } from '@/components/text/useRichTextEditor'
 import { RichTextToolbar } from '@/components/text/RichTextToolbar'
@@ -50,7 +51,8 @@ function findTextLayer(
 export function CanvasTextEditor({ stageRef }: CanvasTextEditorProps) {
   const editingTextId = useEditorStore((s) => s.editingTextId)
   const stopTextEdit = useEditorStore((s) => s.stopTextEdit)
-  const project = useEditorStore((s) => s.project)
+  const settings = useEditorStore((s) => s.project.settings)
+  const slideGroups = useEditorStore((s) => s.project.slideGroups)
   const activeSlideGroupId = useEditorStore((s) => s.activeSlideGroupId)
   const activeCanvasFormat = useEditorStore((s) => s.activeCanvasFormat)
   // Subscribe to viewport so the overlay follows zoom / pan
@@ -60,9 +62,9 @@ export function CanvasTextEditor({ stageRef }: CanvasTextEditorProps) {
 
   // Resolve the active format so the overlay aligns with what the canvas renders.
   // Content edits still flow to the shared base via updateLayer's format routing.
-  const rawGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+  const rawGroup = slideGroups.find((g) => g.id === activeSlideGroupId)
   const group = rawGroup
-    ? applyCanvasFormatToGroup(rawGroup, activeCanvasFormat, getProjectBaseFormat(project), project.settings.customFormats)
+    ? applyCanvasFormatToGroup(rawGroup, activeCanvasFormat, getProjectBaseFormat({ settings }), settings.customFormats)
     : undefined
   const found = editingTextId && group ? findTextLayer(group.layers, editingTextId) : null
   const layerId = found?.layer.id
@@ -116,7 +118,7 @@ function CanvasTextEditorBox({
   const stopTextEdit = useEditorStore((s) => s.stopTextEdit)
   const updateLayer = useEditorStore((s) => s.updateLayer)
   const updateChildLayer = useEditorStore((s) => s.updateChildLayer)
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const brandColors = useBrandColors()
   const wrapperRef = useRef<HTMLDivElement>(null)
   const editorRef = useRef<HTMLDivElement>(null)
   const baseFill = resolveFill(layer.fill, brandColors)
