@@ -29,6 +29,22 @@ describe('project persistence', () => {
     expect(imported?.type).toBe('text')
   })
 
+  it('accepts a project export bundle while keeping bare project imports compatible', () => {
+    useEditorStore.getState().addText()
+    const project = useEditorStore.getState().project
+
+    useEditorStore.getState().resetProject()
+    useEditorStore.getState().importProject(JSON.stringify({
+      kind: 'project-export',
+      schemaVersion: 1,
+      project,
+      assets: { 'shot.png': 'data:image/png;base64,asset' },
+    }))
+
+    expect(useEditorStore.getState().project.id).toBe(project.id)
+    expect(getActiveGroup().layers.some((layer) => layer.type === 'text')).toBe(true)
+  })
+
   it('exportProject returns valid parseable JSON of the current project', () => {
     const parsed = JSON.parse(useEditorStore.getState().exportProject())
 

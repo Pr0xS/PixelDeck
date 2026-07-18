@@ -151,11 +151,6 @@ export function ExportApp() {
       return
     }
 
-    // Populate asset store
-    for (const [filename, dataUrl] of Object.entries(config.assets ?? {})) {
-      addAsset(filename, dataUrl)
-    }
-
     // Load project — surface malformed project files to the CLI instead of hanging
     try {
       importProject(JSON.stringify(config.project))
@@ -180,6 +175,13 @@ export function ExportApp() {
 
     // Pre-decode all asset images so use-image resolves from cache during render.
     const preload = async () => {
+      // Headless mode still uses an explicit project scope. Wait for hydration
+      // before adding CLI-provided assets so an async scope load cannot replace them.
+      await useAssetStore.getState().setActiveProject(config.project.id)
+      for (const [filename, dataUrl] of Object.entries(config.assets ?? {})) {
+        addAsset(filename, dataUrl)
+      }
+
       await Promise.all(
         Object.values(config.assets ?? {}).map(
           (dataUrl) =>

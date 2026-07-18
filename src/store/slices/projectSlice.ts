@@ -1,6 +1,7 @@
 import type { BrandColor, Template } from '@/types'
 import { normalizeProjectFormats, BASE_CANVAS_FORMAT } from '@/utils/canvasFormats'
 import { projectToTemplate, applyTemplate, extractInlineScreenshots } from '@/utils/templates'
+import { isProjectExportBundle } from '@/utils/projectAssets'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
 import { useAssetStore } from '../assets'
 import {
@@ -76,8 +77,9 @@ export const createProjectSlice = (
 
   importProject: (json) => {
     const parsed: unknown = JSON.parse(json)
-    assertProjectShape(parsed)
-    const project = migrateProject(parsed)
+    const rawProject = isProjectExportBundle(parsed) ? parsed.project : parsed
+    assertProjectShape(rawProject)
+    const project = migrateProject(rawProject)
     set({
       project,
       activeSlideGroupId: project.slideGroups[0]?.id ?? '',
