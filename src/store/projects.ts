@@ -28,6 +28,15 @@ function warnStorageFailure(err: unknown) {
   }, 0)
 }
 
+/** Load a saved project without persisting the currently loaded editor project. */
+function loadProjectById(id: string): boolean {
+  const json = localStorage.getItem(projectKey(id))
+  if (!json) return false
+  localStorage.setItem(ACTIVE_KEY, id)
+  useEditorStore.getState().importProject(json)
+  return true
+}
+
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 export interface ProjectMeta {
@@ -75,18 +84,10 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
 
     const activeId = localStorage.getItem(ACTIVE_KEY)
 
-    const tryLoad = (id: string): boolean => {
-      const json = localStorage.getItem(projectKey(id))
-      if (!json) return false
-      useEditorStore.getState().importProject(json)
-      localStorage.setItem(ACTIVE_KEY, id)
-      return true
-    }
-
     if (activeId && projects.find((p) => p.id === activeId)) {
-      if (!tryLoad(activeId) && projects.length > 0) tryLoad(projects[0].id)
+      if (!loadProjectById(activeId) && projects.length > 0) loadProjectById(projects[0].id)
     } else if (projects.length > 0) {
-      tryLoad(projects[0].id)
+      loadProjectById(projects[0].id)
     }
 
     // Always persist whatever is now in the editor (covers first-ever run)
@@ -137,12 +138,7 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
     const { projects } = get()
     if (!projects.find((p) => p.id === id)) return
     get().saveCurrentProject()
-
-    const json = localStorage.getItem(projectKey(id))
-    if (!json) return
-
-    useEditorStore.getState().importProject(json)
-    localStorage.setItem(ACTIVE_KEY, id)
+    loadProjectById(id)
   },
 
   deleteProject(id) {
@@ -157,15 +153,14 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
     }
     set({ projects: updated })
 
-    const activeId = localStorage.getItem(ACTIVE_KEY)
-    if (activeId === id) {
-      if (updated.length > 0) {
-        get().openProject(updated[0].id)
-      } else {
-        useEditorStore.getState().resetProject()
-        get().saveCurrentProject()
-      }
-    }
+    const activeProjectId = useEditorStore.getState().project.id
+    if (activeProjectId !== id) return
+
+    const replacement = updated[0]
+    if (replacement && loadProjectById(replacement.id)) return
+
+    useEditorStore.getState().resetProject()
+    get().saveCurrentProject()
   },
 
   renameProject(id, name) {
