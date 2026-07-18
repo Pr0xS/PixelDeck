@@ -15,6 +15,7 @@ function getActiveGroup() {
 beforeEach(() => {
   useAssetStore.getState().clearAssets()
   useEditorStore.getState().resetProject()
+  void useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
   useEditorStore.setState({
     editingGroupId: null,
     selectedLayerIds: [],

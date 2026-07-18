@@ -28,8 +28,6 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
   const { projects, createProject, openProject, deleteProject, renameProject } =
     useProjectsStore()
   const activeProjectId = useEditorStore((s) => s.project.id)
-  const exportProject = useEditorStore((s) => s.exportProject)
-  const importProject = useEditorStore((s) => s.importProject)
 
   const [renamingId, setRenamingId] = useState<string | null>(null)
   const [deleteId, setDeleteId] = useState<string | null>(null)
@@ -91,11 +89,8 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
     setDeleteId(null)
   }
 
-  const handleExportProject = (id: string, name: string) => {
-    // If it's the active project, use the live editor state (most up-to-date)
-    const json = id === activeProjectId
-      ? exportProject()
-      : localStorage.getItem(`pd:project:${id}`) ?? exportProject()
+  const handleExportProject = async (id: string, name: string) => {
+    const json = await useProjectsStore.getState().exportProjectBundle(id)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const slug = name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'project'
@@ -113,10 +108,14 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
     const file = files[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        importProject(reader.result as string)
+        const { missing } = await useProjectsStore.getState()
+          .importProjectFromJson(reader.result as string)
         onClose()
+        if (missing.length > 0) {
+          alert(`Project imported. ${missing.length} referenced image(s) were missing from the file and will appear blank.`)
+        }
       } catch {
         alert('Failed to open project file.')
       }
@@ -426,7 +425,7 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                   >
                     <button
                       title="Export project as JSON"
-                      onClick={(e) => { e.stopPropagation(); handleExportProject(p.id, p.name) }}
+                      onClick={(e) => { e.stopPropagation(); void handleExportProject(p.id, p.name) }}
                       style={{
                         background: 'none',
                         border: 'none',

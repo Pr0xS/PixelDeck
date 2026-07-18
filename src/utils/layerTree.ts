@@ -1,6 +1,15 @@
 import type { Layer } from '@/types'
 
 export type LayerMapper = (layer: Layer) => Layer
+export type LayerVisitor = (layer: Layer) => void
+
+/** Read-only pre-order traversal: visits every layer then recurses into group children. */
+export function forEachLayerTree(layers: Layer[], fn: LayerVisitor): void {
+  for (const layer of layers) {
+    fn(layer)
+    if (layer.type === 'group') forEachLayerTree(layer.children, fn)
+  }
+}
 
 /**
  * Map every layer in a tree without mutating the input.
