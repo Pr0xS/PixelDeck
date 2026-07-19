@@ -11,7 +11,7 @@ import { FormatTabs } from '@/components/canvas/FormatTabs'
 import { LocaleLayoutTabs } from '@/components/canvas/LocaleLayoutTabs'
 import { useThumbnails } from '@/hooks/useThumbnails'
 import { useEditorStore, useUndoRedo } from '@/store'
-import { applyCanvasFormat } from '@/utils/canvasFormats'
+import { applyCanvasFormat, resolveProjectView } from '@/utils/canvasFormats'
 import { registerStage } from '@/utils/stageRegistry'
 
 // Lazy-load the localization view — it's a separate mode and not needed on initial load.
@@ -131,7 +131,6 @@ export default function App() {
         }
       }
 
-      // Known limitation: nudges start from raw base coordinates, not the resolved format/locale view.
       // Arrow keys — nudge selected layer 1px (Shift = 10px)
       if (!e.ctrlKey && !e.metaKey) {
         const { ArrowLeft, ArrowRight, ArrowUp, ArrowDown } = { ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown' }
@@ -140,9 +139,19 @@ export default function App() {
           const step = e.shiftKey ? 10 : 1
           const dx = e.key === ArrowLeft ? -step : e.key === ArrowRight ? step : 0
           const dy = e.key === ArrowUp ? -step : e.key === ArrowDown ? step : 0
-          const { selection, editingGroupId: egi, updateLayer, updateChildLayer, project: p, activeSlideGroupId: gid } = useEditorStore.getState()
+          const {
+            selection,
+            editingGroupId: egi,
+            updateLayer,
+            updateChildLayer,
+            project: p,
+            activeSlideGroupId: gid,
+            activeLocale,
+            activeCanvasFormat,
+          } = useEditorStore.getState()
           if (!selection?.layerId) return
-          const grp = p.slideGroups.find((g) => g.id === gid)
+          const resolvedProject = resolveProjectView(p, activeLocale, activeCanvasFormat)
+          const grp = resolvedProject.slideGroups.find((g) => g.id === gid)
           if (!grp) return
           if (egi) {
             const groupLayer = grp.layers.find((l) => l.id === egi)

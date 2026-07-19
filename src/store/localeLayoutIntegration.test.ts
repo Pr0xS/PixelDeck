@@ -35,6 +35,76 @@ beforeEach(() => {
 })
 
 describe('locale/format layout store integration', () => {
+  it('nudges from the resolved position of a format-only override', () => {
+    useEditorStore.getState().addText()
+    const layer = getTextLayer()
+    useEditorStore.getState().updateSettings({ activeFormats: [ANDROID_FORMAT] })
+    useEditorStore.getState().setActiveCanvasFormat(ANDROID_FORMAT)
+    useEditorStore.getState().updateLayer(layer.id, { x: 640 })
+
+    const state = useEditorStore.getState()
+    const resolvedLayer = resolveProjectView(
+      state.project,
+      state.activeLocale,
+      state.activeCanvasFormat,
+    ).slideGroups[0].layers.find((candidate) => candidate.id === layer.id) as TextLayer
+    state.updateLayer(layer.id, { x: resolvedLayer.x + 1 })
+
+    expect(getTextLayer().formatOverrides?.[ANDROID_FORMAT]?.x).toBe(641)
+  })
+
+  it('nudges from the resolved position of a locale/format override', () => {
+    useEditorStore.getState().addText()
+    const layer = getTextLayer()
+    enableGermanAndroid()
+    useEditorStore.getState().updateLayer(layer.id, { x: 2020 })
+
+    const state = useEditorStore.getState()
+    const resolvedLayer = resolveProjectView(
+      state.project,
+      state.activeLocale,
+      state.activeCanvasFormat,
+    ).slideGroups[0].layers.find((candidate) => candidate.id === layer.id) as TextLayer
+    state.updateLayer(layer.id, { x: resolvedLayer.x + 1 })
+
+    expect(getTextLayer().localeLayoutOverrides?.de?.[ANDROID_FORMAT]?.x).toBe(2021)
+  })
+
+  it('nudges a group child in the same resolved coordinate space used by override routing', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    const layers = getActiveGroup().layers
+    const textId = layers.find((layer) => layer.type === 'text')!.id
+    const shapeId = layers.find((layer) => layer.type === 'shape')!.id
+    useEditorStore.getState().createGroup([textId, shapeId])
+    const group = getActiveGroup().layers.find((layer) => layer.type === 'group') as GroupLayer
+    const baseChildX = group.children.find((child) => child.id === textId)!.x
+    useEditorStore.getState().updateLayer(group.id, { scale: 2 })
+    enableGermanAndroid()
+
+    const state = useEditorStore.getState()
+    const resolvedGroup = resolveProjectView(
+      state.project,
+      state.activeLocale,
+      state.activeCanvasFormat,
+    ).slideGroups[0].layers.find((layer) => layer.id === group.id) as GroupLayer
+    const resolvedChild = resolvedGroup.children.find((child) => child.id === textId)!
+    state.updateChildLayer(group.id, textId, { x: resolvedChild.x + 1 })
+
+    const storedGroup = getActiveGroup().layers.find((layer) => layer.id === group.id) as GroupLayer
+    const storedChild = storedGroup.children.find((child) => child.id === textId)!
+    const expectedX = resolvedChild.x + 1
+    expect(storedChild.x).toBe(baseChildX)
+    expect(storedChild.localeLayoutOverrides?.de?.[ANDROID_FORMAT]?.x).toBe(expectedX)
+
+    const reResolvedGroup = resolveProjectView(
+      useEditorStore.getState().project,
+      'de',
+      ANDROID_FORMAT,
+    ).slideGroups[0].layers.find((layer) => layer.id === group.id) as GroupLayer
+    expect(reResolvedGroup.children.find((child) => child.id === textId)?.x).toBe(expectedX)
+  })
+
   it('routes, resolves, scopes, and prunes overrides across locale and format contexts', () => {
     useEditorStore.getState().addText()
     const layer = getTextLayer()
