@@ -4,6 +4,7 @@ import {
   assertProjectShape,
   LOCALE_SYMMETRIC_SCHEMA_VERSION,
   migrateProject,
+  patchLayerForLocale,
   stripDataUrls,
 } from './helpers'
 
@@ -329,6 +330,18 @@ describe('foldLayerToSymmetric / localeContent migration', () => {
       expect.objectContaining({ start: 0, end: 7, fontWeight: 400 }),
     ])
     expect(layer.localeContent?.fr).not.toHaveProperty('spans')
+  })
+})
+
+describe('patchLayerForLocale', () => {
+  it('writes non-default content to localeContent and localeOverrides without changing the base field', () => {
+    const layer = makeTextLayer({ text: 'Hello' })
+
+    const result = patchLayerForLocale(layer, { text: 'Hola' }, 'es', 'en')
+
+    expect(result.layer.localeContent?.es.text).toBe('Hola')
+    expect(result.layer.localeOverrides?.es.text).toBe('Hola')
+    expect((result.layer as TextLayer).text).toBe('Hello')
   })
 })
 

@@ -313,6 +313,59 @@ export const splitFormatPatch = (patch: Partial<Layer>): { layout: FormatLayerPa
   return { layout: layout as FormatLayerPatch, content: content as Partial<Layer> }
 }
 
+/** Keys whose values are per-locale content (v0.6.0 symmetric locale model). */
+export const LOCALE_CONTENT_KEYS = ['text', 'marks', 'screenshotPath', 'screenshotDataUrl', 'src'] as const
+
+/**
+ * Split a layer patch into locale-content keys (text/marks/screenshotPath/
+ * screenshotDataUrl/src) and everything else. Mirrors splitFormatPatch for
+ * the orthogonal locale axis.
+ */
+export const splitLocalePatch = (patch: Partial<Layer>): { locale: LocaleContent; rest: Partial<Layer> } => {
+  const locale: Record<string, unknown> = {}
+  const rest: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(patch)) {
+    if ((LOCALE_CONTENT_KEYS as readonly string[]).includes(key)) locale[key] = value
+    else rest[key] = value
+  }
+  return { locale: locale as LocaleContent, rest: rest as Partial<Layer> }
+}
+
+/**
+ * Route a layer patch's locale-content keys into localeContent[activeLocale],
+ * keeping the legacy write target in sync (base layer fields when
+ * activeLocale === defaultLocale — the only reachable case today per the
+ * App.tsx editor-mode invariant that resets activeLocale to defaultLocale on
+ * entering the canvas editor; localeOverrides[activeLocale] otherwise, for
+ * forward-compat and consistency with how the locale-slice actions write).
+ * Returns the updated layer plus the non-locale `rest` of the patch for the
+ * caller to apply via the existing format-patch pipeline. If the patch has
+ * no locale-content keys, returns the layer unchanged and the full patch as
+ * `rest` (zero-cost passthrough).
+ */
+export const patchLayerForLocale = (
+  layer: Layer,
+  patch: Partial<Layer>,
+  activeLocale: string,
+  defaultLocale: string,
+): { layer: Layer; rest: Partial<Layer> } => {
+  const { locale: localePatch, rest } = splitLocalePatch(patch)
+  if (Object.keys(localePatch).length === 0) return { layer, rest }
+
+  const localeContent = { ...(layer.localeContent ?? {}) }
+  localeContent[activeLocale] = { ...(localeContent[activeLocale] ?? {}), ...localePatch }
+  let next = { ...layer, localeContent } as Layer
+
+  if (activeLocale === defaultLocale) {
+    next = { ...next, ...localePatch } as Layer
+  } else {
+    const localeOverrides = { ...(next.localeOverrides ?? {}) }
+    localeOverrides[activeLocale] = { ...(localeOverrides[activeLocale] ?? {}), ...localePatch }
+    next = { ...next, localeOverrides } as Layer
+  }
+  return { layer: next, rest }
+}
+
 /**
  * Pick a subset of keys off a layer as a patch object. This is the single
  * place where a Layer is read through dynamic string keys — the discriminated

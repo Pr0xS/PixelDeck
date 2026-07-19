@@ -10,6 +10,7 @@ import {
   bakeLayerScale,
   mutateActiveGroup,
   getActiveGroup,
+  patchLayerForLocale,
   patchLayerForFormat,
 } from '../helpers'
 
@@ -93,8 +94,9 @@ export const createLayerSlice = (
 
   updateLayer: (layerId, patch) => {
     // When in group-edit mode, transparently route to the child if the ID matches
-    const { editingGroupId, project, activeCanvasFormat } = get()
+    const { editingGroupId, project, activeCanvasFormat, activeLocale } = get()
     const baseFormat = getProjectBaseFormat(project)
+    const defaultLocale = project.settings.defaultLocale
     if (editingGroupId) {
       const slideGroup = getActiveGroup(get)
       const groupLayer = slideGroup?.layers.find(
@@ -107,9 +109,11 @@ export const createLayerSlice = (
     }
     mutateActiveGroup(set, (g) => ({
       ...g,
-      layers: g.layers.map((l) =>
-        l.id === layerId ? patchLayerForFormat(l, patch, activeCanvasFormat, baseFormat) : l,
-      ),
+      layers: g.layers.map((l) => {
+        if (l.id !== layerId) return l
+        const { layer: localized, rest } = patchLayerForLocale(l, patch, activeLocale, defaultLocale)
+        return patchLayerForFormat(localized, rest, activeCanvasFormat, baseFormat)
+      }),
     }))
   },
 

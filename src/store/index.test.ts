@@ -74,6 +74,74 @@ describe('updateLayer', () => {
   })
 })
 
+describe('updateLayer — locale content sync', () => {
+  it('writes text to both the legacy field and default locale content', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    const defaultLocale = useEditorStore.getState().project.settings.defaultLocale
+
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'New headline' })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.text).toBe('New headline')
+    expect(updated.localeContent?.[defaultLocale]?.text).toBe('New headline')
+  })
+
+  it('does not create locale content for a non-locale patch', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+
+    useEditorStore.getState().updateLayer(textLayer.id, { opacity: 0.5 })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.opacity).toBe(0.5)
+    expect(updated.localeContent).toBeUndefined()
+  })
+
+  it('writes a phone screenshot path to both legacy and default locale content', () => {
+    useEditorStore.getState().addPhone()
+    const phone = getActiveGroup().layers.find((l) => l.type === 'phone') as PhoneLayer
+    const defaultLocale = useEditorStore.getState().project.settings.defaultLocale
+
+    useEditorStore.getState().updateLayer(phone.id, { screenshotPath: 'shot.png' })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === phone.id) as PhoneLayer
+    expect(updated.screenshotPath).toBe('shot.png')
+    expect(updated.localeContent?.[defaultLocale]?.screenshotPath).toBe('shot.png')
+  })
+
+  it('routes a mixed patch through locale and format pipelines', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    const defaultLocale = useEditorStore.getState().project.settings.defaultLocale
+
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hi', opacity: 0.3, x: 50 })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.text).toBe('Hi')
+    expect(updated.localeContent?.[defaultLocale]?.text).toBe('Hi')
+    expect(updated.opacity).toBe(0.3)
+    expect(updated.x).toBe(50)
+  })
+
+  it('writes group child text to default locale content', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    const layers = getActiveGroup().layers
+    const textId = layers.find((l) => l.type === 'text')!.id
+    const shapeId = layers.find((l) => l.type === 'shape')!.id
+    useEditorStore.getState().createGroup([textId, shapeId])
+    const group = getActiveGroup().layers.find((l) => l.type === 'group') as GroupLayer
+    const defaultLocale = useEditorStore.getState().project.settings.defaultLocale
+
+    useEditorStore.getState().updateChildLayer(group.id, textId, { text: 'Nested edit' })
+
+    const updatedGroup = getActiveGroup().layers.find((l) => l.id === group.id) as GroupLayer
+    const child = updatedGroup.children.find((l) => l.id === textId) as TextLayer
+    expect(child.localeContent?.[defaultLocale]?.text).toBe('Nested edit')
+  })
+})
+
 // ─── removeLayer ──────────────────────────────────────────────────────────────
 
 describe('removeLayer', () => {

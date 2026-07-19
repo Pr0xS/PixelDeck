@@ -5,6 +5,7 @@ import {
   bakeLayerScale,
   mutateActiveGroup,
   getActiveGroup,
+  patchLayerForLocale,
   patchLayerForFormat,
   updateLayerInTree,
 } from '../helpers'
@@ -210,15 +211,18 @@ export const createGroupSlice = (
   },
 
   updateChildLayer: (groupId, childId, patch) => {
-    const { project, activeCanvasFormat } = get()
+    const { project, activeCanvasFormat, activeLocale } = get()
     const baseFormat = getProjectBaseFormat(project)
+    const defaultLocale = project.settings.defaultLocale
     mutateActiveGroup(set, (g) => ({
       ...g,
       layers: updateLayerInTree(g.layers, groupId, (layer) => layer.type === 'group'
         ? {
             ...layer,
-            children: updateLayerInTree(layer.children, childId, (child) =>
-              patchLayerForFormat(child, patch, activeCanvasFormat, baseFormat)),
+            children: updateLayerInTree(layer.children, childId, (child) => {
+              const { layer: localized, rest } = patchLayerForLocale(child, patch, activeLocale, defaultLocale)
+              return patchLayerForFormat(localized, rest, activeCanvasFormat, baseFormat)
+            }),
           }
         : layer),
     }))
