@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import {
   resolveLayerLocale,
   applyLocale,
+  getLocalizableLayers,
   buildLocaleManifest,
   applyLocaleManifest,
 } from './locale'
@@ -87,6 +88,26 @@ describe('resolveLayerLocale', () => {
     expect(result.id).toBe('text1')
     expect(result.opacity).toBe(1)
   })
+
+  it('prefers localeContent over a stale locale override', () => {
+    const layer = makeTextLayer({
+      localeContent: { es: { text: 'Hola' } },
+      localeOverrides: { es: { text: 'Stale translation' } },
+    })
+
+    const result = resolveLayerLocale(layer, 'es')
+
+    expect(result.text).toBe('Hola')
+  })
+
+  it('returns the layer unchanged when localeContent has no requested locale', () => {
+    const layer = makeTextLayer({
+      localeContent: { fr: { text: 'Bonjour' } },
+      localeOverrides: { es: { text: 'Stale translation' } },
+    })
+
+    expect(resolveLayerLocale(layer, 'es')).toBe(layer)
+  })
 })
 
 // ─── applyLocale ──────────────────────────────────────────────────────────────
@@ -116,6 +137,32 @@ describe('applyLocale', () => {
     const result = applyLocale(project, 'es')
     const resolved = result.slideGroups[0].layers.find((l) => l.id === 'text1') as TextLayer
     expect(resolved.text).toBe('Hello')
+  })
+
+  it('applies localeContent when legacy locale overrides are absent', () => {
+    const project = makeProject([
+      makeTextLayer({ localeContent: { es: { text: 'Hola mundo' } } }),
+    ])
+
+    const result = applyLocale(project, 'es')
+    const resolved = result.slideGroups[0].layers.find((l) => l.id === 'text1') as TextLayer
+
+    expect(resolved.text).toBe('Hola mundo')
+  })
+})
+
+// ─── getLocalizableLayers ────────────────────────────────────────────────────
+
+describe('getLocalizableLayers', () => {
+  it('prefers default-locale content over a stale flat text field', () => {
+    const project = makeProject([
+      makeTextLayer({
+        text: 'From base field',
+        localeContent: { en: { text: 'From content' } },
+      }),
+    ])
+
+    expect(getLocalizableLayers(project)[0].defaultText).toBe('From content')
   })
 })
 
@@ -170,6 +217,22 @@ describe('buildLocaleManifest', () => {
 
     expect(entry.overrides['es']).toEqual({ text: 'Hola' })
   })
+
+  it('sources default and override text from localeContent', () => {
+    const layer = makeTextLayer({
+      text: 'Stale default',
+      localeContent: {
+        en: { text: 'Def' },
+        es: { text: 'Hola' },
+      },
+      localeOverrides: { es: { text: 'Stale translation' } },
+    })
+
+    const entry = buildLocaleManifest(makeProject([layer])).groups[0].layers[0]
+
+    expect(entry.default.text).toBe('Def')
+    expect(entry.overrides.es?.text).toBe('Hola')
+  })
 })
 
 // ─── applyLocaleManifest ──────────────────────────────────────────────────────
@@ -203,5 +266,17 @@ describe('applyLocaleManifest', () => {
     const result = applyLocaleManifest(project, manifest)
     const resultLayer = result.slideGroups[0].layers.find((l) => l.id === 'text1')
     expect(resultLayer?.localeOverrides).toBeUndefined()
+  })
+
+  it('writes imported overrides to both localeOverrides and localeContent', () => {
+    const project = makeProject([makeTextLayer()])
+    const manifest = buildLocaleManifest(project)
+    manifest.groups[0].layers[0].overrides.es = { text: 'Hola' }
+
+    const result = applyLocaleManifest(project, manifest)
+    const resultLayer = result.slideGroups[0].layers.find((l) => l.id === 'text1')
+
+    expect(resultLayer?.localeOverrides?.es).toEqual({ text: 'Hola' })
+    expect(resultLayer?.localeContent?.es).toEqual({ text: 'Hola' })
   })
 })
