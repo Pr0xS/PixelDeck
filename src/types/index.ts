@@ -196,6 +196,15 @@ export interface BaseLayer {
   /** Optional per-format visibility. Undefined = follows `visible`. */
   formatVisibility?: Partial<Record<CanvasFormatId, boolean>>;
   /**
+   * v0.6.0 per-locale, per-format LAYOUT overrides. Stored in the TARGET
+   * format's coordinate space — identical semantics to formatOverrides values,
+   * so render spreads them directly with no scaling. Sparse: a cell exists only
+   * when edited. NEVER the default locale (that is the base) and NEVER the base
+   * format. Layout keys only (x/y/width/height/fontSize/scale/rotation); never
+   * content, style, or model.
+   */
+  localeLayoutOverrides?: Partial<Record<string, Partial<Record<CanvasFormatId, FormatLayerPatch>>>>;
+  /**
    * If set, this layer belongs exclusively to one format and is invisible in all others.
    * Set automatically when a layer is added while viewing a non-base format.
    * Cleared when the user explicitly "Makes shared".

@@ -11,8 +11,10 @@ import {
   mutateActiveGroup,
   getActiveGroup,
   patchLayerForLocale,
+  patchLayerForLocaleFormatLayout,
   patchLayerForFormat,
   seedLocaleContent,
+  splitLocaleFormatLayoutPatch,
 } from '../helpers'
 
 export const createLayerSlice = (
@@ -114,7 +116,20 @@ export const createLayerSlice = (
       layers: g.layers.map((l) => {
         if (l.id !== layerId) return l
         const { layer: localized, rest } = patchLayerForLocale(l, patch, activeLocale, defaultLocale)
-        return patchLayerForFormat(localized, rest, activeCanvasFormat, baseFormat)
+        if (activeLocale === defaultLocale) {
+          return patchLayerForFormat(localized, rest, activeCanvasFormat, baseFormat)
+        }
+        if (activeCanvasFormat === baseFormat) {
+          const { rest: nonLayout } = splitLocaleFormatLayoutPatch(rest)
+          return patchLayerForFormat(localized, nonLayout, baseFormat, baseFormat)
+        }
+        const { layer: withLocaleLayout, rest: formatRest } = patchLayerForLocaleFormatLayout(
+          localized,
+          rest,
+          activeLocale,
+          activeCanvasFormat,
+        )
+        return patchLayerForFormat(withLocaleLayout, formatRest, activeCanvasFormat, baseFormat)
       }),
     }))
   },

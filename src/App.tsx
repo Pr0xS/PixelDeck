@@ -8,6 +8,7 @@ import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SlideNavigator } from '@/components/panels/SlideNavigator'
 import { StageCanvas } from '@/components/canvas/StageCanvas'
 import { FormatTabs } from '@/components/canvas/FormatTabs'
+import { LocaleLayoutTabs } from '@/components/canvas/LocaleLayoutTabs'
 import { useThumbnails } from '@/hooks/useThumbnails'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { applyCanvasFormat } from '@/utils/canvasFormats'
@@ -130,6 +131,7 @@ export default function App() {
         }
       }
 
+      // Known limitation: nudges start from raw base coordinates, not the resolved format/locale view.
       // Arrow keys — nudge selected layer 1px (Shift = 10px)
       if (!e.ctrlKey && !e.metaKey) {
         const { ArrowLeft, ArrowRight, ArrowUp, ArrowDown } = { ArrowLeft: 'ArrowLeft', ArrowRight: 'ArrowRight', ArrowUp: 'ArrowUp', ArrowDown: 'ArrowDown' }
@@ -170,8 +172,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [undo, redo, exitGroupEdit, editingGroupId])
 
-  // Entering the editor always resets to the base locale — editing a derived
-  // locale view would silently write to the base layers.
+  // Returning from localization starts the editor on the default locale.
   const handleSetMode = (mode: 'editor' | 'localization') => {
     if (mode === 'editor') {
       const s = useEditorStore.getState()
@@ -228,6 +229,7 @@ export default function App() {
           >
             {/* Format tabs — switch between platform preview formats */}
             <FormatTabs />
+            <LocaleLayoutTabs />
 
             {/* Canvas fills remaining height — StageCanvas takes full space */}
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>

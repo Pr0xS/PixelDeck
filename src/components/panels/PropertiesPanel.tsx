@@ -37,9 +37,10 @@ import { EmojiProperties } from '@/components/properties/EmojiProperties'
 import { BrandProperties } from '@/components/properties/BrandProperties'
 import { ShapeProperties } from '@/components/properties/ShapeProperties'
 import { GroupProperties } from '@/components/properties/GroupProperties'
-import { applyCanvasFormat, getCanvasFormat, getFormatCanvasDims, getFormatLabel, getProjectActiveFormats, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { getCanvasFormat, getFormatCanvasDims, getFormatLabel, getProjectActiveFormats, getProjectBaseFormat, resolveProjectView } from '@/utils/canvasFormats'
 import type { CanvasFormatId } from '@/types'
 import { getLayerBBox, getUnionBBox, computeAlignPatch, type AlignAxis } from '@/utils/alignLayers'
+import { getLanguageName } from '@/utils/locale'
 
 // ─── Alignment Section ────────────────────────────────────────────────────────
 
@@ -158,12 +159,13 @@ function AlignmentSection({
 // ─── Layout Tab ───────────────────────────────────────────────────────────────
 
 function LayoutTab({ layer }: { layer: Layer }) {
-  const { updateLayer, project, activeSlideGroupId, activeCanvasFormat, editingGroupId, setLayerFormatVisibility } = useEditorStore(
+  const { updateLayer, project, activeSlideGroupId, activeCanvasFormat, activeLocale, editingGroupId, setLayerFormatVisibility } = useEditorStore(
     useShallow((s) => ({
       updateLayer: s.updateLayer,
       project: s.project,
       activeSlideGroupId: s.activeSlideGroupId,
       activeCanvasFormat: s.activeCanvasFormat,
+      activeLocale: s.activeLocale,
       editingGroupId: s.editingGroupId,
       setLayerFormatVisibility: s.setLayerFormatVisibility,
     }))
@@ -207,6 +209,8 @@ function LayoutTab({ layer }: { layer: Layer }) {
 
   // Active formats for platform visibility chips
   const activeFormats: CanvasFormatId[] = getProjectActiveFormats(project)
+  const baseFormat = getProjectBaseFormat(project)
+  const localeLayoutGated = activeLocale !== project.settings.defaultLocale && activeCanvasFormat === baseFormat
 
   return (
     <div className="space-y-4">
@@ -284,6 +288,11 @@ function LayoutTab({ layer }: { layer: Layer }) {
 
       {/* Position / Size / Rotation — not applicable for background */}
       <div className={panelSectionCls}>
+        {localeLayoutGated && (
+          <p className="mb-3 text-[10px] text-[#22d3ee]">
+            Switch to a platform tab to adjust {getLanguageName(activeLocale)} layout
+          </p>
+        )}
         {!isBackground && (
           <>
             <SliderField label="X" value={layer.x} min={xMin} max={xMax} unit="px" onChange={(v) => upd({ x: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} labelAddon={<OverrideDot layerId={layer.id} propKey="x" />} />
@@ -421,7 +430,9 @@ export function PropertiesPanel() {
     selection,
     editingGroupId,
     activeCanvasFormat,
+    activeLocale,
     clearLayerFormatOverride,
+    clearLayerLocaleFormatOverride,
     syncLayerFormatToShared,
     makeLayerShared,
     copyLayerStyle,
@@ -436,7 +447,9 @@ export function PropertiesPanel() {
       selection: s.selection,
       editingGroupId: s.editingGroupId,
       activeCanvasFormat: s.activeCanvasFormat,
+      activeLocale: s.activeLocale,
       clearLayerFormatOverride: s.clearLayerFormatOverride,
+      clearLayerLocaleFormatOverride: s.clearLayerLocaleFormatOverride,
       syncLayerFormatToShared: s.syncLayerFormatToShared,
       makeLayerShared: s.makeLayerShared,
       copyLayerStyle: s.copyLayerStyle,
@@ -449,7 +462,7 @@ export function PropertiesPanel() {
   const editingTextId = useEditorStore((s) => s.editingTextId)
   const [activeTab, setActiveTab] = useState<PanelTab>('layout')
 
-  const viewProject = applyCanvasFormat(project, activeCanvasFormat)
+  const viewProject = resolveProjectView(project, activeLocale, activeCanvasFormat)
   const activeGroup: SlideGroup | undefined = viewProject.slideGroups.find((group) => group.id === activeSlideGroupId)
   const rawActiveGroup: SlideGroup | undefined = project.slideGroups.find((group) => group.id === activeSlideGroupId)
 
@@ -513,6 +526,10 @@ export function PropertiesPanel() {
   const activeFormatInfo = getCanvasFormat(activeCanvasFormat, project.settings.customFormats)
   const isBaseFormat = activeCanvasFormat === baseCanvasFormat
   const selectedHasFormatOverride = Boolean(rawSelectedLayer?.formatOverrides?.[activeCanvasFormat])
+  const activeLocaleLayoutOverride = rawSelectedLayer?.localeLayoutOverrides?.[activeLocale]?.[activeCanvasFormat]
+  const localeAdjustmentCount = Object.keys(activeLocaleLayoutOverride ?? {}).length
+  const isDefaultLocale = activeLocale === project.settings.defaultLocale
+  const activeLocaleLabel = getLanguageName(activeLocale)
   const isBackgroundSelected = selectedLayer?.type === 'background'
 
   const borderColor = 'rgba(255,255,255,0.06)'
@@ -614,6 +631,22 @@ export function PropertiesPanel() {
                     <button onClick={() => clearLayerFormatOverride(rawSelectedLayer!.id)} className="text-[10px] text-[#fbbf24] hover:text-white underline">Reset</button>
                     <button onClick={() => syncLayerFormatToShared(rawSelectedLayer!.id)} className="text-[10px] text-[#fbbf24] hover:text-white underline">Share</button>
                   </div>
+                </div>
+              </div>
+            )}
+
+            {rawSelectedLayer && !isDefaultLocale && !isBaseFormat && localeAdjustmentCount > 0 && (
+              <div className="mb-3 rounded-lg border border-[rgba(34,211,238,0.25)] bg-[rgba(34,211,238,0.08)] px-3 py-2">
+                <div className="flex items-center justify-between gap-2">
+                  <span className="text-[10px] text-[#22d3ee]">
+                    {localeAdjustmentCount} locale adjustment{localeAdjustmentCount !== 1 ? 's' : ''} for {activeLocaleLabel} · {activeFormatInfo.label}
+                  </span>
+                  <button
+                    onClick={() => clearLayerLocaleFormatOverride(rawSelectedLayer!.id)}
+                    className="shrink-0 text-[10px] text-[#22d3ee] underline hover:text-white"
+                  >
+                    Reset
+                  </button>
                 </div>
               </div>
             )}

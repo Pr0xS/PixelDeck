@@ -11,6 +11,7 @@ import type {
 } from '@/types'
 import { getModelForPlatform } from '@/assets/mockups/specs'
 import { mapLayerTree } from '@/utils/layerTree'
+import { applyLocale } from './locale'
 
 export const CANVAS_FORMAT_PRESETS = [
   { id: 'iphone-69', label: 'iPhone 6.9"', width: 1320, height: 2868 },
@@ -42,6 +43,9 @@ export const FORMAT_PLATFORM: Record<BuiltInFormatId, 'ios' | 'android'> = {
 
 /** Layout keys + model — model forks per format (auto-swap + manual override). */
 export const FORMAT_FORK_KEYS = [...FORMAT_LAYOUT_KEYS, 'model'] as const
+
+/** Locale layout forks spatial keys only; it never swaps a device model. */
+export const LOCALE_LAYOUT_FORK_KEYS = FORMAT_FORK_KEYS.filter((key) => key !== 'model')
 
 export function isCustomFormatId(id: CanvasFormatId): id is CustomFormatId {
   return id.startsWith('custom:')
@@ -303,6 +307,48 @@ export function applyCanvasFormat(project: Project, format: CanvasFormatId): Pro
 }
 
 /**
+ * Third render pass: merge target-space locale/format layout overrides onto a
+ * project already resolved by applyCanvasFormat. Values are spread as-is.
+ */
+export function applyLocaleFormatLayout(project: Project, locale: string, format: CanvasFormatId): Project {
+  const baseFormat = getProjectBaseFormat(project)
+  if (locale === project.settings.defaultLocale || format === baseFormat) return project
+  return {
+    ...project,
+    slideGroups: project.slideGroups.map((group) => ({
+      ...group,
+      layers: mapLayerTree(group.layers, (layer) => {
+        const patch = layer.localeLayoutOverrides?.[locale]?.[format]
+        return patch ? ({ ...layer, ...patch, id: layer.id, type: layer.type } as Layer) : layer
+      }),
+    })),
+  }
+}
+
+/** Group-scoped locale/format layout resolver for callers without project settings. */
+export function applyLocaleFormatLayoutToGroup(
+  group: SlideGroup,
+  locale: string,
+  format: CanvasFormatId,
+  defaultLocale: string,
+  baseFormat: CanvasFormatId,
+): SlideGroup {
+  if (locale === defaultLocale || format === baseFormat) return group
+  return {
+    ...group,
+    layers: mapLayerTree(group.layers, (layer) => {
+      const patch = layer.localeLayoutOverrides?.[locale]?.[format]
+      return patch ? ({ ...layer, ...patch, id: layer.id, type: layer.type } as Layer) : layer
+    }),
+  }
+}
+
+/** Resolve content, format projection, then locale/format layout in precedence order. */
+export function resolveProjectView(project: Project, locale: string, format: CanvasFormatId): Project {
+  return applyLocaleFormatLayout(applyCanvasFormat(applyLocale(project, locale), format), locale, format)
+}
+
+/**
  * Map a layer expressed in a format's coordinate space back into the group's
  * authoring (base) space. Used when adding layers while previewing a non-base
  * format, and when promoting a format adjustment to the shared base.
@@ -450,4 +496,22 @@ export function countFormatAdjustments(
   }
 
   return group.layers.reduce((sum, layer) => sum + countLayer(layer), 0)
+}
+
+/** Count non-empty locale/format layout override cells, including group children. */
+export function countLocaleFormatAdjustments(
+  group: SlideGroup,
+  locale: string,
+  format: CanvasFormatId,
+  baseFormat: CanvasFormatId,
+): number {
+  if (locale === 'en' || format === baseFormat) return 0
+
+  let count = 0
+  mapLayerTree(group.layers, (layer) => {
+    const patch = layer.localeLayoutOverrides?.[locale]?.[format]
+    if (patch && Object.keys(patch).length > 0) count++
+    return layer
+  })
+  return count
 }

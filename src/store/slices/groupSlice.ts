@@ -6,7 +6,9 @@ import {
   mutateActiveGroup,
   getActiveGroup,
   patchLayerForLocale,
+  patchLayerForLocaleFormatLayout,
   patchLayerForFormat,
+  splitLocaleFormatLayoutPatch,
   updateLayerInTree,
   seedLocaleContent,
 } from '../helpers'
@@ -223,7 +225,20 @@ export const createGroupSlice = (
             ...layer,
             children: updateLayerInTree(layer.children, childId, (child) => {
               const { layer: localized, rest } = patchLayerForLocale(child, patch, activeLocale, defaultLocale)
-              return patchLayerForFormat(localized, rest, activeCanvasFormat, baseFormat)
+              if (activeLocale === defaultLocale) {
+                return patchLayerForFormat(localized, rest, activeCanvasFormat, baseFormat)
+              }
+              if (activeCanvasFormat === baseFormat) {
+                const { rest: nonLayout } = splitLocaleFormatLayoutPatch(rest)
+                return patchLayerForFormat(localized, nonLayout, baseFormat, baseFormat)
+              }
+              const { layer: withLocaleLayout, rest: formatRest } = patchLayerForLocaleFormatLayout(
+                localized,
+                rest,
+                activeLocale,
+                activeCanvasFormat,
+              )
+              return patchLayerForFormat(withLocaleLayout, formatRest, activeCanvasFormat, baseFormat)
             }),
           }
         : layer),

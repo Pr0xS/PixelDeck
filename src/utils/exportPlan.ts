@@ -1,5 +1,5 @@
 import type { CanvasFormatId, Project, SlideGroup } from '@/types'
-import { applyCanvasFormat, getFormatLabel, isCustomFormatId } from './canvasFormats'
+import { applyCanvasFormat, applyLocaleFormatLayout, getFormatLabel, isCustomFormatId } from './canvasFormats'
 import { applyLocale } from './locale'
 
 export type ExportPlanScope = 'current-group' | 'project'
@@ -78,8 +78,8 @@ export function buildExportFileTarget(options: BuildExportFileTargetOptions): Pi
 
 /**
  * Builds the deterministic export matrix and its projected groups.
- * Composition intentionally remains format(locale(project)): locale projection is
- * computed once per locale and each format projection once per locale/format.
+ * Composition is locale-format-layout(format(locale(project))): locale projection
+ * is computed once per locale and each remaining projection once per locale/format.
  */
 export function buildExportPlan(project: Project, options: BuildExportPlanOptions = {}): ExportPlan {
   const locales = options.locales?.length
@@ -101,7 +101,11 @@ export function buildExportPlan(project: Project, options: BuildExportPlanOption
   for (const locale of locales) {
     const localizedProject = applyLocale(project, locale)
     for (const formatId of formatIds) {
-      const resolvedProject = applyCanvasFormat(localizedProject, formatId)
+      const resolvedProject = applyLocaleFormatLayout(
+        applyCanvasFormat(localizedProject, formatId),
+        locale,
+        formatId,
+      )
       const formatLabel = getFormatLabel(formatId, customFormats)
       for (const group of resolvedProject.slideGroups) {
         if (selectedGroupIds && !selectedGroupIds.has(group.id)) continue

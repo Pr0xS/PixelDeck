@@ -7,6 +7,7 @@ import type { EditorStore } from './types'
 import { newProject, migrateProject, assertProjectShape, touchProject, stripDataUrls } from './helpers'
 import { createSelectionSlice } from './slices/selectionSlice'
 import { createLocaleSlice } from './slices/localeSlice'
+import { createLocaleLayoutSlice } from './slices/localeLayoutSlice'
 import { createFormatSlice } from './slices/formatSlice'
 import { createSlideGroupSlice } from './slices/slideGroupSlice'
 import { createLayerSlice } from './slices/layerSlice'
@@ -60,6 +61,7 @@ export const useEditorStore = create<EditorStore>()(
       // ─ Slices
       ...createSelectionSlice(set, get),
       ...createLocaleSlice(set, get),
+      ...createLocaleLayoutSlice(set, get),
       ...createFormatSlice(set, get),
       ...createSlideGroupSlice(set, get),
       ...createLayerSlice(set, get),

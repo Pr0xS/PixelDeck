@@ -9,6 +9,7 @@ import { mapLayerTree } from '@/utils/layerTree'
 import {
   BASE_CANVAS_FORMAT,
   FORMAT_FORK_KEYS,
+  LOCALE_LAYOUT_FORK_KEYS,
   normalizeProjectFormats,
 } from '@/utils/canvasFormats'
 import type { EditorSet, EditorGet } from './types'
@@ -347,6 +348,17 @@ export const splitFormatPatch = (patch: Partial<Layer>): { layout: FormatLayerPa
   return { layout: layout as FormatLayerPatch, content: content as Partial<Layer> }
 }
 
+/** Split a patch into per-locale, per-format layout keys and everything else. */
+export const splitLocaleFormatLayoutPatch = (patch: Partial<Layer>): { layout: FormatLayerPatch; rest: Partial<Layer> } => {
+  const layout: Record<string, unknown> = {}
+  const rest: Record<string, unknown> = {}
+  for (const [key, value] of Object.entries(patch)) {
+    if ((LOCALE_LAYOUT_FORK_KEYS as readonly string[]).includes(key)) layout[key] = value
+    else rest[key] = value
+  }
+  return { layout: layout as FormatLayerPatch, rest: rest as Partial<Layer> }
+}
+
 /** Keys whose values are per-locale content (v0.6.0 symmetric locale model). */
 export const LOCALE_CONTENT_KEYS = ['text', 'marks', 'screenshotPath', 'screenshotDataUrl', 'src'] as const
 
@@ -415,6 +427,87 @@ export const withFormatOverride = (layer: Layer, format: CanvasFormatId, patch: 
     },
   },
 } as Layer)
+
+/** Merge a target-space layout patch into one locale/format override cell. */
+export const withLocaleFormatOverride = (
+  layer: Layer,
+  locale: string,
+  format: CanvasFormatId,
+  patch: FormatLayerPatch,
+): Layer => ({
+  ...layer,
+  localeLayoutOverrides: {
+    ...(layer.localeLayoutOverrides ?? {}),
+    [locale]: {
+      ...(layer.localeLayoutOverrides?.[locale] ?? {}),
+      [format]: {
+        ...(layer.localeLayoutOverrides?.[locale]?.[format] ?? {}),
+        ...patch,
+      },
+    },
+  },
+} as Layer)
+
+/** Remove one locale/format override cell and prune empty parent maps. */
+export const withoutLocaleFormatOverride = (
+  layer: Layer,
+  locale: string,
+  format: CanvasFormatId,
+): Layer => {
+  if (!layer.localeLayoutOverrides?.[locale]?.[format]) return layer
+  const { [format]: _removedFormat, ...remainingFormats } = layer.localeLayoutOverrides[locale]
+  void _removedFormat
+  const { [locale]: _removedLocale, ...remainingLocales } = layer.localeLayoutOverrides
+  void _removedLocale
+  const localeLayoutOverrides = Object.keys(remainingFormats).length
+    ? { ...remainingLocales, [locale]: remainingFormats }
+    : remainingLocales
+  return {
+    ...layer,
+    localeLayoutOverrides: Object.keys(localeLayoutOverrides).length ? localeLayoutOverrides : undefined,
+  } as Layer
+}
+
+/** Remove one key from a locale/format override cell and prune empty maps. */
+export const withoutLocaleFormatOverrideKey = (
+  layer: Layer,
+  locale: string,
+  format: CanvasFormatId,
+  key: string,
+): Layer => {
+  const patch = layer.localeLayoutOverrides?.[locale]?.[format]
+  if (!patch || !(key in patch)) return layer
+  const { [key]: _removedKey, ...remainingPatch } = patch as Record<string, unknown>
+  void _removedKey
+  if (!Object.keys(remainingPatch).length) return withoutLocaleFormatOverride(layer, locale, format)
+  const localeLayoutOverrides = {
+    ...layer.localeLayoutOverrides,
+    [locale]: {
+      ...layer.localeLayoutOverrides![locale],
+      [format]: remainingPatch as FormatLayerPatch,
+    },
+  }
+  return { ...layer, localeLayoutOverrides } as Layer
+}
+
+/** Route layout keys into one locale/format override cell. */
+export const patchLayerForLocaleFormatLayout = (
+  layer: Layer,
+  patch: Partial<Layer>,
+  locale: string,
+  format: CanvasFormatId,
+): { layer: Layer; rest: Partial<Layer> } => {
+  const { layout, rest } = splitLocaleFormatLayoutPatch(patch)
+  if (!Object.keys(layout).length) return { layer, rest }
+  return { layer: withLocaleFormatOverride(layer, locale, format, layout), rest }
+}
+
+/** Remove one locale/format override cell across a complete layer tree. */
+export const resetLocaleFormatOverridesInLayerTree = (
+  layers: Layer[],
+  locale: string,
+  format: CanvasFormatId,
+): Layer[] => mapLayerTree(layers, (layer) => withoutLocaleFormatOverride(layer, locale, format))
 
 export const withoutFormatOverride = (layer: Layer, format: CanvasFormatId): Layer => {
   if (!layer.formatOverrides?.[format]) return layer
