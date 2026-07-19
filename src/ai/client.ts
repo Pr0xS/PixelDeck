@@ -1,4 +1,3 @@
-import { formatAiNetworkError } from '@/ai/errors'
 import { buildOpenAiCompatibleHeaders } from '@/ai/headers'
 import { getDefaultModel, getProviderConfig } from '@/ai/providers'
 import type { AiProvider } from '@/ai/providers'
@@ -132,6 +131,10 @@ export interface AiChatOptions {
   maxTokens?: number
   /** Request provider-level JSON mode when it is known to be compatible. */
   forceJsonMode?: boolean
+  /** Abort the request after this many milliseconds. Defaults to 60 seconds. */
+  timeoutMs?: number
+  /** Retries after the initial attempt for network, timeout, 429, and 5xx errors. */
+  retries?: number
 }
 
 export interface AiImageEditOptions {
@@ -141,6 +144,108 @@ export interface AiImageEditOptions {
   model?: string
   prompt: string
   imageDataUrl: string
+  /** Abort the request after this many milliseconds. Defaults to 60 seconds. */
+  timeoutMs?: number
+  /** Retries after the initial attempt for network, timeout, 429, and 5xx errors. */
+  retries?: number
+}
+
+export const DEFAULT_AI_REQUEST_TIMEOUT_MS = 60_000
+export const DEFAULT_AI_MAX_RETRIES = 2
+const AI_RETRY_BASE_DELAY_MS = 250
+
+export type AiClientErrorKind = 'network' | 'timeout' | 'http' | 'parse'
+
+/** Consistent error shape for provider transport and response failures. */
+export class AiClientError extends Error {
+  readonly kind: AiClientErrorKind
+  readonly status?: number
+
+  constructor(kind: AiClientErrorKind, message: string, options?: { status?: number; cause?: unknown }) {
+    super(message, { cause: options?.cause })
+    this.name = 'AiClientError'
+    this.kind = kind
+    this.status = options?.status
+  }
+}
+
+interface AiRequestSettings {
+  timeoutMs?: number
+  retries?: number
+  /**
+   * When false, timeouts and mid-flight network failures are NOT retried.
+   * Use for non-idempotent endpoints (image generation): a timed-out request may
+   * still complete server-side, and an automatic retry would duplicate the work
+   * and the charge. HTTP 429/5xx responses are still retried — the server
+   * answered, so no duplicate generation is in flight.
+   */
+  retryOnTransportErrors?: boolean
+}
+
+function normalizeNonNegativeInteger(value: number | undefined, fallback: number): number {
+  return typeof value === 'number' && Number.isFinite(value) && value >= 0 ? Math.floor(value) : fallback
+}
+
+function wait(ms: number): Promise<void> {
+  return new Promise((resolve) => setTimeout(resolve, ms))
+}
+
+function networkErrorMessage(provider: AiProvider, action: string, error: unknown): string {
+  const cause = error instanceof Error && error.message ? error.message : 'Network request failed'
+  const hint = 'Check your network connection and that the base URL is correct and allows direct browser requests (CORS). If this provider blocks browser CORS, use a different provider or a self-hosted proxy.'
+  return `Could not ${action} for ${provider}. ${hint} (${cause})`
+}
+
+async function requestJsonWithRetry(
+  provider: AiProvider,
+  action: string,
+  url: string,
+  init: RequestInit,
+  settings: AiRequestSettings,
+  httpErrorLabel = `${provider} API error`,
+): Promise<unknown> {
+  const timeoutMs = normalizeNonNegativeInteger(settings.timeoutMs, DEFAULT_AI_REQUEST_TIMEOUT_MS)
+  const retries = normalizeNonNegativeInteger(settings.retries, DEFAULT_AI_MAX_RETRIES)
+  const retryOnTransportErrors = settings.retryOnTransportErrors ?? true
+
+  for (let attempt = 0; attempt <= retries; attempt++) {
+    const controller = new AbortController()
+    const timeoutId = setTimeout(() => controller.abort(), timeoutMs)
+    try {
+      const response = await fetch(url, { ...init, signal: controller.signal })
+      if (response.ok) {
+        try {
+          return await response.json()
+        } catch (error) {
+          throw new AiClientError('parse', `${provider} returned invalid JSON while trying to ${action}.`, { cause: error })
+        }
+      } else {
+        const body = await response.text()
+        const httpError = new AiClientError(
+          'http',
+          `${httpErrorLabel} ${response.status}: ${body}`,
+          { status: response.status },
+        )
+        const transient = response.status === 429 || response.status >= 500
+        if (!transient || attempt === retries) throw httpError
+      }
+    } catch (error) {
+      if (error instanceof AiClientError) throw error
+
+      const timedOut = controller.signal.aborted
+      const normalized = timedOut
+        ? new AiClientError('timeout', `Timed out while trying to ${action} for ${provider} after ${timeoutMs}ms.`, { cause: error })
+        : new AiClientError('network', networkErrorMessage(provider, action, error), { cause: error })
+      const transient = retryOnTransportErrors && (timedOut || error instanceof TypeError)
+      if (!transient || attempt === retries) throw normalized
+    } finally {
+      clearTimeout(timeoutId)
+    }
+
+    await wait(AI_RETRY_BASE_DELAY_MS * (attempt + 1))
+  }
+
+  throw new AiClientError('network', `Could not ${action} for ${provider}.`)
 }
 
 export async function chat(options: AiChatOptions): Promise<string> {
@@ -157,6 +262,7 @@ export async function chat(options: AiChatOptions): Promise<string> {
     options.maxTokens,
     options.provider,
     options.forceJsonMode,
+    options,
   )
 }
 
@@ -168,11 +274,11 @@ export async function editImage(options: AiImageEditOptions): Promise<string> {
   const model = options.model?.trim() || getDefaultModel(options.provider)
 
   if (options.provider === 'openai') {
-    return editImageWithOpenAi(baseUrl, apiKey, model, options.prompt, options.imageDataUrl)
+    return editImageWithOpenAi(baseUrl, apiKey, model, options.prompt, options.imageDataUrl, options)
   }
   // Other compatible providers attempt image editing via chat completions.
   // The model itself signals unsupported via the JSON error contract in the prompt.
-  return editImageWithOpenAiCompatibleImageChat(options.provider, baseUrl, apiKey, model, options.prompt, options.imageDataUrl)
+  return editImageWithOpenAiCompatibleImageChat(options.provider, baseUrl, apiKey, model, options.prompt, options.imageDataUrl, options)
 }
 
 /**
@@ -201,6 +307,7 @@ async function chatWithOpenAiCompatible(
   maxTokens: number | undefined,
   provider: AiProvider,
   forceJsonMode = false,
+  requestSettings: AiRequestSettings = {},
 ): Promise<string> {
   const headers = buildOpenAiCompatibleHeaders(provider, apiKey, { contentType: true })
 
@@ -252,21 +359,16 @@ async function chatWithOpenAiCompatible(
     }
   }
 
-  let res: Response
-  try {
-    res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify(body),
-    })
-  } catch (error) {
-    throw formatAiNetworkError(provider, 'call chat completions', error)
-  }
-  if (!res.ok) throw new Error(`${provider} API error ${res.status}: ${await res.text()}`)
-
-  const data = await res.json()
-  const choice = data?.choices?.[0]
-  const content = choice?.message?.content
+  const data = await requestJsonWithRetry(provider, 'call chat completions', `${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify(body),
+  }, requestSettings)
+  const dataRecord = data && typeof data === 'object' ? data as Record<string, unknown> : null
+  const choices = Array.isArray(dataRecord?.choices) ? dataRecord.choices : []
+  const choice = choices[0] && typeof choices[0] === 'object' ? choices[0] as Record<string, unknown> : null
+  const message = choice?.message && typeof choice.message === 'object' ? choice.message as Record<string, unknown> : null
+  const content = message?.content
   const finishReason = choice?.finish_reason
   if (typeof content !== 'string') throw new Error(`${provider} returned an empty response.`)
   if (!content.trim()) {
@@ -282,6 +384,7 @@ async function editImageWithOpenAi(
   model: string,
   prompt: string,
   imageDataUrl: string,
+  requestSettings: AiRequestSettings,
 ): Promise<string> {
   const { mediaType, data } = splitDataUrl(imageDataUrl)
   const bytes = Uint8Array.from(atob(data), (char) => char.charCodeAt(0))
@@ -291,19 +394,11 @@ async function editImageWithOpenAi(
   form.set('prompt', prompt)
   form.set('image', new Blob([bytes], { type: mediaType }), `source.${extension}`)
 
-  let res: Response
-  try {
-    res = await fetch(`${baseUrl}/images/edits`, {
-      method: 'POST',
-      headers: { Authorization: `Bearer ${apiKey}` },
-      body: form,
-    })
-  } catch (error) {
-    throw formatAiNetworkError('openai', 'edit image', error)
-  }
-  if (!res.ok) throw new Error(`OpenAI image API error ${res.status}: ${await res.text()}`)
-
-  const dataJson = await res.json()
+  const dataJson = await requestJsonWithRetry('openai', 'edit image', `${baseUrl}/images/edits`, {
+    method: 'POST',
+    headers: { Authorization: `Bearer ${apiKey}` },
+    body: form,
+  }, { ...requestSettings, retryOnTransportErrors: false }, 'OpenAI image API error')
   return extractGeneratedImageDataUrl(dataJson)
 }
 
@@ -314,6 +409,7 @@ async function editImageWithOpenAiCompatibleImageChat(
   model: string,
   prompt: string,
   imageDataUrl: string,
+  requestSettings: AiRequestSettings,
 ): Promise<string> {
   const headers = buildOpenAiCompatibleHeaders(provider, apiKey, { contentType: true })
 
@@ -322,23 +418,15 @@ async function editImageWithOpenAiCompatibleImageChat(
     { type: 'image_url', image_url: { url: imageDataUrl } },
   ]
 
-  let res: Response
-  try {
-    res = await fetch(`${baseUrl}/chat/completions`, {
-      method: 'POST',
-      headers,
-      body: JSON.stringify({
-        model,
-        // modalities is an OpenRouter extension; other OpenAI-compatible endpoints reject it.
-        ...(provider === 'openrouter' ? { modalities: ['image', 'text'] } : {}),
-        messages: [{ role: 'user', content: userContent }],
-      }),
-    })
-  } catch (error) {
-    throw formatAiNetworkError(provider, 'generate image', error)
-  }
-  if (!res.ok) throw new Error(`${getProviderConfig(provider).shortLabel} image API error ${res.status}: ${await res.text()}`)
-
-  const dataJson = await res.json()
+  const dataJson = await requestJsonWithRetry(provider, 'generate image', `${baseUrl}/chat/completions`, {
+    method: 'POST',
+    headers,
+    body: JSON.stringify({
+      model,
+      // modalities is an OpenRouter extension; other OpenAI-compatible endpoints reject it.
+      ...(provider === 'openrouter' ? { modalities: ['image', 'text'] } : {}),
+      messages: [{ role: 'user', content: userContent }],
+    }),
+  }, { ...requestSettings, retryOnTransportErrors: false }, `${getProviderConfig(provider).shortLabel} image API error`)
   return extractImageOrThrowModelError(dataJson)
 }

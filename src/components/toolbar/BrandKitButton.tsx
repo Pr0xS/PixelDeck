@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react'
-import { useEditorStore } from '@/store'
+import { useBrandColors } from '@/hooks/useBrandColors'
 import { BrandColorList } from '@/components/common/BrandColorList'
 import type { BrandColor } from '@/types'
 
@@ -8,7 +8,7 @@ export function BrandKitButton() {
   const popoverRef = useRef<HTMLDivElement>(null)
   const buttonRef = useRef<HTMLButtonElement>(null)
 
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
+  const brandColors = useBrandColors()
 
   // Close on click outside
   useEffect(() => {

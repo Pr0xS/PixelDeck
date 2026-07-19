@@ -2,7 +2,9 @@ import { useMemo, useRef, useEffect } from 'react'
 import { Image as KonvaImage, Group } from 'react-konva'
 import type Konva from 'konva'
 import type { EmojiLayer } from '@/types'
-import { getShadowProps, useKonvaBlur } from './effects'
+import { useLayerEffects } from '@/hooks/useLayerEffects'
+import { useLayerInteraction } from '@/hooks/useLayerInteraction'
+import { useLayerTransform } from '@/hooks/useLayerTransform'
 
 interface EmojiNodeProps {
   layer: EmojiLayer
@@ -36,10 +38,33 @@ export function EmojiNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
   const imageRef = useRef<Konva.Image>(null)
   const currentFontSize = useRef(layer.fontSize)
   useEffect(() => { currentFontSize.current = layer.fontSize }, [layer.fontSize])
-  useKonvaBlur(groupRef, layer.blur, `emoji:${layer.emoji}:${layer.fontSize}`)
+  const shadowProps = useLayerEffects(groupRef, layer, `emoji:${layer.emoji}:${layer.fontSize}`)
 
   const emojiCanvas = useEmojiCanvas(layer.emoji, layer.fontSize)
   const half = layer.fontSize / 2
+  const interactionProps = useLayerInteraction({
+    nodeRef: groupRef,
+    locked: layer.locked,
+    onSelect,
+    onDragEnd,
+    getDragPosition: (node) => ({
+      x: node.x() - currentFontSize.current / 2,
+      y: node.y() - currentFontSize.current / 2,
+    }),
+  })
+  const handleTransformEnd = useLayerTransform({
+    nodeRef: groupRef,
+    onChange: onTransformEnd,
+    buildPatch: (node): Partial<EmojiLayer> => {
+      const newSize = currentFontSize.current
+      return {
+        x: node.x() - newSize / 2,
+        y: node.y() - newSize / 2,
+        rotation: node.rotation(),
+        fontSize: newSize,
+      }
+    },
+  })
 
   return (
     <Group
@@ -53,11 +78,7 @@ export function EmojiNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
       visible={layer.visible}
       rotation={layer.rotation}
       draggable={!forceNotDraggable && !layer.locked}
-      onDragStart={() => { if (!layer.locked) onSelect() }}
-      onDragEnd={(e: Konva.KonvaEventObject<DragEvent>) => {
-        const node = e.target
-        onDragEnd(node.x() - currentFontSize.current / 2, node.y() - currentFontSize.current / 2)
-      }}
+      {...interactionProps}
       onTransform={() => {
         const group = groupRef.current
         const img = imageRef.current
@@ -74,19 +95,7 @@ export function EmojiNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
         img.offsetX(0)
         img.offsetY(0)
       }}
-      onTransformEnd={() => {
-        const group = groupRef.current
-        if (!group) return
-        group.scaleX(1)
-        group.scaleY(1)
-        const newSize = currentFontSize.current
-        onTransformEnd({
-          x: group.x() - newSize / 2,
-          y: group.y() - newSize / 2,
-          rotation: group.rotation(),
-          fontSize: newSize,
-        })
-      }}
+      onTransformEnd={handleTransformEnd}
     >
       <KonvaImage
         ref={imageRef}
@@ -95,9 +104,7 @@ export function EmojiNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
         y={0}
         width={layer.fontSize}
         height={layer.fontSize}
-        onClick={() => { if (!layer.locked) onSelect() }}
-        onTap={() => { if (!layer.locked) onSelect() }}
-        {...getShadowProps(layer.shadow)}
+        {...shadowProps}
       />
     </Group>
   )

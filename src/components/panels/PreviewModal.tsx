@@ -6,6 +6,10 @@ import { getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFo
 import type { BackgroundLayer, CanvasFormatId } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
+import { ModalShell } from '@/components/ui/ModalShell'
+import { NumberInput } from '@/components/ui/NumberInput'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
 interface PreviewModalProps {
   open: boolean
@@ -29,19 +33,20 @@ export function PreviewModal({
   cancelCapture,
   initialLocale,
 }: PreviewModalProps) {
-  const project = useEditorStore((s) => s.project)
+  const settings = useEditorStore((s) => s.project.settings)
+  const slideGroups = useEditorStore((s) => s.project.slideGroups)
   const activeSlideGroupId = useEditorStore((s) => s.activeSlideGroupId)
   const activeLocale = useEditorStore((s) => s.activeLocale)
   const activeCanvasFormat = useEditorStore((s) => s.activeCanvasFormat)
   const setActiveSlideGroup = useEditorStore((s) => s.setActiveSlideGroup)
-  const panoSettings = useEditorStore((s) => s.project.settings.pano ?? { gapPx: 24, compensate: false })
+  const panoSettings = useEditorStore((s) => s.project.settings.pano) ?? { gapPx: 24, compensate: false }
   const setPanoRenderOverride = useEditorStore((s) => s.setPanoRenderOverride)
   const updatePanoSettings = useEditorStore((s) => s.updatePanoSettings)
 
-  const locales = project.settings.locales ?? [project.settings.defaultLocale]
-  const platformFormats = getExportTargets(project)
+  const locales = settings.locales ?? [settings.defaultLocale]
+  const platformFormats = getExportTargets({ settings })
 
-  const totalSlides = project.slideGroups.reduce((n, g) => n + g.numSlides, 0)
+  const totalSlides = slideGroups.reduce((n, g) => n + g.numSlides, 0)
 
   // Snapshot of the editor state at open time, restored on close — the preview
   // is ephemeral and must never leave the editor in a non-base locale/format.
@@ -49,18 +54,11 @@ export function PreviewModal({
     locale: string
     format: CanvasFormatId
   } | null>(null)
-  const hasPanoGroups = project.slideGroups.some((g) => g.numSlides > 1)
+  const hasPanoGroups = slideGroups.some((g) => g.numSlides > 1)
 
   const recapturePreview = () => {
     captureAllHighRes({ panoCompensationPx: panoSettings.gapPx, panoCompensate: panoSettings.compensate })
   }
-
-  useEffect(() => {
-    if (!open) return
-    const handleKeyDown = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
 
   useEffect(() => {
     if (open) {
@@ -100,11 +98,9 @@ export function PreviewModal({
     recapturePreview()
   }
 
-  if (!open) return null
-
   // Build flat list once: each entry knows its global number
   type FlatSlide = {
-    group: (typeof project.slideGroups)[number]
+    group: (typeof slideGroups)[number]
     slideIdx: number
     globalNum: number
     isFirstInGroup: boolean
@@ -112,7 +108,7 @@ export function PreviewModal({
   }
   const flatSlides: FlatSlide[] = []
   let num = 0
-  project.slideGroups.forEach((group, groupIndex) => {
+  slideGroups.forEach((group, groupIndex) => {
     for (let i = 0; i < group.numSlides; i++) {
       num++
       flatSlides.push({
@@ -129,17 +125,16 @@ export function PreviewModal({
   const SLIDE_H = 400
 
   return (
-    <div
-      className="fixed inset-0 z-[9999] flex items-center justify-center bg-[rgba(0,0,0,0.82)] p-6 backdrop-blur-sm"
-      onClick={onClose}
-    >
-      <div
-        className="flex max-h-[90vh] w-full max-w-[90vw] flex-col overflow-hidden rounded-xl border bg-[#18181f] shadow-2xl"
-        style={{ borderColor: 'rgba(255,255,255,0.08)' }}
-        onClick={(e) => e.stopPropagation()}
-      >
-        {/* Header */}
-        <div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] px-6 py-4">
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      maxWidth="max-w-[90vw]"
+      backdropClassName="fixed inset-0 z-[9999] flex items-center justify-center bg-[rgba(0,0,0,0.82)] p-6 backdrop-blur-sm"
+      backdropStyle={undefined}
+      panelClassName="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border bg-[#18181f] shadow-2xl"
+      panelStyle={{ borderColor: 'rgba(255,255,255,0.08)' }}
+      showCloseButton={false}
+      header={<div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] px-6 py-4">
           <div>
             <h2 className="text-sm font-semibold text-[#f3f0ff]">Preview</h2>
             {isCapturingPreview ? (
@@ -151,7 +146,7 @@ export function PreviewModal({
               </div>
             ) : (
               <p className="mt-1 text-xs text-[#7d7a90]">
-                {totalSlides} slide{totalSlides !== 1 ? 's' : ''} · {project.slideGroups.length} group{project.slideGroups.length !== 1 ? 's' : ''}
+                {totalSlides} slide{totalSlides !== 1 ? 's' : ''} · {slideGroups.length} group{slideGroups.length !== 1 ? 's' : ''}
               </p>
             )}
           </div>
@@ -159,70 +154,31 @@ export function PreviewModal({
           <div className="flex flex-wrap items-center gap-2">
             {/* Platform selector */}
             {platformFormats.length > 1 && (
-              <div className="flex items-center gap-0.5 rounded-lg border border-[rgba(255,255,255,0.1)] p-1">
-                {platformFormats.map((format) => {
-                  const selected = activeCanvasFormat === format
-                  return (
-                    <button
-                      key={format}
-                      onClick={() => selectFormat(format)}
-                      className="rounded-md px-2.5 py-1 text-[11px] transition-colors"
-                      style={{
-                        background: selected ? 'rgba(124,110,246,0.26)' : 'transparent',
-                        color: selected ? '#cbbfff' : '#7d7a90',
-                        fontWeight: selected ? 700 : 500,
-                      }}
-                    >
-                      {getFormatLabel(format, project.settings.customFormats)}
-                    </button>
-                  )
-                })}
-              </div>
+              <SegmentedControl value={activeCanvasFormat} options={platformFormats.map((format) => ({ value: format, label: getFormatLabel(format, settings.customFormats) }))} onChange={selectFormat} className="flex items-center gap-0.5 rounded-lg border border-[rgba(255,255,255,0.1)] p-1" optionClassName="rounded-md px-2.5 py-1 text-[11px] transition-colors" activeClassName="bg-[rgba(124,110,246,0.26)] text-[#cbbfff] font-bold" inactiveClassName="bg-transparent text-[#7d7a90] font-medium" />
             )}
 
             {/* Locale selector */}
             {locales.length > 1 && (
-              <div className="flex items-center gap-0.5 rounded-lg border border-[rgba(255,255,255,0.1)] p-1">
-                {locales.map((locale) => {
-                  const selected = activeLocale === locale
-                  return (
-                    <button
-                      key={locale}
-                      onClick={() => selectLocale(locale)}
-                      title={getLanguageName(locale)}
-                      className="rounded-md px-2.5 py-1 text-[11px] transition-colors"
-                      style={{
-                        background: selected ? 'rgba(124,110,246,0.26)' : 'transparent',
-                        color: selected ? '#cbbfff' : '#7d7a90',
-                        fontWeight: selected ? 700 : 500,
-                      }}
-                    >
-                      {getLanguageName(locale)}
-                    </button>
-                  )
-                })}
-              </div>
+              <SegmentedControl value={activeLocale} options={locales.map((locale) => ({ value: locale, label: getLanguageName(locale), title: getLanguageName(locale) }))} onChange={selectLocale} className="flex items-center gap-0.5 rounded-lg border border-[rgba(255,255,255,0.1)] p-1" optionClassName="rounded-md px-2.5 py-1 text-[11px] transition-colors" activeClassName="bg-[rgba(124,110,246,0.26)] text-[#cbbfff] font-bold" inactiveClassName="bg-transparent text-[#7d7a90] font-medium" />
             )}
 
             {hasPanoGroups && (
               <label className="flex items-center gap-2 rounded-lg border border-[rgba(255,255,255,0.1)] px-2 py-1 text-[11px] text-[#8f90a3]">
-                <input
-                  type="checkbox"
+                <ToggleSwitch
+                  variant="checkbox"
                   checked={panoSettings.compensate}
-                  onChange={(e) => {
-                    const next = e.target.checked
+                  onChange={(next) => {
                     updatePanoSettings({ compensate: next })
                     captureAllHighRes({ panoCompensationPx: panoSettings.gapPx, panoCompensate: next })
                   }}
-                  className="h-3 w-3 accent-[#7c6ef6]"
+                  checkboxClassName="h-3 w-3 accent-[#7c6ef6]"
                 />
                 <span>Compensate</span>
-                <input
-                  type="number"
+                <NumberInput
                   min={0}
                   max={MAX_PANO_COMPENSATION_PX}
                   value={panoSettings.gapPx || DEFAULT_PANO_COMPENSATION_PX}
-                  onChange={(e) => updatePanoSettings({ gapPx: parseInt(e.target.value, 10) || 0 })}
+                  onValueChange={(_value, raw) => updatePanoSettings({ gapPx: parseInt(raw, 10) || 0 })}
                   onBlur={() => {
                     const next = normalizePanoCompensationPx(panoSettings.gapPx)
                     updatePanoSettings({ gapPx: next || DEFAULT_PANO_COMPENSATION_PX })
@@ -246,7 +202,8 @@ export function PreviewModal({
               ×
             </button>
           </div>
-        </div>
+        </div>}
+    >
 
         {/* Filmstrip */}
         <div className="overflow-y-auto px-6 py-6">
@@ -257,8 +214,8 @@ export function PreviewModal({
                 const bgLayer = group.layers.find((l) => l.type === 'background') as BackgroundLayer | undefined
                 const fallbackFill = fillToCss(bgLayer?.fill ?? group.background?.fill ?? '#171724')
                 // Use format-specific dims so the container aspect ratio matches the captured image.
-                const baseFormat = getProjectBaseFormat(project)
-                const dims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat, project.settings.customFormats)
+                const baseFormat = getProjectBaseFormat({ settings })
+                const dims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat, settings.customFormats)
                 const slideW = Math.round((dims.width / dims.height) * SLIDE_H)
                 const isPanoContinuation = !isFirstInGroup && group.numSlides > 1
                 const seamGap = isPanoContinuation && panoSettings.compensate
@@ -379,7 +336,6 @@ export function PreviewModal({
             </div>
           </div>
         </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

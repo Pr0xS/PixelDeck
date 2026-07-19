@@ -1,5 +1,5 @@
 import { chromium } from '@playwright/test'
-import { readFileSync, readdirSync, mkdirSync, writeFileSync, existsSync } from 'fs'
+import { readFileSync, readdirSync, mkdirSync, writeFileSync, existsSync, statSync } from 'fs'
 import { join, resolve, basename } from 'path'
 import { fileURLToPath } from 'url'
 import { dirname } from 'path'
@@ -17,6 +17,54 @@ const DEFAULTS = {
   port: 4321,
   timeoutMs: 60000,
   viewport: { width: 1400, height: 900 },
+}
+
+function requireNonEmptyString(value, field, context = 'Export job') {
+  if (typeof value !== 'string' || !value.trim()) {
+    throw new Error(`${context}: "${field}" must be a non-empty string.`)
+  }
+}
+
+function parsePositiveInteger(value, field, fallback) {
+  if (value === undefined) return fallback
+  const parsed = typeof value === 'number' ? value : Number(value)
+  if (!Number.isInteger(parsed) || parsed <= 0) {
+    throw new Error(`Export option "${field}" must be a positive integer.`)
+  }
+  return parsed
+}
+
+function validateBuild() {
+  const indexPath = join(distPath, 'index.html')
+  if (!existsSync(indexPath) || !statSync(indexPath).isFile()) {
+    throw new Error(`Build not found at ${indexPath}. Run "npm run build" first.`)
+  }
+}
+
+function validateJob(job, context = 'Export job') {
+  if (!job || typeof job !== 'object' || Array.isArray(job)) {
+    throw new Error(`${context} must be an object.`)
+  }
+  requireNonEmptyString(job.project, 'project', context)
+  requireNonEmptyString(job.outputDir, 'output', context)
+  if (job.screenshotsDir !== undefined) requireNonEmptyString(job.screenshotsDir, 'screenshots', context)
+  if (job.locale !== undefined && job.locale !== null) requireNonEmptyString(job.locale, 'locale', context)
+
+  const projectPath = resolve(job.project)
+  if (!existsSync(projectPath) || !statSync(projectPath).isFile()) {
+    throw new Error(`${context}: project file not found: ${projectPath}`)
+  }
+
+  let projectJson
+  try {
+    projectJson = JSON.parse(readFileSync(projectPath, 'utf8'))
+  } catch (error) {
+    throw new Error(`${context}: project file is not valid JSON: ${projectPath} (${error instanceof Error ? error.message : error})`)
+  }
+  if (!projectJson || typeof projectJson !== 'object' || !Array.isArray(projectJson.slideGroups)) {
+    throw new Error(`${context}: project JSON must be an object with a "slideGroups" array: ${projectPath}`)
+  }
+  return { projectPath, projectJson }
 }
 
 // ─── Static file server ──────────────────────────────────────────────────────
@@ -141,12 +189,8 @@ async function loadScreenshots(screenshotsDir, projectJson) {
 // ─── Single export run ────────────────────────────────────────────────────────
 
 async function runSingle({ project, screenshotsDir, outputDir, locale, port = DEFAULTS.port, timeout = DEFAULTS.timeoutMs }) {
-  // Read project JSON
-  const projectPath = resolve(project)
-  if (!existsSync(projectPath)) {
-    throw new Error(`Project file not found: ${projectPath}`)
-  }
-  const projectJson = JSON.parse(readFileSync(projectPath, 'utf8'))
+  validateBuild()
+  const { projectJson } = validateJob({ project, screenshotsDir, outputDir, locale })
   
   // Load screenshot assets
   const assets = await loadScreenshots(screenshotsDir, projectJson)
@@ -218,26 +262,56 @@ async function runSingle({ project, screenshotsDir, outputDir, locale, port = DE
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 export async function runExport(opts) {
+  if (!opts || typeof opts !== 'object' || Array.isArray(opts)) {
+    throw new Error('Export options must be an object.')
+  }
+  const port = parsePositiveInteger(opts.port, 'port', DEFAULTS.port)
+  const timeout = parsePositiveInteger(opts.timeout, 'timeout', DEFAULTS.timeoutMs)
+
   // Batch mode: --config=batch.yaml
   if (opts.config) {
+    requireNonEmptyString(opts.config, 'config', 'Export options')
     const configPath = resolve(opts.config)
+    if (!existsSync(configPath) || !statSync(configPath).isFile()) {
+      throw new Error(`Batch config file not found: ${configPath}`)
+    }
     const raw = readFileSync(configPath, 'utf8')
-    const batch = yaml.load(raw)
+    let batch
+    try {
+      batch = yaml.load(raw)
+    } catch (error) {
+      throw new Error(`Batch config is not valid YAML: ${configPath} (${error instanceof Error ? error.message : error})`)
+    }
 
-    if (!batch.jobs || !Array.isArray(batch.jobs)) {
+    if (!batch || typeof batch !== 'object' || !Array.isArray(batch.jobs) || batch.jobs.length === 0) {
       throw new Error('Batch config must have a "jobs" array')
     }
 
-    let totalSaved = 0
-    for (const [i, job] of batch.jobs.entries()) {
-      console.log(`\n[CLI] Job ${i + 1}/${batch.jobs.length}: ${job.project}`)
-      const result = await runSingle({
+    validateBuild()
+    const jobs = batch.jobs.map((job, i) => {
+      if (!job || typeof job !== 'object' || Array.isArray(job)) {
+        throw new Error(`Batch job ${i + 1} must be an object.`)
+      }
+      const normalized = {
         project: job.project,
         screenshotsDir: job.screenshots,
         outputDir: job.output,
         locale: job.locale ?? null,
-        port: opts.port ? Number(opts.port) : DEFAULTS.port + i,  // different port per job to avoid conflict
-        timeout: opts.timeout ? Number(opts.timeout) : DEFAULTS.timeoutMs,
+      }
+      validateJob(normalized, `Batch job ${i + 1}`)
+      return normalized
+    })
+
+    let totalSaved = 0
+    for (const [i, job] of jobs.entries()) {
+      console.log(`\n[CLI] Job ${i + 1}/${batch.jobs.length}: ${job.project}`)
+      const result = await runSingle({
+        project: job.project,
+        screenshotsDir: job.screenshotsDir,
+        outputDir: job.outputDir,
+        locale: job.locale,
+        port: opts.port ? port : DEFAULTS.port + i,  // different port per job to avoid conflict
+        timeout,
       })
       totalSaved += result.saved
     }
@@ -253,6 +327,13 @@ export async function runExport(opts) {
   if (!opts.output) {
     throw new Error('--output directory is required')
   }
+  validateBuild()
+  validateJob({
+    project: opts.project,
+    screenshotsDir: opts.screenshots,
+    outputDir: opts.output,
+    locale: opts.locale ?? null,
+  })
 
   // Single mode — with optional locale
   if (opts['all-locales']) {
@@ -267,8 +348,8 @@ export async function runExport(opts) {
         screenshotsDir: opts.screenshots,
         outputDir: opts.output,
         locale,
-        port: opts.port ? Number(opts.port) : DEFAULTS.port,
-        timeout: opts.timeout ? Number(opts.timeout) : DEFAULTS.timeoutMs,
+        port,
+        timeout,
       })
       totalSaved += result.saved
     }
@@ -281,7 +362,7 @@ export async function runExport(opts) {
     screenshotsDir: opts.screenshots,
     outputDir: opts.output,
     locale: opts.locale ?? null,
-    port: opts.port ? Number(opts.port) : DEFAULTS.port,
-    timeout: opts.timeout ? Number(opts.timeout) : DEFAULTS.timeoutMs,
+    port,
+    timeout,
   })
 }

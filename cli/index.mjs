@@ -7,10 +7,6 @@
  *   pixeldeck export --config=<batch.yaml>
  *   pixeldeck serve  # serve dist/ for development
  */
-// Parse CLI args
-const args = process.argv.slice(2)
-const command = args[0]
-
 function parseArgs(rawArgs) {
   const opts = {}
   for (const arg of rawArgs) {
@@ -21,38 +17,41 @@ function parseArgs(rawArgs) {
   return opts
 }
 
-// --help / -h anywhere → print help and exit
-if (args.includes('--help') || args.includes('-h') || !command) {
-  printHelp()
-  process.exit(0)
-}
+async function main() {
+  const args = process.argv.slice(2)
+  const command = args[0]
 
-switch (command) {
-  case 'export': {
-    const opts = parseArgs(args.slice(1))
-    const { runExport } = await import('./export.mjs')
-    await runExport(opts)
-    break
-  }
-
-  case 'locale-manifest': {
-    const opts = parseArgs(args.slice(1))
-    const { runLocaleManifest } = await import('./locale.mjs')
-    await runLocaleManifest(opts)
-    break
-  }
-
-  case 'locale-import': {
-    const opts = parseArgs(args.slice(1))
-    const { runLocaleImport } = await import('./locale.mjs')
-    await runLocaleImport(opts)
-    break
-  }
-
-  default:
-    console.error(`Unknown command: ${command}\n`)
+  // --help / -h anywhere → print help and exit successfully
+  if (args.includes('--help') || args.includes('-h') || !command) {
     printHelp()
-    process.exit(1)
+    return
+  }
+
+  switch (command) {
+    case 'export': {
+      const opts = parseArgs(args.slice(1))
+      const { runExport } = await import('./export.mjs')
+      await runExport(opts)
+      break
+    }
+
+    case 'locale-manifest': {
+      const opts = parseArgs(args.slice(1))
+      const { runLocaleManifest } = await import('./locale.mjs')
+      await runLocaleManifest(opts)
+      break
+    }
+
+    case 'locale-import': {
+      const opts = parseArgs(args.slice(1))
+      const { runLocaleImport } = await import('./locale.mjs')
+      await runLocaleImport(opts)
+      break
+    }
+
+    default:
+      throw new Error(`Unknown command: ${command}. Run with --help to see available commands.`)
+  }
 }
 
 function printHelp() {
@@ -90,4 +89,13 @@ Examples:
   node cli/index.mjs locale-manifest --project=./project.json --output=./locales.json
   node cli/index.mjs locale-import --project=./project.json --manifest=./locales.json
 `)
+}
+
+try {
+  await main()
+} catch (error) {
+  const verbose = process.argv.includes('--verbose') || Boolean(process.env.DEBUG)
+  const message = error instanceof Error ? error.message : String(error)
+  console.error(`[PixelDeck CLI] ${verbose && error instanceof Error ? error.stack ?? message : message}`)
+  process.exitCode = 1
 }

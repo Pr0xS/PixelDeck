@@ -15,8 +15,9 @@ import type Konva from 'konva'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
 import { useFontStore } from '@/store/fontStore'
-import { applyLocale } from '@/utils/locale'
-import { applyCanvasFormat, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { getProjectBaseFormat } from '@/utils/canvasFormats'
+import { buildExportPlan, type ExportPlanBatch } from '@/utils/exportPlan'
+import { acquireCaptureLock, waitForStage, waitForStageCaptureReady } from '@/utils/stageCapture'
 import { loadGoogleFonts, registerCustomFonts } from '@/utils/fonts'
 import { LayerNode } from '@/components/canvas/LayerNode'
 import type { Layer as AppLayer, Project, SlideGroup } from '@/types'
@@ -43,60 +44,6 @@ declare global {
     __EXPORT_DONE__?: boolean
     __EXPORT_ERROR__?: string
   }
-}
-
-// ─── Deterministic capture readiness ─────────────────────────────────────────
-
-/** Consecutive identical frames required before the stage counts as settled. */
-const SETTLE_QUIET_FRAMES = 10
-/** Hard ceiling per group — capture proceeds (with a warning) if exceeded. */
-const SETTLE_TIMEOUT_MS = 15000
-
-const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
-
-/** Wait until the Konva stage ref is mounted (it appears a frame after phase flips). */
-async function waitForStage(stageRef: React.RefObject<Konva.Stage | null>): Promise<Konva.Stage | null> {
-  const start = performance.now()
-  while (performance.now() - start < SETTLE_TIMEOUT_MS) {
-    if (stageRef.current) return stageRef.current
-    await nextFrame()
-  }
-  return stageRef.current
-}
-
-/**
- * Wait until every Konva.Image in the stage holds a fully decoded image and
- * the image set has been stable for SETTLE_QUIET_FRAMES consecutive frames.
- *
- * This replaces the old fixed setTimeout delays: async image loads (use-image)
- * mount Konva.Image nodes only after load, so we poll until the node count
- * stops changing AND every present image reports complete. Fast machines
- * capture in a few frames; slow CI boxes wait exactly as long as needed.
- */
-async function waitForStageSettled(stage: Konva.Stage): Promise<void> {
-  const start = performance.now()
-  let stableFrames = 0
-  let lastCount = -1
-
-  while (performance.now() - start < SETTLE_TIMEOUT_MS) {
-    await nextFrame()
-    const images = stage.find('Image')
-    const allLoaded = images.every((node) => {
-      const img = (node as Konva.Image).image()
-      if (!img) return false
-      if (img instanceof HTMLImageElement) return img.complete && img.naturalWidth > 0
-      return true
-    })
-
-    if (allLoaded && images.length === lastCount) {
-      stableFrames += 1
-      if (stableFrames >= SETTLE_QUIET_FRAMES) return
-    } else {
-      stableFrames = 0
-    }
-    lastCount = images.length
-  }
-  console.warn('[ExportApp] stage did not settle within timeout — capturing anyway')
 }
 
 // ─── Single-group headless canvas ────────────────────────────────────────────
@@ -135,7 +82,7 @@ function HeadlessCanvas({ group, stageRef }: HeadlessCanvasProps) {
 
 export function ExportApp() {
   const stageRef = useRef<Konva.Stage | null>(null)
-  const [currentGroupIndex, setCurrentGroupIndex] = useState(0)
+  const [currentBatchIndex, setCurrentBatchIndex] = useState(0)
   const [phase, setPhase] = useState<'loading' | 'rendering' | 'done'>('loading')
   const resultsRef = useRef<ExportResult[]>([])
 
@@ -146,40 +93,45 @@ export function ExportApp() {
   const addAsset = useAssetStore((s) => s.addAsset)
   const addFont = useFontStore((s) => s.addFont)
   const getFont = useFontStore((s) => s.getFont)
-  // useMemo prevents a new object reference on every render, which would cause
-  // the Phase 2 effect to re-run in an infinite loop for non-default locales.
-  // Apply locale + base format projection. The base format pass is a no-op for
-  // scaling but filters layers hidden in the base format ("only Android" etc.),
-  // keeping CLI output consistent with the editor's base view.
-  const localizedProject = useMemo(
-    () => applyCanvasFormat(applyLocale(project, activeLocale), getProjectBaseFormat(project)),
+  // The CLI explicitly targets base (single-format headless export); browser
+  // exports use the same planner with the configured active formats.
+  // NOTE (v0.4.x): CLI output filenames use the shared planner naming —
+  // `<group>__<slide>.png`, sanitized and collision-safe. This intentionally
+  // replaced the old raw `<slide>.png` naming, which let two groups with the
+  // same slide names overwrite each other's files. See cli/README.md.
+  const exportPlan = useMemo(
+    () => buildExportPlan(project, {
+      formatIds: [getProjectBaseFormat(project)],
+      locales: [activeLocale],
+      scope: 'project',
+    }),
     [project, activeLocale],
   )
 
   const config = window.__EXPORT_CONFIG__ as ExportConfig | undefined
 
-  const captureGroup = (group: SlideGroup) => {
+  const captureBatch = (batch: ExportPlanBatch) => {
     const stage = stageRef.current
     if (!stage) {
-      console.error('[ExportApp] Stage not ready for group', group.id)
+      console.error('[ExportApp] Stage not ready for group', batch.group.id)
       return
     }
 
-    for (let i = 0; i < group.numSlides; i++) {
-      const name = group.slideNames[i] ?? `slide-${i + 1}`
+    for (const entry of batch.entries) {
+      if (entry.slideIndex === null) continue
       try {
         const dataUrl = stage.toDataURL({
-          x: i * group.slideWidth,
+          x: entry.slideIndex * batch.group.slideWidth,
           y: 0,
-          width: group.slideWidth,
-          height: group.slideHeight,
+          width: batch.group.slideWidth,
+          height: batch.group.slideHeight,
           pixelRatio: 1,
           mimeType: 'image/png',
         })
-        resultsRef.current.push({ name, dataUrl })
-        console.log(`[ExportApp] captured ${name}`)
+        resultsRef.current.push({ name: entry.name, dataUrl })
+        console.log(`[ExportApp] captured ${entry.name}`)
       } catch (err) {
-        console.error(`[ExportApp] failed to capture ${name}:`, err)
+        console.error(`[ExportApp] failed to capture ${entry.name}:`, err)
       }
     }
   }
@@ -197,11 +149,6 @@ export function ExportApp() {
       window.__EXPORT_ERROR__ = 'window.__EXPORT_CONFIG__ not found'
       window.__EXPORT_DONE__ = true
       return
-    }
-
-    // Populate asset store
-    for (const [filename, dataUrl] of Object.entries(config.assets ?? {})) {
-      addAsset(filename, dataUrl)
     }
 
     // Load project — surface malformed project files to the CLI instead of hanging
@@ -228,6 +175,13 @@ export function ExportApp() {
 
     // Pre-decode all asset images so use-image resolves from cache during render.
     const preload = async () => {
+      // Headless mode still uses an explicit project scope. Wait for hydration
+      // before adding CLI-provided assets so an async scope load cannot replace them.
+      await useAssetStore.getState().setActiveProject(config.project.id)
+      for (const [filename, dataUrl] of Object.entries(config.assets ?? {})) {
+        addAsset(filename, dataUrl)
+      }
+
       await Promise.all(
         Object.values(config.assets ?? {}).map(
           (dataUrl) =>
@@ -264,20 +218,18 @@ export function ExportApp() {
   useEffect(() => {
     if (phase !== 'rendering') return
 
-    const groups = localizedProject.slideGroups
-    if (groups.length === 0) {
+    const batches = exportPlan.batches
+    if (batches.length === 0) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       finalize()
       return
     }
 
-    const group = groups[currentGroupIndex]
-    if (!group) {
+    const batch = batches[currentBatchIndex]
+    if (!batch) {
       finalize()
       return
     }
-
-    setActiveSlideGroup(group.id)
 
     let cancelled = false
     const run = async () => {
@@ -288,34 +240,40 @@ export function ExportApp() {
       } catch {
         // FontFaceSet unavailable — rely on the settle polling below
       }
-      // Deterministic readiness: wait for the stage to mount and for all
-      // Konva images to be decoded and stable, then paint two final frames.
-      const stage = await waitForStage(stageRef)
-      if (stage) await waitForStageSettled(stage)
-      await nextFrame()
-      await nextFrame()
-      if (cancelled) return
+      const release = await acquireCaptureLock()
+      try {
+        if (cancelled) return
+        useEditorStore.getState().setActiveLocale(batch.locale)
+        useEditorStore.getState().setActiveCanvasFormat(batch.formatId)
+        setActiveSlideGroup(batch.group.id)
 
-      captureGroup(group)
+        const stage = await waitForStage(stageRef)
+        if (stage) await waitForStageCaptureReady(stage)
+        if (cancelled) return
 
-      const next = currentGroupIndex + 1
-      if (next < groups.length) {
-        setCurrentGroupIndex(next)
-      } else {
-        finalize()
+        captureBatch(batch)
+
+        const next = currentBatchIndex + 1
+        if (next < batches.length) {
+          setCurrentBatchIndex(next)
+        } else {
+          finalize()
+        }
+      } finally {
+        release()
       }
     }
     void run()
 
     return () => { cancelled = true }
-  }, [phase, currentGroupIndex]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [phase, currentBatchIndex]) // eslint-disable-line react-hooks/exhaustive-deps
 
   // ── Render ────────────────────────────────────────────────────────────────
   if (!config) {
     return <div style={{ color: 'red' }}>No export config</div>
   }
 
-  const group = localizedProject.slideGroups[currentGroupIndex]
+  const group = exportPlan.batches[currentBatchIndex]?.group
 
   if (phase === 'loading' || !group) {
     return <div style={{ color: '#888', padding: 20 }}>Loading…</div>

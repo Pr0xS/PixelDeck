@@ -1,6 +1,6 @@
-import type { Layer, GroupLayer, LocaleLayerPatch, LocaleOverrideBatchEntry } from '@/types'
+import type { Layer, LocaleLayerPatch, LocaleOverrideBatchEntry } from '@/types'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
-import { touchProject, touchSettings, patchLayerLocale, patchLayerBase } from '../helpers'
+import { mapLayerTree, touchProject, touchSettings, updateLayerInTree } from '../helpers'
 
 export const createLocaleSlice = (
   set: EditorSet,
@@ -40,18 +40,10 @@ export const createLocaleSlice = (
 
     // Strip overrides for this locale from all layers in all slide groups
     function stripLocale(layer: Layer): Layer {
-      if (!layer.localeOverrides?.[locale]) {
-        if (layer.type !== 'group') return layer
-        const grp = layer as GroupLayer
-        return { ...grp, children: grp.children.map(stripLocale) }
-      }
+      if (!layer.localeOverrides?.[locale]) return layer
       const { [locale]: _removed, ...rest } = layer.localeOverrides
       void _removed
-      const updated = { ...layer, localeOverrides: Object.keys(rest).length > 0 ? rest : undefined }
-      if (updated.type === 'group') {
-        return { ...updated, children: (updated as GroupLayer).children.map(stripLocale) }
-      }
-      return updated
+      return { ...layer, localeOverrides: Object.keys(rest).length > 0 ? rest : undefined }
     }
 
     set((s) => ({
@@ -59,7 +51,7 @@ export const createLocaleSlice = (
         settings: { ...s.project.settings, locales: finalLocales },
         slideGroups: s.project.slideGroups.map((g) => ({
           ...g,
-          layers: g.layers.map(stripLocale),
+          layers: mapLayerTree(g.layers, stripLocale),
         })),
       }),
       activeLocale: activeLocale === locale ? project.settings.defaultLocale : activeLocale,
@@ -91,7 +83,7 @@ export const createLocaleSlice = (
       project: touchProject(s.project, {
         slideGroups: s.project.slideGroups.map((g) => {
           if (g.id !== slideGroupId) return g
-          return { ...g, layers: g.layers.map((l) => patchLayerBase(l, layerId, patch)) }
+          return { ...g, layers: updateLayerInTree(g.layers, layerId, patch) }
         }),
       }),
     }))
@@ -102,7 +94,10 @@ export const createLocaleSlice = (
       project: touchProject(s.project, {
         slideGroups: s.project.slideGroups.map((g) => {
           if (g.id !== slideGroupId) return g
-          return { ...g, layers: g.layers.map((l) => patchLayerLocale(l, layerId, locale, patch)) }
+          return { ...g, layers: updateLayerInTree(g.layers, layerId, (layer) => ({
+            ...layer,
+            localeOverrides: { ...(layer.localeOverrides ?? {}), [locale]: patch },
+          })) }
         }),
       }),
     }))
@@ -113,7 +108,11 @@ export const createLocaleSlice = (
       project: touchProject(s.project, {
         slideGroups: s.project.slideGroups.map((g) => {
           if (g.id !== slideGroupId) return g
-          return { ...g, layers: g.layers.map((l) => patchLayerLocale(l, layerId, locale, null)) }
+          return { ...g, layers: updateLayerInTree(g.layers, layerId, (layer) => {
+            const next = { ...(layer.localeOverrides ?? {}) }
+            delete next[locale]
+            return { ...layer, localeOverrides: Object.keys(next).length ? next : undefined }
+          }) }
         }),
       }),
     }))
@@ -136,14 +135,14 @@ export const createLocaleSlice = (
           if (!layerMap) return g
           return {
             ...g,
-            layers: g.layers.map((l) => {
-              const localeMap = layerMap.get(l.id)
-              if (!localeMap) return l
-              let next = l
+            layers: mapLayerTree(g.layers, (layer) => {
+              const localeMap = layerMap.get(layer.id)
+              if (!localeMap) return layer
+              let localeOverrides = { ...(layer.localeOverrides ?? {}) }
               for (const [locale, patch] of localeMap) {
-                next = patchLayerLocale(next, l.id, locale, patch)
+                localeOverrides = { ...localeOverrides, [locale]: patch }
               }
-              return next
+              return { ...layer, localeOverrides }
             }),
           }
         }),

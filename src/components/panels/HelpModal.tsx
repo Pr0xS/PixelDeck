@@ -1,4 +1,5 @@
-import { useEffect, type ReactNode } from 'react'
+import type { ReactNode } from 'react'
+import { ModalShell } from '@/components/ui/ModalShell'
 
 interface HelpModalProps {
   open: boolean
@@ -68,48 +69,17 @@ function ShortcutTable({ rows }: { rows: ShortcutRow[] }) {
 }
 
 export function HelpModal({ open, onClose }: HelpModalProps) {
-  useEffect(() => {
-    if (!open) return
-    const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') onClose()
-    }
-    window.addEventListener('keydown', handleKeyDown)
-    return () => window.removeEventListener('keydown', handleKeyDown)
-  }, [open, onClose])
-
-  if (!open) return null
-
   return (
-    <div
-      onClick={onClose}
-      style={{
-        position: 'fixed',
-        inset: 0,
-        zIndex: 9999,
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        background: 'rgba(0,0,0,0.6)',
-        backdropFilter: 'blur(4px)',
-      }}
-    >
-      <div
-        onClick={(e) => e.stopPropagation()}
-        style={{
-          background: '#13131a',
-          border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 14,
-          width: '100%',
-          maxWidth: 960,
-          maxHeight: '85vh',
-          display: 'flex',
-          flexDirection: 'column',
-          margin: '0 16px',
-          overflow: 'hidden',
-        }}
-      >
-        {/* Header */}
-        <div
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      maxWidth=""
+      backdropClassName="fixed inset-0 z-[9999] flex items-center justify-center"
+      backdropStyle={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
+      panelClassName=""
+      panelStyle={{ background: '#13131a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, width: '100%', maxWidth: 960, maxHeight: '85vh', display: 'flex', flexDirection: 'column', margin: '0 16px', overflow: 'hidden' }}
+      showCloseButton={false}
+      header={<div
           style={{
             display: 'flex',
             alignItems: 'center',
@@ -155,7 +125,8 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
           >
             ×
           </button>
-        </div>
+        </div>}
+    >
 
         {/* Scrollable body */}
         <div style={{ overflowY: 'auto', padding: '8px 24px 28px', flex: 1 }}>
@@ -348,7 +319,6 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
             ]}
           />
         </div>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

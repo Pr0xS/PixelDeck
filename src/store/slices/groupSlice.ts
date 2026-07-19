@@ -6,6 +6,7 @@ import {
   mutateActiveGroup,
   getActiveGroup,
   patchLayerForFormat,
+  updateLayerInTree,
 } from '../helpers'
 import { getProjectBaseFormat } from '@/utils/canvasFormats'
 
@@ -213,16 +214,13 @@ export const createGroupSlice = (
     const baseFormat = getProjectBaseFormat(project)
     mutateActiveGroup(set, (g) => ({
       ...g,
-      layers: g.layers.map((l) => {
-        if (l.id !== groupId || l.type !== 'group') return l
-        const grp = l as GroupLayer
-        return {
-          ...grp,
-          children: grp.children.map((c) =>
-            c.id === childId ? patchLayerForFormat(c, patch, activeCanvasFormat, baseFormat) : c
-          ),
-        }
-      }),
+      layers: updateLayerInTree(g.layers, groupId, (layer) => layer.type === 'group'
+        ? {
+            ...layer,
+            children: updateLayerInTree(layer.children, childId, (child) =>
+              patchLayerForFormat(child, patch, activeCanvasFormat, baseFormat)),
+          }
+        : layer),
     }))
   },
 })

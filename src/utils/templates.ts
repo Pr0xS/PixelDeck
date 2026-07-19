@@ -5,6 +5,7 @@ import type {
   CanvasBackground, BackgroundLayer,
 } from '@/types'
 import { migrateLayerSpans } from '@/store/helpers'
+import { mapLayerTree } from '@/utils/layerTree'
 
 // ─── ID helpers ──────────────────────────────────────────────────────────────
 
@@ -127,7 +128,7 @@ export function extractInlineScreenshots(
     return filename
   }
 
-  const walk = (layer: Layer): void => {
+  const extractFromLayer = (layer: Layer): Layer => {
     if (layer.type === 'phone' && layer.screenshotDataUrl) {
       if (layer.screenshotPath) {
         if (!filenamesByDataUrl.has(layer.screenshotDataUrl)) {
@@ -153,10 +154,10 @@ export function extractInlineScreenshots(
       }
     }
 
-    if (layer.type === 'group') layer.children.forEach(walk)
+    return layer
   }
 
-  for (const group of cloned) group.layers.forEach(walk)
+  for (const group of cloned) group.layers = mapLayerTree(group.layers, extractFromLayer)
   return { slideGroups: cloned, assets }
 }
 

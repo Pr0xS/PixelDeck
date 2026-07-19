@@ -32,26 +32,42 @@ interface LayerNodeProps {
   onChildTransformEnd?: (childId: string, attrs: Partial<Layer>) => void
 }
 
+const noop = () => {}
+const noopIndex: (index: number) => void = noop
+const noopAccentDrag: (index: number, cx: number, cy: number) => void = noop
+const noopAccentTransform: (index: number, rx: number, ry: number) => void = noop
+const noopChild: (childId: string) => void = noop
+const noopChildDrag: (childId: string, x: number, y: number) => void = noop
+const noopChildTransform: (childId: string, attrs: Partial<Layer>) => void = noop
+
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function LayerNode({
   layer, isSelected, onSelect, onDragEnd, onTransformEnd,
-  canvasWidth, canvasHeight, forceNotDraggable,
-  selectedAccentIndex, onSelectAccent, onAccentDragEnd, onAccentTransformEnd,
-  isEditing, selectedChildId, onEnterEdit, onSelectChild, onChildDragEnd, onChildTransformEnd,
+  canvasWidth = 1290, canvasHeight = 2796, forceNotDraggable,
+  selectedAccentIndex = null,
+  onSelectAccent = noopIndex,
+  onAccentDragEnd = noopAccentDrag,
+  onAccentTransformEnd = noopAccentTransform,
+  isEditing = false,
+  selectedChildId = null,
+  onEnterEdit = noop,
+  onSelectChild = noopChild,
+  onChildDragEnd = noopChildDrag,
+  onChildTransformEnd = noopChildTransform,
 }: LayerNodeProps) {
   switch (layer.type) {
     case 'background':
       return (
         <BackgroundNode
           layer={layer as BackgroundLayer}
-          canvasWidth={canvasWidth ?? 1290}
-          canvasHeight={canvasHeight ?? 2796}
+          canvasWidth={canvasWidth}
+          canvasHeight={canvasHeight}
           isSelected={isSelected}
-          selectedAccentIndex={selectedAccentIndex ?? null}
-          onSelectAccent={onSelectAccent ?? (() => {})}
-          onAccentDragEnd={onAccentDragEnd ?? (() => {})}
-          onAccentTransformEnd={onAccentTransformEnd ?? (() => {})}
+          selectedAccentIndex={selectedAccentIndex}
+          onSelectAccent={onSelectAccent}
+          onAccentDragEnd={onAccentDragEnd}
+          onAccentTransformEnd={onAccentTransformEnd}
         />
       )
     case 'phone':
@@ -125,15 +141,15 @@ export function LayerNode({
         <GroupNode
           layer={layer as GroupLayer}
           isSelected={isSelected}
-          isEditing={isEditing ?? false}
-          selectedChildId={selectedChildId ?? null}
+          isEditing={isEditing}
+          selectedChildId={selectedChildId}
           onSelect={onSelect}
           onDragEnd={onDragEnd}
           onTransformEnd={(attrs) => onTransformEnd(attrs as Partial<Layer>)}
-          onEnterEdit={onEnterEdit ?? (() => {})}
-          onSelectChild={onSelectChild ?? (() => {})}
-          onChildDragEnd={onChildDragEnd ?? (() => {})}
-          onChildTransformEnd={onChildTransformEnd ?? (() => {})}
+          onEnterEdit={onEnterEdit}
+          onSelectChild={onSelectChild}
+          onChildDragEnd={onChildDragEnd}
+          onChildTransformEnd={onChildTransformEnd}
         />
       )
     default:

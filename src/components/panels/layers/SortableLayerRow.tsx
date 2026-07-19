@@ -1,7 +1,7 @@
-import { useState } from 'react'
 import { useSortable, SortableContext, verticalListSortingStrategy } from '@dnd-kit/sortable'
 import { CSS } from '@dnd-kit/utilities'
 import type { Layer, GroupLayer } from '@/types'
+import { InlineEditableLabel } from '@/components/ui/InlineEditableLabel'
 import { LAYER_ICON, type ItemData } from './constants'
 
 // ─── SortableLayer (regular top-level layers) ────────────────────────────────
@@ -23,15 +23,6 @@ export function SortableLayer({
   layer, isSelected, isMultiSelected,
   onSelect, onCtrlSelect, onContextMenu, onVisibilityToggle, onLockToggle, onMenuOpen, onRename,
 }: SortableLayerProps) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState('')
-
-  const commit = () => {
-    const v = draft.trim()
-    if (v) onRename(v)
-    setEditing(false)
-    setDraft('')
-  }
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: layer.id,
     data: { container: 'root' } satisfies ItemData,
@@ -68,31 +59,12 @@ export function SortableLayer({
 
       <span className="text-xs shrink-0" style={{ color: '#6b6b7a' }}>{LAYER_ICON[layer.type]}</span>
 
-      {editing ? (
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          autoFocus
-          onFocus={(e) => e.target.select()}
-          onClick={(e) => e.stopPropagation()}
-          onDoubleClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commit()
-            if (e.key === 'Escape') { setEditing(false); setDraft('') }
-          }}
-          className="flex-1 text-xs px-1 rounded border border-[#7c6ef6] bg-[#0f0f13] text-[#e8e8f0] focus:outline-none min-w-0"
-        />
-      ) : (
-        <span
-          className="flex-1 text-xs truncate"
-          style={{ color: isSelected ? '#e8e8f0' : '#b0b0c4', cursor: 'text' }}
-          onDoubleClick={(e) => { e.stopPropagation(); setDraft(layer.name); setEditing(true) }}
-        >
-          {layer.name}
-        </span>
-      )}
+      <InlineEditableLabel
+        value={layer.name}
+        onCommit={onRename}
+        className="flex-1 text-xs truncate"
+        style={{ color: isSelected ? '#e8e8f0' : '#b0b0c4', cursor: 'text' }}
+      />
 
       <button
         aria-label={layer.locked ? `Unlock ${layer.name}` : `Lock ${layer.name}`}
@@ -121,15 +93,6 @@ export interface SortableChildProps {
 }
 
 export function SortableChild({ child, groupId, isSelected, onSelect, onRename }: SortableChildProps) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState('')
-
-  const commit = () => {
-    const v = draft.trim()
-    if (v) onRename(v)
-    setEditing(false)
-    setDraft('')
-  }
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: child.id,
     data: { container: 'group', groupId } satisfies ItemData,
@@ -159,31 +122,12 @@ export function SortableChild({ child, groupId, isSelected, onSelect, onRename }
       <span className="text-xs shrink-0 w-4 text-center text-[#7d7898]">
         {LAYER_ICON[child.type] ?? '◯'}
       </span>
-      {editing ? (
-        <input
-          value={draft}
-          onChange={(e) => setDraft(e.target.value)}
-          autoFocus
-          onFocus={(e) => e.target.select()}
-          onClick={(e) => e.stopPropagation()}
-          onDoubleClick={(e) => e.stopPropagation()}
-          onPointerDown={(e) => e.stopPropagation()}
-          onBlur={commit}
-          onKeyDown={(e) => {
-            if (e.key === 'Enter') commit()
-            if (e.key === 'Escape') { setEditing(false); setDraft('') }
-          }}
-          className="flex-1 text-xs px-1 rounded border border-[#7c6ef6] bg-[#0f0f13] text-[#e8e8f0] focus:outline-none min-w-0"
-        />
-      ) : (
-        <span
-          className="flex-1 text-xs truncate"
-          style={{ color: isSelected ? '#e8e8f0' : '#6b6b7a', cursor: 'text' }}
-          onDoubleClick={(e) => { e.stopPropagation(); setDraft(child.name); setEditing(true) }}
-        >
-          {child.name}
-        </span>
-      )}
+      <InlineEditableLabel
+        value={child.name}
+        onCommit={onRename}
+        className="flex-1 text-xs truncate"
+        style={{ color: isSelected ? '#e8e8f0' : '#6b6b7a', cursor: 'text' }}
+      />
     </div>
   )
 }
@@ -216,15 +160,6 @@ export function SortableGroup({
   onVisibilityToggle, onLockToggle, onMenuOpen, onSelectChild,
   onRename, onRenameChild,
 }: SortableGroupProps) {
-  const [editing, setEditing] = useState(false)
-  const [draft, setDraft] = useState('')
-
-  const commit = () => {
-    const v = draft.trim()
-    if (v) onRename(v)
-    setEditing(false)
-    setDraft('')
-  }
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({
     id: layer.id,
     data: { container: 'root', isGroup: true } satisfies ItemData,
@@ -277,31 +212,12 @@ export function SortableGroup({
 
         <span className="text-xs shrink-0 text-[#b6adff]">▥</span>
 
-        {editing ? (
-          <input
-            value={draft}
-            onChange={(e) => setDraft(e.target.value)}
-            autoFocus
-            onFocus={(e) => e.target.select()}
-            onClick={(e) => e.stopPropagation()}
-            onDoubleClick={(e) => e.stopPropagation()}
-            onPointerDown={(e) => e.stopPropagation()}
-            onBlur={commit}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') commit()
-              if (e.key === 'Escape') { setEditing(false); setDraft('') }
-            }}
-            className="flex-1 text-xs px-1 rounded border border-[#7c6ef6] bg-[#0f0f13] text-[#e8e8f0] focus:outline-none min-w-0"
-          />
-        ) : (
-          <span
-            className="flex-1 text-xs truncate font-semibold"
-            style={{ color: isSelected ? '#e8e8f0' : '#d8d2ff', cursor: 'text' }}
-            onDoubleClick={(e) => { e.stopPropagation(); setDraft(layer.name); setEditing(true) }}
-          >
-            {layer.name}
-          </span>
-        )}
+        <InlineEditableLabel
+          value={layer.name}
+          onCommit={onRename}
+          className="flex-1 text-xs truncate font-semibold"
+          style={{ color: isSelected ? '#e8e8f0' : '#d8d2ff', cursor: 'text' }}
+        />
 
         <span className="shrink-0 rounded-full px-1.5 py-0.5 text-[10px] leading-none border border-[rgba(124,110,246,0.28)] bg-[rgba(124,110,246,0.12)] text-[#b6adff]">
           {layer.children.length}

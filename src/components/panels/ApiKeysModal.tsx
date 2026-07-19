@@ -1,4 +1,5 @@
 import { AiProviderSettings } from '@/components/ai/AiProviderSettings'
+import { ModalShell } from '@/components/ui/ModalShell'
 
 interface ApiKeysModalProps {
   open: boolean
@@ -6,19 +7,15 @@ interface ApiKeysModalProps {
 }
 
 export function ApiKeysModal({ open, onClose }: ApiKeysModalProps) {
-  if (!open) return null
-
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-center justify-center backdrop-blur-sm"
-      style={{ background: 'rgba(0,0,0,0.6)' }}
-      onClick={onClose}
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      maxWidth="max-w-2xl"
+      backdropStyle={{ background: 'rgba(0,0,0,0.6)' }}
+      panelClassName="rounded-2xl border shadow-2xl w-full mx-4 p-6 max-h-[90vh] overflow-y-auto"
+      showCloseButton={false}
     >
-      <div
-        className="rounded-2xl border shadow-2xl w-full max-w-2xl mx-4 p-6 max-h-[90vh] overflow-y-auto"
-        style={{ background: '#18181f', borderColor: 'rgba(255,255,255,0.1)' }}
-        onClick={(event) => event.stopPropagation()}
-      >
         <div className="flex items-center justify-between mb-5">
           <h2 className="text-base font-semibold text-[#e8e8f0]">AI Settings</h2>
           <button onClick={onClose} className="text-[#6b6b7a] hover:text-[#e8e8f0] transition-colors text-lg">✕</button>
@@ -37,7 +34,6 @@ export function ApiKeysModal({ open, onClose }: ApiKeysModalProps) {
         >
           Save
         </button>
-      </div>
-    </div>
+    </ModalShell>
   )
 }

@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import { chat, editImage, supportsImageEditing } from './client'
+import { AiClientError, chat, editImage, supportsImageEditing } from './client'
 
 function makeOpenAiFetchMock(content = '{"translation":"Hola"}') {
   return vi.fn().mockResolvedValue({
@@ -28,11 +28,69 @@ beforeEach(() => {
 })
 
 afterEach(() => {
+  vi.useRealTimers()
   vi.restoreAllMocks()
   vi.unstubAllGlobals()
 })
 
 describe('chat', () => {
+  it('aborts a request when its timeout expires', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => new Promise((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const request = chat({
+      provider: 'openai', apiKey: 'sk-test', messages: [{ role: 'user', content: 'hello' }], timeoutMs: 50, retries: 0,
+    })
+    const rejection = expect(request).rejects.toMatchObject({ kind: 'timeout' })
+    await vi.advanceTimersByTimeAsync(50)
+
+    await rejection
+    expect((fetchMock.mock.calls[0][1].signal as AbortSignal).aborted).toBe(true)
+    vi.useRealTimers()
+  })
+
+  it('retries a 500 response and then succeeds', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 500, text: () => Promise.resolve('temporarily unavailable') })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ choices: [{ message: { content: 'Recovered' } }] }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const request = chat({
+      provider: 'openai', apiKey: 'sk-test', messages: [{ role: 'user', content: 'hello' }], retries: 1,
+    })
+    await vi.runAllTimersAsync()
+
+    await expect(request).resolves.toBe('Recovered')
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
+  })
+
+  it('does not retry a 401 response and preserves status and body', async () => {
+    const fetchMock = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 401,
+      text: () => Promise.resolve('invalid API key'),
+    })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const error = await chat({
+      provider: 'openai', apiKey: 'sk-test', messages: [{ role: 'user', content: 'hello' }], retries: 2,
+    }).catch((caught: unknown) => caught)
+
+    expect(error).toBeInstanceOf(AiClientError)
+    expect(error).toMatchObject({ kind: 'http', status: 401 })
+    expect((error as Error).message).toContain('openai API error 401: invalid API key')
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+  })
+
   it.each(['openai', 'openrouter'] as const)('adds JSON response format for %s', async (provider) => {
     const fetchMock = makeOpenAiFetchMock()
     vi.stubGlobal('fetch', fetchMock)
@@ -151,5 +209,48 @@ describe('editImage', () => {
       provider: 'custom', apiKey: 'sk-test', baseUrl: 'https://custom.example.com/v1', model: 'text-model',
       prompt: 'localize', imageDataUrl: sourceImage,
     })).rejects.toThrow('Cannot generate images.')
+  })
+
+  it('does not retry image generation after a timeout (non-idempotent)', async () => {
+    vi.useFakeTimers()
+    const fetchMock = vi.fn((_url: string, init: RequestInit) => new Promise((_resolve, reject) => {
+      init.signal?.addEventListener('abort', () => reject(new DOMException('Aborted', 'AbortError')))
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+
+    const request = editImage({
+      provider: 'custom', apiKey: 'sk-test', baseUrl: 'https://custom.example.com/v1', model: 'image-model',
+      prompt: 'localize', imageDataUrl: sourceImage, timeoutMs: 50, retries: 2,
+    })
+    const rejection = expect(request).rejects.toMatchObject({ kind: 'timeout' })
+    await vi.advanceTimersByTimeAsync(2000)
+
+    await rejection
+    // retries=2 would allow 3 attempts, but transport errors must not be retried for image generation
+    expect(fetchMock).toHaveBeenCalledTimes(1)
+    vi.useRealTimers()
+  })
+
+  it('still retries image generation on a 429 response', async () => {
+    vi.useFakeTimers()
+    const generated = 'data:image/png;base64,Z2VuZXJhdGVk'
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce({ ok: false, status: 429, text: () => Promise.resolve('rate limited') })
+      .mockResolvedValueOnce({
+        ok: true,
+        status: 200,
+        json: () => Promise.resolve({ choices: [{ message: { images: [{ image_url: { url: generated } }] } }] }),
+      })
+    vi.stubGlobal('fetch', fetchMock)
+
+    const request = editImage({
+      provider: 'custom', apiKey: 'sk-test', baseUrl: 'https://custom.example.com/v1', model: 'image-model',
+      prompt: 'localize', imageDataUrl: sourceImage, retries: 1,
+    })
+    await vi.runAllTimersAsync()
+
+    await expect(request).resolves.toBe(generated)
+    expect(fetchMock).toHaveBeenCalledTimes(2)
+    vi.useRealTimers()
   })
 })

@@ -2,10 +2,11 @@ import { useRef, useEffect } from 'react'
 import { Rect, Ellipse, Group, Image as KonvaImage } from 'react-konva'
 import Konva from 'konva'
 import useImage from 'use-image'
-import { useEditorStore } from '@/store'
 import type { BackgroundAccent, BackgroundLayer, BrandColor } from '@/types'
-import { resolveBrandColor, resolveFill } from '@/utils/brandColors'
-import { fillToKonvaProps, toTransparentColor } from '@/utils/gradients'
+import { resolveBrandColor } from '@/utils/brandColors'
+import { toTransparentColor } from '@/utils/gradients'
+import { layerFillToKonvaProps } from '@/utils/konvaFill'
+import { useBrandColors } from '@/hooks/useBrandColors'
 import {
   getBackgroundAccentOpacity,
   getBackgroundAccentRenderColor,
@@ -156,8 +157,8 @@ export function BackgroundNode({
   onAccentDragEnd,
   onAccentTransformEnd,
 }: BackgroundNodeProps) {
-  const brandColors = useEditorStore((s) => s.project.settings.brandColors) ?? []
-  const fillProps = fillToKonvaProps(resolveFill(layer.fill, brandColors), canvasWidth, canvasHeight)
+  const brandColors = useBrandColors()
+  const fillProps = layerFillToKonvaProps(layer.fill, brandColors, { width: canvasWidth, height: canvasHeight })
   const groupRef = useRef<Konva.Group>(null)
 
   // Background image

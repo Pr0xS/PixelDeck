@@ -2,6 +2,9 @@ import { useState, useEffect, useRef } from 'react'
 import { useProjectsStore } from '@/store/projects'
 import { useEditorStore } from '@/store'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { ModalShell } from '@/components/ui/ModalShell'
+import { InlineEditableLabel } from '@/components/ui/InlineEditableLabel'
+import { FileUploadButton } from '@/components/ui/FileUploadButton'
 
 
 interface ProjectsModalProps {
@@ -25,13 +28,9 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
   const { projects, createProject, openProject, deleteProject, renameProject } =
     useProjectsStore()
   const activeProjectId = useEditorStore((s) => s.project.id)
-  const exportProject = useEditorStore((s) => s.exportProject)
-  const importProject = useEditorStore((s) => s.importProject)
 
   const [renamingId, setRenamingId] = useState<string | null>(null)
-  const [renameValue, setRenameValue] = useState('')
   const [deleteId, setDeleteId] = useState<string | null>(null)
-  const renameInputRef = useRef<HTMLInputElement>(null)
 
   const [creatingNew, setCreatingNew] = useState(false)
   const [newName, setNewName] = useState('')
@@ -39,45 +38,13 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
   const newNameInputRef = useRef<HTMLInputElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
 
-  // Focus rename input when it appears
-  useEffect(() => {
-    if (renamingId) renameInputRef.current?.select()
-  }, [renamingId])
-
   // Focus new name input when creating
   useEffect(() => {
     if (creatingNew) newNameInputRef.current?.focus()
   }, [creatingNew])
 
-  // Close on Escape
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (deleteId) return
-      if (e.key === 'Escape') {
-        if (creatingNew) {
-          setCreatingNew(false)
-          return
-        }
-        onClose()
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose, deleteId, creatingNew])
-
-  if (!open) return null
-
-  const startRename = (id: string, currentName: string) => {
+  const startRename = (id: string) => {
     setRenamingId(id)
-    setRenameValue(currentName)
-  }
-
-  const commitRename = () => {
-    if (renamingId && renameValue.trim()) {
-      renameProject(renamingId, renameValue.trim())
-    }
-    setRenamingId(null)
   }
 
   const handleOpen = (id: string) => {
@@ -122,11 +89,8 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
     setDeleteId(null)
   }
 
-  const handleExportProject = (id: string, name: string) => {
-    // If it's the active project, use the live editor state (most up-to-date)
-    const json = id === activeProjectId
-      ? exportProject()
-      : localStorage.getItem(`pd:project:${id}`) ?? exportProject()
+  const handleExportProject = async (id: string, name: string) => {
+    const json = await useProjectsStore.getState().exportProjectBundle(id)
     const blob = new Blob([json], { type: 'application/json' })
     const url = URL.createObjectURL(blob)
     const slug = name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'project'
@@ -140,20 +104,23 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
 
   const handleImport = () => importInputRef.current?.click()
 
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleImportFile = (files: File[]) => {
+    const file = files[0]
     if (!file) return
     const reader = new FileReader()
-    reader.onload = () => {
+    reader.onload = async () => {
       try {
-        importProject(reader.result as string)
+        const { missing } = await useProjectsStore.getState()
+          .importProjectFromJson(reader.result as string)
         onClose()
+        if (missing.length > 0) {
+          alert(`Project imported. ${missing.length} referenced image(s) were missing from the file and will appear blank.`)
+        }
       } catch {
         alert('Failed to open project file.')
       }
     }
     reader.readAsText(file)
-    e.target.value = ''
   }
 
   // Sort: active first, then by most recently updated
@@ -175,23 +142,19 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
         onCancel={() => setDeleteId(null)}
       />
 
-      <div
-        className="fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-sm"
-        style={{ background: 'rgba(0,0,0,0.65)' }}
-        onClick={onClose}
-      >
-        <div
-          className="relative rounded-2xl border shadow-2xl w-full max-w-lg mx-4 flex flex-col overflow-hidden"
-          style={{
-            background: '#18181f',
-            borderColor: 'rgba(255,255,255,0.1)',
-            maxHeight: '75vh',
-            boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
-          }}
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div
+      <ModalShell
+        open={open}
+        onClose={onClose}
+        onEscape={() => {
+          if (deleteId) return
+          if (creatingNew) setCreatingNew(false)
+          else onClose()
+        }}
+        maxWidth="max-w-lg"
+        backdropClassName="fixed inset-0 z-[200] flex items-center justify-center backdrop-blur-sm"
+        panelStyle={{ background: '#18181f', borderColor: 'rgba(255,255,255,0.1)', maxHeight: '75vh', boxShadow: '0 24px 80px rgba(0,0,0,0.6)' }}
+        showCloseButton={false}
+        header={<div
             style={{
               padding: '18px 20px 12px',
               borderBottom: '1px solid rgba(255,255,255,0.07)',
@@ -242,13 +205,12 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
               >
                 + New
               </button>
-              <input
+              <FileUploadButton
                 ref={importInputRef}
-                type="file"
                 accept=".json"
-                style={{ display: 'none' }}
-                onChange={handleImportFile}
-              />
+                onFiles={handleImportFile}
+                className="hidden"
+              >Import file</FileUploadButton>
               <button
                 onClick={onClose}
                 style={{
@@ -264,7 +226,10 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                 ×
               </button>
             </div>
-          </div>
+          </div>}
+        footerClassName=""
+        footer={<div style={{ padding: '10px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#6b6b7a', textAlign: 'center' }}>Auto-saved · Double-click a name to rename</div>}
+      >
 
           {/* New project form */}
           {creatingNew && (
@@ -404,19 +369,14 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
 
                   {/* Name + meta */}
                   <div style={{ flex: 1, minWidth: 0 }}>
-                    {isRenaming ? (
-                      <input
-                        ref={renameInputRef}
-                        value={renameValue}
-                        onChange={(e) => setRenameValue(e.target.value)}
-                        onBlur={commitRename}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter') commitRename()
-                          if (e.key === 'Escape') setRenamingId(null)
-                          e.stopPropagation()
+                    <InlineEditableLabel
+                        value={p.name}
+                        editing={isRenaming}
+                        onEditingChange={(editing) => {
+                          setRenamingId(editing ? p.id : null)
                         }}
-                        onClick={(e) => e.stopPropagation()}
-                        style={{
+                        onCommit={(name) => renameProject(p.id, name)}
+                        inputStyle={{
                           background: 'rgba(255,255,255,0.08)',
                           border: '1px solid rgba(124,110,246,0.6)',
                           borderRadius: 4,
@@ -427,13 +387,6 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                           width: '100%',
                           outline: 'none',
                         }}
-                      />
-                    ) : (
-                      <div
-                        onDoubleClick={(e) => {
-                          e.stopPropagation()
-                          startRename(p.id, p.name)
-                        }}
                         style={{
                           fontSize: 13,
                           fontWeight: 500,
@@ -442,8 +395,8 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                           textOverflow: 'ellipsis',
                           whiteSpace: 'nowrap',
                         }}
+                        className="block"
                       >
-                        {p.name}
                         {isActive && (
                           <span
                             style={{
@@ -459,8 +412,7 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                             current
                           </span>
                         )}
-                      </div>
-                    )}
+                      </InlineEditableLabel>
                     <div style={{ fontSize: 11, color: '#6b6b7a', marginTop: 2 }}>
                       {relativeTime(p.updatedAt)}
                     </div>
@@ -473,7 +425,7 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                   >
                     <button
                       title="Export project as JSON"
-                      onClick={(e) => { e.stopPropagation(); handleExportProject(p.id, p.name) }}
+                      onClick={(e) => { e.stopPropagation(); void handleExportProject(p.id, p.name) }}
                       style={{
                         background: 'none',
                         border: 'none',
@@ -496,7 +448,7 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                       title="Rename (double-click name)"
                       onClick={(e) => {
                         e.stopPropagation()
-                        startRename(p.id, p.name)
+                        startRename(p.id)
                       }}
                       style={{
                         background: 'none',
@@ -543,20 +495,7 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
             })}
           </div>
 
-          {/* Footer */}
-          <div
-            style={{
-              padding: '10px 20px',
-              borderTop: '1px solid rgba(255,255,255,0.07)',
-              fontSize: 11,
-              color: '#6b6b7a',
-              textAlign: 'center',
-            }}
-          >
-            Auto-saved · Double-click a name to rename
-          </div>
-        </div>
-      </div>
+      </ModalShell>
     </>
   )
 }

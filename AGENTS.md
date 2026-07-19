@@ -17,9 +17,11 @@ PixelDeck is a React + TypeScript visual editor for designing App Store screensh
 | Asset store | `src/store/assets.ts` |
 | App entry / mode routing | `src/main.tsx` |
 | Editor shell | `src/App.tsx` |
-| Konva canvas | `src/components/canvas/StageCanvas.tsx` |
+| Konva canvas | `src/components/canvas/StageCanvas.tsx` (composition) + `src/components/canvas/stage/*` (viewport/selection/drop/transformer hooks, overlays) |
 | Layer type router | `src/components/canvas/LayerNode.tsx` |
 | Layer renderers | `src/components/canvas/*Node.tsx` |
+| Shared node hooks | `src/hooks/useLayerTransform.ts`, `useLayerEffects.ts`, `useLayerInteraction.ts`, `useBrandColors.ts` |
+| Shared UI primitives | `src/components/ui/` (ModalShell, NumberInput, ToggleSwitch, SegmentedControl, FileUploadButton, InlineEditableLabel) |
 | Properties inspector | `src/components/panels/PropertiesPanel.tsx` |
 | Layer list panel | `src/components/panels/LayersPanel.tsx` |
 | Slide navigator | `src/components/panels/SlideNavigator.tsx` |
@@ -28,6 +30,9 @@ PixelDeck is a React + TypeScript visual editor for designing App Store screensh
 | Projects modal | `src/components/panels/ProjectsModal.tsx` |
 | Brand kit button | `src/components/toolbar/BrandKitButton.tsx` |
 | Pano geometry | `src/utils/panoGeometry.ts` |
+| Layer tree walkers | `src/utils/layerTree.ts` (mapLayerTree/updateLayerInTree/findLayerInTree — use these, do not hand-roll recursion) |
+| Export plan (pure) | `src/utils/exportPlan.ts` (locale × format × group × slide enumeration + naming, shared by browser and headless) |
+| Fill → Konva props | `src/utils/konvaFill.ts` |
 | Multi-format export | `src/utils/multiFormatExport.ts` |
 | Stage capture mutex | `src/utils/stageCapture.ts` |
 | Canvas formats | `src/utils/canvasFormats.ts` |

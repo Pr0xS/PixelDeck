@@ -12,7 +12,8 @@ import {
 import type { CanvasFormatId } from '@/types'
 
 export function FormatTabs() {
-  const project = useEditorStore((s) => s.project)
+  const settings = useEditorStore((s) => s.project.settings)
+  const slideGroups = useEditorStore((s) => s.project.slideGroups)
   const activeCanvasFormat = useEditorStore((s) => s.activeCanvasFormat)
   const setActiveCanvasFormat = useEditorStore((s) => s.setActiveCanvasFormat)
   const activeSlideGroupId = useEditorStore((s) => s.activeSlideGroupId)
@@ -24,10 +25,10 @@ export function FormatTabs() {
   const resetActiveFormatVisibility = useEditorStore((s) => s.resetActiveFormatVisibility)
   const promoteActiveFormatLayoutToShared = useEditorStore((s) => s.promoteActiveFormatLayoutToShared)
 
-  const baseFormat = getProjectBaseFormat(project)
+  const baseFormat = getProjectBaseFormat({ settings })
 
   // activeFormats may not be in project.settings yet — fall back to base + defaults
-  const activeFormats: CanvasFormatId[] = getProjectActiveFormats(project)
+  const activeFormats: CanvasFormatId[] = getProjectActiveFormats({ settings })
 
   // Platform tabs = activeFormats excluding base
   const platformFormats = activeFormats.filter((f) => f !== BASE_CANVAS_FORMAT)
@@ -92,7 +93,7 @@ export function FormatTabs() {
   }
 
   // Raw group for badge counts
-  const rawGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+  const rawGroup = slideGroups.find((g) => g.id === activeSlideGroupId)
   const activeAdjustmentCount = rawGroup && !isBase
     ? countFormatAdjustments(rawGroup, activeCanvasFormat, baseFormat)
     : 0
@@ -103,7 +104,7 @@ export function FormatTabs() {
   }
 
   const handlePromoteLayout = () => {
-    const label = getFormatLabel(activeCanvasFormat, project.settings.customFormats)
+    const label = getFormatLabel(activeCanvasFormat, settings.customFormats)
     const ok = window.confirm(
       `Use ${label} layout as shared for this slide?\n\n` +
       'This promotes all layout/model overrides from this platform into Base, so other platforms may move. Content stays shared.',
@@ -150,9 +151,9 @@ export function FormatTabs() {
                 className={`flex items-center gap-1 pl-3 pr-1 h-full text-xs font-medium transition-colors whitespace-nowrap ${
                   isActive ? '' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
                 }`}
-                title={`${getFormatLabel(fmtId, project.settings.customFormats)} format · ${count} layout adjustment${count !== 1 ? 's' : ''}`}
+                title={`${getFormatLabel(fmtId, settings.customFormats)} format · ${count} layout adjustment${count !== 1 ? 's' : ''}`}
               >
-                {getFormatLabel(fmtId, project.settings.customFormats)}
+                {getFormatLabel(fmtId, settings.customFormats)}
                 {count > 0 && (
                   <span
                     className="ml-0.5 text-[10px] font-semibold"
@@ -167,7 +168,7 @@ export function FormatTabs() {
               <button
                 onClick={(e) => handleRemoveFormat(fmtId, e)}
                 className="self-center mb-[2px] mr-0.5 w-4 h-4 flex items-center justify-center rounded text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.08)] opacity-0 group-hover/tab:opacity-100 transition-opacity text-[10px] leading-none"
-                title={`Remove ${getFormatLabel(fmtId, project.settings.customFormats)} tab`}
+                title={`Remove ${getFormatLabel(fmtId, settings.customFormats)} tab`}
               >
                 ×
               </button>
@@ -196,7 +197,7 @@ export function FormatTabs() {
                     onClick={() => handleToggleAdd(fmt.id as CanvasFormatId)}
                     className="w-full text-left px-3 py-2 text-xs text-[#a0a0b0] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e8e8f0] transition-colors"
                   >
-                    {getFormatLabel(fmt.id as CanvasFormatId, project.settings.customFormats)}
+                    {getFormatLabel(fmt.id as CanvasFormatId, settings.customFormats)}
                     <span className="ml-1.5 text-[10px] opacity-50">
                       {fmt.width}×{fmt.height}
                     </span>
@@ -290,9 +291,9 @@ export function FormatTabs() {
           }}
         >
           <span className="text-xs" style={{ color: '#fbbf24' }}>
-            ⚠ <strong>{getFormatLabel(activeCanvasFormat, project.settings.customFormats)}</strong> tab · Layers added here belong only to{' '}
-            <strong>{getFormatLabel(activeCanvasFormat, project.settings.customFormats)}</strong> · Layout adjustments only affect{' '}
-            <strong>{getFormatLabel(activeCanvasFormat, project.settings.customFormats)}</strong> · Content (text, colors) is shared
+            ⚠ <strong>{getFormatLabel(activeCanvasFormat, settings.customFormats)}</strong> tab · Layers added here belong only to{' '}
+            <strong>{getFormatLabel(activeCanvasFormat, settings.customFormats)}</strong> · Layout adjustments only affect{' '}
+            <strong>{getFormatLabel(activeCanvasFormat, settings.customFormats)}</strong> · Content (text, colors) is shared
           </span>
           <div className="ml-4 flex shrink-0 items-center gap-2">
             <button
@@ -307,7 +308,7 @@ export function FormatTabs() {
                 onClick={() => setActionsOpen((v) => !v)}
                 className="rounded border border-[rgba(245,158,11,0.25)] px-2 py-0.5 text-xs transition-colors hover:bg-[rgba(245,158,11,0.12)]"
                 style={{ color: '#fbbf24' }}
-                title={`Global actions for this ${getFormatLabel(activeCanvasFormat, project.settings.customFormats)} slide`}
+                title={`Global actions for this ${getFormatLabel(activeCanvasFormat, settings.customFormats)} slide`}
               >
                 Actions ▾
               </button>
@@ -315,7 +316,7 @@ export function FormatTabs() {
                 <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#1c1c26] shadow-xl">
                   <div className="border-b border-[rgba(255,255,255,0.08)] px-3 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#fbbf24]">
-                      {getFormatLabel(activeCanvasFormat, project.settings.customFormats)} slide actions
+                      {getFormatLabel(activeCanvasFormat, settings.customFormats)} slide actions
                     </p>
                     <p className="mt-0.5 text-[10px] text-[#6b6b7a]">
                       {activeAdjustmentCount} platform adjustment{activeAdjustmentCount !== 1 ? 's' : ''} on this slide

@@ -5,6 +5,8 @@ import { useEditorStore } from '@/store'
 import { looksLikeTemplate } from '@/utils/templates'
 import { downloadDataUrl } from '@/utils/export'
 import type { Template } from '@/types'
+import { ModalShell } from '@/components/ui/ModalShell'
+import { FileUploadButton } from '@/components/ui/FileUploadButton'
 
 interface TemplatesModalProps {
   open: boolean
@@ -38,23 +40,6 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
     }
   }, [open, project.name])
 
-  useEffect(() => {
-    if (!open) return
-    const onKey = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        if (exportOpen) {
-          setExportOpen(false)
-        } else {
-          onClose()
-        }
-      }
-    }
-    window.addEventListener('keydown', onKey)
-    return () => window.removeEventListener('keydown', onKey)
-  }, [open, onClose, exportOpen])
-
-  if (!open) return null
-
   const handleGalleryApply = async (entry: typeof manifest[0]) => {
     setApplying(entry.slug)
     try {
@@ -86,8 +71,8 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
     onClose()
   }
 
-  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const file = e.target.files?.[0]
+  const handleImportFile = (files: File[]) => {
+    const file = files[0]
     if (!file) return
     setImportError(null)
     const reader = new FileReader()
@@ -110,7 +95,6 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
       }
     }
     reader.readAsText(file)
-    e.target.value = ''
   }
 
   /* ─── shared input style ─────────────────────────────────── */
@@ -130,39 +114,17 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
   }
 
   return (
-    <>
-      {/* Backdrop */}
-      <div
-        onClick={onClose}
-        style={{
-          position: 'fixed',
-          inset: 0,
-          background: 'rgba(0,0,0,0.6)',
-          zIndex: 200,
-        }}
-      />
-
-      {/* Modal */}
-      <div
-        style={{
-          position: 'fixed',
-          top: '50%',
-          left: '50%',
-          transform: 'translate(-50%,-50%)',
-          width: 680,
-          maxHeight: '80vh',
-          background: '#18181f',
-          border: '1px solid rgba(255,255,255,0.1)',
-          borderRadius: 12,
-          display: 'flex',
-          flexDirection: 'column',
-          zIndex: 201,
-          boxShadow: '0 24px 80px rgba(0,0,0,0.6)',
-          overflow: 'hidden',
-        }}
-      >
-        {/* ── Header ─────────────────────────────────────────── */}
-        <div
+    <ModalShell
+      open={open}
+      onClose={onClose}
+      onEscape={() => exportOpen ? setExportOpen(false) : onClose()}
+      maxWidth=""
+      backdropClassName="fixed inset-0 z-[200] flex items-center justify-center"
+      backdropStyle={{ background: 'rgba(0,0,0,0.6)' }}
+      panelClassName=""
+      panelStyle={{ width: 680, maxHeight: '80vh', background: '#18181f', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, display: 'flex', flexDirection: 'column', boxShadow: '0 24px 80px rgba(0,0,0,0.6)', overflow: 'hidden' }}
+      showCloseButton={false}
+      header={<div
           style={{
             padding: '14px 16px 14px 20px',
             borderBottom: exportOpen
@@ -287,7 +249,10 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
               ×
             </button>
           </div>
-        </div>
+        </div>}
+      footerClassName=""
+      footer={<div style={{ padding: '10px 20px', borderTop: '1px solid rgba(255,255,255,0.07)', fontSize: 11, color: '#4a4a5a', textAlign: 'center', flexShrink: 0 }}>Add templates to <code style={{ background: 'rgba(255,255,255,0.04)', padding: '1px 4px', borderRadius: 3 }}>public/templates/</code> to include them in the gallery</div>}
+    >
 
         {/* ── Export panel (inline collapsible) ──────────────── */}
         {exportOpen && (
@@ -411,13 +376,12 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
         {/* ── Gallery ────────────────────────────────────────── */}
         <div style={{ flex: 1, overflowY: 'auto', padding: 16 }}>
           {/* Hidden file input for Import */}
-          <input
+          <FileUploadButton
             ref={importRef}
-            type="file"
             accept=".json"
-            style={{ display: 'none' }}
-            onChange={handleImportFile}
-          />
+            className="hidden"
+            onFiles={handleImportFile}
+          >Import template</FileUploadButton>
 
           {/* Import error (shown inline in gallery area) */}
           {importError && (
@@ -643,30 +607,6 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
           )}
         </div>
 
-        {/* ── Footer ─────────────────────────────────────────── */}
-        <div
-          style={{
-            padding: '10px 20px',
-            borderTop: '1px solid rgba(255,255,255,0.07)',
-            fontSize: 11,
-            color: '#4a4a5a',
-            textAlign: 'center',
-            flexShrink: 0,
-          }}
-        >
-          Add templates to{' '}
-          <code
-            style={{
-              background: 'rgba(255,255,255,0.04)',
-              padding: '1px 4px',
-              borderRadius: 3,
-            }}
-          >
-            public/templates/
-          </code>{' '}
-          to include them in the gallery
-        </div>
-      </div>
-    </>
+    </ModalShell>
   )
 }

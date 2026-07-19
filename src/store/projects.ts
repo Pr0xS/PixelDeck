@@ -8,8 +8,15 @@
  */
 
 import { create } from 'zustand'
+import type { Project } from '@/types'
+import {
+  buildProjectExportBundle,
+  collectAssetKeys,
+  isProjectExportBundle,
+} from '@/utils/projectAssets'
 import { useEditorStore } from './index'
-import { stripDataUrls } from './helpers'
+import { newId, stripDataUrls } from './helpers'
+import { useAssetStore } from './assets'
 
 // ─── Keys ──────────────────────────────────────────────────────────────────────
 
@@ -26,6 +33,15 @@ function warnStorageFailure(err: unknown) {
   window.setTimeout(() => {
     alert('Project library save failed. Export Project now to avoid losing recent changes.')
   }, 0)
+}
+
+/** Load a saved project without persisting the currently loaded editor project. */
+function loadProjectById(id: string): boolean {
+  const json = localStorage.getItem(projectKey(id))
+  if (!json) return false
+  localStorage.setItem(ACTIVE_KEY, id)
+  useEditorStore.getState().importProject(json)
+  return true
 }
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
@@ -61,6 +77,12 @@ interface ProjectsStore {
 
   /** Sync list metadata with whatever is currently in the editor store. */
   syncMeta: () => void
+
+  /** Export a project and its referenced images as a self-contained bundle. */
+  exportProjectBundle: (id: string) => Promise<string>
+
+  /** Import a bare project or self-contained project bundle as a new project. */
+  importProjectFromJson: (json: string) => Promise<{ missing: string[] }>
 }
 
 // ─── Store ─────────────────────────────────────────────────────────────────────
@@ -75,22 +97,15 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
 
     const activeId = localStorage.getItem(ACTIVE_KEY)
 
-    const tryLoad = (id: string): boolean => {
-      const json = localStorage.getItem(projectKey(id))
-      if (!json) return false
-      useEditorStore.getState().importProject(json)
-      localStorage.setItem(ACTIVE_KEY, id)
-      return true
-    }
-
     if (activeId && projects.find((p) => p.id === activeId)) {
-      if (!tryLoad(activeId) && projects.length > 0) tryLoad(projects[0].id)
+      if (!loadProjectById(activeId) && projects.length > 0) loadProjectById(projects[0].id)
     } else if (projects.length > 0) {
-      tryLoad(projects[0].id)
+      loadProjectById(projects[0].id)
     }
 
     // Always persist whatever is now in the editor (covers first-ever run)
     set({ projects, initialized: true })
+    void useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
     get().saveCurrentProject()
   },
 
@@ -131,22 +146,20 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
     useEditorStore.getState().resetProject()
     useEditorStore.getState().setProjectName(trimmed)
     get().saveCurrentProject()
+    void useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
   },
 
   openProject(id) {
     const { projects } = get()
     if (!projects.find((p) => p.id === id)) return
     get().saveCurrentProject()
-
-    const json = localStorage.getItem(projectKey(id))
-    if (!json) return
-
-    useEditorStore.getState().importProject(json)
-    localStorage.setItem(ACTIVE_KEY, id)
+    loadProjectById(id)
+    void useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
   },
 
   deleteProject(id) {
     localStorage.removeItem(projectKey(id))
+    void useAssetStore.getState().clearProject(id)
 
     const { projects } = get()
     const updated = projects.filter((p) => p.id !== id)
@@ -157,15 +170,15 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
     }
     set({ projects: updated })
 
-    const activeId = localStorage.getItem(ACTIVE_KEY)
-    if (activeId === id) {
-      if (updated.length > 0) {
-        get().openProject(updated[0].id)
-      } else {
-        useEditorStore.getState().resetProject()
-        get().saveCurrentProject()
-      }
+    const activeProjectId = useEditorStore.getState().project.id
+    if (activeProjectId !== id) return
+
+    const replacement = updated[0]
+    if (!replacement || !loadProjectById(replacement.id)) {
+      useEditorStore.getState().resetProject()
+      get().saveCurrentProject()
     }
+    void useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
   },
 
   renameProject(id, name) {
@@ -184,6 +197,47 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
 
   syncMeta() {
     get().saveCurrentProject()
+  },
+
+  async exportProjectBundle(id) {
+    const editor = useEditorStore.getState()
+    const assetStore = useAssetStore.getState()
+    const isActive = editor.project.id === id
+    let project: Project
+    let resolve: (key: string) => string | undefined
+
+    if (isActive) {
+      project = editor.project
+      resolve = (key) => assetStore.getAsset(key)
+    } else {
+      const json = localStorage.getItem(projectKey(id))
+      if (!json) throw new Error('Project not found')
+      project = JSON.parse(json) as Project
+      const stored = await assetStore.loadProjectAssets(id)
+      resolve = (key) => stored[key]?.dataUrl
+    }
+
+    const { bundle } = buildProjectExportBundle(project, resolve)
+    return JSON.stringify(bundle, null, 2)
+  },
+
+  async importProjectFromJson(json) {
+    const parsed: unknown = JSON.parse(json)
+    const bundle = isProjectExportBundle(parsed) ? parsed : null
+    const rawProject = bundle ? bundle.project : parsed
+    const assets: Record<string, string> = bundle ? bundle.assets : {}
+
+    get().saveCurrentProject()
+    const withFreshId = { ...(rawProject as Project), id: newId() }
+    useEditorStore.getState().importProject(JSON.stringify(withFreshId))
+    const newProjectId = useEditorStore.getState().project.id
+    await useAssetStore.getState().setActiveProject(newProjectId)
+    await useAssetStore.getState().hydrateProject(newProjectId, assets)
+    get().saveCurrentProject()
+
+    const referenced = collectAssetKeys(useEditorStore.getState().project)
+    const missing = [...referenced].filter((key) => !(key in assets))
+    return { missing }
   },
 }))
 

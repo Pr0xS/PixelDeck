@@ -6,6 +6,9 @@ import type { PhoneLayer, Layer } from '@/types'
 import { fileToDataUrl } from '@/utils/files'
 import { ColorField, SliderField } from '@/components/properties/PropertyControls'
 import { OverrideDot } from '@/components/properties/OverrideDot'
+import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
+import { FileUploadButton } from '@/components/ui/FileUploadButton'
 import { PHONE_MODELS, getPhoneSpec } from '@/assets/mockups/specs'
 import {
   inputCls,
@@ -159,13 +162,11 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
         {/* Status bar toggle */}
         <div className="mb-3 flex items-center justify-between">
           <label className={labelCls + ' !mb-0'}>Status Bar</label>
-          <button
-            type="button"
-            onClick={() => upd({ showStatusBar: !(layer.showStatusBar ?? true) })}
-            className={`relative h-5 w-9 rounded-full transition-colors ${(layer.showStatusBar ?? true) ? 'bg-[#7c6ef6]' : 'bg-[rgba(255,255,255,0.12)]'}`}
-          >
-            <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${(layer.showStatusBar ?? true) ? 'translate-x-[18px]' : 'translate-x-0'}`} />
-          </button>
+          <ToggleSwitch
+            checked={layer.showStatusBar ?? true}
+            onChange={(checked) => upd({ showStatusBar: checked })}
+            ariaLabel="Toggle status bar"
+          />
         </div>
         {/* Controls — only shown when status bar is on */}
         {(layer.showStatusBar ?? true) && (
@@ -173,18 +174,16 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
             {/* Background type */}
             <div>
               <label className={labelCls}>Background</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(['transparent', 'solid'] as const).map((b) => (
-                  <button
-                    key={b}
-                    type="button"
-                    onClick={() => upd({ statusBarBg: b })}
-                    className={`rounded-lg border px-3 py-2 text-xs transition-colors ${(layer.statusBarBg ?? 'transparent') === b ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white' : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)]'}`}
-                  >
-                    {b === 'transparent' ? 'Transparent' : 'Solid'}
-                  </button>
-                ))}
-              </div>
+              <SegmentedControl
+                value={layer.statusBarBg ?? 'transparent'}
+                options={[
+                  { value: 'transparent', label: 'Transparent' },
+                  { value: 'solid', label: 'Solid' },
+                ]}
+                onChange={(b) => upd({ statusBarBg: b })}
+                className="grid grid-cols-2 gap-2"
+                optionClassName="rounded-lg border px-3 py-2 text-xs transition-colors"
+              />
             </div>
 
             {/* Colour picker — only for solid */}
@@ -203,18 +202,16 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
             {/* Icon theme */}
             <div>
               <label className={labelCls}>Icons</label>
-              <div className="grid grid-cols-2 gap-2">
-                {(['dark', 'light'] as const).map((t) => (
-                  <button
-                    key={t}
-                    type="button"
-                    onClick={() => upd({ statusBarTheme: t })}
-                    className={`rounded-lg border px-3 py-2 text-xs transition-colors ${(layer.statusBarTheme ?? 'dark') === t ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white' : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)]'}`}
-                  >
-                    {t === 'dark' ? '🌙 Dark' : '☀️ Light'}
-                  </button>
-                ))}
-              </div>
+              <SegmentedControl
+                value={layer.statusBarTheme ?? 'dark'}
+                options={[
+                  { value: 'dark', label: '🌙 Dark' },
+                  { value: 'light', label: '☀️ Light' },
+                ]}
+                onChange={(t) => upd({ statusBarTheme: t })}
+                className="grid grid-cols-2 gap-2"
+                optionClassName="rounded-lg border px-3 py-2 text-xs transition-colors"
+              />
             </div>
           </div>
         )}
@@ -230,48 +227,33 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
 
       <div className={panelSectionCls}>
         <label className={labelCls}>Screenshot</label>
-        <div
+        <FileUploadButton
+          ref={screenshotInputRef}
+          variant="dropzone"
+          accept="image/*"
+          ariaLabel="Upload screenshot"
           className="rounded-xl border border-dashed border-[rgba(255,255,255,0.14)] bg-[#0f0f13] p-4 text-center transition-colors hover:border-[rgba(124,110,246,0.55)] cursor-pointer"
-          onClick={() => screenshotInputRef.current?.click()}
-          onDragOver={(e) => e.preventDefault()}
-          onDrop={async (e) => {
-            e.preventDefault()
-            const file = e.dataTransfer.files[0]
+          onFiles={async (files) => {
+            const file = files[0]
             if (!file) return
             await handleScreenshotFile(file)
           }}
         >
           {previewSrc ? <img src={previewSrc} alt="Screenshot" className="mx-auto max-h-24 rounded-lg object-contain" /> : <span className="text-xs text-[#6b6b7a]">Click or drag to upload screenshot</span>}
-        </div>
+        </FileUploadButton>
         {screenshotLabel && <p className="mt-2 truncate text-[10px] text-[#6b6b7a]">{screenshotLabel}</p>}
-        <input
-          ref={screenshotInputRef}
-          type="file"
-          accept="image/*"
-          className="hidden"
-          onChange={async (e) => {
-            const file = e.target.files?.[0]
-            if (!file) return
-            await handleScreenshotFile(file)
-            e.target.value = ''
-          }}
-        />
       </div>
 
       <div className={panelSectionCls}>
         <label className={labelCls}>Fit</label>
-        <div className="grid grid-cols-3 gap-2">
-          {(['cover', 'contain', 'fill'] as const).map((fit) => (
-            <button
-              key={fit}
-              type="button"
-              onClick={() => upd({ screenshotFit: fit })}
-              className={`rounded-lg border px-2 py-2 text-xs transition-colors ${layer.screenshotFit === fit ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white' : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)]'}`}
-            >
-              {fit.charAt(0).toUpperCase() + fit.slice(1)}
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          value={layer.screenshotFit}
+          options={(['cover', 'contain', 'fill'] as const).map((fit) => ({
+            value: fit,
+            label: fit.charAt(0).toUpperCase() + fit.slice(1),
+          }))}
+          onChange={(fit) => upd({ screenshotFit: fit })}
+        />
       </div>
 
       <div className={panelSectionCls}>
@@ -283,13 +265,11 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
       <div className={panelSectionCls}>
         <div className="mb-3 flex items-center justify-between">
           <label className={labelCls + ' !mb-0'}>Border</label>
-          <button
-            type="button"
-            onClick={() => upd({ border: layer.border ? undefined : { color: '#FFFFFF', width: 2, opacity: 0.5 } })}
-            className={`relative h-5 w-9 rounded-full transition-colors ${layer.border ? 'bg-[#7c6ef6]' : 'bg-[rgba(255,255,255,0.12)]'}`}
-          >
-            <span className={`absolute top-0.5 left-0.5 h-4 w-4 rounded-full bg-white shadow transition-transform ${layer.border ? 'translate-x-[18px]' : 'translate-x-0'}`} />
-          </button>
+          <ToggleSwitch
+            checked={Boolean(layer.border)}
+            onChange={(checked) => upd({ border: checked ? { color: '#FFFFFF', width: 2, opacity: 0.5 } : undefined })}
+            ariaLabel="Toggle screenshot border"
+          />
         </div>
         {layer.border && (
           <div className="space-y-3">

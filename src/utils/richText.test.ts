@@ -44,6 +44,35 @@ describe('segmentMarks', () => {
   it('returns empty for empty text', () => {
     expect(segmentMarks([{ start: 0, end: 5, italic: true }], 0)).toEqual([])
   })
+
+  it('characterizes nested, adjacent, empty, and exact-boundary marks in segment order', () => {
+    const marks: TextMark[] = [
+      { start: 0, end: 8, fill: '#111111', underline: true },
+      { start: 2, end: 6, fill: '#222222', italic: true },
+      { start: 3, end: 5, fontWeight: 700 },
+      { start: 6, end: 8, strikethrough: true },
+      { start: 8, end: 8, fill: '#ignored' },
+      { start: 8, end: 10, fill: '#333333' },
+    ]
+
+    expect(segmentMarks(marks, 12, [2, 5, 8])).toEqual([
+      { start: 0, end: 2, style: { fill: '#111111', underline: true } },
+      { start: 2, end: 3, style: { fill: '#222222', italic: true, underline: true } },
+      { start: 3, end: 5, style: { fill: '#222222', fontWeight: 700, italic: true, underline: true } },
+      { start: 5, end: 6, style: { fill: '#222222', italic: true, underline: true } },
+      { start: 6, end: 8, style: { fill: '#111111', underline: true, strikethrough: true } },
+      { start: 8, end: 10, style: { fill: '#333333' } },
+      { start: 10, end: 12, style: {} },
+    ])
+  })
+
+  it('preserves stable unstyled segmentation at extra boundaries without marks', () => {
+    expect(segmentMarks([], 6, [4, 2, 4, 0, 6])).toEqual([
+      { start: 0, end: 2, style: {} },
+      { start: 2, end: 4, style: {} },
+      { start: 4, end: 6, style: {} },
+    ])
+  })
 })
 
 describe('normalizeMarks', () => {

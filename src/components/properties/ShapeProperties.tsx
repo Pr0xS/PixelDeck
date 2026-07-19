@@ -1,6 +1,7 @@
 import { useEditorStore } from '@/store'
 import type { ShapeLayer, Layer } from '@/types'
 import { SliderField } from '@/components/properties/PropertyControls'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { labelCls, panelSectionCls, pauseTemporal, resumeTemporal } from '@/components/properties/panelConstants'
 
 // Shapes that look best starting square
@@ -19,7 +20,7 @@ const SHAPE_OPTIONS: { type: ShapeLayer['shapeType']; label: string; icon: strin
   { type: 'check',    label: 'Check',    icon: '✓' },
 ]
 
-const ARROW_DIRECTIONS: { dir: ShapeLayer['arrowDirection']; label: string }[] = [
+const ARROW_DIRECTIONS: { dir: NonNullable<ShapeLayer['arrowDirection']>; label: string }[] = [
   { dir: 'right', label: '→' },
   { dir: 'up',    label: '↑' },
   { dir: 'down',  label: '↓' },
@@ -34,31 +35,28 @@ export function ShapeProperties({ layer }: { layer: ShapeLayer }) {
     <div className="space-y-4">
       <div className={panelSectionCls}>
         <label className={labelCls}>Shape Type</label>
-        <div className="grid grid-cols-3 gap-2">
-          {SHAPE_OPTIONS.map(({ type, label, icon }) => (
-            <button
-              key={type}
-              type="button"
-              onClick={() => {
-                const patch: Partial<ShapeLayer> = { shapeType: type }
-                if (SQUARE_SHAPES.has(type)) {
-                  const side = Math.min(layer.width, layer.height)
-                  patch.width = side
-                  patch.height = side
-                }
-                upd(patch)
-              }}
-              className={`rounded-lg border px-2 py-2 text-xs transition-colors flex flex-col items-center gap-0.5 ${
-                layer.shapeType === type
-                  ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white'
-                  : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e8e8f0]'
-              }`}
-            >
-              <span className="text-base leading-none">{icon}</span>
-              <span>{label}</span>
-            </button>
-          ))}
-        </div>
+        <SegmentedControl
+          value={layer.shapeType}
+          options={SHAPE_OPTIONS.map(({ type, label, icon }) => ({
+            value: type,
+            label: (
+              <>
+                <span className="text-base leading-none">{icon}</span>
+                <span>{label}</span>
+              </>
+            ),
+          }))}
+          onChange={(type) => {
+            const patch: Partial<ShapeLayer> = { shapeType: type }
+            if (SQUARE_SHAPES.has(type)) {
+              const side = Math.min(layer.width, layer.height)
+              patch.width = side
+              patch.height = side
+            }
+            upd(patch)
+          }}
+          optionClassName="rounded-lg border px-2 py-2 text-xs transition-colors flex flex-col items-center gap-0.5"
+        />
       </div>
 
       {layer.shapeType === 'rect' && (
@@ -105,22 +103,13 @@ export function ShapeProperties({ layer }: { layer: ShapeLayer }) {
       {layer.shapeType === 'arrow' && (
         <div className={panelSectionCls}>
           <label className={labelCls}>Direction</label>
-          <div className="grid grid-cols-4 gap-2">
-            {ARROW_DIRECTIONS.map(({ dir, label }) => (
-              <button
-                key={dir}
-                type="button"
-                onClick={() => upd({ arrowDirection: dir })}
-                className={`rounded-lg border py-2 text-base transition-colors ${
-                  (layer.arrowDirection ?? 'right') === dir
-                    ? 'border-[#7c6ef6] bg-[#7c6ef6] text-white'
-                    : 'border-[rgba(255,255,255,0.1)] text-[#6b6b7a] hover:bg-[rgba(255,255,255,0.06)] hover:text-[#e8e8f0]'
-                }`}
-              >
-                {label}
-              </button>
-            ))}
-          </div>
+          <SegmentedControl
+            value={layer.arrowDirection ?? 'right'}
+            options={ARROW_DIRECTIONS.map(({ dir, label }) => ({ value: dir, label }))}
+            onChange={(dir) => upd({ arrowDirection: dir })}
+            className="grid grid-cols-4 gap-2"
+            optionClassName="rounded-lg border py-2 text-base transition-colors"
+          />
         </div>
       )}
     </div>
