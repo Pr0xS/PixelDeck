@@ -1,6 +1,11 @@
 import { describe, it, expect } from 'vitest'
-import type { BackgroundLayer, GroupLayer, Layer, PhoneLayer, Project, SlideGroup, TextLayer } from '@/types'
-import { assertProjectShape, migrateProject, stripDataUrls } from './helpers'
+import type { BackgroundLayer, GroupLayer, ImageLayer, Layer, PhoneLayer, Project, SlideGroup, TextLayer } from '@/types'
+import {
+  assertProjectShape,
+  LOCALE_SYMMETRIC_SCHEMA_VERSION,
+  migrateProject,
+  stripDataUrls,
+} from './helpers'
 
 const baseLayer = {
   x: 0,
@@ -53,6 +58,20 @@ function makePhoneLayer(overrides: Partial<PhoneLayer> = {}): PhoneLayer {
     screenshotFit: 'cover',
     screenshotOffsetX: 0,
     screenshotOffsetY: 0,
+    ...overrides,
+  }
+}
+
+function makeImageLayer(overrides: Partial<ImageLayer> = {}): ImageLayer {
+  return {
+    ...baseLayer,
+    id: 'image-1',
+    name: 'Image',
+    type: 'image',
+    src: 'image.png',
+    width: 100,
+    height: 100,
+    cornerRadius: 0,
     ...overrides,
   }
 }
@@ -185,6 +204,131 @@ describe('migrateProject', () => {
     const migrated = migrateProject(project)
 
     expect(migrated.settings.pano).toEqual({ gapPx: 48, compensate: true })
+  })
+})
+
+describe('foldLayerToSymmetric / localeContent migration', () => {
+  it('populates default-locale text content without changing the base text', () => {
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ layers: [makeBackgroundLayer(), makeTextLayer({ text: 'Hello' })] })],
+    })
+
+    const migrated = migrateProject(project)
+    const layer = migrated.slideGroups[0].layers[1] as TextLayer
+
+    expect(layer.localeContent).toEqual({ en: { text: 'Hello' } })
+    expect(layer.text).toBe('Hello')
+  })
+
+  it('populates both default and override locale text content', () => {
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ layers: [
+        makeBackgroundLayer(),
+        makeTextLayer({ text: 'Hello', localeOverrides: { es: { text: 'Hola' } } }),
+      ] })],
+    })
+
+    const layer = migrateProject(project).slideGroups[0].layers[1]
+
+    expect(layer.localeContent).toEqual({ en: { text: 'Hello' }, es: { text: 'Hola' } })
+    expect(layer.localeOverrides).toEqual({ es: { text: 'Hola' } })
+  })
+
+  it('populates default-locale phone screenshot content', () => {
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ layers: [makeBackgroundLayer(), makePhoneLayer({ screenshotPath: 'phone.png' })] })],
+    })
+
+    const layer = migrateProject(project).slideGroups[0].layers[1]
+
+    expect(layer.localeContent?.en.screenshotPath).toBe('phone.png')
+  })
+
+  it('populates default-locale image source content', () => {
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ layers: [makeBackgroundLayer(), makeImageLayer({ src: 'hero.png' })] })],
+    })
+
+    const layer = migrateProject(project).slideGroups[0].layers[1]
+
+    expect(layer.localeContent?.en.src).toBe('hero.png')
+  })
+
+  it('does not add localeContent to non-localizable layers', () => {
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ layers: [makeBackgroundLayer()] })],
+    })
+
+    const layer = migrateProject(project).slideGroups[0].layers[0]
+
+    expect(layer.localeContent).toBeUndefined()
+  })
+
+  it('recursively populates localeContent on group children', () => {
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ layers: [
+        makeBackgroundLayer(),
+        makeGroupLayer({ children: [makeTextLayer({ text: 'Nested' })] }),
+      ] })],
+    })
+
+    const group = migrateProject(project).slideGroups[0].layers[1] as GroupLayer
+
+    expect(group.children[0].localeContent).toEqual({ en: { text: 'Nested' } })
+  })
+
+  it('is idempotent when migrateProject runs twice', () => {
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ layers: [makeBackgroundLayer(), makeTextLayer()] })],
+    })
+    const migrated = migrateProject(project)
+    const firstResult = structuredClone(migrated)
+
+    const migratedAgain = migrateProject(migrated)
+
+    expect(migratedAgain).toEqual(firstResult)
+  })
+
+  it('sets the schema version and preserves an already-current version', () => {
+    const legacy = migrateProject(makeProject())
+    const currentProject = makeProject({
+      settings: {
+        defaultSlideWidth: 1290,
+        defaultSlideHeight: 2796,
+        defaultLocale: 'en',
+        brandName: 'My App',
+        schemaVersion: LOCALE_SYMMETRIC_SCHEMA_VERSION,
+      },
+    })
+
+    const current = migrateProject(currentProject)
+
+    expect(legacy.settings.schemaVersion).toBe(LOCALE_SYMMETRIC_SCHEMA_VERSION)
+    expect(current.settings.schemaVersion).toBe(LOCALE_SYMMETRIC_SCHEMA_VERSION)
+  })
+
+  it('migrates legacy locale override spans to marks before folding content', () => {
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ layers: [
+        makeBackgroundLayer(),
+        makeTextLayer({
+          localeOverrides: {
+            fr: {
+              text: 'Bonjour',
+              spans: [{ text: 'Bonjour', fontWeight: 400 }],
+            },
+          },
+        }),
+      ] })],
+    })
+
+    const layer = migrateProject(project).slideGroups[0].layers[1]
+
+    expect(layer.localeContent?.fr.text).toBe('Bonjour')
+    expect(layer.localeContent?.fr.marks).toEqual([
+      expect.objectContaining({ start: 0, end: 7, fontWeight: 400 }),
+    ])
+    expect(layer.localeContent?.fr).not.toHaveProperty('spans')
   })
 })
 

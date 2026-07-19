@@ -122,6 +122,30 @@ export interface LocaleLayerPatch {
 }
 
 /**
+ * The localizable content for ONE locale. Identical shape for every locale,
+ * including the default locale — this uniformity is the point (v0.6.0
+ * symmetric locale model). Structurally the same payload as LocaleLayerPatch
+ * minus the deprecated `spans` field (spans are always migrated to `marks`
+ * before this shape is ever populated).
+ *
+ * NOT YET LOAD-BEARING: as of this phase, `Layer.localeContent` is populated
+ * by migration but nothing reads it yet. Renderers and the editor still read
+ * the legacy flat fields (`TextLayer.text`, `ImageLayer.src`, etc.) and
+ * `localeOverrides`. A later phase switches consumers over; only then can the
+ * legacy fields and `localeOverrides` be removed.
+ */
+export interface LocaleContent {
+  // TextLayer
+  text?: string;
+  marks?: TextMark[];
+  // PhoneLayer
+  screenshotPath?: string;
+  screenshotDataUrl?: string;
+  // ImageLayer
+  src?: string;
+}
+
+/**
  * Controls how a layer participates in localization / bulk AI translation.
  *  - 'auto'   : eligible for bulk AI translate (default; undefined === 'auto')
  *  - 'manual' : human-entered overrides only; bulk translate SKIPS it
@@ -162,6 +186,13 @@ export interface BaseLayer {
    * Merged at render / export time by applyLocale(). Never affects undo history shape.
    */
   localeOverrides?: Record<string, LocaleLayerPatch>;
+  /**
+   * v0.6.0 symmetric locale model (in progress): per-locale content,
+   * INCLUDING the default locale's own content. Key = locale code.
+   * Populated by migration; not yet read by any consumer — see LocaleContent
+   * doc comment. Do not write to this yet outside of migration.
+   */
+  localeContent?: Record<string, LocaleContent>;
   /** Per-format visual/layout overrides. Base layer remains the shared source. */
   formatOverrides?: Partial<Record<CanvasFormatId, FormatLayerPatch>>;
   /** Optional per-format visibility. Undefined = follows `visible`. */
@@ -417,6 +448,13 @@ export interface ProjectSettings {
   defaultLocale: string;
   /** Full list of defined locales including defaultLocale (e.g. ['en', 'es', 'fr']). */
   locales?: string[];
+  /**
+   * Bumped when the project's on-disk shape changes in a way that requires
+   * one-time migration (e.g. the v0.6.0 symmetric locale model). Undefined
+   * means "pre-versioning" / legacy. Compare with LOCALE_SYMMETRIC_SCHEMA_VERSION
+   * in store/helpers.ts.
+   */
+  schemaVersion?: number;
   brandName: string;
   brandLogoDataUrl?: string;
   brandColors?: BrandColor[];

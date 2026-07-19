@@ -2,15 +2,19 @@ import { nanoid } from 'nanoid'
 import type {
   Project, SlideGroup, Layer, LayerType, GroupLayer,
   BackgroundLayer, CanvasBackground, ProjectSettings,
-  LocaleLayerPatch, CanvasFormatId, FormatLayerPatch,
+  LocaleLayerPatch, LocaleContent, CanvasFormatId, FormatLayerPatch,
 } from '@/types'
 import { spansToMarks } from '@/utils/textRendering'
+import { mapLayerTree } from '@/utils/layerTree'
 import {
   BASE_CANVAS_FORMAT,
   FORMAT_FORK_KEYS,
   normalizeProjectFormats,
 } from '@/utils/canvasFormats'
 import type { EditorSet, EditorGet } from './types'
+
+/** Bumped by each one-time project-shape migration. See migrateProject(). */
+export const LOCALE_SYMMETRIC_SCHEMA_VERSION = 1
 
 export { findLayerInTree, mapLayerTree, updateLayerInTree } from '@/utils/layerTree'
 
@@ -150,6 +154,45 @@ export function migrateLayerSpans(layer: Layer): Layer {
   return layer
 }
 
+/**
+ * v0.6.0 symmetric locale model — Phase 1 (additive only).
+ * Populates `layer.localeContent[defaultLocale]` from the layer's current
+ * base fields, and copies each existing `localeOverrides[locale]` entry into
+ * `localeContent[locale]` verbatim (same shape, just relocated). Does NOT
+ * remove `localeOverrides` or the base fields — this phase is purely
+ * additive so existing read paths are unaffected. Idempotent: if
+ * `localeContent` is already present, returns the layer unchanged.
+ */
+export function foldLayerToSymmetric(layer: Layer, defaultLocale: string): Layer {
+  if (layer.localeContent) return layer // already migrated
+  if (layer.type !== 'text' && layer.type !== 'phone' && layer.type !== 'image') return layer
+
+  const defaultContent: LocaleContent =
+    layer.type === 'text'
+      ? { text: layer.text, ...(layer.marks?.length ? { marks: layer.marks } : {}) }
+      : layer.type === 'phone'
+        ? {
+            ...(layer.screenshotPath !== undefined ? { screenshotPath: layer.screenshotPath } : {}),
+            ...(layer.screenshotDataUrl !== undefined ? { screenshotDataUrl: layer.screenshotDataUrl } : {}),
+          }
+        : { src: layer.src }
+
+  const localeContent: Record<string, LocaleContent> = { [defaultLocale]: defaultContent }
+  if (layer.localeOverrides) {
+    for (const [locale, patch] of Object.entries(layer.localeOverrides)) {
+      // patch is LocaleLayerPatch; spans should already be migrated to marks
+      // by migrateLayerSpans (which must run before this in migrateProject).
+      // Defensively drop spans if somehow still present rather than carrying
+      // a field LocaleContent doesn't declare.
+      const { spans: _spans, ...rest } = patch
+      void _spans
+      localeContent[locale] = rest as LocaleContent
+    }
+  }
+
+  return { ...layer, localeContent } as Layer
+}
+
 export function newSlideGroup(overrides?: Partial<SlideGroup>): SlideGroup {
   const bgLayer = createBackgroundLayer()
   const { layers: overrideLayers, ...otherOverrides } = overrides ?? {}
@@ -227,11 +270,15 @@ export function migrateProject(raw: Project): Project {
       sg.layers = [migrated, ...sg.layers]
     }
     sg.layers = sg.layers.map(migrateLayerSpans)
+    sg.layers = mapLayerTree(sg.layers, (l) => foldLayerToSymmetric(l, project.settings.defaultLocale))
     // Legacy field — fully superseded by the BackgroundLayer in layers[0]
     delete sg.background
   }
   if (!project.settings.pano) {
     project.settings = { ...project.settings, pano: { gapPx: 24, compensate: false } }
+  }
+  if ((project.settings.schemaVersion ?? 0) < LOCALE_SYMMETRIC_SCHEMA_VERSION) {
+    project.settings = { ...project.settings, schemaVersion: LOCALE_SYMMETRIC_SCHEMA_VERSION }
   }
   return project
 }
