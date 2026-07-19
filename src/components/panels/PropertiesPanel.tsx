@@ -290,7 +290,7 @@ function LayoutTab({ layer }: { layer: Layer }) {
       <div className={panelSectionCls}>
         {localeLayoutGated && (
           <p className="mb-3 text-[10px] text-[#22d3ee]">
-            Switch to a platform tab to adjust {getLanguageName(activeLocale)} layout
+            Layout changes do not apply in Base for {getLanguageName(activeLocale)}. Switch to a platform tab to adjust position and size.
           </p>
         )}
         {!isBackground && (

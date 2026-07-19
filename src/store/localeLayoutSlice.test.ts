@@ -81,6 +81,40 @@ describe('locale/format layout write routing', () => {
     expect(updated.localeLayoutOverrides).toBeUndefined()
   })
 
+  it('routes Base plus non-default locale edits by content, layout, and shared property category', () => {
+    useEditorStore.getState().addText()
+    const layer = getTextLayer()
+    useEditorStore.getState().setActiveLocale('de')
+
+    useEditorStore.getState().updateLayer(layer.id, {
+      x: 200,
+      width: 480,
+      fontSize: 72,
+      rotation: 15,
+      text: 'Hallo',
+      opacity: 0.5,
+      fill: '#ff0000',
+      visible: false,
+      locked: true,
+    })
+
+    const updated = getTextLayer()
+    expect(updated).toMatchObject({
+      x: layer.x,
+      width: layer.width,
+      fontSize: layer.fontSize,
+      rotation: layer.rotation,
+      text: layer.text,
+      opacity: 0.5,
+      fill: '#ff0000',
+      visible: false,
+      locked: true,
+    })
+    expect(updated.localeContent?.de?.text).toBe('Hallo')
+    expect(updated.localeLayoutOverrides).toBeUndefined()
+    expect(updated.formatOverrides).toBeUndefined()
+  })
+
   it('preserves default-locale non-base routing through formatOverrides', () => {
     useEditorStore.getState().addText()
     const layer = getTextLayer()

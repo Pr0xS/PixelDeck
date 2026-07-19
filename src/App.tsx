@@ -7,8 +7,7 @@ import { PreviewModal } from '@/components/panels/PreviewModal'
 import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SlideNavigator } from '@/components/panels/SlideNavigator'
 import { StageCanvas } from '@/components/canvas/StageCanvas'
-import { FormatTabs } from '@/components/canvas/FormatTabs'
-import { LocaleLayoutTabs } from '@/components/canvas/LocaleLayoutTabs'
+import { EditingContextAlert, EditingContextBar } from '@/components/canvas/EditingContext'
 import { useThumbnails } from '@/hooks/useThumbnails'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { applyCanvasFormat, resolveProjectView } from '@/utils/canvasFormats'
@@ -236,13 +235,13 @@ export default function App() {
             className="flex-1 overflow-hidden bg-[#111118] flex flex-col"
             style={{ minWidth: 0 }}
           >
-            {/* Compact format + locale context rows above the canvas */}
-            <FormatTabs />
-            <LocaleLayoutTabs />
+            {/* Both editing axes share one compact top bar. */}
+            <EditingContextBar />
 
             {/* Canvas fills remaining height — StageCanvas takes full space */}
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
               <StageCanvas stageRef={stageRef} />
+              <EditingContextAlert />
             </div>
           </main>
 
