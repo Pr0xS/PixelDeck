@@ -503,6 +503,135 @@ describe('setLocaleOverride / clearLocaleOverride', () => {
   })
 })
 
+describe('relabelDefaultLocale / promoteLocaleToDefault', () => {
+  it('relabels the default locale and moves its locale content key', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hello' })
+
+    useEditorStore.getState().relabelDefaultLocale('en-us')
+
+    const { project } = useEditorStore.getState()
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(project.settings.defaultLocale).toBe('en-us')
+    expect(project.settings.locales?.[0]).toBe('en-us')
+    expect(updated.localeContent?.['en-us']?.text).toBe('Hello')
+    expect(updated.localeContent?.en).toBeUndefined()
+  })
+
+  it('does not relabel the default to an existing distinct locale', () => {
+    useEditorStore.getState().addLocale('es')
+
+    useEditorStore.getState().relabelDefaultLocale('es')
+
+    expect(useEditorStore.getState().project.settings.defaultLocale).toBe('en')
+  })
+
+  it('promotes an existing translation and preserves the demoted default', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hello' })
+    useEditorStore.getState().addLocale('es')
+    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+
+    useEditorStore.getState().promoteLocaleToDefault('es')
+
+    const { project } = useEditorStore.getState()
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(project.settings.defaultLocale).toBe('es')
+    expect(updated.text).toBe('Hola')
+    expect(updated.localeContent?.es.text).toBe('Hola')
+    expect(updated.localeContent?.en.text).toBe('Hello')
+    expect(updated.localeOverrides?.en.text).toBe('Hello')
+    expect(updated.localeOverrides?.es).toBeUndefined()
+  })
+
+  it('seeds an incomplete promoted locale from the old default', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hello' })
+    useEditorStore.getState().addLocale('es')
+
+    useEditorStore.getState().promoteLocaleToDefault('es')
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.text).toBe('Hello')
+    expect(updated.localeContent?.es.text).toBe('Hello')
+    expect(updated.localeContent?.en.text).toBe('Hello')
+  })
+
+  it('does not promote a locale absent from project settings', () => {
+    const projectBefore = useEditorStore.getState().project
+
+    useEditorStore.getState().promoteLocaleToDefault('es')
+
+    expect(useEditorStore.getState().project).toBe(projectBefore)
+    expect(useEditorStore.getState().project.settings.defaultLocale).toBe('en')
+  })
+
+  it('clears stale default text marks when the promoted translation has none', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().updateLayer(textLayer.id, {
+      text: 'Hello',
+      marks: [{ start: 0, end: 5, fontWeight: 700 }],
+    })
+    useEditorStore.getState().addLocale('es')
+    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+
+    useEditorStore.getState().promoteLocaleToDefault('es')
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.text).toBe('Hola')
+    expect(updated.marks).toBeUndefined()
+  })
+
+  it('dual-writes locale overrides to symmetric locale content', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+
+    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.localeOverrides?.es).toEqual({ text: 'Hola' })
+    expect(updated.localeContent?.es).toEqual({ text: 'Hola' })
+  })
+
+  it('clears locale overrides from both legacy and symmetric maps', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+
+    useEditorStore.getState().clearLocaleOverride(groupId, textLayer.id, 'es')
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.localeOverrides?.es).toBeUndefined()
+    expect(updated.localeContent?.es).toBeUndefined()
+  })
+
+  it('removes a locale from both maps on every layer', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayers = getActiveGroup().layers.filter((l) => l.type === 'text') as TextLayer[]
+    useEditorStore.getState().addLocale('es')
+    for (const [index, layer] of textLayers.entries()) {
+      useEditorStore.getState().setLocaleOverride(groupId, layer.id, 'es', { text: `Hola ${index}` })
+    }
+
+    useEditorStore.getState().removeLocale('es')
+
+    for (const layer of getActiveGroup().layers.filter((l) => l.type === 'text') as TextLayer[]) {
+      expect(layer.localeOverrides?.es).toBeUndefined()
+      expect(layer.localeContent?.es).toBeUndefined()
+    }
+  })
+})
+
 // ─── addTemplateSlideGroups (brand kit merge) ─────────────────────────────────
 
 describe('addTemplateSlideGroups', () => {

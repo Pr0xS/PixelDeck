@@ -39,7 +39,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     activeLocale,
     addLocale,
     removeLocale,
-    renameDefaultLocale,
+    relabelDefaultLocale,
     setActiveLocale,
     setLocaleOverride,
     clearLocaleOverride,
@@ -50,7 +50,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     activeLocale: s.activeLocale,
     addLocale: s.addLocale,
     removeLocale: s.removeLocale,
-    renameDefaultLocale: s.renameDefaultLocale,
+    relabelDefaultLocale: s.relabelDefaultLocale,
     setActiveLocale: s.setActiveLocale,
     setLocaleOverride: s.setLocaleOverride,
     clearLocaleOverride: s.clearLocaleOverride,
@@ -398,7 +398,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     }
     const nonDefault = locales.filter((l) => l !== defaultLocale)
     if (nonDefault.includes(locale)) return
-    renameDefaultLocale(locale)
+    relabelDefaultLocale(locale)
     setShowDefaultLocalePicker(false)
   }
 

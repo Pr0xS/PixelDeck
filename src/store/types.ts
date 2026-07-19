@@ -77,7 +77,8 @@ export interface EditorStore {
   setActiveLocale: (locale: string) => void
   addLocale: (locale: string) => void
   removeLocale: (locale: string) => void
-  renameDefaultLocale: (locale: string) => void
+  relabelDefaultLocale: (locale: string) => void
+  promoteLocaleToDefault: (locale: string) => void
   updateLayerInSlideGroup: (slideGroupId: string, layerId: string, patch: Partial<Layer>) => void
   setLocaleOverride: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
   clearLocaleOverride: (slideGroupId: string, layerId: string, locale: string) => void
