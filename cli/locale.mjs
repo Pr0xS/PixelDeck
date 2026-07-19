@@ -73,7 +73,7 @@ export function applyLocaleManifest(project, manifest) {
       for (const [locale, patch] of Object.entries(localeOverrides)) {
         mergedLocaleContent[locale] = patch
       }
-      patched = { ...layer, localeOverrides, localeContent: mergedLocaleContent }
+      patched = { ...layer, localeContent: mergedLocaleContent }
     }
     if (patched.type === 'group') {
       return { ...patched, children: patched.children.map(patchLayer) }

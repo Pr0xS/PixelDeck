@@ -8,6 +8,7 @@ import {
   patchLayerForLocale,
   patchLayerForFormat,
   updateLayerInTree,
+  seedLocaleContent,
 } from '../helpers'
 import { getProjectBaseFormat } from '@/utils/canvasFormats'
 
@@ -104,12 +105,13 @@ export const createGroupSlice = (
   },
 
   addToGroup: (groupId, layer) => {
+    const seededLayer = seedLocaleContent(layer, get().project.settings.defaultLocale)
     mutateActiveGroup(set, (g) => ({
       ...g,
       layers: g.layers.map((l) => {
         if (l.id !== groupId || l.type !== 'group') return l
         const grp = l as GroupLayer
-        return { ...grp, children: [...grp.children, layer] }
+        return { ...grp, children: [...grp.children, seededLayer] }
       }),
     }))
   },

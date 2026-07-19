@@ -180,7 +180,7 @@ describe('projectToTemplate', () => {
       background.imageDataUrl = 'data:image/png;base64,background'
     }
     phone.screenshotDataUrl = 'data:image/png;base64,phone'
-    phone.localeOverrides = {
+    phone.localeContent = {
       es: { screenshotPath: 'es.png', screenshotDataUrl: 'data:image/png;base64,es' },
     }
     phone.formatOverrides = {
@@ -191,7 +191,7 @@ describe('projectToTemplate', () => {
       id: 'image1', name: 'Photo', type: 'image', x: 10, y: 20, rotation: 0,
       opacity: 1, visible: true, locked: false, src: 'data:image/png;base64,image',
       width: 300, height: 200, cornerRadius: 12,
-      localeOverrides: { es: { src: 'data:image/png;base64,image-es' } },
+      localeContent: { es: { src: 'data:image/png;base64,image-es' } },
       formatOverrides: {
         'iphone-69': { src: 'data:image/png;base64,image-format' },
       } as unknown as ImageLayer['formatOverrides'],
@@ -218,10 +218,10 @@ describe('projectToTemplate', () => {
     expect((tpl.slideGroups[0].layers[0] as BackgroundLayer).imageDataUrl).toBeUndefined()
     expect(exportedPhone.screenshotPath).toBeUndefined()
     expect(exportedPhone.screenshotDataUrl).toBeUndefined()
-    expect(exportedPhone.localeOverrides?.es).toEqual({})
+    expect(exportedPhone.localeContent?.es).toEqual({})
     expect(exportedPhone.formatOverrides?.['iphone-69']).toEqual({})
     expect(exportedImage.src).toBe('')
-    expect(exportedImage.localeOverrides?.es).toEqual({})
+    expect(exportedImage.localeContent?.es).toEqual({})
     expect(exportedImage.formatOverrides?.['iphone-69']).toEqual({})
     expect(exportedBrand.logoDataUrl).toBeUndefined()
     expect(JSON.stringify(tpl)).not.toContain('data:image')
@@ -353,21 +353,21 @@ describe('extractInlineScreenshots', () => {
   it('deduplicates identical screenshots across base layers and locale overrides', () => {
     const first = makePhone('p1', dataUrl)
     const second = makePhone('p2')
-    second.localeOverrides = { es: { screenshotDataUrl: dataUrl } }
+    second.localeContent = { es: { screenshotDataUrl: dataUrl } }
 
     const result = extractInlineScreenshots('Dedupe', groupsWith(first, second))
     const phones = result.slideGroups[0].layers as PhoneLayer[]
-    expect(phones[0].screenshotPath).toBe(phones[1].localeOverrides?.es.screenshotPath)
+    expect(phones[0].screenshotPath).toBe(phones[1].localeContent?.es.screenshotPath)
     expect(result.assets).toHaveLength(1)
   })
 
   it('extracts locale override screenshots and detects jpeg extensions', () => {
     const phone = makePhone('p1')
     const jpeg = 'data:image/jpeg;base64,anBlZw=='
-    phone.localeOverrides = { fr: { screenshotDataUrl: jpeg } }
+    phone.localeContent = { fr: { screenshotDataUrl: jpeg } }
 
     const result = extractInlineScreenshots('Photo Set', groupsWith(phone))
-    const patch = (result.slideGroups[0].layers[0] as PhoneLayer).localeOverrides?.fr
+    const patch = (result.slideGroups[0].layers[0] as PhoneLayer).localeContent?.fr
     expect(patch?.screenshotDataUrl).toBeUndefined()
     expect(patch?.screenshotPath).toBe('template-photo-set-1.jpg')
     expect(result.assets[0]).toEqual({ filename: 'template-photo-set-1.jpg', dataUrl: jpeg })

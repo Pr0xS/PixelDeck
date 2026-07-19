@@ -111,7 +111,7 @@ export function collectLocalizableRows(
 export function isOverrideComplete(row: LocalizableRow, locale: string, defaultLocale: string): boolean {
   if (locale === defaultLocale) return true
   if (effectiveLocalizationMode(row.layer) === 'skip') return true // skipped = not counted
-  const override = row.layer.localeOverrides?.[locale]
+  const override = row.layer.localeContent?.[locale]
   if (!override) return false
   if (row.layerType === 'text') return typeof override.text === 'string' && override.text.trim().length > 0
   if (row.layerType === 'phone') return Boolean((override.screenshotPath?.trim()) || override.screenshotDataUrl)

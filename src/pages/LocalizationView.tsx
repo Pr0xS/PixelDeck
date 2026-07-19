@@ -43,9 +43,9 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     relabelDefaultLocale,
     promoteLocaleToDefault,
     setActiveLocale,
-    setLocaleOverride,
-    clearLocaleOverride,
-    setLocaleOverridesBatch,
+    setLocaleContent,
+    clearLocaleContent,
+    setLocaleContentBatch,
     updateLayerInSlideGroup,
   } = useEditorStore(useShallow((s) => ({
     project: s.project,
@@ -55,9 +55,9 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     relabelDefaultLocale: s.relabelDefaultLocale,
     promoteLocaleToDefault: s.promoteLocaleToDefault,
     setActiveLocale: s.setActiveLocale,
-    setLocaleOverride: s.setLocaleOverride,
-    clearLocaleOverride: s.clearLocaleOverride,
-    setLocaleOverridesBatch: s.setLocaleOverridesBatch,
+    setLocaleContent: s.setLocaleContent,
+    clearLocaleContent: s.clearLocaleContent,
+    setLocaleContentBatch: s.setLocaleContentBatch,
     updateLayerInSlideGroup: s.updateLayerInSlideGroup,
   })))
   const { addAsset, getAsset } = useAssetStore(useShallow((s) => ({ addAsset: s.addAsset, getAsset: s.getAsset })))
@@ -107,7 +107,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
   const [cellStatus, setCellStatus] = useState<Map<CellKey, CellStatus>>(new Map())
   const [cellError, setCellError] = useState<Map<CellKey, string>>(new Map())
   // Optimistic bulk AI results: displayed immediately, then committed once at
-  // the end via setLocaleOverridesBatch so the operation remains one undo step.
+  // the end via setLocaleContentBatch so the operation remains one undo step.
   const [bulkPreviewOverrides, setBulkPreviewOverrides] = useState<Map<CellKey, LocaleLayerPatch>>(new Map())
   const [isBulkRunning, setIsBulkRunning] = useState(false)
   const [overwriteExisting, setOverwriteExisting] = useState(false)
@@ -153,7 +153,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     const group = project.slideGroups.find((item) => item.id === uploadTarget.slideGroupId)
     const found = group ? findLayerById(group.layers, uploadTarget.layerId) : null
     const layer = found?.layer
-    const existingOverride = layer?.localeOverrides?.[uploadTarget.locale] ?? {}
+    const existingOverride = layer?.localeContent?.[uploadTarget.locale] ?? {}
     const assetKey = buildLocaleAssetKey(uploadTarget.locale, uploadTarget.slideGroupId, uploadTarget.layerId, file.name)
     addAsset(assetKey, dataUrl)
     if (uploadTarget.locale === project.settings.defaultLocale) {
@@ -170,13 +170,13 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       return
     }
     if (uploadTarget.layerType === 'phone') {
-      setLocaleOverride(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {
+      setLocaleContent(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {
         ...existingOverride,
         screenshotPath: assetKey,
         screenshotDataUrl: undefined,
       })
     } else {
-      setLocaleOverride(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {
+      setLocaleContent(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {
         ...existingOverride,
         src: assetKey,
       })
@@ -222,14 +222,14 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
         marks: (row.layer as TextLayer).marks,
         targetLocale: locale,
       })
-      setLocaleOverride(row.slideGroupId, row.layerId, locale, { text: result.text, marks: result.marks })
+      setLocaleContent(row.slideGroupId, row.layerId, locale, { text: result.text, marks: result.marks })
       markFormattingLost(key, Boolean(result.formattingLost))
       setCellStatus((m) => new Map(m).set(key, 'done'))
     } catch (e) {
       setCellError((m) => new Map(m).set(key, getErrorMessage(e)))
       setCellStatus((m) => new Map(m).set(key, 'error'))
     }
-  }, [getActiveBaseUrl, getActiveKey, getActiveModel, markFormattingLost, project, provider, setLocaleOverride])
+  }, [getActiveBaseUrl, getActiveKey, getActiveModel, markFormattingLost, project, provider, setLocaleContent])
 
   // TODO: AI image generation disabled temporarily — re-enable when ready.
   // Handler and import are preserved in git history. See localizeImage.ts + editImage() in client.ts.
@@ -263,7 +263,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       if (eligibleRows.length === 0) continue
       for (const locale of nonDefaultLocales) {
         const pending = eligibleRows.filter((row) => {
-          const hasOverride = typeof row.layer.localeOverrides?.[locale]?.text === 'string'
+          const hasOverride = typeof row.layer.localeContent?.[locale]?.text === 'string'
           return !hasOverride || overwriteExisting
         })
         if (pending.length > 0) batches.push({ slideGroup, locale, rows: pending })
@@ -376,11 +376,11 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     }
 
     // Single undo step for the whole batch (includes work finished before Stop)
-    if (staged.length > 0) setLocaleOverridesBatch(staged)
+    if (staged.length > 0) setLocaleContentBatch(staged)
     setBulkPreviewOverrides(new Map())
 
     setIsBulkRunning(false)
-  }, [defaultLocale, getActiveBaseUrl, getActiveKey, getActiveModel, groups, isBulkRunning, locales, markFormattingLost, overwriteExisting, project, provider, setLocaleOverridesBatch])
+  }, [defaultLocale, getActiveBaseUrl, getActiveKey, getActiveModel, groups, isBulkRunning, locales, markFormattingLost, overwriteExisting, project, provider, setLocaleContentBatch])
 
   // ─ Mode update
   const handleModeUpdate = useCallback((row: LocalizableRow, mode: LocalizationMode | undefined) => {
@@ -439,7 +439,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       if (effectiveLocalizationMode(r.layer) !== 'auto') return false
       if (!r.defaultText) return false
       return nonDefaultLocales.some((locale) => {
-        const hasOverride = typeof r.layer.localeOverrides?.[locale]?.text === 'string'
+        const hasOverride = typeof r.layer.localeContent?.[locale]?.text === 'string'
         return !hasOverride || overwriteExisting
       })
     }).length * nonDefaultLocales.length
@@ -531,8 +531,8 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
                   onNavigateToLayer={navigateToLayer}
                   onModeUpdate={handleModeUpdate}
                   updateLayerInSlideGroup={updateLayerInSlideGroup}
-                  setLocaleOverride={setLocaleOverride}
-                  clearLocaleOverride={clearLocaleOverride}
+                  setLocaleContent={setLocaleContent}
+                  clearLocaleContent={clearLocaleContent}
                   getAsset={getAsset}
                   openUploadPicker={openUploadPicker}
                   setEditingTextCell={setEditingTextCell}

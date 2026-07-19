@@ -13,7 +13,7 @@ import type { FillValue, TextLayer, TextMark } from '@/types'
 // Renders a cheap styled preview; clicking it mounts the shared rich-text
 // editor (same engine as the canvas/panel editors) bound to the override's
 // text+marks instead of the layer itself. Styling commits go through
-// `onCommit` → setLocaleOverride, so marks stay locale-specific.
+// `onCommit` → setLocaleContent, so marks stay locale-specific.
 //
 // Toolbar placement: when `toolbarSlot` is provided, the RichTextToolbar is
 // portaled into it (a floating, viewport-fixed panel owned by the view — same

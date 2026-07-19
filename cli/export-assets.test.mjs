@@ -24,6 +24,17 @@ describe('CLI export asset helpers', () => {
     expect(collectAssetRefsFromProject(project)).toEqual(new Set(['a.png', 'c.png']))
   })
 
+  it('collects asset refs from locale content patches', () => {
+    const project = {
+      slideGroups: [{ layers: [
+        { type: 'phone', localeContent: { es: { screenshotPath: 'phone-es.png' } } },
+        { type: 'image', localeContent: { fr: { src: 'image-fr.png' } } },
+      ] }],
+    }
+
+    expect(collectAssetRefsFromProject(project)).toEqual(new Set(['phone-es.png', 'image-fr.png']))
+  })
+
   it('recursively collects refs from group children', () => {
     const project = {
       slideGroups: [{ layers: [

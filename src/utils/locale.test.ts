@@ -69,9 +69,9 @@ describe('resolveLayerLocale', () => {
     expect(result).toBe(layer)
   })
 
-  it('returns the layer unchanged when no override exists for the given locale', () => {
+  it('returns the layer unchanged when no content exists for the given locale', () => {
     const layer = makeTextLayer({
-      localeOverrides: { fr: { text: 'Bonjour' } },
+      localeContent: { fr: { text: 'Bonjour' } },
     })
     const result = resolveLayerLocale(layer, 'es')
     expect(result).toBe(layer)
@@ -79,7 +79,7 @@ describe('resolveLayerLocale', () => {
 
   it('shallowly merges the matching locale patch into the layer', () => {
     const layer = makeTextLayer({
-      localeOverrides: { es: { text: 'Hola' } },
+      localeContent: { es: { text: 'Hola' } },
     })
     const result = resolveLayerLocale(layer, 'es')
     expect(result).not.toBe(layer)
@@ -89,10 +89,9 @@ describe('resolveLayerLocale', () => {
     expect(result.opacity).toBe(1)
   })
 
-  it('prefers localeContent over a stale locale override', () => {
+  it('reads localeContent', () => {
     const layer = makeTextLayer({
       localeContent: { es: { text: 'Hola' } },
-      localeOverrides: { es: { text: 'Stale translation' } },
     })
 
     const result = resolveLayerLocale(layer, 'es')
@@ -103,7 +102,6 @@ describe('resolveLayerLocale', () => {
   it('returns the layer unchanged when localeContent has no requested locale', () => {
     const layer = makeTextLayer({
       localeContent: { fr: { text: 'Bonjour' } },
-      localeOverrides: { es: { text: 'Stale translation' } },
     })
 
     expect(resolveLayerLocale(layer, 'es')).toBe(layer)
@@ -121,7 +119,7 @@ describe('applyLocale', () => {
 
   it('applies a text override to a TextLayer in a SlideGroup', () => {
     const layer = makeTextLayer({
-      localeOverrides: { es: { text: 'Hola mundo' } },
+      localeContent: { es: { text: 'Hola mundo' } },
     })
     const project = makeProject([layer])
     const result = applyLocale(project, 'es')
@@ -132,7 +130,7 @@ describe('applyLocale', () => {
   })
 
   it('leaves layers that have no override for the given locale unchanged', () => {
-    const layer = makeTextLayer() // no localeOverrides
+    const layer = makeTextLayer() // no localeContent
     const project = makeProject([layer])
     const result = applyLocale(project, 'es')
     const resolved = result.slideGroups[0].layers.find((l) => l.id === 'text1') as TextLayer
@@ -170,7 +168,7 @@ describe('getLocalizableLayers', () => {
 
 describe('buildLocaleManifest', () => {
   it('returns the correct top-level structure', () => {
-    const project = makeProject([makeTextLayer()])
+    const project = makeProject([makeTextLayer({ localeContent: { en: { text: 'Hello' } } })])
     const manifest = buildLocaleManifest(project)
 
     expect(manifest.project).toBe('Test Project')
@@ -201,7 +199,7 @@ describe('buildLocaleManifest', () => {
   })
 
   it('captures default text and null override for non-default locales', () => {
-    const project = makeProject([makeTextLayer()])
+    const project = makeProject([makeTextLayer({ localeContent: { en: { text: 'Hello' } } })])
     const manifest = buildLocaleManifest(project)
     const entry = manifest.groups[0].layers[0]
 
@@ -209,8 +207,8 @@ describe('buildLocaleManifest', () => {
     expect(entry.overrides['es']).toBeNull()
   })
 
-  it('captures existing locale overrides', () => {
-    const layer = makeTextLayer({ localeOverrides: { es: { text: 'Hola' } } })
+  it('captures existing locale content', () => {
+    const layer = makeTextLayer({ localeContent: { en: { text: 'Hello' }, es: { text: 'Hola' } } })
     const project = makeProject([layer])
     const manifest = buildLocaleManifest(project)
     const entry = manifest.groups[0].layers[0]
@@ -225,7 +223,6 @@ describe('buildLocaleManifest', () => {
         en: { text: 'Def' },
         es: { text: 'Hola' },
       },
-      localeOverrides: { es: { text: 'Stale translation' } },
     })
 
     const entry = buildLocaleManifest(makeProject([layer])).groups[0].layers[0]
@@ -238,15 +235,15 @@ describe('buildLocaleManifest', () => {
 // ─── applyLocaleManifest ──────────────────────────────────────────────────────
 
 describe('applyLocaleManifest', () => {
-  it('round-trip: build manifest then apply returns layers with the original overrides', () => {
-    const layer = makeTextLayer({ localeOverrides: { es: { text: 'Hola' } } })
+  it('round-trip: build manifest then apply returns layers with the original locale content', () => {
+    const layer = makeTextLayer({ localeContent: { en: { text: 'Hello' }, es: { text: 'Hola' } } })
     const project = makeProject([layer])
 
     const manifest = buildLocaleManifest(project)
     const result = applyLocaleManifest(project, manifest)
 
     const resultLayer = result.slideGroups[0].layers.find((l) => l.id === 'text1')
-    expect(resultLayer?.localeOverrides?.['es']?.text).toBe('Hola')
+    expect(resultLayer?.localeContent?.['es']?.text).toBe('Hola')
   })
 
   it('updates locales and defaultLocale from the manifest', () => {
@@ -258,17 +255,17 @@ describe('applyLocaleManifest', () => {
     expect(result.settings.locales).toEqual(['en', 'es'])
   })
 
-  it('does not add localeOverrides to layers with no non-null overrides in the manifest', () => {
+  it('does not add localeContent to layers with no non-null overrides in the manifest', () => {
     // Layer has no pre-existing overrides; manifest will have null for 'es'
     const project = makeProject([makeTextLayer()])
     const manifest = buildLocaleManifest(project)
-    // All overrides are null → applyLocaleManifest should not inject localeOverrides
+    // All overrides are null → applyLocaleManifest should not inject localeContent
     const result = applyLocaleManifest(project, manifest)
     const resultLayer = result.slideGroups[0].layers.find((l) => l.id === 'text1')
-    expect(resultLayer?.localeOverrides).toBeUndefined()
+    expect(resultLayer?.localeContent).toBeUndefined()
   })
 
-  it('writes imported overrides to both localeOverrides and localeContent', () => {
+  it('writes imported overrides to localeContent', () => {
     const project = makeProject([makeTextLayer()])
     const manifest = buildLocaleManifest(project)
     manifest.groups[0].layers[0].overrides.es = { text: 'Hola' }
@@ -276,7 +273,6 @@ describe('applyLocaleManifest', () => {
     const result = applyLocaleManifest(project, manifest)
     const resultLayer = result.slideGroups[0].layers.find((l) => l.id === 'text1')
 
-    expect(resultLayer?.localeOverrides?.es).toEqual({ text: 'Hola' })
     expect(resultLayer?.localeContent?.es).toEqual({ text: 'Hola' })
   })
 })

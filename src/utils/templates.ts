@@ -60,12 +60,12 @@ function stripFromLayer(layer: Layer): Layer {
   // the layout survives and the user can replace the image after importing.
   if (next.type === 'image') next = { ...next, src: '' }
 
-  if (next.localeOverrides) {
-    const lo: NonNullable<typeof next.localeOverrides> = {}
-    for (const [locale, patch] of Object.entries(next.localeOverrides)) {
-      lo[locale] = stripImageSourceFields(patch)
+  if (next.localeContent) {
+    const lc: NonNullable<typeof next.localeContent> = {}
+    for (const [locale, patch] of Object.entries(next.localeContent)) {
+      lc[locale] = stripImageSourceFields(patch)
     }
-    next = { ...next, localeOverrides: lo }
+    next = { ...next, localeContent: lc }
   }
 
   if (next.formatOverrides) {
@@ -140,8 +140,8 @@ export function extractInlineScreenshots(
       delete layer.screenshotDataUrl
     }
 
-    if (layer.localeOverrides) {
-      for (const patch of Object.values(layer.localeOverrides)) {
+    if (layer.localeContent) {
+      for (const patch of Object.values(layer.localeContent)) {
         if (!patch.screenshotDataUrl) continue
         if (patch.screenshotPath) {
           if (!filenamesByDataUrl.has(patch.screenshotDataUrl)) {

@@ -127,12 +127,6 @@ export interface LocaleLayerPatch {
  * symmetric locale model). Structurally the same payload as LocaleLayerPatch
  * minus the deprecated `spans` field (spans are always migrated to `marks`
  * before this shape is ever populated).
- *
- * NOT YET LOAD-BEARING: as of this phase, `Layer.localeContent` is populated
- * by migration but nothing reads it yet. Renderers and the editor still read
- * the legacy flat fields (`TextLayer.text`, `ImageLayer.src`, etc.) and
- * `localeOverrides`. A later phase switches consumers over; only then can the
- * legacy fields and `localeOverrides` be removed.
  */
 export interface LocaleContent {
   // TextLayer
@@ -153,8 +147,8 @@ export interface LocaleContent {
  */
 export type LocalizationMode = 'auto' | 'manual' | 'skip';
 
-/** A single entry in a batch locale override commit. */
-export interface LocaleOverrideBatchEntry {
+/** A single entry in a batch locale content commit. */
+export interface LocaleContentBatchEntry {
   slideGroupId: string;
   layerId: string;
   locale: string;
@@ -182,15 +176,19 @@ export interface BaseLayer {
   blur?: number;      // blur radius in px
   shadow?: ShadowConfig;
   /**
-   * Per-locale property overrides. Key = locale code (e.g. 'es').
-   * Merged at render / export time by applyLocale(). Never affects undo history shape.
-   */
-  localeOverrides?: Record<string, LocaleLayerPatch>;
-  /**
-   * v0.6.0 symmetric locale model (in progress): per-locale content,
-   * INCLUDING the default locale's own content. Key = locale code.
-   * Populated by migration; not yet read by any consumer — see LocaleContent
-   * doc comment. Do not write to this yet outside of migration.
+   * v0.6.0 symmetric locale model: per-locale content, INCLUDING the default
+   * locale's own content. Key = locale code. This is the SOLE storage for
+   * localizable content (text/marks for TextLayer; screenshotPath/
+   * screenshotDataUrl for PhoneLayer; src for ImageLayer) — there is no
+   * separate "override" map; every locale, including the default, is stored
+   * identically here. Populated on layer creation, kept in sync by every
+   * edit path (updateLayer/updateChildLayer/setLocaleContent/
+   * promoteLocaleToDefault), and read by applyLocale() for every non-default
+   * locale. (The TextLayer.text/marks, ImageLayer.src, PhoneLayer.
+   * screenshotPath/screenshotDataUrl flat fields remain the storage for the
+   * DEFAULT locale specifically — applyLocale()'s fast path reads those
+   * directly for the current default; localeContent[defaultLocale] is kept
+   * as a synced mirror of the same data for uniform access.)
    */
   localeContent?: Record<string, LocaleContent>;
   /** Per-format visual/layout overrides. Base layer remains the shared source. */
@@ -205,7 +203,7 @@ export interface BaseLayer {
   ownerFormat?: CanvasFormatId;
   /**
    * Localization participation mode. Undefined === 'auto'.
-   * Co-located with localeOverrides because it is layer-scoped, undoable,
+   * Co-located with localeContent because it is layer-scoped, undoable,
    * and travels with copy/paste + manifest.
    */
   localizationMode?: LocalizationMode;

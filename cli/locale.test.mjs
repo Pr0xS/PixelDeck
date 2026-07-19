@@ -35,7 +35,8 @@ describe('CLI locale manifest', () => {
 
     const patched = applyLocaleManifest(stripped, manifest)
 
-    expect(patched.slideGroups[0].layers[0].localeOverrides.es.text).toBe('Hola')
+    expect(patched.slideGroups[0].layers[0].localeContent.es.text).toBe('Hola')
+    expect(patched.slideGroups[0].layers[0]).not.toHaveProperty('localeOverrides')
   })
 
   it('uses manifest locale settings rather than input project settings', () => {
@@ -84,7 +85,7 @@ describe('CLI locale manifest', () => {
     const patched = applyLocaleManifest(stripped, manifest)
 
     expect(manifest.groups[0].layers.map((layer) => layer.id)).toContain('child')
-    expect(patched.slideGroups[0].layers[0].children[0].localeOverrides.es.text).toBe('Hola nested')
+    expect(patched.slideGroups[0].layers[0].children[0].localeContent.es.text).toBe('Hola nested')
   })
 
   it('builds default content and overrides from localeContent', () => {
@@ -111,7 +112,7 @@ describe('CLI locale manifest', () => {
     expect(manifest.groups[0].layers[0].default.text).toBe('From content')
   })
 
-  it('applies manifest overrides to localeOverrides and localeContent', () => {
+  it('applies manifest overrides to localeContent only', () => {
     const input = clone(project)
     delete input.slideGroups[0].layers[0].localeOverrides
     const manifest = buildLocaleManifest(project)
@@ -119,9 +120,8 @@ describe('CLI locale manifest', () => {
     const patched = applyLocaleManifest(input, manifest)
     const layer = patched.slideGroups[0].layers[0]
 
-    expect(layer.localeOverrides.es.text).toBe('Hola')
     expect(layer.localeContent.es.text).toBe('Hola')
-    expect(layer.localeContent.es).toBe(layer.localeOverrides.es)
+    expect(layer).not.toHaveProperty('localeOverrides')
   })
 
   it('preserves unrelated localeContent entries when applying overrides', () => {

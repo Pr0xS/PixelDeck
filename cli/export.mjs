@@ -132,6 +132,10 @@ export function collectAssetRefsFromProject(project) {
     if (layer.type === 'image') {
       if (layer.src && !String(layer.src).startsWith('data:')) refs.add(layer.src)
     }
+    for (const patch of Object.values(layer.localeContent ?? {})) {
+      if (patch?.screenshotPath && !String(patch.screenshotPath).startsWith('data:')) refs.add(patch.screenshotPath)
+      if (patch?.src && !String(patch.src).startsWith('data:')) refs.add(patch.src)
+    }
     for (const patch of Object.values(layer.localeOverrides ?? {})) {
       if (patch?.screenshotPath && !String(patch.screenshotPath).startsWith('data:')) refs.add(patch.screenshotPath)
       if (patch?.src && !String(patch.src).startsWith('data:')) refs.add(patch.src)

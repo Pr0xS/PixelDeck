@@ -2,7 +2,7 @@ import type {
   Project, SlideGroup, Layer, Selection,
   LayerType,
   ProjectSettings, LocaleLayerPatch,
-  LocaleOverrideBatchEntry,
+  LocaleContentBatchEntry,
   CanvasFormatId,
   CustomCanvasFormat,
   CustomFormatId,
@@ -80,10 +80,10 @@ export interface EditorStore {
   relabelDefaultLocale: (locale: string) => void
   promoteLocaleToDefault: (locale: string) => void
   updateLayerInSlideGroup: (slideGroupId: string, layerId: string, patch: Partial<Layer>) => void
-  setLocaleOverride: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
-  clearLocaleOverride: (slideGroupId: string, layerId: string, locale: string) => void
-  /** Commit multiple locale overrides in a single undo step. Use for bulk AI translate. */
-  setLocaleOverridesBatch: (entries: LocaleOverrideBatchEntry[]) => void
+  setLocaleContent: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
+  clearLocaleContent: (slideGroupId: string, layerId: string, locale: string) => void
+  /** Commit multiple locale content patches in a single undo step. Use for bulk AI translate. */
+  setLocaleContentBatch: (entries: LocaleContentBatchEntry[]) => void
 
   // ─ Canvas format actions
   setActiveCanvasFormat: (format: CanvasFormatId) => void

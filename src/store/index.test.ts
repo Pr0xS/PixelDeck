@@ -36,6 +36,7 @@ describe('addLayer', () => {
     // background + text
     expect(layers).toHaveLength(2)
     expect(layers[1].type).toBe('text')
+    expect(layers[1].localeContent?.en.text).toBe('Your headline')
   })
 
   it('selects the newly added layer', () => {
@@ -87,7 +88,7 @@ describe('updateLayer — locale content sync', () => {
     expect(updated.localeContent?.[defaultLocale]?.text).toBe('New headline')
   })
 
-  it('does not create locale content for a non-locale patch', () => {
+  it('preserves seeded locale content for a non-locale patch', () => {
     useEditorStore.getState().addText()
     const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
 
@@ -95,7 +96,7 @@ describe('updateLayer — locale content sync', () => {
 
     const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
     expect(updated.opacity).toBe(0.5)
-    expect(updated.localeContent).toBeUndefined()
+    expect(updated.localeContent?.en.text).toBe('Your headline')
   })
 
   it('writes a phone screenshot path to both legacy and default locale content', () => {
@@ -476,30 +477,30 @@ describe('copyLayers + pasteLayers', () => {
   })
 })
 
-// ─── setLocaleOverride / clearLocaleOverride ──────────────────────────────────
+// ─── setLocaleContent / clearLocaleContent ────────────────────────────────────
 
-describe('setLocaleOverride / clearLocaleOverride', () => {
-  it('setLocaleOverride adds an override on the layer', () => {
+describe('setLocaleContent / clearLocaleContent', () => {
+  it('setLocaleContent adds locale content on the layer', () => {
     useEditorStore.getState().addText()
     const groupId = useEditorStore.getState().activeSlideGroupId
     const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
 
-    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
 
     const after = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
-    expect(after.localeOverrides?.['es']?.text).toBe('Hola')
+    expect(after.localeContent?.['es']?.text).toBe('Hola')
   })
 
-  it('clearLocaleOverride removes the override', () => {
+  it('clearLocaleContent removes locale content', () => {
     useEditorStore.getState().addText()
     const groupId = useEditorStore.getState().activeSlideGroupId
     const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
 
-    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
-    useEditorStore.getState().clearLocaleOverride(groupId, textLayer.id, 'es')
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
+    useEditorStore.getState().clearLocaleContent(groupId, textLayer.id, 'es')
 
     const after = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
-    expect(after.localeOverrides?.['es']).toBeUndefined()
+    expect(after.localeContent?.['es']).toBeUndefined()
   })
 })
 
@@ -533,7 +534,7 @@ describe('relabelDefaultLocale / promoteLocaleToDefault', () => {
     const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
     useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hello' })
     useEditorStore.getState().addLocale('es')
-    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
 
     useEditorStore.getState().promoteLocaleToDefault('es')
 
@@ -543,8 +544,6 @@ describe('relabelDefaultLocale / promoteLocaleToDefault', () => {
     expect(updated.text).toBe('Hola')
     expect(updated.localeContent?.es.text).toBe('Hola')
     expect(updated.localeContent?.en.text).toBe('Hello')
-    expect(updated.localeOverrides?.en.text).toBe('Hello')
-    expect(updated.localeOverrides?.es).toBeUndefined()
   })
 
   it('seeds an incomplete promoted locale from the old default', () => {
@@ -579,7 +578,7 @@ describe('relabelDefaultLocale / promoteLocaleToDefault', () => {
       marks: [{ start: 0, end: 5, fontWeight: 700 }],
     })
     useEditorStore.getState().addLocale('es')
-    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
 
     useEditorStore.getState().promoteLocaleToDefault('es')
 
@@ -588,45 +587,42 @@ describe('relabelDefaultLocale / promoteLocaleToDefault', () => {
     expect(updated.marks).toBeUndefined()
   })
 
-  it('dual-writes locale overrides to symmetric locale content', () => {
+  it('writes symmetric locale content', () => {
     useEditorStore.getState().addText()
     const groupId = useEditorStore.getState().activeSlideGroupId
     const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
 
-    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
 
     const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
-    expect(updated.localeOverrides?.es).toEqual({ text: 'Hola' })
     expect(updated.localeContent?.es).toEqual({ text: 'Hola' })
   })
 
-  it('clears locale overrides from both legacy and symmetric maps', () => {
+  it('clears locale content', () => {
     useEditorStore.getState().addText()
     const groupId = useEditorStore.getState().activeSlideGroupId
     const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
-    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
 
-    useEditorStore.getState().clearLocaleOverride(groupId, textLayer.id, 'es')
+    useEditorStore.getState().clearLocaleContent(groupId, textLayer.id, 'es')
 
     const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
-    expect(updated.localeOverrides?.es).toBeUndefined()
     expect(updated.localeContent?.es).toBeUndefined()
   })
 
-  it('removes a locale from both maps on every layer', () => {
+  it('removes a locale from locale content on every layer', () => {
     useEditorStore.getState().addText()
     useEditorStore.getState().addText()
     const groupId = useEditorStore.getState().activeSlideGroupId
     const textLayers = getActiveGroup().layers.filter((l) => l.type === 'text') as TextLayer[]
     useEditorStore.getState().addLocale('es')
     for (const [index, layer] of textLayers.entries()) {
-      useEditorStore.getState().setLocaleOverride(groupId, layer.id, 'es', { text: `Hola ${index}` })
+      useEditorStore.getState().setLocaleContent(groupId, layer.id, 'es', { text: `Hola ${index}` })
     }
 
     useEditorStore.getState().removeLocale('es')
 
     for (const layer of getActiveGroup().layers.filter((l) => l.type === 'text') as TextLayer[]) {
-      expect(layer.localeOverrides?.es).toBeUndefined()
       expect(layer.localeContent?.es).toBeUndefined()
     }
   })

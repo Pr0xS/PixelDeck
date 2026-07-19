@@ -23,6 +23,16 @@ export { findLayerInTree, mapLayerTree, updateLayerInTree } from '@/utils/layerT
 export function newId() { return nanoid(10) }
 
 /**
+ * Old (pre-0.6.0) project files, or files produced by the CLI manifest tool
+ * before it fully switched over, may still have a `localeOverrides` key on a
+ * layer even though the current type no longer declares it. Read it
+ * defensively for one-time migration purposes only — never write it back.
+ */
+function getLegacyLocaleOverrides(layer: Layer): Record<string, LocaleLayerPatch> | undefined {
+  return (layer as unknown as { localeOverrides?: Record<string, LocaleLayerPatch> }).localeOverrides
+}
+
+/**
  * Bake a group's uniform scale into a child layer's own properties.
  * Used when dissolving / flattening a scaled group so the visual result is unchanged.
  */
@@ -131,10 +141,11 @@ export function migrateLayerSpans(layer: Layer): Layer {
       const { text, marks } = spansToMarks(layer.spans!)
       result = { ...result, text, marks: marks.length ? marks : undefined, spans: undefined } as Layer
     }
-    // Migrate localeOverrides patches that still carry legacy spans
-    if (result.localeOverrides) {
+    // Migrate legacy locale override patches that still carry spans.
+    const legacyOverrides = getLegacyLocaleOverrides(result)
+    if (legacyOverrides) {
       const migratedOverrides: Record<string, LocaleLayerPatch> = {}
-      for (const [locale, patch] of Object.entries(result.localeOverrides)) {
+      for (const [locale, patch] of Object.entries(legacyOverrides)) {
         if (patch.spans?.length && !patch.marks?.length) {
           const { text, marks } = spansToMarks(patch.spans)
           migratedOverrides[locale] = {
@@ -147,7 +158,9 @@ export function migrateLayerSpans(layer: Layer): Layer {
           migratedOverrides[locale] = patch
         }
       }
-      result = { ...result, localeOverrides: migratedOverrides }
+      // Keep the spans-free legacy value only as a migration intermediate.
+      // foldLayerToSymmetric runs next and consumes/removes this raw key.
+      result = { ...result, localeOverrides: migratedOverrides } as unknown as Layer
     }
     return result
   }
@@ -155,17 +168,19 @@ export function migrateLayerSpans(layer: Layer): Layer {
 }
 
 /**
- * v0.6.0 symmetric locale model — Phase 1 (additive only).
+ * v0.6.0 symmetric locale model migration.
  * Populates `layer.localeContent[defaultLocale]` from the layer's current
- * base fields, and copies each existing `localeOverrides[locale]` entry into
- * `localeContent[locale]` verbatim (same shape, just relocated). Does NOT
- * remove `localeOverrides` or the base fields — this phase is purely
- * additive so existing read paths are unaffected. Idempotent: if
- * `localeContent` is already present, returns the layer unchanged.
+ * base fields, and folds each legacy `localeOverrides[locale]` entry into
+ * `localeContent[locale]`. The legacy key is removed from migrated output.
  */
 export function foldLayerToSymmetric(layer: Layer, defaultLocale: string): Layer {
-  if (layer.localeContent) return layer // already migrated
-  if (layer.type !== 'text' && layer.type !== 'phone' && layer.type !== 'image') return layer
+  const legacyOverrides = getLegacyLocaleOverrides(layer)
+  const { localeOverrides: _legacy, ...layerWithoutLegacy } = layer as unknown as Layer & {
+    localeOverrides?: Record<string, LocaleLayerPatch>
+  }
+  void _legacy
+  if (layer.localeContent) return layerWithoutLegacy as Layer // already migrated
+  if (layer.type !== 'text' && layer.type !== 'phone' && layer.type !== 'image') return layerWithoutLegacy as Layer
 
   const defaultContent: LocaleContent =
     layer.type === 'text'
@@ -178,8 +193,8 @@ export function foldLayerToSymmetric(layer: Layer, defaultLocale: string): Layer
         : { src: layer.src }
 
   const localeContent: Record<string, LocaleContent> = { [defaultLocale]: defaultContent }
-  if (layer.localeOverrides) {
-    for (const [locale, patch] of Object.entries(layer.localeOverrides)) {
+  if (legacyOverrides) {
+    for (const [locale, patch] of Object.entries(legacyOverrides)) {
       // patch is LocaleLayerPatch; spans should already be migrated to marks
       // by migrateLayerSpans (which must run before this in migrateProject).
       // Defensively drop spans if somehow still present rather than carrying
@@ -190,7 +205,26 @@ export function foldLayerToSymmetric(layer: Layer, defaultLocale: string): Layer
     }
   }
 
-  return { ...layer, localeContent } as Layer
+  return { ...layerWithoutLegacy, localeContent } as Layer
+}
+
+/**
+ * Seed localeContent[defaultLocale] for a brand-new layer at creation time.
+ * Existing project layers are handled by foldLayerToSymmetric during migration.
+ */
+export function seedLocaleContent(layer: Layer, defaultLocale: string): Layer {
+  if (layer.localeContent) return layer
+  if (layer.type !== 'text' && layer.type !== 'phone' && layer.type !== 'image') return layer
+  const content: LocaleContent =
+    layer.type === 'text'
+      ? { text: layer.text, ...(layer.marks?.length ? { marks: layer.marks } : {}) }
+      : layer.type === 'phone'
+        ? {
+            ...(layer.screenshotPath !== undefined ? { screenshotPath: layer.screenshotPath } : {}),
+            ...(layer.screenshotDataUrl !== undefined ? { screenshotDataUrl: layer.screenshotDataUrl } : {}),
+          }
+        : { src: layer.src }
+  return { ...layer, localeContent: { [defaultLocale]: content } } as Layer
 }
 
 export function newSlideGroup(overrides?: Partial<SlideGroup>): SlideGroup {
@@ -332,12 +366,9 @@ export const splitLocalePatch = (patch: Partial<Layer>): { locale: LocaleContent
 }
 
 /**
- * Route a layer patch's locale-content keys into localeContent[activeLocale],
- * keeping the legacy write target in sync (base layer fields when
- * activeLocale === defaultLocale — the only reachable case today per the
- * App.tsx editor-mode invariant that resets activeLocale to defaultLocale on
- * entering the canvas editor; localeOverrides[activeLocale] otherwise, for
- * forward-compat and consistency with how the locale-slice actions write).
+ * Route a layer patch's locale-content keys into localeContent[activeLocale].
+ * When editing the default locale, keep the layer's flat default-locale fields
+ * in sync as well.
  * Returns the updated layer plus the non-locale `rest` of the patch for the
  * caller to apply via the existing format-patch pipeline. If the patch has
  * no locale-content keys, returns the layer unchanged and the full patch as
@@ -358,10 +389,6 @@ export const patchLayerForLocale = (
 
   if (activeLocale === defaultLocale) {
     next = { ...next, ...localePatch } as Layer
-  } else {
-    const localeOverrides = { ...(next.localeOverrides ?? {}) }
-    localeOverrides[activeLocale] = { ...(localeOverrides[activeLocale] ?? {}), ...localePatch }
-    next = { ...next, localeOverrides } as Layer
   }
   return { layer: next, rest }
 }
@@ -433,9 +460,9 @@ function stripLayerDataUrls(layer: Layer): Layer {
   if (layer.type === 'phone') {
     delete (layer as { screenshotDataUrl?: string }).screenshotDataUrl
   }
-  // Strip localeOverrides patches that carry inline data URLs
-  if (layer.localeOverrides) {
-    for (const patch of Object.values(layer.localeOverrides)) {
+  // Strip per-locale inline data URLs
+  if (layer.localeContent) {
+    for (const patch of Object.values(layer.localeContent)) {
       delete patch.screenshotDataUrl
     }
   }

@@ -12,6 +12,7 @@ import {
   getActiveGroup,
   patchLayerForLocale,
   patchLayerForFormat,
+  seedLocaleContent,
 } from '../helpers'
 
 export const createLayerSlice = (
@@ -48,6 +49,7 @@ export const createLayerSlice = (
       // No coordinate mapping needed: owned layers only render in their format.
       layerToAdd = { ...layer, ownerFormat: activeCanvasFormat } as Layer
     }
+    layerToAdd = seedLocaleContent(layerToAdd, project.settings.defaultLocale)
     if (editingGroupId) {
       // Inside group edit mode: add the layer into the group with group-local coords
       const grp = getActiveGroup(get)?.layers.find(
@@ -359,10 +361,8 @@ export const createLayerSlice = (
     const chipGroup: GroupLayer = {
       id: newId(), name: 'Chip', type: 'group',
       x: 100, y: 600, rotation: 0, opacity: 1, visible: true, locked: false,
-      children: [bg, label],
+      children: [bg, seedLocaleContent(label, settings.defaultLocale)],
     }
-    void settings // used for brand context in other factories
-
     get().addLayer(chipGroup)
   },
 })

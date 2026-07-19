@@ -2,7 +2,7 @@ import type {
   Layer,
   LocaleContent,
   LocaleLayerPatch,
-  LocaleOverrideBatchEntry,
+  LocaleContentBatchEntry,
   TextLayer,
   TextMark,
 } from '@/types'
@@ -29,11 +29,6 @@ import { mapLayerTree, touchProject, touchSettings, updateLayerInTree } from '..
  *     fields directly and bypasses localeContent entirely for the default
  *     locale. Without this the canvas would keep showing the old default's
  *     content after promotion.
- *  4. Sync localeOverrides: the demoted oldDefault gets an entry (so
- *     anything still reading localeOverrides directly — PhoneProperties.tsx,
- *     the Localization page cells — sees it), and the promoted target's
- *     entry is removed (a default locale's content was never conventionally
- *     read from localeOverrides).
  * Only text/phone/image layers carry localizable content; everything else
  * passes through unchanged. Recursion into group children is handled by
  * wrapping this in mapLayerTree() at the call site.
@@ -58,11 +53,7 @@ function promoteLayerToLocale(layer: Layer, targetLocale: string, oldDefault: st
 
   const localeContent = { ...existingLocaleContent, [targetLocale]: targetContent, [oldDefault]: oldDefaultContent }
 
-  const localeOverrides = { ...(layer.localeOverrides ?? {}) }
-  localeOverrides[oldDefault] = oldDefaultContent as LocaleLayerPatch
-  delete localeOverrides[targetLocale]
-
-  let patched = { ...layer, ...targetContent, localeContent } as Layer
+  const patched = { ...layer, ...targetContent, localeContent } as Layer
   // Text marks must travel explicitly, even when undefined — otherwise a
   // translated text with no marks would keep the old default's stale marks
   // (they'd reference character offsets into text that no longer exists).
@@ -70,11 +61,6 @@ function promoteLayerToLocale(layer: Layer, targetLocale: string, oldDefault: st
   if (layer.type === 'text') {
     (patched as TextLayer).marks = (targetContent as { marks?: TextMark[] }).marks
   }
-  patched = {
-    ...patched,
-    localeOverrides: Object.keys(localeOverrides).length ? localeOverrides : undefined,
-  } as Layer
-
   return patched
 }
 
@@ -89,9 +75,9 @@ export const createLocaleSlice = (
   | 'relabelDefaultLocale'
   | 'promoteLocaleToDefault'
   | 'updateLayerInSlideGroup'
-  | 'setLocaleOverride'
-  | 'clearLocaleOverride'
-  | 'setLocaleOverridesBatch'
+  | 'setLocaleContent'
+  | 'clearLocaleContent'
+  | 'setLocaleContentBatch'
 > => ({
   // ─ Locale actions
   setActiveLocale: (locale) => set({ activeLocale: locale }),
@@ -115,18 +101,14 @@ export const createLocaleSlice = (
     const locales = existing.filter((l) => l !== locale && l !== project.settings.defaultLocale)
     const finalLocales = [project.settings.defaultLocale, ...locales]
 
-    // Strip overrides for this locale from all layers in all slide groups
+    // Strip content for this locale from all layers in all slide groups
     function stripLocale(layer: Layer): Layer {
-      const hasOverride = layer.localeOverrides?.[locale]
       const hasContent = layer.localeContent?.[locale]
-      if (!hasOverride && !hasContent) return layer
-      const { [locale]: _removedOverride, ...restOverrides } = layer.localeOverrides ?? {}
-      void _removedOverride
+      if (!hasContent) return layer
       const { [locale]: _removedContent, ...restContent } = layer.localeContent ?? {}
       void _removedContent
       return {
         ...layer,
-        localeOverrides: Object.keys(restOverrides).length > 0 ? restOverrides : undefined,
         localeContent: Object.keys(restContent).length > 0 ? restContent : undefined,
       }
     }
@@ -205,7 +187,7 @@ export const createLocaleSlice = (
     }))
   },
 
-  setLocaleOverride: (slideGroupId, layerId, locale, patch) => {
+  setLocaleContent: (slideGroupId, layerId, locale, patch) => {
     set((s) => ({
       project: touchProject(s.project, {
         slideGroups: s.project.slideGroups.map((g) => {
@@ -215,7 +197,6 @@ export const createLocaleSlice = (
             void _spans
             return {
               ...layer,
-              localeOverrides: { ...(layer.localeOverrides ?? {}), [locale]: patch },
               localeContent: {
                 ...(layer.localeContent ?? {}),
                 [locale]: { ...(layer.localeContent?.[locale] ?? {}), ...contentPatch },
@@ -227,19 +208,16 @@ export const createLocaleSlice = (
     }))
   },
 
-  clearLocaleOverride: (slideGroupId, layerId, locale) => {
+  clearLocaleContent: (slideGroupId, layerId, locale) => {
     set((s) => ({
       project: touchProject(s.project, {
         slideGroups: s.project.slideGroups.map((g) => {
           if (g.id !== slideGroupId) return g
           return { ...g, layers: updateLayerInTree(g.layers, layerId, (layer) => {
-            const next = { ...(layer.localeOverrides ?? {}) }
-            delete next[locale]
             const nextContent = { ...(layer.localeContent ?? {}) }
             delete nextContent[locale]
             return {
               ...layer,
-              localeOverrides: Object.keys(next).length > 0 ? next : undefined,
               localeContent: Object.keys(nextContent).length > 0 ? nextContent : undefined,
             }
           }) }
@@ -248,7 +226,7 @@ export const createLocaleSlice = (
     }))
   },
 
-  setLocaleOverridesBatch: (entries: LocaleOverrideBatchEntry[]) => {
+  setLocaleContentBatch: (entries: LocaleContentBatchEntry[]) => {
     if (entries.length === 0) return
     const byGroup = new Map<string, Map<string, Map<string, LocaleLayerPatch>>>()
     for (const e of entries) {
@@ -268,10 +246,8 @@ export const createLocaleSlice = (
             layers: mapLayerTree(g.layers, (layer) => {
               const localeMap = layerMap.get(layer.id)
               if (!localeMap) return layer
-              let localeOverrides = { ...(layer.localeOverrides ?? {}) }
               let localeContent = { ...(layer.localeContent ?? {}) }
               for (const [locale, patch] of localeMap) {
-                localeOverrides = { ...localeOverrides, [locale]: patch }
                 const { spans: _spans, ...contentPatch } = patch
                 void _spans
                 localeContent = {
@@ -279,7 +255,7 @@ export const createLocaleSlice = (
                   [locale]: { ...(localeContent[locale] ?? {}), ...contentPatch },
                 }
               }
-              return { ...layer, localeOverrides, localeContent }
+              return { ...layer, localeContent }
             }),
           }
         }),

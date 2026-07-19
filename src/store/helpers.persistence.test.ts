@@ -225,14 +225,14 @@ describe('foldLayerToSymmetric / localeContent migration', () => {
     const project = makeProject({
       slideGroups: [makeSlideGroup({ layers: [
         makeBackgroundLayer(),
-        makeTextLayer({ text: 'Hello', localeOverrides: { es: { text: 'Hola' } } }),
+        makeTextLayer({ text: 'Hello', localeOverrides: { es: { text: 'Hola' } } } as unknown as Partial<TextLayer>),
       ] })],
     })
 
     const layer = migrateProject(project).slideGroups[0].layers[1]
 
     expect(layer.localeContent).toEqual({ en: { text: 'Hello' }, es: { text: 'Hola' } })
-    expect(layer.localeOverrides).toEqual({ es: { text: 'Hola' } })
+    expect(layer).not.toHaveProperty('localeOverrides')
   })
 
   it('populates default-locale phone screenshot content', () => {
@@ -319,7 +319,7 @@ describe('foldLayerToSymmetric / localeContent migration', () => {
               spans: [{ text: 'Bonjour', fontWeight: 400 }],
             },
           },
-        }),
+        } as unknown as Partial<TextLayer>),
       ] })],
     })
 
@@ -334,13 +334,12 @@ describe('foldLayerToSymmetric / localeContent migration', () => {
 })
 
 describe('patchLayerForLocale', () => {
-  it('writes non-default content to localeContent and localeOverrides without changing the base field', () => {
+  it('writes non-default content to localeContent without changing the base field', () => {
     const layer = makeTextLayer({ text: 'Hello' })
 
     const result = patchLayerForLocale(layer, { text: 'Hola' }, 'es', 'en')
 
     expect(result.layer.localeContent?.es.text).toBe('Hola')
-    expect(result.layer.localeOverrides?.es.text).toBe('Hola')
     expect((result.layer as TextLayer).text).toBe('Hello')
   })
 })
@@ -370,18 +369,18 @@ describe('stripDataUrls', () => {
     expect(layer.screenshotPath).toBe('kept.png')
   })
 
-  it('strips screenshotDataUrl from locale overrides while preserving screenshotPath', () => {
+  it('strips screenshotDataUrl from locale content while preserving screenshotPath', () => {
     const project = makeProject({
       slideGroups: [makeSlideGroup({ layers: [makePhoneLayer({
-        localeOverrides: { es: { screenshotDataUrl: 'data:image/png;base64,es', screenshotPath: 'kept.png' } },
+        localeContent: { es: { screenshotDataUrl: 'data:image/png;base64,es', screenshotPath: 'kept.png' } },
       })] })],
     })
 
     const stripped = stripDataUrls(project)
     const layer = stripped.slideGroups[0].layers[0]
 
-    expect(layer.localeOverrides?.es.screenshotDataUrl).toBeUndefined()
-    expect(layer.localeOverrides?.es.screenshotPath).toBe('kept.png')
+    expect(layer.localeContent?.es.screenshotDataUrl).toBeUndefined()
+    expect(layer.localeContent?.es.screenshotPath).toBe('kept.png')
   })
 
   it('does not mutate the original project object', () => {

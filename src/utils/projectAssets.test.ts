@@ -29,7 +29,7 @@ function projectWithAssets(): Project {
     screenshotFit: 'cover',
     screenshotOffsetX: 0,
     screenshotOffsetY: 0,
-    localeOverrides: { es: { screenshotPath: 'locale-phone.png' } },
+    localeContent: { es: { screenshotPath: 'locale-phone.png' } },
     formatOverrides: {
       'iphone-69': { screenshotPath: 'format-phone.png' } as FormatLayerPatch,
     },
@@ -43,7 +43,7 @@ function projectWithAssets(): Project {
     width: 100,
     height: 100,
     cornerRadius: 0,
-    localeOverrides: { fr: { src: 'locale-image.png' } },
+    localeContent: { fr: { src: 'locale-image.png' } },
     formatOverrides: { 'android-phone': { src: 'format-image.png' } as FormatLayerPatch },
   }
   const child: PhoneLayer = { ...phone, id: 'child', screenshotPath: 'nested-phone.png' }
@@ -75,7 +75,7 @@ describe('project asset bundles', () => {
     const project = projectWithAssets()
     const image = project.slideGroups[0].layers.find((layer) => layer.type === 'image') as ImageLayer
     image.src = 'data:image/png;base64,inline'
-    image.localeOverrides = { es: { src: '' } }
+    image.localeContent = { es: { src: '' } }
     image.formatOverrides = undefined
 
     const keys = collectAssetKeys(project)
@@ -89,7 +89,7 @@ describe('project asset bundles', () => {
     const phone = projectWithAssets().slideGroups[0].layers.find(
       (layer) => layer.type === 'phone',
     ) as PhoneLayer
-    phone.localeOverrides = undefined
+    phone.localeContent = undefined
     phone.formatOverrides = undefined
     const image: ImageLayer = {
       ...baseLayer,
