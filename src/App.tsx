@@ -236,7 +236,7 @@ export default function App() {
             className="flex-1 overflow-hidden bg-[#111118] flex flex-col"
             style={{ minWidth: 0 }}
           >
-            {/* Format tabs — switch between platform preview formats */}
+            {/* Compact format + locale context rows above the canvas */}
             <FormatTabs />
             <LocaleLayoutTabs />
 

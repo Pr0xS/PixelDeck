@@ -61,104 +61,125 @@ export function LocaleLayoutTabs() {
 
   return (
     <div className="shrink-0 bg-[#18181f] border-b border-[rgba(255,255,255,0.06)]">
-      <div className="flex items-end px-3 h-9 gap-0.5">
-        <button
-          onClick={() => setActiveLocale(defaultLocale)}
-          style={{
-            borderBottom: activeLocale === defaultLocale ? '2px solid #22d3ee' : '2px solid transparent',
-            color: activeLocale === defaultLocale ? '#ffffff' : undefined,
-          }}
-          className={`flex items-center gap-1 px-3 h-full text-xs font-medium transition-colors whitespace-nowrap ${
-            activeLocale === defaultLocale ? '' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
-          }`}
-          title={`Default locale · ${getLanguageName(defaultLocale)}`}
-        >
-          Default
-        </button>
-
-        {locales.filter((locale) => locale !== defaultLocale).map((locale) => {
-          const isActive = activeLocale === locale
-          const count = activeGroup && !isBaseFormat
-            ? countLocaleFormatAdjustments(
-                activeGroup,
-                locale,
-                activeCanvasFormat,
-                defaultLocale,
-                baseFormat,
-              )
-            : 0
-          const label = getLanguageName(locale)
-          return (
-            <button
-              key={locale}
-              onClick={() => setActiveLocale(locale)}
-              style={{
-                borderBottom: isActive ? '2px solid #22d3ee' : '2px solid transparent',
-                color: isActive ? '#ffffff' : undefined,
-              }}
-              className={`flex items-center gap-1 px-3 h-full text-xs font-medium transition-colors whitespace-nowrap ${
-                isActive ? '' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
-              }`}
-              title={`${label} locale · ${count} locale layout adjustment${count !== 1 ? 's' : ''}`}
-            >
-              {label}
-              {count > 0 && (
-                <span className="ml-0.5 text-[10px] font-semibold" style={{ color: '#22d3ee' }}>
-                  ●{count}
-                </span>
-              )}
-            </button>
-          )
-        })}
-      </div>
-
-      {activeLocale !== defaultLocale && (
-        <div
-          className="flex items-center justify-between px-3 py-1"
-          style={{
-            background: 'rgba(34,211,238,0.08)',
-            borderBottom: '1px solid rgba(34,211,238,0.25)',
-          }}
-        >
-          <span className="text-xs" style={{ color: '#22d3ee' }}>
-            {isBaseFormat ? (
-              <>🌐 <strong>{localeLabel}</strong> layout · switch to a platform tab to edit locale layout</>
-            ) : (
-              <>🌐 Editing <strong>{localeLabel}</strong> layout · <strong>{formatLabel}</strong> only — position &amp; size apply to {localeLabel}+{formatLabel}. Content &amp; style are shared.</>
-            )}
+      <div className="flex h-10 min-w-0 items-stretch pl-3">
+        {/* Locale axis and tabs */}
+        <div className="flex min-w-0 flex-1 items-end gap-0.5">
+          <span className="mr-1 self-center text-[9px] font-semibold uppercase tracking-[0.16em] text-[#565664]">
+            Locale
           </span>
-          {!isBaseFormat && (
-            <div className="ml-4 flex shrink-0 items-center gap-2">
+          <button
+            onClick={() => setActiveLocale(defaultLocale)}
+            style={{
+              borderBottom: activeLocale === defaultLocale ? '2px solid #22d3ee' : '2px solid transparent',
+              color: activeLocale === defaultLocale ? '#ffffff' : undefined,
+            }}
+            className={`flex items-center gap-1 px-3 h-full text-xs font-medium transition-colors whitespace-nowrap ${
+              activeLocale === defaultLocale ? '' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
+            }`}
+            title={`Default locale · ${getLanguageName(defaultLocale)}`}
+          >
+            Default
+          </button>
+
+          {locales.filter((locale) => locale !== defaultLocale).map((locale) => {
+            const isActive = activeLocale === locale
+            const count = activeGroup && !isBaseFormat
+              ? countLocaleFormatAdjustments(
+                  activeGroup,
+                  locale,
+                  activeCanvasFormat,
+                  defaultLocale,
+                  baseFormat,
+                )
+              : 0
+            const label = getLanguageName(locale)
+            return (
               <button
-                onClick={() => setActiveLocale(defaultLocale)}
-                className="text-xs transition-opacity hover:opacity-100"
-                style={{ color: '#22d3ee', opacity: 0.7 }}
+                key={locale}
+                onClick={() => setActiveLocale(locale)}
+                style={{
+                  borderBottom: isActive ? '2px solid #22d3ee' : '2px solid transparent',
+                  color: isActive ? '#ffffff' : undefined,
+                }}
+                className={`flex items-center gap-1 px-3 h-full text-xs font-medium transition-colors whitespace-nowrap ${
+                  isActive ? '' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
+                }`}
+                title={`${label} locale · ${count} locale layout adjustment${count !== 1 ? 's' : ''}`}
               >
-                ↩ Default
-              </button>
-              <div className="relative" ref={actionsRef}>
-                <button
-                  onClick={() => setActionsOpen((open) => !open)}
-                  className="rounded border border-[rgba(34,211,238,0.25)] px-2 py-0.5 text-xs transition-colors hover:bg-[rgba(34,211,238,0.12)]"
-                  style={{ color: '#22d3ee' }}
-                >
-                  Actions ▾
-                </button>
-                {actionsOpen && (
-                  <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#1c1c26] shadow-xl">
-                    <button
-                      className="w-full px-3 py-2 text-left text-[11px] text-[#e8e8f0] transition-colors hover:bg-[rgba(255,255,255,0.06)]"
-                      onClick={handleReset}
-                    >
-                      Reset {localeLabel} {formatLabel} layout
-                    </button>
-                  </div>
+                {label}
+                {count > 0 && (
+                  <span className="ml-0.5 text-[10px] font-semibold" style={{ color: '#22d3ee' }}>
+                    ●{count}
+                  </span>
                 )}
-              </div>
-            </div>
-          )}
+              </button>
+            )
+          })}
         </div>
-      )}
+
+        {/* Locale scope appears only outside the default locale, as before. */}
+        {activeLocale !== defaultLocale && (
+          <div
+            className="ml-auto flex shrink-0 items-center gap-3 border-l px-3"
+            style={{
+              background: 'rgba(34,211,238,0.08)',
+              borderColor: 'rgba(34,211,238,0.25)',
+            }}
+            title={isBaseFormat
+              ? `${localeLabel} layout — switch to a platform tab to edit locale-specific layout.`
+              : `${localeLabel} × ${formatLabel} — position and size apply only to this locale and format. Content and style are shared.`}
+          >
+            <div className="flex items-center gap-2 whitespace-nowrap text-[11px]" style={{ color: '#22d3ee' }}>
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#22d3ee] shadow-[0_0_8px_rgba(34,211,238,0.55)]" />
+              {isBaseFormat ? (
+                <>
+                  <strong>{localeLabel} layout</strong>
+                  <span className="text-[rgba(34,211,238,0.68)]">·</span>
+                  <span>Choose a platform to edit locale layout</span>
+                </>
+              ) : (
+                <>
+                  <strong>{localeLabel} × {formatLabel}</strong>
+                  <span className="text-[rgba(34,211,238,0.68)]">·</span>
+                  <span>Position &amp; size scoped</span>
+                  <span className="text-[rgba(34,211,238,0.68)]">·</span>
+                  <span>Content &amp; style shared</span>
+                </>
+              )}
+            </div>
+            {!isBaseFormat && (
+              <div className="flex shrink-0 items-center gap-2">
+                <button
+                  onClick={() => setActiveLocale(defaultLocale)}
+                  className="whitespace-nowrap text-[11px] transition-opacity hover:opacity-100"
+                  style={{ color: '#22d3ee', opacity: 0.7 }}
+                >
+                  ↩ Default
+                </button>
+                <div className="relative" ref={actionsRef}>
+                  <button
+                    onClick={() => setActionsOpen((open) => !open)}
+                    className="rounded border border-[rgba(34,211,238,0.25)] px-2 py-0.5 text-[11px] transition-colors hover:bg-[rgba(34,211,238,0.12)]"
+                    style={{ color: '#22d3ee' }}
+                  >
+                    Actions ▾
+                  </button>
+                  {actionsOpen && (
+                    <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#1c1c26] shadow-xl">
+                      <button
+                        className="w-full px-3 py-2 text-left text-[11px] text-[#e8e8f0] transition-colors hover:bg-[rgba(255,255,255,0.06)]"
+                        onClick={handleReset}
+                      >
+                        Reset {localeLabel} {formatLabel} layout
+                      </button>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </div>
+        )}
+      </div>
     </div>
   )
 }

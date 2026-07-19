@@ -117,74 +117,78 @@ export function FormatTabs() {
 
   return (
     <div className="shrink-0 bg-[#18181f] border-b border-[rgba(255,255,255,0.06)]">
-      {/* Tab row */}
-      <div className="flex items-end px-3 h-9 gap-0.5">
+      <div className="flex h-10 min-w-0 items-stretch pl-3">
+        {/* Format axis and tabs */}
+        <div className="flex min-w-0 flex-1 items-end gap-0.5">
+          <span className="mr-1 self-center text-[9px] font-semibold uppercase tracking-[0.16em] text-[#565664]">
+            Format
+          </span>
 
-        {/* Base tab — always first, never removable */}
-        <button
-          onClick={() => setActiveCanvasFormat(baseFormat)}
-          style={{
-            borderBottom: isBase ? '2px solid #7c6ef6' : '2px solid transparent',
-            color: isBase ? '#ffffff' : undefined,
-          }}
-          className={`flex items-center gap-1 px-3 h-full text-xs font-medium transition-colors whitespace-nowrap ${
-            isBase ? '' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
-          }`}
-          title="Base canvas — shared content, always exported"
-        >
-          Base
-        </button>
-
-        {/* Platform tabs */}
-        {platformFormats.map((fmtId) => {
-          const isActive = activeCanvasFormat === fmtId
-          const count = rawGroup ? countFormatAdjustments(rawGroup, fmtId, baseFormat) : 0
-
-          return (
-            <div key={fmtId} className="relative flex items-end h-full group/tab">
-              <button
-                onClick={() => setActiveCanvasFormat(fmtId)}
-                style={{
-                  borderBottom: isActive ? '2px solid #7c6ef6' : '2px solid transparent',
-                  color: isActive ? '#ffffff' : undefined,
-                }}
-                className={`flex items-center gap-1 pl-3 pr-1 h-full text-xs font-medium transition-colors whitespace-nowrap ${
-                  isActive ? '' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
-                }`}
-                title={`${getFormatLabel(fmtId, settings.customFormats)} format · ${count} layout adjustment${count !== 1 ? 's' : ''}`}
-              >
-                {getFormatLabel(fmtId, settings.customFormats)}
-                {count > 0 && (
-                  <span
-                    className="ml-0.5 text-[10px] font-semibold"
-                    style={{ color: isActive ? '#a78bfa' : '#7c6ef6' }}
-                  >
-                    ●{count}
-                  </span>
-                )}
-              </button>
-
-              {/* Remove button — visible on hover */}
-              <button
-                onClick={(e) => handleRemoveFormat(fmtId, e)}
-                className="self-center mb-[2px] mr-0.5 w-4 h-4 flex items-center justify-center rounded text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.08)] opacity-0 group-hover/tab:opacity-100 transition-opacity text-[10px] leading-none"
-                title={`Remove ${getFormatLabel(fmtId, settings.customFormats)} tab`}
-              >
-                ×
-              </button>
-            </div>
-          )
-        })}
-
-        {/* [+] Add format dropdown */}
-        <div className="relative ml-1 self-center" ref={dropdownRef}>
+          {/* Base tab — always first, never removable */}
           <button
-            onClick={() => setDropdownOpen((v) => !v)}
-            className="flex items-center justify-center w-7 h-7 rounded text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)] text-sm transition-colors"
-            title="Add platform format"
+            onClick={() => setActiveCanvasFormat(baseFormat)}
+            style={{
+              borderBottom: isBase ? '2px solid #7c6ef6' : '2px solid transparent',
+              color: isBase ? '#ffffff' : undefined,
+            }}
+            className={`flex items-center gap-1 px-3 h-full text-xs font-medium transition-colors whitespace-nowrap ${
+              isBase ? '' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
+            }`}
+            title="Base canvas — shared content, always exported"
           >
-            +
+            Base
           </button>
+
+          {/* Platform tabs */}
+          {platformFormats.map((fmtId) => {
+            const isActive = activeCanvasFormat === fmtId
+            const count = rawGroup ? countFormatAdjustments(rawGroup, fmtId, baseFormat) : 0
+
+            return (
+              <div key={fmtId} className="relative flex items-end h-full group/tab">
+                <button
+                  onClick={() => setActiveCanvasFormat(fmtId)}
+                  style={{
+                    borderBottom: isActive ? '2px solid #7c6ef6' : '2px solid transparent',
+                    color: isActive ? '#ffffff' : undefined,
+                  }}
+                  className={`flex items-center gap-1 pl-3 pr-1 h-full text-xs font-medium transition-colors whitespace-nowrap ${
+                    isActive ? '' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
+                  }`}
+                  title={`${getFormatLabel(fmtId, settings.customFormats)} format · ${count} layout adjustment${count !== 1 ? 's' : ''}`}
+                >
+                  {getFormatLabel(fmtId, settings.customFormats)}
+                  {count > 0 && (
+                    <span
+                      className="ml-0.5 text-[10px] font-semibold"
+                      style={{ color: isActive ? '#a78bfa' : '#7c6ef6' }}
+                    >
+                      ●{count}
+                    </span>
+                  )}
+                </button>
+
+                {/* Remove button — visible on hover */}
+                <button
+                  onClick={(e) => handleRemoveFormat(fmtId, e)}
+                  className="self-center mb-[2px] mr-0.5 w-4 h-4 flex items-center justify-center rounded text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.08)] opacity-0 group-hover/tab:opacity-100 transition-opacity text-[10px] leading-none"
+                  title={`Remove ${getFormatLabel(fmtId, settings.customFormats)} tab`}
+                >
+                  ×
+                </button>
+              </div>
+            )
+          })}
+
+          {/* [+] Add format dropdown */}
+          <div className="relative ml-1 self-center" ref={dropdownRef}>
+            <button
+              onClick={() => setDropdownOpen((v) => !v)}
+              className="flex items-center justify-center w-7 h-7 rounded text-[#6b6b7a] hover:text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)] text-sm transition-colors"
+              title="Add platform format"
+            >
+              +
+            </button>
 
           {dropdownOpen && (
             <div className="absolute top-full left-0 mt-1 z-50 bg-[#1e1e2a] border border-[rgba(255,255,255,0.1)] rounded-lg shadow-xl overflow-hidden min-w-[176px]">
@@ -267,53 +271,52 @@ export function FormatTabs() {
               </div>
             </div>
           )}
+          </div>
         </div>
-      </div>
 
-      {/* Info / warning bar below tabs */}
-      {isBase ? (
-        /* Subtle info bar on Base tab */
-        <div
-          className="flex items-center px-3 py-[3px]"
-          style={{ background: 'rgba(255,255,255,0.02)' }}
-        >
-          <span className="text-[10px]" style={{ color: '#6b6b7a' }}>
-            Base · Layers added here appear in all formats
-          </span>
-        </div>
-      ) : (
-        /* Amber warning banner on platform tabs */
-        <div
-          className="flex items-center justify-between px-3 py-1"
-          style={{
-            background: 'rgba(245,158,11,0.08)',
-            borderBottom: '1px solid rgba(245,158,11,0.25)',
-          }}
-        >
-          <span className="text-xs" style={{ color: '#fbbf24' }}>
-            ⚠ <strong>{getFormatLabel(activeCanvasFormat, settings.customFormats)}</strong> tab · Layers added here belong only to{' '}
-            <strong>{getFormatLabel(activeCanvasFormat, settings.customFormats)}</strong> · Layout adjustments only affect{' '}
-            <strong>{getFormatLabel(activeCanvasFormat, settings.customFormats)}</strong> · Content (text, colors) is shared
-          </span>
-          <div className="ml-4 flex shrink-0 items-center gap-2">
-            <button
-              onClick={() => setActiveCanvasFormat(baseFormat)}
-              className="text-xs transition-opacity hover:opacity-100"
-              style={{ color: '#fbbf24', opacity: 0.7 }}
-            >
-              ↩ Base
-            </button>
-            <div className="relative" ref={actionsRef}>
+        {/* Persistent scope summary, compacted into the tab row. */}
+        {isBase ? (
+          <div className="ml-auto flex shrink-0 items-center border-l border-[rgba(255,255,255,0.06)] px-3 text-[10px] text-[#6b6b7a]">
+            <span className="mr-2 h-1.5 w-1.5 rounded-full bg-[#7c6ef6] opacity-70" />
+            Shared base · New layers appear in every format
+          </div>
+        ) : (
+          <div
+            className="ml-auto flex shrink-0 items-center gap-3 border-l px-3"
+            style={{
+              background: 'rgba(245,158,11,0.08)',
+              borderColor: 'rgba(245,158,11,0.25)',
+            }}
+            title={`${getFormatLabel(activeCanvasFormat, settings.customFormats)} only — new layers and layout adjustments affect only ${getFormatLabel(activeCanvasFormat, settings.customFormats)}. Text and colors are shared.`}
+          >
+            <div className="flex items-center gap-2 whitespace-nowrap text-[11px]" style={{ color: '#fbbf24' }}>
+              <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-[#f59e0b] shadow-[0_0_8px_rgba(245,158,11,0.55)]" />
+              <strong>{getFormatLabel(activeCanvasFormat, settings.customFormats)} only</strong>
+              <span className="text-[rgba(251,191,36,0.68)]">·</span>
+              <span>New layers + layout scoped</span>
+              <span className="text-[rgba(251,191,36,0.68)]">·</span>
+              <span>Text &amp; colors shared</span>
+            </div>
+            <div className="flex shrink-0 items-center gap-2">
               <button
-                onClick={() => setActionsOpen((v) => !v)}
-                className="rounded border border-[rgba(245,158,11,0.25)] px-2 py-0.5 text-xs transition-colors hover:bg-[rgba(245,158,11,0.12)]"
-                style={{ color: '#fbbf24' }}
-                title={`Global actions for this ${getFormatLabel(activeCanvasFormat, settings.customFormats)} slide`}
+                onClick={() => setActiveCanvasFormat(baseFormat)}
+                className="whitespace-nowrap text-[11px] transition-opacity hover:opacity-100"
+                style={{ color: '#fbbf24', opacity: 0.7 }}
+                title="Return to the shared base format"
               >
-                Actions ▾
+                ↩ Base
               </button>
-              {actionsOpen && (
-                <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#1c1c26] shadow-xl">
+              <div className="relative" ref={actionsRef}>
+                <button
+                  onClick={() => setActionsOpen((v) => !v)}
+                  className="rounded border border-[rgba(245,158,11,0.25)] px-2 py-0.5 text-[11px] transition-colors hover:bg-[rgba(245,158,11,0.12)]"
+                  style={{ color: '#fbbf24' }}
+                  title={`Global actions for this ${getFormatLabel(activeCanvasFormat, settings.customFormats)} slide`}
+                >
+                  Actions ▾
+                </button>
+                {actionsOpen && (
+                  <div className="absolute right-0 top-full z-50 mt-1 w-64 overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#1c1c26] shadow-xl">
                   <div className="border-b border-[rgba(255,255,255,0.08)] px-3 py-2">
                     <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#fbbf24]">
                       {getFormatLabel(activeCanvasFormat, settings.customFormats)} slide actions
@@ -339,12 +342,13 @@ export function FormatTabs() {
                     Use platform layout as shared…
                     <span className="mt-0.5 block text-[10px] text-[#f59e0b]">Promotes this platform layout into Base. Affects other platforms.</span>
                   </button>
-                </div>
-              )}
+                  </div>
+                )}
+              </div>
             </div>
           </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   )
 }
