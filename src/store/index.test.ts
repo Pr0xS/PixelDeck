@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useEditorStore } from './index'
 import { useAssetStore } from '@/store/assets'
 import type { TextLayer, GroupLayer, Template, PhoneLayer } from '@/types'
+import { buildLocaleManifest } from '@/utils/locale'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -480,6 +481,17 @@ describe('copyLayers + pasteLayers', () => {
 // ─── setLocaleContent / clearLocaleContent ────────────────────────────────────
 
 describe('setLocaleContent / clearLocaleContent', () => {
+  it('keeps default locale content in sync when editing base text by slide group', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+
+    useEditorStore.getState().updateLayerInSlideGroup(groupId, textLayer.id, { text: 'Fresh source' })
+
+    const manifest = buildLocaleManifest(useEditorStore.getState().project)
+    expect(manifest.groups[0].layers.find((layer) => layer.id === textLayer.id)?.default.text).toBe('Fresh source')
+  })
+
   it('setLocaleContent adds locale content on the layer', () => {
     useEditorStore.getState().addText()
     const groupId = useEditorStore.getState().activeSlideGroupId
@@ -551,6 +563,22 @@ describe('relabelDefaultLocale / promoteLocaleToDefault', () => {
     const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
     useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hello' })
     useEditorStore.getState().addLocale('es')
+
+    useEditorStore.getState().promoteLocaleToDefault('es')
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.text).toBe('Hello')
+    expect(updated.localeContent?.es.text).toBe('Hello')
+    expect(updated.localeContent?.en.text).toBe('Hello')
+  })
+
+  it('falls back to the old default when the promoted text override is empty', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hello' })
+    useEditorStore.getState().addLocale('es')
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: '' })
 
     useEditorStore.getState().promoteLocaleToDefault('es')
 

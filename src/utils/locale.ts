@@ -95,6 +95,15 @@ export function effectiveLocalizationMode(layer: Layer): LocalizationMode {
   return explicit ?? 'auto'
 }
 
+/** Whether locale content has the meaningful value required by its layer type. */
+export function isLocaleContentComplete(layer: Layer, content: LocaleContent | undefined): boolean {
+  if (!content) return false
+  if (layer.type === 'text') return typeof content.text === 'string' && content.text.trim().length > 0
+  if (layer.type === 'phone') return Boolean(content.screenshotPath?.trim() || content.screenshotDataUrl)
+  if (layer.type === 'image') return Boolean(content.src?.trim())
+  return false
+}
+
 function collectFromLayers(
   layers: Layer[],
   groupId: string,

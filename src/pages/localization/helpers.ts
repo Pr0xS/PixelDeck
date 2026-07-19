@@ -1,6 +1,6 @@
 import type { CSSProperties } from 'react'
 import type { BackgroundLayer, BrandColor, GroupLayer, Layer, SlideGroup, TextLayer, PhoneLayer, ImageLayer } from '@/types'
-import { effectiveLocalizationMode } from '@/utils/locale'
+import { effectiveLocalizationMode, isLocaleContentComplete } from '@/utils/locale'
 import { CANVAS_FORMAT_PRESETS } from '@/utils/canvasFormats'
 import type { CanvasFormatId } from '@/types'
 import { resolveFill } from '@/utils/brandColors'
@@ -111,11 +111,7 @@ export function collectLocalizableRows(
 export function isOverrideComplete(row: LocalizableRow, locale: string, defaultLocale: string): boolean {
   if (locale === defaultLocale) return true
   if (effectiveLocalizationMode(row.layer) === 'skip') return true // skipped = not counted
-  const override = row.layer.localeContent?.[locale]
-  if (!override) return false
-  if (row.layerType === 'text') return typeof override.text === 'string' && override.text.trim().length > 0
-  if (row.layerType === 'phone') return Boolean((override.screenshotPath?.trim()) || override.screenshotDataUrl)
-  return Boolean(override.src?.trim())
+  return isLocaleContentComplete(row.layer, row.layer.localeContent?.[locale])
 }
 
 export function readFileAsDataUrl(file: File): Promise<string> {

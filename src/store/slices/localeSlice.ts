@@ -7,7 +7,8 @@ import type {
   TextMark,
 } from '@/types'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
-import { mapLayerTree, touchProject, touchSettings, updateLayerInTree } from '../helpers'
+import { mapLayerTree, patchLayerForLocale, touchProject, touchSettings, updateLayerInTree } from '../helpers'
+import { isLocaleContentComplete } from '@/utils/locale'
 
 /**
  * v0.6.0 default-locale promotion: `targetLocale` becomes the new default.
@@ -18,8 +19,8 @@ import { mapLayerTree, touchProject, touchSettings, updateLayerInTree } from '..
  *     snapshot for `oldDefault` (defense in depth — Phase 3 keeps
  *     localeContent[oldDefault] synced on every edit, but this guarantees
  *     correctness regardless of that invariant).
- *  2. Seed: use `targetLocale`'s existing localeContent entry if present and
- *     non-empty, else fall back to the oldDefault snapshot — so the new
+ *  2. Seed: use `targetLocale`'s existing localeContent entry if complete for
+ *     the layer type, else fall back to the oldDefault snapshot — so the new
  *     default never has holes. This is the one place a "swap-like" step
  *     survives from the original design: an incomplete promoted locale
  *     inherits the old default's content for whatever it's missing.
@@ -49,7 +50,7 @@ function promoteLayerToLocale(layer: Layer, targetLocale: string, oldDefault: st
   const existingLocaleContent = layer.localeContent ?? {}
   const existingTarget = existingLocaleContent[targetLocale]
   const targetContent: LocaleContent =
-    existingTarget && Object.keys(existingTarget).length > 0 ? existingTarget : oldDefaultContent
+    existingTarget && isLocaleContentComplete(layer, existingTarget) ? existingTarget : oldDefaultContent
 
   const localeContent = { ...existingLocaleContent, [targetLocale]: targetContent, [oldDefault]: oldDefaultContent }
 
@@ -181,7 +182,11 @@ export const createLocaleSlice = (
       project: touchProject(s.project, {
         slideGroups: s.project.slideGroups.map((g) => {
           if (g.id !== slideGroupId) return g
-          return { ...g, layers: updateLayerInTree(g.layers, layerId, patch) }
+          const defaultLocale = s.project.settings.defaultLocale
+          return { ...g, layers: updateLayerInTree(g.layers, layerId, (layer) => {
+            const routed = patchLayerForLocale(layer, patch, defaultLocale, defaultLocale)
+            return { ...routed.layer, ...routed.rest } as Layer
+          }) }
         }),
       }),
     }))
