@@ -7,10 +7,10 @@ import { PreviewModal } from '@/components/panels/PreviewModal'
 import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SlideNavigator } from '@/components/panels/SlideNavigator'
 import { StageCanvas } from '@/components/canvas/StageCanvas'
-import { FormatTabs } from '@/components/canvas/FormatTabs'
+import { EditingContextAlert, EditingContextBar } from '@/components/canvas/EditingContext'
 import { useThumbnails } from '@/hooks/useThumbnails'
 import { useEditorStore, useUndoRedo } from '@/store'
-import { applyCanvasFormat } from '@/utils/canvasFormats'
+import { applyCanvasFormat, resolveProjectView } from '@/utils/canvasFormats'
 import { registerStage } from '@/utils/stageRegistry'
 
 // Lazy-load the localization view — it's a separate mode and not needed on initial load.
@@ -138,9 +138,19 @@ export default function App() {
           const step = e.shiftKey ? 10 : 1
           const dx = e.key === ArrowLeft ? -step : e.key === ArrowRight ? step : 0
           const dy = e.key === ArrowUp ? -step : e.key === ArrowDown ? step : 0
-          const { selection, editingGroupId: egi, updateLayer, updateChildLayer, project: p, activeSlideGroupId: gid } = useEditorStore.getState()
+          const {
+            selection,
+            editingGroupId: egi,
+            updateLayer,
+            updateChildLayer,
+            project: p,
+            activeSlideGroupId: gid,
+            activeLocale,
+            activeCanvasFormat,
+          } = useEditorStore.getState()
           if (!selection?.layerId) return
-          const grp = p.slideGroups.find((g) => g.id === gid)
+          const resolvedProject = resolveProjectView(p, activeLocale, activeCanvasFormat)
+          const grp = resolvedProject.slideGroups.find((g) => g.id === gid)
           if (!grp) return
           if (egi) {
             const groupLayer = grp.layers.find((l) => l.id === egi)
@@ -170,8 +180,7 @@ export default function App() {
     return () => window.removeEventListener('keydown', handleKeyDown)
   }, [undo, redo, exitGroupEdit, editingGroupId])
 
-  // Entering the editor always resets to the base locale — editing a derived
-  // locale view would silently write to the base layers.
+  // Returning from localization starts the editor on the default locale.
   const handleSetMode = (mode: 'editor' | 'localization') => {
     if (mode === 'editor') {
       const s = useEditorStore.getState()
@@ -226,12 +235,13 @@ export default function App() {
             className="flex-1 overflow-hidden bg-[#111118] flex flex-col"
             style={{ minWidth: 0 }}
           >
-            {/* Format tabs — switch between platform preview formats */}
-            <FormatTabs />
+            {/* Both editing axes share one compact top bar. */}
+            <EditingContextBar />
 
             {/* Canvas fills remaining height — StageCanvas takes full space */}
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
               <StageCanvas stageRef={stageRef} />
+              <EditingContextAlert />
             </div>
           </main>
 

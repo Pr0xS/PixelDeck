@@ -5,8 +5,12 @@ import {
   bakeLayerScale,
   mutateActiveGroup,
   getActiveGroup,
+  patchLayerForLocale,
+  patchLayerForLocaleFormatLayout,
   patchLayerForFormat,
+  splitLocaleFormatLayoutPatch,
   updateLayerInTree,
+  seedLocaleContent,
 } from '../helpers'
 import { getProjectBaseFormat } from '@/utils/canvasFormats'
 
@@ -103,12 +107,13 @@ export const createGroupSlice = (
   },
 
   addToGroup: (groupId, layer) => {
+    const seededLayer = seedLocaleContent(layer, get().project.settings.defaultLocale)
     mutateActiveGroup(set, (g) => ({
       ...g,
       layers: g.layers.map((l) => {
         if (l.id !== groupId || l.type !== 'group') return l
         const grp = l as GroupLayer
-        return { ...grp, children: [...grp.children, layer] }
+        return { ...grp, children: [...grp.children, seededLayer] }
       }),
     }))
   },
@@ -210,15 +215,31 @@ export const createGroupSlice = (
   },
 
   updateChildLayer: (groupId, childId, patch) => {
-    const { project, activeCanvasFormat } = get()
+    const { project, activeCanvasFormat, activeLocale } = get()
     const baseFormat = getProjectBaseFormat(project)
+    const defaultLocale = project.settings.defaultLocale
     mutateActiveGroup(set, (g) => ({
       ...g,
       layers: updateLayerInTree(g.layers, groupId, (layer) => layer.type === 'group'
         ? {
             ...layer,
-            children: updateLayerInTree(layer.children, childId, (child) =>
-              patchLayerForFormat(child, patch, activeCanvasFormat, baseFormat)),
+            children: updateLayerInTree(layer.children, childId, (child) => {
+              const { layer: localized, rest } = patchLayerForLocale(child, patch, activeLocale, defaultLocale)
+              if (activeLocale === defaultLocale) {
+                return patchLayerForFormat(localized, rest, activeCanvasFormat, baseFormat)
+              }
+              if (activeCanvasFormat === baseFormat) {
+                const { rest: nonLayout } = splitLocaleFormatLayoutPatch(rest)
+                return patchLayerForFormat(localized, nonLayout, baseFormat, baseFormat)
+              }
+              const { layer: withLocaleLayout, rest: formatRest } = patchLayerForLocaleFormatLayout(
+                localized,
+                rest,
+                activeLocale,
+                activeCanvasFormat,
+              )
+              return patchLayerForFormat(withLocaleLayout, formatRest, activeCanvasFormat, baseFormat)
+            }),
           }
         : layer),
     }))

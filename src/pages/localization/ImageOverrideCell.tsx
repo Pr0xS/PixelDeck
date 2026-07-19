@@ -21,7 +21,7 @@ export function ImageOverrideCell({
   onUpload,
   onClear,
 }: ImageOverrideCellProps) {
-  const override = row.layer.localeOverrides?.[locale]
+  const override = row.layer.localeContent?.[locale]
   const isDefaultLocale = locale === defaultLocale
   const isActiveColumn = locale === activeLocale
   const mode = effectiveLocalizationMode(row.layer)

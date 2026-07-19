@@ -52,7 +52,7 @@ export function LocaleBar({
             const selected = locale === activeLocale
             const isDefault = locale === defaultLocale
             return (
-              <div key={locale} ref={isDefault ? defaultLocaleAnchorRef : undefined} className="relative group">
+              <div key={locale} ref={isDefault ? defaultLocaleAnchorRef : undefined} className="relative group flex items-center gap-2">
                 <button
                   type="button"
                   onClick={() => setActiveLocale(locale)}
@@ -74,19 +74,17 @@ export function LocaleBar({
                   )}
                 </button>
                 {isDefault ? (
-                  <>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setShowAddLocale(false)
-                        setShowDefaultLocalePicker((open) => !open)
-                      }}
-                      className="absolute -top-1 -right-1 h-4 w-4 rounded-full bg-[#1a1a24] border border-white/10 text-[9px] text-[#6b6b7a] hover:text-[#c4b5fd] hover:border-[rgba(124,110,246,0.45)] opacity-0 group-hover:opacity-100 transition flex items-center justify-center"
-                      title="Change base language label"
-                    >
-                      ✎
-                    </button>
-                  </>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowAddLocale(false)
+                      setShowDefaultLocalePicker((open) => !open)
+                    }}
+                    className="rounded-full border border-[#7c6ef6]/30 bg-[#7c6ef6]/10 px-3 py-2 text-xs font-medium text-[#d8d2ff] transition hover:border-[#7c6ef6]/60 hover:bg-[#7c6ef6]/18 hover:text-white"
+                    title="Change default language"
+                  >
+                    Change source
+                  </button>
                 ) : (
                   <button
                     type="button"
@@ -142,7 +140,8 @@ export function LocaleBar({
         open={showDefaultLocalePicker}
         anchorRef={defaultLocaleAnchorRef}
         existingLocales={locales.filter((l) => l !== defaultLocale)}
-        note="This only changes the language label for the source content. Existing translated languages cannot be promoted to default."
+        allowSelectingExisting
+        note="Pick a new code to relabel the source language. Pick an existing translated language to review its completeness before promoting it to default."
         onAdd={handleDefaultLocaleChange}
         onCancel={() => setShowDefaultLocalePicker(false)}
       />

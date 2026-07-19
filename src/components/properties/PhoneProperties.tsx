@@ -81,13 +81,13 @@ function LocaleScreenshotRow({
 // ─── PhoneProperties ──────────────────────────────────────────────────────────
 
 export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
-  const { updateLayer, project, activeSlideGroupId, setLocaleOverride, clearLocaleOverride } = useEditorStore(
+  const { updateLayer, project, activeSlideGroupId, setLocaleContent, clearLocaleContent } = useEditorStore(
     useShallow((s) => ({
       updateLayer: s.updateLayer,
       project: s.project,
       activeSlideGroupId: s.activeSlideGroupId,
-      setLocaleOverride: s.setLocaleOverride,
-      clearLocaleOverride: s.clearLocaleOverride,
+      setLocaleContent: s.setLocaleContent,
+      clearLocaleContent: s.clearLocaleContent,
     }))
   )
   const upd = (patch: Partial<PhoneLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
@@ -299,7 +299,7 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
             <label className={labelCls}>Localized Screenshots</label>
             <div className="space-y-2">
               {nonDefaultLocales.map((locale) => {
-                const override = layer.localeOverrides?.[locale]
+                const override = layer.localeContent?.[locale]
                 const path = override?.screenshotPath
                 const previewSrc = path ? assets[path]?.dataUrl ?? override?.screenshotDataUrl : override?.screenshotDataUrl
                 return (
@@ -310,9 +310,9 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
                     onUpload={async (file) => {
                       const dataUrl = await fileToDataUrl(file)
                       addAsset(file.name, dataUrl)
-                      setLocaleOverride(activeSlideGroupId, layer.id, locale, { screenshotPath: file.name, screenshotDataUrl: dataUrl })
+                      setLocaleContent(activeSlideGroupId, layer.id, locale, { screenshotPath: file.name, screenshotDataUrl: dataUrl })
                     }}
-                    onClear={() => clearLocaleOverride(activeSlideGroupId, layer.id, locale)}
+                    onClear={() => clearLocaleContent(activeSlideGroupId, layer.id, locale)}
                   />
                 )
               })}

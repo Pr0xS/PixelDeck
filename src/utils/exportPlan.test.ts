@@ -1,15 +1,15 @@
 import { describe, expect, it } from 'vitest'
-import type { Project, SlideGroup } from '@/types'
+import type { Layer, Project, SlideGroup, TextLayer } from '@/types'
 import { buildExportFileTarget, buildExportPlan, safeExportSegment } from './exportPlan'
 
-const group = (id: string, name: string, slideNames: string[]): SlideGroup => ({
+const group = (id: string, name: string, slideNames: string[], layers: Layer[] = []): SlideGroup => ({
   id,
   name,
   numSlides: slideNames.length,
   slideWidth: 1320,
   slideHeight: 2868,
   slideNames,
-  layers: [],
+  layers,
 })
 
 const project: Project = {
@@ -104,6 +104,52 @@ describe('buildExportPlan', () => {
       'base/en/First-Group__Shared-Slide',
       'base/en/Second-Group__Shared-Slide',
     ])
+  })
+
+  it('applies locale layout overrides only to their locale and format batch', () => {
+    const text: TextLayer = {
+      id: 'localized-title',
+      name: 'Localized title',
+      type: 'text',
+      x: 100,
+      y: 200,
+      rotation: 0,
+      opacity: 1,
+      visible: true,
+      locked: false,
+      text: 'Hello',
+      fontFamily: 'Inter',
+      fontSize: 100,
+      fontWeight: 700,
+      fill: '#fff',
+      letterSpacing: 0,
+      lineHeight: 1.2,
+      align: 'left',
+      localeLayoutOverrides: {
+        de: { 'android-phone': { x: 200 } },
+      },
+    }
+    const scopedProject: Project = {
+      ...project,
+      settings: { ...project.settings, locales: ['en', 'de'] },
+      slideGroups: [group('localized', 'Localized', ['Localized'], [text])],
+    }
+
+    // ExportApp and browser export both consume this plan, so these projections
+    // prove headless/browser export parity without testing their render shells.
+    const plan = buildExportPlan(scopedProject, {
+      locales: ['de', 'en'],
+      formatIds: ['android-phone', 'iphone-69'],
+    })
+    const layerX = (locale: string, formatId: string) => {
+      const batch = plan.batches.find((candidate) =>
+        candidate.locale === locale && candidate.formatId === formatId)
+      return batch?.group.layers.find((layer) => layer.id === text.id)?.x
+    }
+
+    expect(layerX('de', 'android-phone')).toBe(200)
+    expect(layerX('en', 'android-phone')).not.toBe(200)
+    expect(layerX('de', 'iphone-69')).not.toBe(200)
   })
 })
 

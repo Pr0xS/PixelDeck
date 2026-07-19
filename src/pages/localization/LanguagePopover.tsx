@@ -7,10 +7,12 @@ import { LANGUAGES } from '@/utils/locale'
 
 function LanguageCombobox({
   existingLocales,
+  allowSelectingExisting = false,
   onAdd,
   onCancel,
 }: {
   existingLocales: string[]
+  allowSelectingExisting?: boolean
   onAdd: (code: string) => void
   onCancel: () => void
 }) {
@@ -39,7 +41,7 @@ function LanguageCombobox({
 
   const handleSelect = (code: string) => {
     const normalized = code.trim().toLowerCase().replace('_', '-')
-    if (existingLocales.includes(normalized)) return
+    if (existingLocales.includes(normalized) && !allowSelectingExisting) return
     onAdd(normalized)
   }
 
@@ -62,20 +64,23 @@ function LanguageCombobox({
       <div className="max-h-56 overflow-y-auto py-1">
         {filtered.map((lang) => {
           const already = existingLocales.includes(lang.code)
+          const disabled = already && !allowSelectingExisting
           return (
             <button
               key={lang.code}
               type="button"
-              disabled={already}
+              disabled={disabled}
               onClick={() => handleSelect(lang.code)}
               className={`flex w-full items-center justify-between px-3 py-2 text-left text-sm transition ${
-                already
+                disabled
                   ? 'cursor-default text-[#4a4a5a]'
+                  : already
+                    ? 'text-[#d9d9e6] hover:bg-[#7c6ef6]/10 hover:text-white'
                   : 'text-[#d9d9e6] hover:bg-white/6 hover:text-white'
               }`}
             >
               <span>{lang.name}</span>
-              <span className={`text-xs font-mono ${already ? 'text-[#3a3a4a]' : 'text-[#6b6b7a]'}`}>
+              <span className={`text-xs font-mono ${disabled ? 'text-[#3a3a4a]' : already ? 'text-[#9d90f8]' : 'text-[#6b6b7a]'}`}>
                 {already ? '✓ ' : ''}{lang.code}
               </span>
             </button>
@@ -117,6 +122,7 @@ export interface LanguagePopoverProps {
   anchorRef: RefObject<HTMLElement | null>
   existingLocales: string[]
   note?: string
+  allowSelectingExisting?: boolean
   onAdd: (code: string) => void
   onCancel: () => void
 }
@@ -126,6 +132,7 @@ export function LanguagePopover({
   anchorRef,
   existingLocales,
   note,
+  allowSelectingExisting = false,
   onAdd,
   onCancel,
 }: LanguagePopoverProps) {
@@ -171,7 +178,12 @@ export function LanguagePopover({
         style={{ left: position.left, top: position.top }}
         onMouseDown={(event) => event.stopPropagation()}
       >
-        <LanguageCombobox existingLocales={existingLocales} onAdd={onAdd} onCancel={onCancel} />
+        <LanguageCombobox
+          existingLocales={existingLocales}
+          allowSelectingExisting={allowSelectingExisting}
+          onAdd={onAdd}
+          onCancel={onCancel}
+        />
         {note && (
           <div className="mt-2 w-72 rounded-xl border border-white/8 bg-[#111118] px-3 py-2 text-[10px] leading-relaxed text-[#7f8094] shadow-xl">
             {note}

@@ -9,31 +9,35 @@ export function buildLocaleManifest(project) {
 
   const groups = project.slideGroups.map((group) => {
     const layers = []
-    collectManifestEntries(group.layers, group.name, nonDefaultLocales, layers)
+    collectManifestEntries(group.layers, group.name, nonDefaultLocales, defaultLocale, layers)
     return { name: group.name, id: group.id, layers }
   })
 
   return { project: project.name, defaultLocale, locales, groups }
 }
 
-function collectManifestEntries(layers, groupName, locales, result) {
+function collectManifestEntries(layers, groupName, locales, defaultLocale, result) {
   for (const layer of layers) {
     if (layer.type === 'group') {
-      collectManifestEntries(layer.children, groupName, locales, result)
+      collectManifestEntries(layer.children, groupName, locales, defaultLocale, result)
       continue
     }
     if (layer.type !== 'text' && layer.type !== 'phone' && layer.type !== 'image') continue
 
+    const defaultContent = layer.localeContent?.[defaultLocale]
     const defaultPatch =
       layer.type === 'text'
-        ? { text: layer.text, ...(layer.spans ? { spans: layer.spans } : {}) }
+        ? {
+            text: defaultContent?.text ?? layer.text,
+            ...((defaultContent?.spans ?? layer.spans) ? { spans: defaultContent?.spans ?? layer.spans } : {}),
+          }
         : layer.type === 'phone'
-          ? { screenshotPath: layer.screenshotPath }
+          ? { screenshotPath: defaultContent?.screenshotPath ?? layer.screenshotPath }
           : { src: '[data-uri-omitted]' }  // don't dump base64 in the manifest
 
     const overrides = {}
     for (const locale of locales) {
-      overrides[locale] = layer.localeOverrides?.[locale] ?? null
+      overrides[locale] = layer.localeContent?.[locale] ?? layer.localeOverrides?.[locale] ?? null
     }
 
     result.push({
@@ -62,9 +66,15 @@ export function applyLocaleManifest(project, manifest) {
   }
 
   function patchLayer(layer) {
-    const patched = overrideMap.has(layer.id)
-      ? { ...layer, localeOverrides: overrideMap.get(layer.id) }
-      : layer
+    const localeOverrides = overrideMap.get(layer.id)
+    let patched = layer
+    if (localeOverrides) {
+      const mergedLocaleContent = { ...(layer.localeContent ?? {}) }
+      for (const [locale, patch] of Object.entries(localeOverrides)) {
+        mergedLocaleContent[locale] = patch
+      }
+      patched = { ...layer, localeContent: mergedLocaleContent }
+    }
     if (patched.type === 'group') {
       return { ...patched, children: patched.children.map(patchLayer) }
     }

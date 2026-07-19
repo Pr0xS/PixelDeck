@@ -179,7 +179,7 @@ CLI (`cli/export.mjs`) injects `window.__EXPORT_CONFIG__` before page navigation
 - **Multi-format export**: `multiFormatExport.ts:exportProjectImages()` handles the full export pipeline: iterates locales × formats × groups, applies `applyLocale()` + `applyCanvasFormat()`, waits for stage settle, captures, and restores state. Use this instead of calling `exportSlide` directly.
 - **Brand color tokens**: Colors can be stored as `brand:id` tokens (e.g. `brand:abc123`). Use `resolveBrandColor(value, brandColors)` from `src/utils/brandColors.ts` before passing to Konva. Never pass raw tokens to Konva.
 - **Canvas formats**: `activeCanvasFormat` controls which format is being previewed/edited. `applyCanvasFormat(project, formatId)` returns a project with format overrides merged. The base format is not exported — only formats in `project.settings.activeFormats` are.
-- **Localization**: `applyLocale(project, locale)` merges `localeOverrides` into layers. The base locale is `project.settings.defaultLocale`. `activeLocale` in the store controls the current preview locale.
+- **Localization**: Default-locale content lives in each layer's flat fields and is mirrored into `localeContent[defaultLocale]`; non-default content lives in `localeContent[locale]`. `applyLocale(project, locale)` merges that locale content into layers, with a no-op fast path for the default locale. `activeLocale` controls the current preview locale.
 
 ---
 

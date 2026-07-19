@@ -7,6 +7,27 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.0](https://github.com/Pr0xS/PixelDeck/compare/v0.5.2...v0.6.0) - 2026-07-19
+
+### Added
+
+- Format-scoped per-locale layout overrides: adjust a layer's position, size, or rotation for a specific locale scoped to a specific canvas format (e.g. a German-only fix on Android) without affecting other formats or locales.
+- A merged format + locale editing bar and a floating, top-centered context alert that always states what's currently being edited and what's shared vs. scoped — replacing the previous stacked warning banners.
+- Grouped format and locale actions (reset layout, reset visibility, make layers shared, promote format layout to shared, reset a locale+format pairing) in a single, clearly sectioned menu.
+- Default-locale promotion: promote any locale to become the project's new default, with a dialog explaining what happens to incomplete translations.
+
+### Changed
+
+- Locale storage is now fully symmetric: default-locale content lives in each layer's flat fields (mirrored into `localeContent[defaultLocale]`), non-default content lives in `localeContent[locale]`. Removed the legacy `localeOverrides` field and its dual-path read fallback in the app runtime (the CLI still tolerates raw un-migrated files).
+
+### Fixed
+
+- Base-table locale edits (Localization view) no longer desync `localeContent[defaultLocale]`, which could surface stale source text in exported translation manifests.
+- Promoting a locale to default no longer replaces content with an empty string when the target locale has an empty manual override — it now correctly falls back to the previous default's content.
+- Inline canvas text editing is now restricted to the default locale, preventing translated content from being silently overwritten by default-locale text when a non-default locale tab is active.
+- Arrow-key nudging now reads the resolved (format/locale-aware) position instead of raw base coordinates, fixing a position jump on the first nudge when a format or locale override was already active.
+- Editing a layer's layout while on the Base format tab with a non-default locale active now shows an explicit warning that layout changes won't apply there, instead of silently reverting with no explanation.
+
 ## [0.5.2](https://github.com/Pr0xS/PixelDeck/compare/v0.5.1...v0.5.2) - 2026-07-19
 
 ### Added

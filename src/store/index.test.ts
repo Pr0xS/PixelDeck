@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach } from 'vitest'
 import { useEditorStore } from './index'
 import { useAssetStore } from '@/store/assets'
 import type { TextLayer, GroupLayer, Template, PhoneLayer } from '@/types'
+import { buildLocaleManifest } from '@/utils/locale'
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -36,6 +37,7 @@ describe('addLayer', () => {
     // background + text
     expect(layers).toHaveLength(2)
     expect(layers[1].type).toBe('text')
+    expect(layers[1].localeContent?.en.text).toBe('Your headline')
   })
 
   it('selects the newly added layer', () => {
@@ -71,6 +73,74 @@ describe('updateLayer', () => {
 
     const shapeAfter = getActiveGroup().layers.find((l) => l.id === shapeLayer.id)!
     expect(shapeAfter.opacity).toBe(1) // unchanged
+  })
+})
+
+describe('updateLayer — locale content sync', () => {
+  it('writes text to both the legacy field and default locale content', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    const defaultLocale = useEditorStore.getState().project.settings.defaultLocale
+
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'New headline' })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.text).toBe('New headline')
+    expect(updated.localeContent?.[defaultLocale]?.text).toBe('New headline')
+  })
+
+  it('preserves seeded locale content for a non-locale patch', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+
+    useEditorStore.getState().updateLayer(textLayer.id, { opacity: 0.5 })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.opacity).toBe(0.5)
+    expect(updated.localeContent?.en.text).toBe('Your headline')
+  })
+
+  it('writes a phone screenshot path to both legacy and default locale content', () => {
+    useEditorStore.getState().addPhone()
+    const phone = getActiveGroup().layers.find((l) => l.type === 'phone') as PhoneLayer
+    const defaultLocale = useEditorStore.getState().project.settings.defaultLocale
+
+    useEditorStore.getState().updateLayer(phone.id, { screenshotPath: 'shot.png' })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === phone.id) as PhoneLayer
+    expect(updated.screenshotPath).toBe('shot.png')
+    expect(updated.localeContent?.[defaultLocale]?.screenshotPath).toBe('shot.png')
+  })
+
+  it('routes a mixed patch through locale and format pipelines', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    const defaultLocale = useEditorStore.getState().project.settings.defaultLocale
+
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hi', opacity: 0.3, x: 50 })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.text).toBe('Hi')
+    expect(updated.localeContent?.[defaultLocale]?.text).toBe('Hi')
+    expect(updated.opacity).toBe(0.3)
+    expect(updated.x).toBe(50)
+  })
+
+  it('writes group child text to default locale content', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addShape()
+    const layers = getActiveGroup().layers
+    const textId = layers.find((l) => l.type === 'text')!.id
+    const shapeId = layers.find((l) => l.type === 'shape')!.id
+    useEditorStore.getState().createGroup([textId, shapeId])
+    const group = getActiveGroup().layers.find((l) => l.type === 'group') as GroupLayer
+    const defaultLocale = useEditorStore.getState().project.settings.defaultLocale
+
+    useEditorStore.getState().updateChildLayer(group.id, textId, { text: 'Nested edit' })
+
+    const updatedGroup = getActiveGroup().layers.find((l) => l.id === group.id) as GroupLayer
+    const child = updatedGroup.children.find((l) => l.id === textId) as TextLayer
+    expect(child.localeContent?.[defaultLocale]?.text).toBe('Nested edit')
   })
 })
 
@@ -408,30 +478,181 @@ describe('copyLayers + pasteLayers', () => {
   })
 })
 
-// ─── setLocaleOverride / clearLocaleOverride ──────────────────────────────────
+// ─── setLocaleContent / clearLocaleContent ────────────────────────────────────
 
-describe('setLocaleOverride / clearLocaleOverride', () => {
-  it('setLocaleOverride adds an override on the layer', () => {
+describe('setLocaleContent / clearLocaleContent', () => {
+  it('keeps default locale content in sync when editing base text by slide group', () => {
     useEditorStore.getState().addText()
     const groupId = useEditorStore.getState().activeSlideGroupId
-    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
 
-    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
+    useEditorStore.getState().updateLayerInSlideGroup(groupId, textLayer.id, { text: 'Fresh source' })
 
-    const after = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
-    expect(after.localeOverrides?.['es']?.text).toBe('Hola')
+    const manifest = buildLocaleManifest(useEditorStore.getState().project)
+    expect(manifest.groups[0].layers.find((layer) => layer.id === textLayer.id)?.default.text).toBe('Fresh source')
   })
 
-  it('clearLocaleOverride removes the override', () => {
+  it('setLocaleContent adds locale content on the layer', () => {
     useEditorStore.getState().addText()
     const groupId = useEditorStore.getState().activeSlideGroupId
     const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
 
-    useEditorStore.getState().setLocaleOverride(groupId, textLayer.id, 'es', { text: 'Hola' })
-    useEditorStore.getState().clearLocaleOverride(groupId, textLayer.id, 'es')
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
 
     const after = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
-    expect(after.localeOverrides?.['es']).toBeUndefined()
+    expect(after.localeContent?.['es']?.text).toBe('Hola')
+  })
+
+  it('clearLocaleContent removes locale content', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text')!
+
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
+    useEditorStore.getState().clearLocaleContent(groupId, textLayer.id, 'es')
+
+    const after = getActiveGroup().layers.find((l) => l.id === textLayer.id)!
+    expect(after.localeContent?.['es']).toBeUndefined()
+  })
+})
+
+describe('relabelDefaultLocale / promoteLocaleToDefault', () => {
+  it('relabels the default locale and moves its locale content key', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hello' })
+
+    useEditorStore.getState().relabelDefaultLocale('en-us')
+
+    const { project } = useEditorStore.getState()
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(project.settings.defaultLocale).toBe('en-us')
+    expect(project.settings.locales?.[0]).toBe('en-us')
+    expect(updated.localeContent?.['en-us']?.text).toBe('Hello')
+    expect(updated.localeContent?.en).toBeUndefined()
+  })
+
+  it('does not relabel the default to an existing distinct locale', () => {
+    useEditorStore.getState().addLocale('es')
+
+    useEditorStore.getState().relabelDefaultLocale('es')
+
+    expect(useEditorStore.getState().project.settings.defaultLocale).toBe('en')
+  })
+
+  it('promotes an existing translation and preserves the demoted default', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hello' })
+    useEditorStore.getState().addLocale('es')
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
+
+    useEditorStore.getState().promoteLocaleToDefault('es')
+
+    const { project } = useEditorStore.getState()
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(project.settings.defaultLocale).toBe('es')
+    expect(updated.text).toBe('Hola')
+    expect(updated.localeContent?.es.text).toBe('Hola')
+    expect(updated.localeContent?.en.text).toBe('Hello')
+  })
+
+  it('seeds an incomplete promoted locale from the old default', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hello' })
+    useEditorStore.getState().addLocale('es')
+
+    useEditorStore.getState().promoteLocaleToDefault('es')
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.text).toBe('Hello')
+    expect(updated.localeContent?.es.text).toBe('Hello')
+    expect(updated.localeContent?.en.text).toBe('Hello')
+  })
+
+  it('falls back to the old default when the promoted text override is empty', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().updateLayer(textLayer.id, { text: 'Hello' })
+    useEditorStore.getState().addLocale('es')
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: '' })
+
+    useEditorStore.getState().promoteLocaleToDefault('es')
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.text).toBe('Hello')
+    expect(updated.localeContent?.es.text).toBe('Hello')
+    expect(updated.localeContent?.en.text).toBe('Hello')
+  })
+
+  it('does not promote a locale absent from project settings', () => {
+    const projectBefore = useEditorStore.getState().project
+
+    useEditorStore.getState().promoteLocaleToDefault('es')
+
+    expect(useEditorStore.getState().project).toBe(projectBefore)
+    expect(useEditorStore.getState().project.settings.defaultLocale).toBe('en')
+  })
+
+  it('clears stale default text marks when the promoted translation has none', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().updateLayer(textLayer.id, {
+      text: 'Hello',
+      marks: [{ start: 0, end: 5, fontWeight: 700 }],
+    })
+    useEditorStore.getState().addLocale('es')
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
+
+    useEditorStore.getState().promoteLocaleToDefault('es')
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.text).toBe('Hola')
+    expect(updated.marks).toBeUndefined()
+  })
+
+  it('writes symmetric locale content', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.localeContent?.es).toEqual({ text: 'Hola' })
+  })
+
+  it('clears locale content', () => {
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayer = getActiveGroup().layers.find((l) => l.type === 'text') as TextLayer
+    useEditorStore.getState().setLocaleContent(groupId, textLayer.id, 'es', { text: 'Hola' })
+
+    useEditorStore.getState().clearLocaleContent(groupId, textLayer.id, 'es')
+
+    const updated = getActiveGroup().layers.find((l) => l.id === textLayer.id) as TextLayer
+    expect(updated.localeContent?.es).toBeUndefined()
+  })
+
+  it('removes a locale from locale content on every layer', () => {
+    useEditorStore.getState().addText()
+    useEditorStore.getState().addText()
+    const groupId = useEditorStore.getState().activeSlideGroupId
+    const textLayers = getActiveGroup().layers.filter((l) => l.type === 'text') as TextLayer[]
+    useEditorStore.getState().addLocale('es')
+    for (const [index, layer] of textLayers.entries()) {
+      useEditorStore.getState().setLocaleContent(groupId, layer.id, 'es', { text: `Hola ${index}` })
+    }
+
+    useEditorStore.getState().removeLocale('es')
+
+    for (const layer of getActiveGroup().layers.filter((l) => l.type === 'text') as TextLayer[]) {
+      expect(layer.localeContent?.es).toBeUndefined()
+    }
   })
 })
 

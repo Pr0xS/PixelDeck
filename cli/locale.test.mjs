@@ -35,7 +35,8 @@ describe('CLI locale manifest', () => {
 
     const patched = applyLocaleManifest(stripped, manifest)
 
-    expect(patched.slideGroups[0].layers[0].localeOverrides.es.text).toBe('Hola')
+    expect(patched.slideGroups[0].layers[0].localeContent.es.text).toBe('Hola')
+    expect(patched.slideGroups[0].layers[0]).not.toHaveProperty('localeOverrides')
   })
 
   it('uses manifest locale settings rather than input project settings', () => {
@@ -84,6 +85,55 @@ describe('CLI locale manifest', () => {
     const patched = applyLocaleManifest(stripped, manifest)
 
     expect(manifest.groups[0].layers.map((layer) => layer.id)).toContain('child')
-    expect(patched.slideGroups[0].layers[0].children[0].localeOverrides.es.text).toBe('Hola nested')
+    expect(patched.slideGroups[0].layers[0].children[0].localeContent.es.text).toBe('Hola nested')
+  })
+
+  it('builds default content and overrides from localeContent', () => {
+    const input = clone(project)
+    const layer = input.slideGroups[0].layers[0]
+    delete layer.text
+    delete layer.localeOverrides
+    layer.localeContent = { en: { text: 'Def' }, es: { text: 'Hola' } }
+
+    const manifest = buildLocaleManifest(input)
+
+    expect(manifest.groups[0].layers[0].default.text).toBe('Def')
+    expect(manifest.groups[0].layers[0].overrides.es.text).toBe('Hola')
+  })
+
+  it('prefers default localeContent over the flat text field', () => {
+    const input = clone(project)
+    const layer = input.slideGroups[0].layers[0]
+    layer.text = 'From base field'
+    layer.localeContent = { en: { text: 'From content' } }
+
+    const manifest = buildLocaleManifest(input)
+
+    expect(manifest.groups[0].layers[0].default.text).toBe('From content')
+  })
+
+  it('applies manifest overrides to localeContent only', () => {
+    const input = clone(project)
+    delete input.slideGroups[0].layers[0].localeOverrides
+    const manifest = buildLocaleManifest(project)
+
+    const patched = applyLocaleManifest(input, manifest)
+    const layer = patched.slideGroups[0].layers[0]
+
+    expect(layer.localeContent.es.text).toBe('Hola')
+    expect(layer).not.toHaveProperty('localeOverrides')
+  })
+
+  it('preserves unrelated localeContent entries when applying overrides', () => {
+    const input = clone(project)
+    delete input.slideGroups[0].layers[0].localeOverrides
+    input.slideGroups[0].layers[0].localeContent = { fr: { text: 'Bonjour' } }
+    const manifest = buildLocaleManifest(project)
+
+    const patched = applyLocaleManifest(input, manifest)
+    const layer = patched.slideGroups[0].layers[0]
+
+    expect(layer.localeContent.fr).toEqual({ text: 'Bonjour' })
+    expect(layer.localeContent.es).toEqual({ text: 'Hola' })
   })
 })

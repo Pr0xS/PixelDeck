@@ -187,7 +187,7 @@ describe('project asset lifecycle and bundles', () => {
     ) as PhoneLayer
     useEditorStore.getState().updateLayer(phone.id, {
       screenshotPath: 'base.png',
-      localeOverrides: { es: { screenshotPath: 'locale::es::phone.png' } },
+      localeContent: { es: { screenshotPath: 'locale::es::phone.png' } },
     })
     const bundle = makeBundle(useEditorStore.getState().project, {
       'base.png': 'data:image/png;base64,base',

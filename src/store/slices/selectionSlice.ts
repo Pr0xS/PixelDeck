@@ -22,7 +22,11 @@ export const createSelectionSlice = (
   | 'exitGroupEdit'
   | 'selectChild'
 > => ({
-  startTextEdit: (layerId) => set({ editingTextId: layerId }),
+  startTextEdit: (layerId) => {
+    const { activeLocale, project } = get()
+    if (activeLocale !== project.settings.defaultLocale) return
+    set({ editingTextId: layerId })
+  },
   stopTextEdit: () => set({ editingTextId: null }),
   setPendingContentFocus: (layerId) => set({ pendingContentFocusLayerId: layerId }),
 

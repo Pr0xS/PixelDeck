@@ -2,7 +2,7 @@
  * locale.ts — Localization utilities for PixelDeck
  *
  * The core primitive is applyLocale(project, locale) → Project.
- * It deep-walks all layers and merges localeOverrides[locale] into each layer.
+ * It deep-walks all layers and merges localeContent[locale] into each layer.
  * The original project is never mutated.
  *
  * Supporting utilities:
@@ -13,60 +13,29 @@
 
 import type {
   Project, Layer, GroupLayer,
-  LocaleLayerPatch, LocalizationMode, TextLayer, PhoneLayer, ImageLayer, TextMark, TextSpan,
+  LocaleContent, LocaleLayerPatch, LocalizationMode,
 } from '@/types'
 import { mapLayerTree } from '@/utils/layerTree'
 
 // ─── Core resolver ────────────────────────────────────────────────────────────
 
-/**
- * Convert legacy TextSpan[] in a locale patch to TextMark[] (pure, no browser APIs).
- * The mark offsets are computed over the concatenated span texts.
- */
-function migrateSpansInPatch(patch: LocaleLayerPatch): LocaleLayerPatch {
-  if (!patch.spans?.length || patch.marks?.length) return patch
-  const spans = patch.spans as TextSpan[]
-  let offset = 0
-  const marks: TextMark[] = []
-  const textParts: string[] = []
-  for (const span of spans) {
-    textParts.push(span.text)
-    const end = offset + span.text.length
-    const hasStyle =
-      span.fill !== undefined || span.fontWeight !== undefined ||
-      span.italic !== undefined || span.underline !== undefined ||
-      span.strikethrough !== undefined
-    if (hasStyle) {
-      marks.push({ start: offset, end, fill: span.fill, fontWeight: span.fontWeight,
-        italic: span.italic, underline: span.underline, strikethrough: span.strikethrough })
-    }
-    offset = end
-  }
-  const migratedText = patch.text ?? textParts.join('')
-  return {
-    ...patch,
-    text: migratedText,
-    marks: marks.length ? marks : undefined,
-    spans: undefined,
-  }
-}
-
-/** Merge localeOverrides[locale] into a single layer (non-mutating, shallow merge). */
-export function resolveLayerLocale<T extends Layer>(layer: T, locale: string): T {
-  if (!layer.localeOverrides) return layer
-  const rawPatch = layer.localeOverrides[locale]
-  if (!rawPatch) return layer
-  // Migrate legacy spans in locale patch first
-  const patch = rawPatch.spans?.length ? migrateSpansInPatch(rawPatch) : rawPatch
+function mergeLocaleContentIntoLayer<T extends Layer>(
+  layer: T,
+  patch: LocaleContent | LocaleLayerPatch,
+): T {
   const merged = { ...layer, ...patch } as T
-  // When locale overrides text without providing its own marks, the base layer's
-  // marks reference positions in the original text and would style the wrong
-  // characters. Drop them so translated text renders without misplaced styling.
   if (patch.text !== undefined && patch.marks === undefined) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ;(merged as any).marks = undefined
   }
   return merged
+}
+
+/** Merge localeContent[locale] into a single layer (non-mutating, shallow merge). */
+export function resolveLayerLocale<T extends Layer>(layer: T, locale: string): T {
+  const content = layer.localeContent?.[locale]
+  if (!content) return layer
+  return mergeLocaleContentIntoLayer(layer, content)
 }
 
 /**
@@ -108,7 +77,7 @@ export interface LocalizableLayerRef {
 export function getLocalizableLayers(project: Project): LocalizableLayerRef[] {
   const result: LocalizableLayerRef[] = []
   for (const group of project.slideGroups) {
-    collectFromLayers(group.layers, group.id, group.name, result)
+    collectFromLayers(group.layers, group.id, group.name, project.settings.defaultLocale, result)
   }
   return result
 }
@@ -126,15 +95,25 @@ export function effectiveLocalizationMode(layer: Layer): LocalizationMode {
   return explicit ?? 'auto'
 }
 
+/** Whether locale content has the meaningful value required by its layer type. */
+export function isLocaleContentComplete(layer: Layer, content: LocaleContent | undefined): boolean {
+  if (!content) return false
+  if (layer.type === 'text') return typeof content.text === 'string' && content.text.trim().length > 0
+  if (layer.type === 'phone') return Boolean(content.screenshotPath?.trim() || content.screenshotDataUrl)
+  if (layer.type === 'image') return Boolean(content.src?.trim())
+  return false
+}
+
 function collectFromLayers(
   layers: Layer[],
   groupId: string,
   groupName: string,
+  defaultLocale: string,
   result: LocalizableLayerRef[],
 ): void {
   for (const layer of layers) {
     if (layer.type === 'group') {
-      collectFromLayers((layer as GroupLayer).children, groupId, groupName, result)
+      collectFromLayers((layer as GroupLayer).children, groupId, groupName, defaultLocale, result)
     } else if (layer.type === 'text' || layer.type === 'phone' || layer.type === 'image') {
       result.push({
         slideGroupId: groupId,
@@ -143,13 +122,12 @@ function collectFromLayers(
         layerName: layer.name,
         layerType: layer.type,
         ref: `${groupName}/${layer.name}`,
-        defaultText: layer.type === 'text' ? (layer as TextLayer).text : undefined,
-        defaultImageRef:
-          layer.type === 'phone'
-            ? (layer as PhoneLayer).screenshotPath ?? (layer as PhoneLayer).screenshotDataUrl
-            : layer.type === 'image'
-              ? (layer as ImageLayer).src
-              : undefined,
+        defaultText: layer.type === 'text' ? layer.localeContent?.[defaultLocale]?.text : undefined,
+        defaultImageRef: layer.type === 'phone'
+          ? layer.localeContent?.[defaultLocale]?.screenshotPath
+          : layer.type === 'image'
+            ? layer.localeContent?.[defaultLocale]?.src
+            : undefined,
       })
     }
   }
@@ -197,7 +175,7 @@ export function buildLocaleManifest(project: Project): LocaleManifest {
 
   const groups: LocaleManifestGroup[] = project.slideGroups.map((group) => {
     const layers: LocaleManifestEntry[] = []
-    collectManifestEntries(group.layers, group.name, nonDefaultLocales, layers)
+    collectManifestEntries(group.layers, group.name, nonDefaultLocales, defaultLocale, layers)
     return { name: group.name, id: group.id, layers }
   })
 
@@ -208,28 +186,30 @@ function collectManifestEntries(
   layers: Layer[],
   groupName: string,
   locales: string[],
+  defaultLocale: string,
   result: LocaleManifestEntry[],
 ): void {
   for (const layer of layers) {
     if (layer.type === 'group') {
-      collectManifestEntries((layer as GroupLayer).children, groupName, locales, result)
+      collectManifestEntries((layer as GroupLayer).children, groupName, locales, defaultLocale, result)
       continue
     }
     if (layer.type !== 'text' && layer.type !== 'phone' && layer.type !== 'image') continue
 
+    const defaultContent = layer.localeContent?.[defaultLocale]
     const defaultPatch: LocaleLayerPatch =
       layer.type === 'text'
         ? {
-            text: (layer as TextLayer).text,
-            ...((layer as TextLayer).marks ? { marks: (layer as TextLayer).marks } : {}),
+            text: defaultContent?.text,
+            ...(defaultContent?.marks ? { marks: defaultContent.marks } : {}),
           }
         : layer.type === 'phone'
-          ? { screenshotPath: (layer as PhoneLayer).screenshotPath }
-          : { src: (layer as ImageLayer).src }
+          ? { screenshotPath: defaultContent?.screenshotPath }
+          : { src: defaultContent?.src }
 
     const overrides: Record<string, LocaleLayerPatch | null> = {}
     for (const locale of locales) {
-      overrides[locale] = layer.localeOverrides?.[locale] ?? null
+      overrides[locale] = layer.localeContent?.[locale] ?? null
     }
 
     result.push({
@@ -260,10 +240,15 @@ export function applyLocaleManifest(project: Project, manifest: LocaleManifest):
     }
   }
 
-  const patchLayer = (layer: Layer): Layer =>
-    overrideMap.has(layer.id)
-      ? { ...layer, localeOverrides: overrideMap.get(layer.id) }
-      : layer
+  const patchLayer = (layer: Layer): Layer => {
+    const localeOverrides = overrideMap.get(layer.id)
+    if (!localeOverrides) return layer
+    const mergedLocaleContent = { ...(layer.localeContent ?? {}) }
+    for (const [locale, patch] of Object.entries(localeOverrides)) {
+      mergedLocaleContent[locale] = patch as LocaleContent
+    }
+    return { ...layer, localeContent: mergedLocaleContent }
+  }
 
   return {
     ...project,

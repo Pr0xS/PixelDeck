@@ -27,8 +27,8 @@ export interface SlideGroupSectionProps {
   onNavigateToLayer: (row: LocalizableRow) => void
   onModeUpdate: (row: LocalizableRow, mode: LocalizationMode | undefined) => void
   updateLayerInSlideGroup: (slideGroupId: string, layerId: string, patch: Partial<Layer>) => void
-  setLocaleOverride: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
-  clearLocaleOverride: (slideGroupId: string, layerId: string, locale: string) => void
+  setLocaleContent: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
+  clearLocaleContent: (slideGroupId: string, layerId: string, locale: string) => void
   getAsset: (key: string) => string | undefined
   openUploadPicker: (target: { slideGroupId: string; layerId: string; locale: string; layerType: 'phone' | 'image' }) => void
   setEditingTextCell: (value: { layerName: string; locale: string } | null) => void
@@ -53,8 +53,8 @@ export function SlideGroupSection({
   onNavigateToLayer,
   onModeUpdate,
   updateLayerInSlideGroup,
-  setLocaleOverride,
-  clearLocaleOverride,
+  setLocaleContent,
+  clearLocaleContent,
   getAsset,
   openUploadPicker,
   setEditingTextCell,
@@ -205,8 +205,8 @@ export function SlideGroupSection({
                               setEditingTextCell(editing ? { layerName: row.layerName, locale } : null)
                             }
                             updateBaseLayer={updateLayerInSlideGroup}
-                            setLocaleOverride={setLocaleOverride}
-                            clearLocaleOverride={clearLocaleOverride}
+                            setLocaleContent={setLocaleContent}
+                            clearLocaleContent={clearLocaleContent}
                             onAiTranslate={() => onSingleAiTranslate(row, locale)}
                           />
                         )
@@ -225,7 +225,7 @@ export function SlideGroupSection({
                             locale,
                             layerType: row.layerType === 'phone' ? 'phone' : 'image',
                           })}
-                          onClear={() => clearLocaleOverride(row.slideGroupId, row.layerId, locale)}
+                          onClear={() => clearLocaleContent(row.slideGroupId, row.layerId, locale)}
                         />
                       )
                     })}

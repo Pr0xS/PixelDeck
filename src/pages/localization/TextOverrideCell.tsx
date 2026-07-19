@@ -22,8 +22,8 @@ export interface TextOverrideCellProps {
   /** Reports editing sessions so the view can show/hide the floating toolbar. */
   onEditingChange: (editing: boolean) => void
   updateBaseLayer: (slideGroupId: string, layerId: string, patch: Partial<Layer>) => void
-  setLocaleOverride: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
-  clearLocaleOverride: (slideGroupId: string, layerId: string, locale: string) => void
+  setLocaleContent: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
+  clearLocaleContent: (slideGroupId: string, layerId: string, locale: string) => void
   onAiTranslate: () => void
 }
 
@@ -40,11 +40,11 @@ export function TextOverrideCell({
   toolbarSlot,
   onEditingChange,
   updateBaseLayer,
-  setLocaleOverride,
-  clearLocaleOverride,
+  setLocaleContent,
+  clearLocaleContent,
   onAiTranslate,
 }: TextOverrideCellProps) {
-  const override = row.layer.localeOverrides?.[locale]
+  const override = row.layer.localeContent?.[locale]
   const displayOverride = previewOverride ?? override
   const isDefaultLocale = locale === defaultLocale
   const hasOverride = isDefaultLocale || typeof displayOverride?.text === 'string'
@@ -115,7 +115,7 @@ export function TextOverrideCell({
         <div className="flex items-center gap-2 flex-wrap">
           <button
             type="button"
-            onClick={() => setLocaleOverride(row.slideGroupId, row.layerId, locale, { text: '' })}
+            onClick={() => setLocaleContent(row.slideGroupId, row.layerId, locale, { text: '' })}
             className="rounded-lg border border-[rgba(255,255,255,0.12)] px-2.5 py-1 text-xs text-[#a0a0b0] hover:border-[rgba(255,255,255,0.22)] hover:text-white transition"
           >
             + Manual
@@ -166,7 +166,7 @@ export function TextOverrideCell({
             if (isDefaultLocale) {
               updateBaseLayer(row.slideGroupId, row.layerId, { text, marks } as Partial<Layer>)
             } else {
-              setLocaleOverride(row.slideGroupId, row.layerId, locale, { ...(displayOverride ?? {}), text, marks })
+              setLocaleContent(row.slideGroupId, row.layerId, locale, { ...(displayOverride ?? {}), text, marks })
             }
           }}
         />
@@ -200,7 +200,7 @@ export function TextOverrideCell({
           {!isDefaultLocale && (
             <button
               type="button"
-              onClick={() => clearLocaleOverride(row.slideGroupId, row.layerId, locale)}
+              onClick={() => clearLocaleContent(row.slideGroupId, row.layerId, locale)}
               className="ml-auto text-xs font-medium text-[#b9b6c9] transition hover:text-white"
             >
               × Clear

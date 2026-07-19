@@ -14,7 +14,7 @@ function addLayerKeys(layer: Layer, out: Set<string>): void {
   if (layer.type === 'phone' && isKey(layer.screenshotPath)) out.add(layer.screenshotPath)
   if (layer.type === 'image' && isKey(layer.src)) out.add(layer.src)
 
-  for (const patch of Object.values(layer.localeOverrides ?? {})) addPatchKeys(patch, out)
+  for (const patch of Object.values(layer.localeContent ?? {})) addPatchKeys(patch, out)
   for (const patch of Object.values(layer.formatOverrides ?? {})) addPatchKeys(patch, out)
 }
 

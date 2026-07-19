@@ -7,7 +7,11 @@ import type { GroupLayer, Layer, TextLayer } from '@/types'
 import { useRichTextEditor } from '@/components/text/useRichTextEditor'
 import { RichTextToolbar } from '@/components/text/RichTextToolbar'
 import { resolveFill } from '@/utils/brandColors'
-import { applyCanvasFormatToGroup, getProjectBaseFormat } from '@/utils/canvasFormats'
+import {
+  applyCanvasFormatToGroup,
+  applyLocaleFormatLayoutToGroup,
+  getProjectBaseFormat,
+} from '@/utils/canvasFormats'
 import { DEFAULT_TEXT_WIDTH } from '@/utils/textRendering'
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -54,6 +58,7 @@ export function CanvasTextEditor({ stageRef }: CanvasTextEditorProps) {
   const settings = useEditorStore((s) => s.project.settings)
   const slideGroups = useEditorStore((s) => s.project.slideGroups)
   const activeSlideGroupId = useEditorStore((s) => s.activeSlideGroupId)
+  const activeLocale = useEditorStore((s) => s.activeLocale)
   const activeCanvasFormat = useEditorStore((s) => s.activeCanvasFormat)
   // Subscribe to viewport so the overlay follows zoom / pan
   const zoom = useEditorStore((s) => s.zoom)
@@ -63,8 +68,15 @@ export function CanvasTextEditor({ stageRef }: CanvasTextEditorProps) {
   // Resolve the active format so the overlay aligns with what the canvas renders.
   // Content edits still flow to the shared base via updateLayer's format routing.
   const rawGroup = slideGroups.find((g) => g.id === activeSlideGroupId)
+  const baseFormat = getProjectBaseFormat({ settings })
   const group = rawGroup
-    ? applyCanvasFormatToGroup(rawGroup, activeCanvasFormat, getProjectBaseFormat({ settings }), settings.customFormats)
+    ? applyLocaleFormatLayoutToGroup(
+        applyCanvasFormatToGroup(rawGroup, activeCanvasFormat, baseFormat, settings.customFormats),
+        activeLocale,
+        activeCanvasFormat,
+        settings.defaultLocale,
+        baseFormat,
+      )
     : undefined
   const found = editingTextId && group ? findTextLayer(group.layers, editingTextId) : null
   const layerId = found?.layer.id

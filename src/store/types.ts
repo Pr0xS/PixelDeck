@@ -2,7 +2,7 @@ import type {
   Project, SlideGroup, Layer, Selection,
   LayerType,
   ProjectSettings, LocaleLayerPatch,
-  LocaleOverrideBatchEntry,
+  LocaleContentBatchEntry,
   CanvasFormatId,
   CustomCanvasFormat,
   CustomFormatId,
@@ -77,12 +77,13 @@ export interface EditorStore {
   setActiveLocale: (locale: string) => void
   addLocale: (locale: string) => void
   removeLocale: (locale: string) => void
-  renameDefaultLocale: (locale: string) => void
+  relabelDefaultLocale: (locale: string) => void
+  promoteLocaleToDefault: (locale: string) => void
   updateLayerInSlideGroup: (slideGroupId: string, layerId: string, patch: Partial<Layer>) => void
-  setLocaleOverride: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
-  clearLocaleOverride: (slideGroupId: string, layerId: string, locale: string) => void
-  /** Commit multiple locale overrides in a single undo step. Use for bulk AI translate. */
-  setLocaleOverridesBatch: (entries: LocaleOverrideBatchEntry[]) => void
+  setLocaleContent: (slideGroupId: string, layerId: string, locale: string, patch: LocaleLayerPatch) => void
+  clearLocaleContent: (slideGroupId: string, layerId: string, locale: string) => void
+  /** Commit multiple locale content patches in a single undo step. Use for bulk AI translate. */
+  setLocaleContentBatch: (entries: LocaleContentBatchEntry[]) => void
 
   // ─ Canvas format actions
   setActiveCanvasFormat: (format: CanvasFormatId) => void
@@ -97,8 +98,11 @@ export interface EditorStore {
   removeCustomFormat: (id: CustomFormatId) => void
   updateCustomFormat: (id: CustomFormatId, patch: Partial<Pick<CustomCanvasFormat, 'label' | 'width' | 'height'>>) => void
   clearLayerFormatOverrideKey: (layerId: string, key: string, format?: CanvasFormatId) => void
+  clearLayerLocaleFormatOverride: (layerId: string, locale?: string, format?: CanvasFormatId) => void
+  clearLayerLocaleFormatOverrideKey: (layerId: string, key: string, locale?: string, format?: CanvasFormatId) => void
   applyLayerFormatKeyToShared: (layerId: string, key: string, format?: CanvasFormatId) => void
   resetActiveFormatLayout: (format?: CanvasFormatId) => void
+  resetActiveLocaleFormatLayout: (locale?: string, format?: CanvasFormatId) => void
   shareActiveFormatOwnedLayers: (format?: CanvasFormatId) => void
   resetActiveFormatVisibility: (format?: CanvasFormatId) => void
   promoteActiveFormatLayoutToShared: (format?: CanvasFormatId) => void

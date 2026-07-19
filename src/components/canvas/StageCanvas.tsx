@@ -4,8 +4,7 @@ import type Konva from 'konva'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
-import { applyLocale } from '@/utils/locale'
-import { applyCanvasFormat } from '@/utils/canvasFormats'
+import { resolveProjectView } from '@/utils/canvasFormats'
 import { getEffectivePano } from '@/utils/panoGeometry'
 import type { Layer as AppLayer, BackgroundLayer } from '@/types'
 import { CanvasTextEditor } from './CanvasTextEditor'
@@ -61,7 +60,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   const assets = useAssetStore((s) => s.assets)
   const addAsset = useAssetStore((s) => s.addAsset)
   const viewProject = useMemo(
-    () => applyCanvasFormat(applyLocale(project, activeLocale), activeCanvasFormat),
+    () => resolveProjectView(project, activeLocale, activeCanvasFormat),
     [project, activeLocale, activeCanvasFormat],
   )
   const group = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)

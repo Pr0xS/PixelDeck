@@ -13,6 +13,7 @@ import { cellKey, type CellKey, type CellStatus, type LocalizableRow, type Uploa
 import { LocaleBar } from './localization/LocaleBar'
 import { BulkTranslateBar } from './localization/BulkTranslateBar'
 import { SlideGroupSection } from './localization/SlideGroupSection'
+import { PromoteLocaleDialog } from './localization/PromoteLocaleDialog'
 
 const ApiKeysModal = lazy(() =>
   import('@/components/panels/ApiKeysModal').then((m) => ({ default: m.ApiKeysModal })),
@@ -39,22 +40,24 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     activeLocale,
     addLocale,
     removeLocale,
-    renameDefaultLocale,
+    relabelDefaultLocale,
+    promoteLocaleToDefault,
     setActiveLocale,
-    setLocaleOverride,
-    clearLocaleOverride,
-    setLocaleOverridesBatch,
+    setLocaleContent,
+    clearLocaleContent,
+    setLocaleContentBatch,
     updateLayerInSlideGroup,
   } = useEditorStore(useShallow((s) => ({
     project: s.project,
     activeLocale: s.activeLocale,
     addLocale: s.addLocale,
     removeLocale: s.removeLocale,
-    renameDefaultLocale: s.renameDefaultLocale,
+    relabelDefaultLocale: s.relabelDefaultLocale,
+    promoteLocaleToDefault: s.promoteLocaleToDefault,
     setActiveLocale: s.setActiveLocale,
-    setLocaleOverride: s.setLocaleOverride,
-    clearLocaleOverride: s.clearLocaleOverride,
-    setLocaleOverridesBatch: s.setLocaleOverridesBatch,
+    setLocaleContent: s.setLocaleContent,
+    clearLocaleContent: s.clearLocaleContent,
+    setLocaleContentBatch: s.setLocaleContentBatch,
     updateLayerInSlideGroup: s.updateLayerInSlideGroup,
   })))
   const { addAsset, getAsset } = useAssetStore(useShallow((s) => ({ addAsset: s.addAsset, getAsset: s.getAsset })))
@@ -94,6 +97,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
   const [showAddLocale, setShowAddLocale] = useState(false)
   const [showDefaultLocalePicker, setShowDefaultLocalePicker] = useState(false)
+  const [promoteTarget, setPromoteTarget] = useState<string | null>(null)
   const [uploadTarget, setUploadTarget] = useState<UploadTarget | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const defaultLocaleAnchorRef = useRef<HTMLDivElement>(null)
@@ -103,7 +107,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
   const [cellStatus, setCellStatus] = useState<Map<CellKey, CellStatus>>(new Map())
   const [cellError, setCellError] = useState<Map<CellKey, string>>(new Map())
   // Optimistic bulk AI results: displayed immediately, then committed once at
-  // the end via setLocaleOverridesBatch so the operation remains one undo step.
+  // the end via setLocaleContentBatch so the operation remains one undo step.
   const [bulkPreviewOverrides, setBulkPreviewOverrides] = useState<Map<CellKey, LocaleLayerPatch>>(new Map())
   const [isBulkRunning, setIsBulkRunning] = useState(false)
   const [overwriteExisting, setOverwriteExisting] = useState(false)
@@ -149,7 +153,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     const group = project.slideGroups.find((item) => item.id === uploadTarget.slideGroupId)
     const found = group ? findLayerById(group.layers, uploadTarget.layerId) : null
     const layer = found?.layer
-    const existingOverride = layer?.localeOverrides?.[uploadTarget.locale] ?? {}
+    const existingOverride = layer?.localeContent?.[uploadTarget.locale] ?? {}
     const assetKey = buildLocaleAssetKey(uploadTarget.locale, uploadTarget.slideGroupId, uploadTarget.layerId, file.name)
     addAsset(assetKey, dataUrl)
     if (uploadTarget.locale === project.settings.defaultLocale) {
@@ -166,13 +170,13 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       return
     }
     if (uploadTarget.layerType === 'phone') {
-      setLocaleOverride(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {
+      setLocaleContent(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {
         ...existingOverride,
         screenshotPath: assetKey,
         screenshotDataUrl: undefined,
       })
     } else {
-      setLocaleOverride(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {
+      setLocaleContent(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {
         ...existingOverride,
         src: assetKey,
       })
@@ -218,14 +222,14 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
         marks: (row.layer as TextLayer).marks,
         targetLocale: locale,
       })
-      setLocaleOverride(row.slideGroupId, row.layerId, locale, { text: result.text, marks: result.marks })
+      setLocaleContent(row.slideGroupId, row.layerId, locale, { text: result.text, marks: result.marks })
       markFormattingLost(key, Boolean(result.formattingLost))
       setCellStatus((m) => new Map(m).set(key, 'done'))
     } catch (e) {
       setCellError((m) => new Map(m).set(key, getErrorMessage(e)))
       setCellStatus((m) => new Map(m).set(key, 'error'))
     }
-  }, [getActiveBaseUrl, getActiveKey, getActiveModel, markFormattingLost, project, provider, setLocaleOverride])
+  }, [getActiveBaseUrl, getActiveKey, getActiveModel, markFormattingLost, project, provider, setLocaleContent])
 
   // TODO: AI image generation disabled temporarily — re-enable when ready.
   // Handler and import are preserved in git history. See localizeImage.ts + editImage() in client.ts.
@@ -259,7 +263,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       if (eligibleRows.length === 0) continue
       for (const locale of nonDefaultLocales) {
         const pending = eligibleRows.filter((row) => {
-          const hasOverride = typeof row.layer.localeOverrides?.[locale]?.text === 'string'
+          const hasOverride = typeof row.layer.localeContent?.[locale]?.text === 'string'
           return !hasOverride || overwriteExisting
         })
         if (pending.length > 0) batches.push({ slideGroup, locale, rows: pending })
@@ -372,11 +376,11 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     }
 
     // Single undo step for the whole batch (includes work finished before Stop)
-    if (staged.length > 0) setLocaleOverridesBatch(staged)
+    if (staged.length > 0) setLocaleContentBatch(staged)
     setBulkPreviewOverrides(new Map())
 
     setIsBulkRunning(false)
-  }, [defaultLocale, getActiveBaseUrl, getActiveKey, getActiveModel, groups, isBulkRunning, locales, markFormattingLost, overwriteExisting, project, provider, setLocaleOverridesBatch])
+  }, [defaultLocale, getActiveBaseUrl, getActiveKey, getActiveModel, groups, isBulkRunning, locales, markFormattingLost, overwriteExisting, project, provider, setLocaleContentBatch])
 
   // ─ Mode update
   const handleModeUpdate = useCallback((row: LocalizableRow, mode: LocalizationMode | undefined) => {
@@ -397,10 +401,33 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       return
     }
     const nonDefault = locales.filter((l) => l !== defaultLocale)
-    if (nonDefault.includes(locale)) return
-    renameDefaultLocale(locale)
+    if (nonDefault.includes(locale)) {
+      setPromoteTarget(locale)
+      setShowDefaultLocalePicker(false)
+      return
+    }
+    relabelDefaultLocale(locale)
     setShowDefaultLocalePicker(false)
   }
+
+  const promotionPreview = useMemo(() => {
+    if (!promoteTarget) return null
+    const eligibleRows = allRows.filter((row) => effectiveLocalizationMode(row.layer) !== 'skip')
+    const incompleteRows = eligibleRows.filter((row) => !isOverrideComplete(row, promoteTarget, defaultLocale))
+    return {
+      total: eligibleRows.length,
+      complete: eligibleRows.length - incompleteRows.length,
+      incompleteLabels: incompleteRows.slice(0, 8).map((row) => `${row.layerName} · ${row.slideGroupName}`),
+      remainingCount: Math.max(0, incompleteRows.length - 8),
+    }
+  }, [allRows, defaultLocale, promoteTarget])
+
+  const handleConfirmPromoteLocale = useCallback(() => {
+    if (!promoteTarget) return
+    promoteLocaleToDefault(promoteTarget)
+    setPromoteTarget(null)
+    setShowDefaultLocalePicker(false)
+  }, [promoteLocaleToDefault, promoteTarget])
 
   const nonDefaultLocales = locales.filter((l) => l !== defaultLocale)
   const hasApiKey = Boolean(getActiveKey())
@@ -412,7 +439,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       if (effectiveLocalizationMode(r.layer) !== 'auto') return false
       if (!r.defaultText) return false
       return nonDefaultLocales.some((locale) => {
-        const hasOverride = typeof r.layer.localeOverrides?.[locale]?.text === 'string'
+        const hasOverride = typeof r.layer.localeContent?.[locale]?.text === 'string'
         return !hasOverride || overwriteExisting
       })
     }).length * nonDefaultLocales.length
@@ -426,6 +453,17 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       <Suspense>
         <ApiKeysModal open={aiSettingsOpen} onClose={() => setAiSettingsOpen(false)} />
       </Suspense>
+      <PromoteLocaleDialog
+        open={Boolean(promoteTarget && promotionPreview)}
+        locale={promoteTarget}
+        currentDefaultLocale={defaultLocale}
+        complete={promotionPreview?.complete ?? 0}
+        total={promotionPreview?.total ?? 0}
+        incompleteLabels={promotionPreview?.incompleteLabels ?? []}
+        remainingCount={promotionPreview?.remainingCount ?? 0}
+        onCancel={() => setPromoteTarget(null)}
+        onConfirm={handleConfirmPromoteLocale}
+      />
 
       {/* Background glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
@@ -493,8 +531,8 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
                   onNavigateToLayer={navigateToLayer}
                   onModeUpdate={handleModeUpdate}
                   updateLayerInSlideGroup={updateLayerInSlideGroup}
-                  setLocaleOverride={setLocaleOverride}
-                  clearLocaleOverride={clearLocaleOverride}
+                  setLocaleContent={setLocaleContent}
+                  clearLocaleContent={clearLocaleContent}
                   getAsset={getAsset}
                   openUploadPicker={openUploadPicker}
                   setEditingTextCell={setEditingTextCell}
