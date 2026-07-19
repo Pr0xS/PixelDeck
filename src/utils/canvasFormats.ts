@@ -45,7 +45,7 @@ export const FORMAT_PLATFORM: Record<BuiltInFormatId, 'ios' | 'android'> = {
 export const FORMAT_FORK_KEYS = [...FORMAT_LAYOUT_KEYS, 'model'] as const
 
 /** Locale layout forks spatial keys only; it never swaps a device model. */
-export const LOCALE_LAYOUT_FORK_KEYS = FORMAT_FORK_KEYS.filter((key) => key !== 'model')
+export const LOCALE_LAYOUT_FORK_KEYS = FORMAT_LAYOUT_KEYS
 
 export function isCustomFormatId(id: CanvasFormatId): id is CustomFormatId {
   return id.startsWith('custom:')
@@ -503,9 +503,10 @@ export function countLocaleFormatAdjustments(
   group: SlideGroup,
   locale: string,
   format: CanvasFormatId,
+  defaultLocale: string,
   baseFormat: CanvasFormatId,
 ): number {
-  if (locale === 'en' || format === baseFormat) return 0
+  if (locale === defaultLocale || format === baseFormat) return 0
 
   let count = 0
   mapLayerTree(group.layers, (layer) => {

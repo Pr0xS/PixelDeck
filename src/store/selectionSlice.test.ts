@@ -16,6 +16,7 @@ beforeEach(() => {
     pasteCount: 0,
     selection: null,
     selectedAccentIndex: null,
+    editingTextId: null,
   })
   useEditorStore.temporal.getState().clear()
 })
@@ -57,6 +58,20 @@ describe('canvas toggles', () => {
     useEditorStore.getState().toggleSeamGuides()
 
     expect(useEditorStore.getState().showSeamGuides).toBe(!original)
+  })
+})
+
+describe('text editing', () => {
+  it('only starts the canvas text editor for the default locale', () => {
+    const { defaultLocale } = useEditorStore.getState().project.settings
+
+    useEditorStore.setState({ activeLocale: 'de' })
+    useEditorStore.getState().startTextEdit('text-layer')
+    expect(useEditorStore.getState().editingTextId).toBeNull()
+
+    useEditorStore.setState({ activeLocale: defaultLocale })
+    useEditorStore.getState().startTextEdit('text-layer')
+    expect(useEditorStore.getState().editingTextId).toBe('text-layer')
   })
 })
 

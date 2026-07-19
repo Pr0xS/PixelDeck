@@ -79,7 +79,13 @@ export function LocaleLayoutTabs() {
         {locales.filter((locale) => locale !== defaultLocale).map((locale) => {
           const isActive = activeLocale === locale
           const count = activeGroup && !isBaseFormat
-            ? countLocaleFormatAdjustments(activeGroup, locale, activeCanvasFormat, baseFormat)
+            ? countLocaleFormatAdjustments(
+                activeGroup,
+                locale,
+                activeCanvasFormat,
+                defaultLocale,
+                baseFormat,
+              )
             : 0
           const label = getLanguageName(locale)
           return (

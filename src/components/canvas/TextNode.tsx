@@ -180,15 +180,17 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
   // ── Double-click → in-canvas WYSIWYG editor (overlay mounted by StageCanvas)
   const handleDblClick = (e: Konva.KonvaEventObject<MouseEvent>) => {
     if (layer.locked) return
+    const { activeLocale, project, startTextEdit } = useEditorStore.getState()
+    if (activeLocale !== project.settings.defaultLocale) return
     if (forceNotDraggable) {
       // Inside a non-editing group: let the event bubble so GroupNode enters
       // group-edit mode and selects this child, then the overlay opens.
-      useEditorStore.getState().startTextEdit(layer.id)
+      startTextEdit(layer.id)
       return
     }
     e.cancelBubble = true
     onSelect()
-    useEditorStore.getState().startTextEdit(layer.id)
+    startTextEdit(layer.id)
   }
 
   // ── Rich text mode: render offscreen canvas as Konva Image ─────────────

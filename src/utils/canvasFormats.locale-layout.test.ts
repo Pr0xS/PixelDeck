@@ -4,6 +4,7 @@ import {
   applyCanvasFormat,
   applyLocaleFormatLayout,
   BASE_CANVAS_FORMAT,
+  countLocaleFormatAdjustments,
   resolveProjectView,
 } from './canvasFormats'
 
@@ -139,5 +140,17 @@ describe('locale-format layout resolution', () => {
     )
 
     expect(getText(resolveProjectView(project, 'de', 'android-phone')).x).toBe(targetX)
+  })
+
+  it('uses the configured default locale when counting adjustments', () => {
+    const group = makeGroup([makeText({
+      localeLayoutOverrides: {
+        de: { 'android-phone': { x: 200 } },
+        en: { 'android-phone': { x: 300 } },
+      },
+    })])
+
+    expect(countLocaleFormatAdjustments(group, 'de', 'android-phone', 'de', BASE_CANVAS_FORMAT)).toBe(0)
+    expect(countLocaleFormatAdjustments(group, 'en', 'android-phone', 'de', BASE_CANVAS_FORMAT)).toBe(1)
   })
 })
