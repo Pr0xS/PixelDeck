@@ -13,6 +13,7 @@ import { cellKey, type CellKey, type CellStatus, type LocalizableRow, type Uploa
 import { LocaleBar } from './localization/LocaleBar'
 import { BulkTranslateBar } from './localization/BulkTranslateBar'
 import { SlideGroupSection } from './localization/SlideGroupSection'
+import { PromoteLocaleDialog } from './localization/PromoteLocaleDialog'
 
 const ApiKeysModal = lazy(() =>
   import('@/components/panels/ApiKeysModal').then((m) => ({ default: m.ApiKeysModal })),
@@ -40,6 +41,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     addLocale,
     removeLocale,
     relabelDefaultLocale,
+    promoteLocaleToDefault,
     setActiveLocale,
     setLocaleOverride,
     clearLocaleOverride,
@@ -51,6 +53,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     addLocale: s.addLocale,
     removeLocale: s.removeLocale,
     relabelDefaultLocale: s.relabelDefaultLocale,
+    promoteLocaleToDefault: s.promoteLocaleToDefault,
     setActiveLocale: s.setActiveLocale,
     setLocaleOverride: s.setLocaleOverride,
     clearLocaleOverride: s.clearLocaleOverride,
@@ -94,6 +97,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
   const [collapsedSections, setCollapsedSections] = useState<Record<string, boolean>>({})
   const [showAddLocale, setShowAddLocale] = useState(false)
   const [showDefaultLocalePicker, setShowDefaultLocalePicker] = useState(false)
+  const [promoteTarget, setPromoteTarget] = useState<string | null>(null)
   const [uploadTarget, setUploadTarget] = useState<UploadTarget | null>(null)
   const fileInputRef = useRef<HTMLInputElement>(null)
   const defaultLocaleAnchorRef = useRef<HTMLDivElement>(null)
@@ -397,10 +401,33 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       return
     }
     const nonDefault = locales.filter((l) => l !== defaultLocale)
-    if (nonDefault.includes(locale)) return
+    if (nonDefault.includes(locale)) {
+      setPromoteTarget(locale)
+      setShowDefaultLocalePicker(false)
+      return
+    }
     relabelDefaultLocale(locale)
     setShowDefaultLocalePicker(false)
   }
+
+  const promotionPreview = useMemo(() => {
+    if (!promoteTarget) return null
+    const eligibleRows = allRows.filter((row) => effectiveLocalizationMode(row.layer) !== 'skip')
+    const incompleteRows = eligibleRows.filter((row) => !isOverrideComplete(row, promoteTarget, defaultLocale))
+    return {
+      total: eligibleRows.length,
+      complete: eligibleRows.length - incompleteRows.length,
+      incompleteLabels: incompleteRows.slice(0, 8).map((row) => `${row.layerName} · ${row.slideGroupName}`),
+      remainingCount: Math.max(0, incompleteRows.length - 8),
+    }
+  }, [allRows, defaultLocale, promoteTarget])
+
+  const handleConfirmPromoteLocale = useCallback(() => {
+    if (!promoteTarget) return
+    promoteLocaleToDefault(promoteTarget)
+    setPromoteTarget(null)
+    setShowDefaultLocalePicker(false)
+  }, [promoteLocaleToDefault, promoteTarget])
 
   const nonDefaultLocales = locales.filter((l) => l !== defaultLocale)
   const hasApiKey = Boolean(getActiveKey())
@@ -426,6 +453,17 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       <Suspense>
         <ApiKeysModal open={aiSettingsOpen} onClose={() => setAiSettingsOpen(false)} />
       </Suspense>
+      <PromoteLocaleDialog
+        open={Boolean(promoteTarget && promotionPreview)}
+        locale={promoteTarget}
+        currentDefaultLocale={defaultLocale}
+        complete={promotionPreview?.complete ?? 0}
+        total={promotionPreview?.total ?? 0}
+        incompleteLabels={promotionPreview?.incompleteLabels ?? []}
+        remainingCount={promotionPreview?.remainingCount ?? 0}
+        onCancel={() => setPromoteTarget(null)}
+        onConfirm={handleConfirmPromoteLocale}
+      />
 
       {/* Background glows */}
       <div className="pointer-events-none absolute inset-0 overflow-hidden">
