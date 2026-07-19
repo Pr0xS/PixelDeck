@@ -26,10 +26,9 @@ export function ImageOverrideCell({
   const isActiveColumn = locale === activeLocale
   const mode = effectiveLocalizationMode(row.layer)
   const isSkipped = mode === 'skip'
-  const basePreviewSrc =
-    row.layerType === 'phone'
-      ? (row.defaultImageRef ? getAsset(row.defaultImageRef) : undefined) ?? row.defaultImageRef
-      : row.defaultImageRef
+  const basePreviewSrc = row.defaultImageRef
+    ? (getAsset(row.defaultImageRef) ?? row.defaultImageRef)
+    : row.defaultImageRef
 
   const previewSrc =
     isDefaultLocale

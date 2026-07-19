@@ -7,10 +7,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
-## [0.5.2](https://github.com/Pr0xS/PixelDeck/compare/v0.5.1...v0.5.2) - 2026-07-17
+## [0.5.2](https://github.com/Pr0xS/PixelDeck/compare/v0.5.1...v0.5.2) - 2026-07-19
 
 ### Added
 
+- Project-scoped asset library: images are now stored per-project in IndexedDB instead of one shared global store, preventing cross-project asset collisions.
+- Self-contained project export/import — exported project JSON now embeds every referenced image, so imported projects are portable across profiles/machines.
 - Shared UI primitives for modals, numeric inputs, toggles, segmented controls, file uploads, and inline labels.
 - Reusable layer-tree walkers, Konva fill conversion, layer interaction/effect hooks, and a pure browser/headless export plan.
 - AI transport and export-plan tests covering timeouts, retries, collision-safe filenames, nested layers, and gradients.
@@ -24,6 +26,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Fixed
 
+- Prevented deleting the active project from resurrecting it via a stale replacement-load race.
+- Fixed image-layer base-locale preview not rendering in the Localization panel (asset-store key wasn't resolved to a data URL).
 - Added AI request timeouts and transient retries while preventing non-idempotent image generation from retrying after transport failures.
 - Added consistent CLI validation and error reporting with non-zero exit codes.
 - Preserved project update timestamps when clearing format-specific state.
