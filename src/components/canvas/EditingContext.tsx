@@ -320,18 +320,10 @@ export function EditingContextAlert() {
   }
 
   const handlePromoteLayout = () => {
-    const ok = window.confirm(
-      `Use ${formatLabel} layout as shared for this slide?\n\n` +
-      'This promotes all layout/model overrides from this platform into Base, so other platforms may move. Content stays shared.',
-    )
-    if (ok) runFormatAction(promoteActiveFormatLayoutToShared)
+    runFormatAction(promoteActiveFormatLayoutToShared)
   }
 
   const handleLocaleReset = () => {
-    const ok = window.confirm(
-      `Reset all locale-specific layout adjustments for ${localeLabel} on ${formatLabel}? This cannot be undone.`,
-    )
-    if (!ok) return
     resetActiveLocaleFormatLayout()
     setActionsOpen(false)
   }
@@ -363,24 +355,16 @@ export function EditingContextAlert() {
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
-          {isFormatScoped && (
-            <button
-              onClick={() => setActiveCanvasFormat(baseFormat)}
-              className="rounded-md px-2 py-1 text-[10px] text-[#d9a52a] transition-colors hover:bg-[rgba(245,158,11,0.1)] hover:text-[#fbbf24]"
-              title="Return to the shared base format"
-            >
-              ↩ Base
-            </button>
-          )}
-          {isLocaleScoped && (
-            <button
-              onClick={() => setActiveLocale(defaultLocale)}
-              className="rounded-md px-2 py-1 text-[10px] text-[#24aaa2] transition-colors hover:bg-[rgba(34,211,197,0.1)] hover:text-[#5eead4]"
-              title="Return to the default locale"
-            >
-              ↩ Default
-            </button>
-          )}
+          <button
+            onClick={() => {
+              setActiveCanvasFormat(baseFormat)
+              setActiveLocale(defaultLocale)
+            }}
+            className="rounded-md px-2 py-1 text-[10px] text-[#c9c9d4] transition-colors hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
+            title="Return to the shared base format and default locale"
+          >
+            ↩ Base + Default
+          </button>
           {isFormatScoped && (
             <div className="relative" ref={actionsRef}>
               <button

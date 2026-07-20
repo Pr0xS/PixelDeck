@@ -15,10 +15,16 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - A branded global loading screen shown on app boot that blocks until the initial thumbnail precache completes, with a looping "loading …" word-reel indicator; it only appears once per session (later precache passes stay silent behind the existing lightweight canvas overlay).
 - Rebuilt the Help panel into a full 14-section user guide (Projects, Templates, Slides, Layers, Properties, Canvas Formats, Localization, Format × Locale editing, Brand Kit, Assets, Exporting, AI Features, Keyboard Shortcuts) with a searchable sidebar and section navigation, replacing the previous single-scroll overview.
 
+### Changed
+
+- The floating format/locale editing alert now has a single "↩ Base + Default" button that returns both the canvas format and locale to shared/default at once, replacing two separate buttons.
+- Removed the confirmation popups on "Use format layout as shared…" and "Reset pairing layout" — both actions are covered by undo (Ctrl/⌘+Z), so the "this cannot be undone" warning was inaccurate.
+
 ### Fixed
 
 - Unified all interactive-editor capture paths (thumbnail precache, Preview high-res capture, export) onto the shared capture mutex, closing a latent race between Preview and Export that could corrupt `activeSlideGroupId`/`panoRenderOverride` restoration.
 - Preview and precache captures no longer restore a stale active slide group if the project changes mid-capture.
+- Slide navigator thumbnail spacing: pano/strip sub-slides now cluster with a tighter, consistent gap so they read as one continuous unit, distinct groups have clearer separation, and a group's name label no longer widens narrow thumbnail strips into uneven gutters.
 
 ## [0.6.0](https://github.com/Pr0xS/PixelDeck/compare/v0.5.2...v0.6.0) - 2026-07-19
 
