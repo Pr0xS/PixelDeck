@@ -74,6 +74,9 @@ function SortableGroupItem({
   setRenameValue,
 }: SortableGroupItemProps) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id: group.id })
+  const thumbW = Math.min(50, Math.round((group.slideWidth / group.slideHeight) * THUMB_H))
+  const slideGap = 6
+  const stripWidth = (thumbW * groupSlides.length) + (slideGap * Math.max(0, groupSlides.length - 1))
 
   const wrapperStyle: React.CSSProperties = {
     transform: CSS.Transform.toString(transform),
@@ -81,7 +84,7 @@ function SortableGroupItem({
     opacity: isDragging ? 0.5 : 1,
     display: 'flex',
     alignItems: 'center',
-    gap: 8,
+    gap: 14,
   }
 
   return (
@@ -99,102 +102,104 @@ function SortableGroupItem({
         />
       )}
 
-      {groupSlides.map(({ slideIdx, globalNum: num, bgCss }) => {
-        const isFirstInGroup = slideIdx === 0
-        const thumb = thumbnails[group.id]?.[slideIdx]
-        const thumbW = Math.min(50, Math.round((group.slideWidth / group.slideHeight) * THUMB_H))
+      {/* The group header is constrained to the exact width of its thumbnail strip.
+          It must not widen a narrow slide and create invisible side gutters between
+          previews. Pano/strip slides keep their tighter inner gap as one visual unit. */}
+      <div
+        style={{ display: 'flex', flexDirection: 'column', gap: 2, width: stripWidth, flexShrink: 0 }}
+        onContextMenu={(e) => handleContextMenu(e, group.id)}
+        onDoubleClick={() => startRename(group.id, group.name)}
+      >
+        {renamingId === group.id ? (
+          <input
+            ref={renameInputRef}
+            type="text"
+            value={renameValue}
+            onChange={(e) => setRenameValue(e.target.value)}
+            onBlur={commitRename}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter') commitRename()
+              if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
+            }}
+            onClick={(e) => e.stopPropagation()}
+            style={{ width: Math.max(stripWidth, 52), height: 14, fontSize: 9, boxSizing: 'border-box' }}
+            className="px-1 rounded border border-[#7c6ef6] bg-[#0f0f13] text-[#e8e8f0] focus:outline-none"
+          />
+        ) : (
+          <span
+            style={{
+              width: '100%',
+              fontSize: 10,
+              color: isActive ? '#9b8fff' : '#8b8b9e',
+              lineHeight: '14px',
+              height: 14,
+              cursor: 'default',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              whiteSpace: 'nowrap',
+              display: 'block',
+            }}
+            title={group.name}
+          >
+            {group.name}
+          </span>
+        )}
 
-        return (
-          <Fragment key={`${group.id}-${slideIdx}`}>
-            <div
-              style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}
-              className="relative shrink-0 group"
-              onContextMenu={(e) => handleContextMenu(e, group.id)}
-              onDoubleClick={() => startRename(group.id, group.name)}
-            >
-              {/* Group name — editable label on first slide, spacer on subsequent slides for alignment */}
-              {isFirstInGroup ? (
-                renamingId === group.id ? (
-                  <input
-                    ref={renameInputRef}
-                    type="text"
-                    value={renameValue}
-                    onChange={(e) => setRenameValue(e.target.value)}
-                    onBlur={commitRename}
-                    onKeyDown={(e) => {
-                      if (e.key === 'Enter') commitRename()
-                      if (e.key === 'Escape') { setRenamingId(null); setRenameValue('') }
-                    }}
-                    onClick={(e) => e.stopPropagation()}
-                    style={{ width: Math.max(thumbW, 52), height: 14, fontSize: 9 }}
-                    className="px-1 rounded border border-[#7c6ef6] bg-[#0f0f13] text-[#e8e8f0] focus:outline-none"
-                  />
-                ) : (
-                  <span
-                    style={{
-                      fontSize: 10,
-                      color: isActive ? '#9b8fff' : '#8b8b9e',
-                      lineHeight: '14px',
-                      height: 14,
-                      cursor: 'default',
-                      maxWidth: Math.max(thumbW, 52),
-                      overflow: 'hidden',
-                      textOverflow: 'ellipsis',
-                      whiteSpace: 'nowrap',
-                      display: 'block',
-                    }}
-                    title={group.name}
-                  >
-                    {group.name}
-                  </span>
-                )
-              ) : (
-                <div style={{ height: 14 }} />
-              )}
+        <div style={{ display: 'flex', alignItems: 'center', gap: slideGap }}>
+          {groupSlides.map(({ slideIdx, globalNum: num, bgCss }) => {
+            const thumb = thumbnails[group.id]?.[slideIdx]
 
-              <div
-                style={{
-                  width: thumbW,
-                  height: THUMB_H,
-                  background: bgCss,
-                  border: `1px solid ${isActive ? '#7c6ef6' : 'rgba(255,255,255,0.12)'}`,
-                  borderRadius: 4,
-                  cursor: isDragging ? 'grabbing' : 'grab',
-                  position: 'relative',
-                  overflow: 'hidden',
-                  flexShrink: 0,
-                }}
-                onClick={() => setActiveSlideGroup(group.id)}
-              >
-                {thumb ? (
-                  <img
-                    src={thumb}
-                    alt={`Slide ${num}`}
-                    style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                  />
-                ) : (
+            return (
+              <Fragment key={`${group.id}-${slideIdx}`}>
+                <div
+                  style={{ display: 'flex', flexDirection: 'column', gap: 2, alignItems: 'center' }}
+                  className="relative shrink-0 group"
+                >
                   <div
                     style={{
-                      position: 'absolute',
-                      inset: 0,
-                      display: 'flex',
-                      alignItems: 'center',
-                      justifyContent: 'center',
-                      fontSize: 10,
+                      width: thumbW,
+                      height: THUMB_H,
+                      background: bgCss,
+                      border: `1px solid ${isActive ? '#7c6ef6' : 'rgba(255,255,255,0.12)'}`,
+                      borderRadius: 4,
+                      cursor: isDragging ? 'grabbing' : 'grab',
+                      position: 'relative',
+                      overflow: 'hidden',
+                      flexShrink: 0,
                     }}
+                    onClick={() => setActiveSlideGroup(group.id)}
                   >
-                    📱
+                    {thumb ? (
+                      <img
+                        src={thumb}
+                        alt={`Slide ${num}`}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      />
+                    ) : (
+                      <div
+                        style={{
+                          position: 'absolute',
+                          inset: 0,
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontSize: 10,
+                        }}
+                      >
+                        📱
+                      </div>
+                    )}
                   </div>
-                )}
-              </div>
 
-              <span style={{ fontSize: 9, color: isActive ? '#7c6ef6' : '#6b6b7a', lineHeight: 1 }}>
-                {num}
-              </span>
-            </div>
-          </Fragment>
-        )
-      })}
+                  <span style={{ fontSize: 9, color: isActive ? '#7c6ef6' : '#6b6b7a', lineHeight: 1 }}>
+                    {num}
+                  </span>
+                </div>
+              </Fragment>
+            )
+          })}
+        </div>
+      </div>
     </div>
   )
 }
