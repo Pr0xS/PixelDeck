@@ -8,6 +8,7 @@ import { PropertiesPanel } from '@/components/panels/PropertiesPanel'
 import { SlideNavigator } from '@/components/panels/SlideNavigator'
 import { StageCanvas } from '@/components/canvas/StageCanvas'
 import { EditingContextAlert, EditingContextBar } from '@/components/canvas/EditingContext'
+import { AppLoadingScreen } from '@/components/AppLoadingScreen'
 import { useThumbnails } from '@/hooks/useThumbnails'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { applyCanvasFormat, resolveProjectView } from '@/utils/canvasFormats'
@@ -17,6 +18,8 @@ import { registerStage } from '@/utils/stageRegistry'
 const LocalizationView = lazy(() =>
   import('@/pages/LocalizationView').then((m) => ({ default: m.LocalizationView })),
 )
+
+const INITIAL_SPLASH_MIN_MS = 450
 
 export default function App() {
   const stageRef = useRef<Konva.Stage>(null)
@@ -41,16 +44,34 @@ export default function App() {
   // Locale the preview opens in + the view to return to when it closes.
   const [previewLocale, setPreviewLocale] = useState<string | undefined>(undefined)
   const [previewReturnTo, setPreviewReturnTo] = useState<'localization' | null>(null)
+  const [hasCompletedInitialLoad, setHasCompletedInitialLoad] = useState(false)
+  const [hasMetMinimumSplashTime, setHasMetMinimumSplashTime] = useState(false)
   const {
     thumbnails,
     previewThumbs,
     isCapturingPreview,
+    isPrecachingThumbnails,
+    hasCompletedInitialPrecache,
     captureAllHighRes,
     cancelPreviewCapture,
   } = useThumbnails(stageRef)
 
+  useEffect(() => {
+    const timeoutId = window.setTimeout(() => setHasMetMinimumSplashTime(true), INITIAL_SPLASH_MIN_MS)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
 
+  useEffect(() => {
+    if (hasCompletedInitialLoad) return
+    if (!hasMetMinimumSplashTime) return
 
+    // An empty project has no thumbnails to capture, so it is ready as soon as
+    // the brief branded entrance has had time to settle.
+    if (!hasCompletedInitialPrecache && project.slideGroups.length > 0) return
+
+    const timeoutId = window.setTimeout(() => setHasCompletedInitialLoad(true), 0)
+    return () => window.clearTimeout(timeoutId)
+  }, [hasCompletedInitialLoad, hasCompletedInitialPrecache, hasMetMinimumSplashTime, project.slideGroups.length])
   useEffect(() => {
     if (project.slideGroups.length === 0) return
     const groupExists = project.slideGroups.some((g) => g.id === activeSlideGroupId)
@@ -242,6 +263,12 @@ export default function App() {
             <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
               <StageCanvas stageRef={stageRef} />
               <EditingContextAlert />
+              {isPrecachingThumbnails && (
+                <div
+                  aria-hidden="true"
+                  style={{ position: 'absolute', inset: 0, background: '#111118', zIndex: 5, pointerEvents: 'all' }}
+                />
+              )}
             </div>
           </main>
 
@@ -261,6 +288,7 @@ export default function App() {
         cancelCapture={cancelPreviewCapture}
         initialLocale={previewLocale}
       />
+      <AppLoadingScreen visible={!hasCompletedInitialLoad} />
     </div>
   )
 }
