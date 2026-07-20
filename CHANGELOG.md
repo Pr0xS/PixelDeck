@@ -7,6 +7,19 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.6.1](https://github.com/Pr0xS/PixelDeck/compare/v0.6.0...v0.6.1) - 2026-07-20
+
+### Added
+
+- Eager low-resolution slide thumbnail precache: the nav filmstrip now fills in thumbnails for every slide group shortly after project load/import/slide-group-add instead of only after a group is manually visited/previewed.
+- A branded global loading screen shown on app boot that blocks until the initial thumbnail precache completes, with a looping "loading …" word-reel indicator; it only appears once per session (later precache passes stay silent behind the existing lightweight canvas overlay).
+- Rebuilt the Help panel into a full 14-section user guide (Projects, Templates, Slides, Layers, Properties, Canvas Formats, Localization, Format × Locale editing, Brand Kit, Assets, Exporting, AI Features, Keyboard Shortcuts) with a searchable sidebar and section navigation, replacing the previous single-scroll overview.
+
+### Fixed
+
+- Unified all interactive-editor capture paths (thumbnail precache, Preview high-res capture, export) onto the shared capture mutex, closing a latent race between Preview and Export that could corrupt `activeSlideGroupId`/`panoRenderOverride` restoration.
+- Preview and precache captures no longer restore a stale active slide group if the project changes mid-capture.
+
 ## [0.6.0](https://github.com/Pr0xS/PixelDeck/compare/v0.5.2...v0.6.0) - 2026-07-19
 
 ### Added

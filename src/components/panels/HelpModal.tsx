@@ -1,324 +1,195 @@
-import type { ReactNode } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import { ModalShell } from '@/components/ui/ModalShell'
+import { HELP_SECTIONS, type HelpSectionId } from '@/components/panels/help/HelpContent'
 
 interface HelpModalProps {
   open: boolean
   onClose: () => void
 }
 
-type ShortcutRow = { keys: ReactNode; desc: string }
-
-function Kbd({ children }: { children: ReactNode }) {
-  return (
-    <kbd
-      style={{
-        background: '#1e1e2a',
-        border: '1px solid rgba(255,255,255,0.15)',
-        borderRadius: 4,
-        padding: '2px 6px',
-        fontSize: 11,
-        fontFamily: 'monospace',
-        color: '#c8c8d8',
-        whiteSpace: 'nowrap',
-      }}
-    >
-      {children}
-    </kbd>
-  )
-}
-
-function SectionHeader({ children }: { children: ReactNode }) {
-  return (
-    <div
-      style={{
-        fontSize: 11,
-        textTransform: 'uppercase',
-        letterSpacing: '0.08em',
-        color: '#6b6b7a',
-        marginTop: 28,
-        marginBottom: 10,
-        paddingBottom: 6,
-        borderBottom: '1px solid rgba(255,255,255,0.06)',
-      }}
-    >
-      {children}
-    </div>
-  )
-}
-
-function ShortcutTable({ rows }: { rows: ShortcutRow[] }) {
-  return (
-    <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-      <tbody>
-        {rows.map((row, i) => (
-          <tr
-            key={i}
-            style={{
-              background: i % 2 === 0 ? 'rgba(255,255,255,0.02)' : 'transparent',
-            }}
-          >
-            <td style={{ padding: '6px 10px', color: '#6b6b7a', width: '40%' }}>
-              {row.keys}
-            </td>
-            <td style={{ padding: '6px 10px', color: '#c8c8d8' }}>{row.desc}</td>
-          </tr>
-        ))}
-      </tbody>
-    </table>
-  )
-}
+const GROUP_LABELS = ['GETTING STARTED', 'DESIGN', 'ADAPT', 'DELIVER'] as const
 
 export function HelpModal({ open, onClose }: HelpModalProps) {
+  const [activeId, setActiveId] = useState<HelpSectionId>('introduction')
+  const [query, setQuery] = useState('')
+  const contentRef = useRef<HTMLDivElement>(null)
+
+  const activeIndex = HELP_SECTIONS.findIndex((section) => section.id === activeId)
+  const activeSection = HELP_SECTIONS[activeIndex] ?? HELP_SECTIONS[0]
+  const filteredSections = useMemo(() => {
+    const normalized = query.trim().toLowerCase()
+    if (!normalized) return HELP_SECTIONS
+    return HELP_SECTIONS.filter((section) => section.title.toLowerCase().includes(normalized))
+  }, [query])
+
+  const selectSection = (id: HelpSectionId) => {
+    setActiveId(id)
+    contentRef.current?.scrollTo({ top: 0, behavior: 'smooth' })
+  }
+
   return (
     <ModalShell
       open={open}
       onClose={onClose}
-      maxWidth=""
-      backdropClassName="fixed inset-0 z-[9999] flex items-center justify-center"
-      backdropStyle={{ background: 'rgba(0,0,0,0.6)', backdropFilter: 'blur(4px)' }}
-      panelClassName=""
-      panelStyle={{ background: '#13131a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, width: '100%', maxWidth: 960, maxHeight: '85vh', display: 'flex', flexDirection: 'column', margin: '0 16px', overflow: 'hidden' }}
-      showCloseButton={false}
-      header={<div
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '18px 24px 16px',
-            borderBottom: '1px solid rgba(255,255,255,0.07)',
-            flexShrink: 0,
-          }}
-        >
-          <div>
-            <div style={{ fontSize: 15, fontWeight: 600, color: '#e8e8f0' }}>
-              🎴 PixelDeck Help
+      title="PixelDeck user guide"
+      closeLabel="Close help"
+      maxWidth="max-w-[1120px]"
+      backdropClassName="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-5"
+      backdropStyle={{ background: 'rgba(4,4,7,0.72)', backdropFilter: 'blur(6px)' }}
+      panelClassName="relative w-full h-[92vh] sm:h-[88vh] flex flex-col overflow-hidden rounded-2xl border shadow-2xl"
+      panelStyle={{
+        background: '#18181f',
+        borderColor: 'rgba(255,255,255,0.09)',
+        boxShadow: '0 32px 100px rgba(0,0,0,0.65), 0 0 0 1px rgba(124,110,246,0.04)',
+      }}
+      closeButtonClassName="absolute top-4 right-4 z-10 text-[#6b6b7a] hover:text-[#e8e8f0] transition-all text-base w-8 h-8 flex items-center justify-center rounded-lg hover:bg-[rgba(255,255,255,0.07)]"
+      header={(
+        <header className="relative shrink-0 overflow-hidden border-b border-[rgba(255,255,255,0.07)] px-5 py-4 sm:px-6">
+          <div className="pointer-events-none absolute -top-16 left-12 h-32 w-64 rounded-full bg-[#7c6ef6] opacity-[0.08] blur-3xl" />
+          <div className="relative flex items-center gap-3 pr-10">
+            <div className="grid h-9 w-9 shrink-0 place-items-center rounded-xl border border-[rgba(155,143,255,0.28)] bg-[rgba(124,110,246,0.12)] text-[#b8afff] shadow-[0_8px_24px_rgba(124,110,246,0.12)]">
+              <span aria-hidden="true" className="text-base">?</span>
             </div>
-            <div style={{ fontSize: 12, color: '#6b6b7a', marginTop: 2 }}>
-              Usage guide &amp; keyboard shortcuts
+            <div>
+              <h2 className="text-[15px] font-semibold tracking-[-0.01em] text-[#f0eff8]">
+                PixelDeck user guide
+              </h2>
+              <p className="mt-0.5 text-[11px] text-[#6b6b7a]">
+                Everything you need to design, adapt, and export screenshot sets.
+              </p>
             </div>
+            <span className="ml-auto hidden rounded-full border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.025)] px-2.5 py-1 text-[10px] font-medium tracking-wide text-[#6b6b7a] sm:block">
+              14 SECTIONS
+            </span>
           </div>
-          <button
-            onClick={onClose}
-            style={{
-              background: 'rgba(255,255,255,0.06)',
-              border: '1px solid rgba(255,255,255,0.1)',
-              borderRadius: 6,
-              color: '#a0a0b0',
-              cursor: 'pointer',
-              fontSize: 16,
-              width: 30,
-              height: 30,
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              lineHeight: 1,
-              flexShrink: 0,
-            }}
-            onMouseEnter={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = '#e8e8f0'
-              ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.2)'
-            }}
-            onMouseLeave={(e) => {
-              ;(e.currentTarget as HTMLButtonElement).style.color = '#a0a0b0'
-              ;(e.currentTarget as HTMLButtonElement).style.borderColor = 'rgba(255,255,255,0.1)'
-            }}
-          >
-            ×
-          </button>
-        </div>}
+        </header>
+      )}
     >
-
-        {/* Scrollable body */}
-        <div style={{ overflowY: 'auto', padding: '8px 24px 28px', flex: 1 }}>
-
-          {/* ── Overview ── */}
-          <SectionHeader>Overview</SectionHeader>
-
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8f0', marginBottom: 4 }}>
-                What is PixelDeck?
-              </div>
-              <p style={{ fontSize: 13, color: '#a0a0b0', lineHeight: 1.6, margin: 0 }}>
-                PixelDeck is a visual editor for designing App Store screenshot layouts. Build polished
-                screenshots with layers, device mockups, text, shapes, and images — then export them
-                as high-resolution PNGs.
-              </p>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8f0', marginBottom: 4 }}>
-                Slides &amp; Slide Groups
-              </div>
-              <p style={{ fontSize: 13, color: '#a0a0b0', lineHeight: 1.6, margin: 0 }}>
-                A <strong style={{ color: '#c8c8d8' }}>Slide Group</strong> is a set of related
-                screenshots (e.g., "iPhone 16 Pro — 3 slides"). Each slide shares the same layer
-                stack. Panorama groups extend the canvas width across multiple slides and let you
-                position elements anywhere in that wide space.
-              </p>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8f0', marginBottom: 4 }}>
-                Layers
-              </div>
-              <p style={{ fontSize: 13, color: '#a0a0b0', lineHeight: 1.6, margin: 0 }}>
-                Add layers from the <strong style={{ color: '#c8c8d8' }}>toolbar</strong> (phone
-                mockup, text, image, shape, etc.). Select layers on the canvas or in the{' '}
-                <strong style={{ color: '#c8c8d8' }}>Layers Panel</strong> on the left. Drag to
-                reorder them. Hold <Kbd>Shift</Kbd> to multi-select.
-              </p>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8f0', marginBottom: 4 }}>
-                Properties Panel
-              </div>
-              <p style={{ fontSize: 13, color: '#a0a0b0', lineHeight: 1.6, margin: 0 }}>
-                When a layer is selected, the right-hand{' '}
-                <strong style={{ color: '#c8c8d8' }}>Properties Panel</strong> shows its
-                type-specific options — position, size, fill, font, shadow, blur, opacity, and more.
-                Changes take effect instantly and can be undone.
-              </p>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8f0', marginBottom: 4 }}>
-                Exporting
-              </div>
-              <p style={{ fontSize: 13, color: '#a0a0b0', lineHeight: 1.6, margin: 0 }}>
-                Click <strong style={{ color: '#c8c8d8' }}>Export</strong> in the bottom bar to
-                download PNGs for every slide. Use{' '}
-                <strong style={{ color: '#c8c8d8' }}>Export Project</strong> in the toolbar to save
-                your work as a JSON file, and{' '}
-                <strong style={{ color: '#c8c8d8' }}>Import Project</strong> to restore it later.
-                The CLI (<code style={{ color: '#c8c8d8', fontSize: 12 }}>node cli/index.mjs</code>)
-                supports headless batch export via Playwright.
-              </p>
-            </div>
-
-            <div>
-              <div style={{ fontSize: 13, fontWeight: 600, color: '#e8e8f0', marginBottom: 4 }}>
-                Localization Mode
-              </div>
-              <p style={{ fontSize: 13, color: '#a0a0b0', lineHeight: 1.6, margin: 0 }}>
-                Switch to <strong style={{ color: '#c8c8d8' }}>Localization</strong> mode from the
-                toolbar to translate text layers across multiple locales. AI-powered translation is
-                available if you configure an API key under{' '}
-                <strong style={{ color: '#c8c8d8' }}>⚙ AI Settings</strong>.
-              </p>
-            </div>
+      <div className="flex min-h-0 flex-1">
+        <aside className="hidden w-[230px] shrink-0 flex-col border-r border-[rgba(255,255,255,0.06)] bg-[#131318] md:flex">
+          <div className="border-b border-[rgba(255,255,255,0.055)] p-3">
+            <label className="relative block">
+              <span className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-[12px] text-[#525260]">⌕</span>
+              <input
+                type="search"
+                value={query}
+                onChange={(event) => setQuery(event.target.value)}
+                placeholder="Find a section…"
+                aria-label="Find a help section"
+                className="h-9 w-full rounded-lg border border-[rgba(255,255,255,0.075)] bg-[#0f0f13] pl-8 pr-3 text-[11px] text-[#d8d8e2] outline-none transition placeholder:text-[#4a4a57] focus:border-[rgba(124,110,246,0.52)] focus:ring-2 focus:ring-[rgba(124,110,246,0.08)]"
+              />
+            </label>
           </div>
 
-          {/* ── Keyboard Shortcuts ── */}
-          <SectionHeader>Keyboard Shortcuts</SectionHeader>
-
-          <div
-            style={{
-              fontSize: 11,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: '#7c6ef6',
-              marginBottom: 8,
-              fontWeight: 600,
-            }}
-          >
-            Canvas &amp; View
+          <nav aria-label="Help sections" className="min-h-0 flex-1 overflow-y-auto px-3 py-3">
+            {GROUP_LABELS.map((group) => {
+              const sections = filteredSections.filter((section) => section.group === group)
+              if (sections.length === 0) return null
+              return (
+                <div key={group} className="mb-4 last:mb-0">
+                  <p className="mb-1.5 px-2 text-[9px] font-semibold tracking-[0.18em] text-[#4e4e5b]">
+                    {group}
+                  </p>
+                  <div className="space-y-0.5">
+                    {sections.map((section) => {
+                      const isActive = section.id === activeId
+                      return (
+                        <button
+                          key={section.id}
+                          type="button"
+                          onClick={() => selectSection(section.id)}
+                          aria-current={isActive ? 'page' : undefined}
+                          className={`group relative flex w-full items-center gap-2.5 rounded-lg px-2 py-2 text-left text-[11px] transition-all ${
+                            isActive
+                              ? 'bg-[rgba(124,110,246,0.14)] text-[#d4ceff]'
+                              : 'text-[#777786] hover:bg-[rgba(255,255,255,0.04)] hover:text-[#d1d1dc]'
+                          }`}
+                        >
+                          {isActive && <span className="absolute inset-y-2 left-0 w-0.5 rounded-full bg-[#8f82ff]" />}
+                          <span className={`w-5 shrink-0 text-right font-mono text-[9px] ${isActive ? 'text-[#8f82ff]' : 'text-[#444451] group-hover:text-[#666675]'}`}>
+                            {String(section.number).padStart(2, '0')}
+                          </span>
+                          <span className="truncate">{section.title}</span>
+                        </button>
+                      )
+                    })}
+                  </div>
+                </div>
+              )
+            })}
+            {filteredSections.length === 0 && (
+              <div className="px-2 py-8 text-center text-[11px] leading-relaxed text-[#555562]">
+                No section titles match<br />“{query}”
+              </div>
+            )}
+          </nav>
+          <div className="border-t border-[rgba(255,255,255,0.055)] px-5 py-3 text-[10px] text-[#454552]">
+            Select a section to jump directly to it.
           </div>
-          <ShortcutTable
-            rows={[
-              { keys: <><Kbd>Space</Kbd> + Drag</>, desc: 'Pan the canvas' },
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>0</Kbd></>, desc: 'Fit canvas to window' },
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>1</Kbd></>, desc: 'Zoom to 100%' },
-            ]}
-          />
+        </aside>
 
-          <div
-            style={{
-              fontSize: 11,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: '#7c6ef6',
-              marginTop: 20,
-              marginBottom: 8,
-              fontWeight: 600,
-            }}
-          >
-            Layers
+        <main className="flex min-w-0 flex-1 flex-col bg-[#18181f]">
+          <div className="shrink-0 border-b border-[rgba(255,255,255,0.06)] bg-[#15151b] px-4 py-2.5 md:hidden">
+            <label className="flex items-center gap-3">
+              <span className="text-[10px] font-semibold tracking-[0.12em] text-[#575765]">SECTION</span>
+              <select
+                value={activeId}
+                onChange={(event) => selectSection(event.target.value as HelpSectionId)}
+                className="min-w-0 flex-1 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#0f0f13] px-3 py-2 text-[11px] text-[#d8d8e2] outline-none focus:border-[rgba(124,110,246,0.5)]"
+                aria-label="Choose help section"
+              >
+                {HELP_SECTIONS.map((section) => (
+                  <option key={section.id} value={section.id}>
+                    {String(section.number).padStart(2, '0')} · {section.title}
+                  </option>
+                ))}
+              </select>
+            </label>
           </div>
-          <ShortcutTable
-            rows={[
-              { keys: <><Kbd>↑</Kbd><Kbd>↓</Kbd><Kbd>←</Kbd><Kbd>→</Kbd></>, desc: 'Nudge selected layer 1px' },
-              { keys: <><Kbd>Shift</Kbd>+Arrow Keys</>, desc: 'Nudge selected layer 10px' },
-              { keys: <><Kbd>Delete</Kbd> / <Kbd>Backspace</Kbd></>, desc: 'Remove selected layer(s)' },
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>D</Kbd></>, desc: 'Duplicate selected layer' },
-            ]}
-          />
 
-          <div
-            style={{
-              fontSize: 11,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: '#7c6ef6',
-              marginTop: 20,
-              marginBottom: 8,
-              fontWeight: 600,
-            }}
-          >
-            Copy &amp; Paste
-          </div>
-          <ShortcutTable
-            rows={[
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>C</Kbd></>, desc: 'Copy selected layer(s)' },
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>X</Kbd></>, desc: 'Cut selected layer(s)' },
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>V</Kbd></>, desc: 'Paste layer(s)' },
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>Alt</Kbd>+<Kbd>C</Kbd></>, desc: 'Copy layer style' },
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>Alt</Kbd>+<Kbd>V</Kbd></>, desc: 'Paste layer style' },
-            ]}
-          />
+          <div ref={contentRef} className="min-h-0 flex-1 overflow-y-auto scroll-smooth">
+            <article className="mx-auto max-w-[760px] px-5 py-7 sm:px-8 sm:py-9 lg:px-10 lg:py-10">
+              <div className="mb-7 flex items-start gap-4 border-b border-[rgba(255,255,255,0.065)] pb-6">
+                <span className="mt-0.5 font-mono text-[11px] font-medium tracking-[0.12em] text-[#8f82ff]">
+                  {String(activeSection.number).padStart(2, '0')}
+                </span>
+                <div>
+                  <p className="mb-2 text-[9px] font-semibold tracking-[0.18em] text-[#565664]">
+                    {activeSection.group}
+                  </p>
+                  <h3 className="text-[22px] font-semibold leading-tight tracking-[-0.025em] text-[#f0eff8] sm:text-2xl">
+                    {activeSection.title}
+                  </h3>
+                </div>
+              </div>
 
-          <div
-            style={{
-              fontSize: 11,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: '#7c6ef6',
-              marginTop: 20,
-              marginBottom: 8,
-              fontWeight: 600,
-            }}
-          >
-            Groups
-          </div>
-          <ShortcutTable
-            rows={[
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>G</Kbd></>, desc: 'Group selected layers' },
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>Shift</Kbd>+<Kbd>G</Kbd></>, desc: 'Dissolve group' },
-              { keys: <><Kbd>Escape</Kbd></>, desc: 'Exit group editing mode' },
-            ]}
-          />
+              <div key={activeSection.id} className="animate-[pixeldeck-loader-enter_240ms_cubic-bezier(0.22,1,0.36,1)_both]">
+                {activeSection.content}
+              </div>
 
-          <div
-            style={{
-              fontSize: 11,
-              textTransform: 'uppercase',
-              letterSpacing: '0.06em',
-              color: '#7c6ef6',
-              marginTop: 20,
-              marginBottom: 8,
-              fontWeight: 600,
-            }}
-          >
-            History
+              <div className="mt-10 flex items-center justify-between gap-3 border-t border-[rgba(255,255,255,0.06)] pt-5">
+                <button
+                  type="button"
+                  disabled={activeIndex === 0}
+                  onClick={() => selectSection(HELP_SECTIONS[activeIndex - 1].id)}
+                  className="rounded-lg border border-[rgba(255,255,255,0.08)] px-3 py-2 text-[11px] text-[#858594] transition hover:border-[rgba(255,255,255,0.15)] hover:text-[#e0e0e9] disabled:pointer-events-none disabled:opacity-0"
+                >
+                  ← Previous
+                </button>
+                <span className="font-mono text-[9px] text-[#484855]">{activeIndex + 1} / {HELP_SECTIONS.length}</span>
+                <button
+                  type="button"
+                  disabled={activeIndex === HELP_SECTIONS.length - 1}
+                  onClick={() => selectSection(HELP_SECTIONS[activeIndex + 1].id)}
+                  className="rounded-lg border border-[rgba(124,110,246,0.22)] bg-[rgba(124,110,246,0.07)] px-3 py-2 text-[11px] text-[#aaa1f5] transition hover:border-[rgba(124,110,246,0.42)] hover:bg-[rgba(124,110,246,0.12)] disabled:pointer-events-none disabled:opacity-0"
+                >
+                  Next →
+                </button>
+              </div>
+            </article>
           </div>
-          <ShortcutTable
-            rows={[
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>Z</Kbd></>, desc: 'Undo' },
-              { keys: <><Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>Shift</Kbd>+<Kbd>Z</Kbd> or <Kbd>Ctrl</Kbd>/<Kbd>⌘</Kbd>+<Kbd>Y</Kbd></>, desc: 'Redo' },
-            ]}
-          />
-        </div>
+        </main>
+      </div>
     </ModalShell>
   )
 }
