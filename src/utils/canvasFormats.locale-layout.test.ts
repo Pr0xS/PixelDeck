@@ -4,6 +4,7 @@ import {
   applyCanvasFormat,
   applyLocaleFormatLayout,
   BASE_CANVAS_FORMAT,
+  buildFormatScaleMap,
   countLocaleFormatAdjustments,
   resolveProjectView,
 } from './canvasFormats'
@@ -63,15 +64,35 @@ describe('locale-format layout resolution', () => {
       localeLayoutOverrides: { de: { 'android-phone': { x: 200 } } },
     })])
 
-    expect(applyLocaleFormatLayout(project, 'en', 'android-phone')).toBe(project)
+    expect(applyLocaleFormatLayout(
+      project,
+      'en',
+      'android-phone',
+      buildFormatScaleMap(project, 'android-phone', BASE_CANVAS_FORMAT),
+    )).toBe(project)
   })
 
-  it('returns the project unchanged for the base format', () => {
+  it('returns the project unchanged for the base format when the locale has no base delta', () => {
     const project = makeProject([makeText({
       localeLayoutOverrides: { de: { 'android-phone': { x: 200 } } },
     })])
 
-    expect(applyLocaleFormatLayout(project, 'de', BASE_CANVAS_FORMAT)).toBe(project)
+    expect(applyLocaleFormatLayout(
+      project,
+      'de',
+      BASE_CANVAS_FORMAT,
+      buildFormatScaleMap(project, BASE_CANVAS_FORMAT, BASE_CANVAS_FORMAT),
+    )).toBe(project)
+  })
+
+  it('applies a locale base delta in the base format', () => {
+    const project = makeProject([makeText({
+      localeBaseDelta: { de: { dx: 20, dy: -10, dRotation: 5, mWidth: 2, mFontSize: 0.5 } },
+      width: 400,
+    })])
+
+    const resolved = resolveProjectView(project, 'de', BASE_CANVAS_FORMAT)
+    expect(getText(resolved)).toMatchObject({ x: 120, y: 190, rotation: 5, width: 800, fontSize: 50 })
   })
 
   it('applies the matching locale and format cell', () => {

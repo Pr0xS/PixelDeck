@@ -68,7 +68,7 @@ describe('locale/format layout write routing', () => {
     expect(resolvedLayer.x).toBe(200)
   })
 
-  it('guards base geometry for a non-default locale but still writes shared non-layout fields', () => {
+  it('stores base geometry as a non-default locale delta while writing shared non-layout fields', () => {
     useEditorStore.getState().addText()
     const layer = getTextLayer()
     useEditorStore.getState().setActiveLocale('de')
@@ -78,6 +78,7 @@ describe('locale/format layout write routing', () => {
     const updated = getTextLayer()
     expect(updated.x).toBe(layer.x)
     expect(updated.visible).toBe(false)
+    expect(updated.localeBaseDelta?.de?.dx).toBe(200 - layer.x)
     expect(updated.localeLayoutOverrides).toBeUndefined()
   })
 
@@ -111,8 +112,26 @@ describe('locale/format layout write routing', () => {
       locked: true,
     })
     expect(updated.localeContent?.de?.text).toBe('Hallo')
+    expect(updated.localeBaseDelta?.de).toMatchObject({
+      dx: 200 - layer.x,
+      mWidth: 480 / (layer.width ?? 1),
+      mFontSize: 72 / layer.fontSize,
+      dRotation: 15 - layer.rotation,
+    })
     expect(updated.localeLayoutOverrides).toBeUndefined()
     expect(updated.formatOverrides).toBeUndefined()
+  })
+
+  it('prunes no-op base deltas and removes an empty locale delta cell', () => {
+    useEditorStore.getState().addText()
+    const layer = getTextLayer()
+    useEditorStore.getState().setActiveLocale('de')
+
+    useEditorStore.getState().updateLayer(layer.id, { x: layer.x + 50, y: layer.y })
+    expect(getTextLayer().localeBaseDelta?.de).toEqual({ dx: 50 })
+
+    useEditorStore.getState().updateLayer(layer.id, { x: layer.x, y: layer.y })
+    expect(getTextLayer().localeBaseDelta).toBeUndefined()
   })
 
   it('preserves default-locale non-base routing through formatOverrides', () => {
@@ -146,7 +165,7 @@ describe('locale/format layout write routing', () => {
     expect(resolvedGroup.children.find((child) => child.id === textId)?.x).toBe(200)
   })
 
-  it('guards nested child base geometry while allowing non-layout fields', () => {
+  it('stores nested child base geometry as a locale delta while allowing non-layout fields', () => {
     const { group, textId } = createGroupWithText()
     const original = group.children.find((child) => child.id === textId)!
     useEditorStore.getState().setActiveLocale('de')
@@ -157,6 +176,7 @@ describe('locale/format layout write routing', () => {
     const updated = updatedGroup.children.find((child) => child.id === textId)!
     expect(updated.x).toBe(original.x)
     expect(updated.visible).toBe(false)
+    expect(updated.localeBaseDelta?.de?.dx).toBe(200 - original.x)
     expect(updated.localeLayoutOverrides).toBeUndefined()
   })
 })
@@ -198,5 +218,18 @@ describe('locale/format layout cleanup actions', () => {
     const child = updatedGroup.children.find((layer) => layer.id === textId) as Layer
     expect(updatedGroup.localeLayoutOverrides).toBeUndefined()
     expect(child.localeLayoutOverrides).toBeUndefined()
+  })
+
+  it('clears a base delta by layout key and prunes the delta map when empty', () => {
+    useEditorStore.getState().addText()
+    const layer = getTextLayer()
+    useEditorStore.getState().setActiveLocale('de')
+    useEditorStore.getState().updateLayer(layer.id, { x: layer.x + 50, y: layer.y + 25 })
+
+    useEditorStore.getState().clearLayerLocaleBaseDeltaKey(layer.id, 'x')
+    expect(getTextLayer().localeBaseDelta?.de).toEqual({ dy: 25 })
+
+    useEditorStore.getState().clearLayerLocaleBaseDeltaKey(layer.id, 'y')
+    expect(getTextLayer().localeBaseDelta).toBeUndefined()
   })
 })

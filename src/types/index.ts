@@ -122,6 +122,21 @@ export interface LocaleLayerPatch {
 }
 
 /**
+ * Per-locale layout adjustment authored in base-canvas coordinates.
+ * Additive values are projected through the active format scale at render time;
+ * multiplicative values apply to the already-resolved format value.
+ */
+export interface LocaleLayoutDelta {
+  dx?: number;
+  dy?: number;
+  dRotation?: number;
+  mWidth?: number;
+  mHeight?: number;
+  mFontSize?: number;
+  mScale?: number;
+}
+
+/**
  * The localizable content for ONE locale. Identical shape for every locale,
  * including the default locale — this uniformity is the point (v0.6.0
  * symmetric locale model). Structurally the same payload as LocaleLayerPatch
@@ -204,6 +219,8 @@ export interface BaseLayer {
    * content, style, or model.
    */
   localeLayoutOverrides?: Partial<Record<string, Partial<Record<CanvasFormatId, FormatLayerPatch>>>>;
+  /** Per-locale layout deltas authored against the shared base layout. */
+  localeBaseDelta?: Partial<Record<string, LocaleLayoutDelta>>;
   /**
    * If set, this layer belongs exclusively to one format and is invisible in all others.
    * Set automatically when a layer is added while viewing a non-base format.

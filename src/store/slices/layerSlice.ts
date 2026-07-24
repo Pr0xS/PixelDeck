@@ -11,10 +11,10 @@ import {
   mutateActiveGroup,
   getActiveGroup,
   patchLayerForLocale,
+  patchLayerForLocaleBaseDelta,
   patchLayerForLocaleFormatLayout,
   patchLayerForFormat,
   seedLocaleContent,
-  splitLocaleFormatLayoutPatch,
 } from '../helpers'
 
 export const createLayerSlice = (
@@ -120,8 +120,13 @@ export const createLayerSlice = (
           return patchLayerForFormat(localized, rest, activeCanvasFormat, baseFormat)
         }
         if (activeCanvasFormat === baseFormat) {
-          const { rest: nonLayout } = splitLocaleFormatLayoutPatch(rest)
-          return patchLayerForFormat(localized, nonLayout, baseFormat, baseFormat)
+          const { layer: withLocaleBaseDelta, rest: nonLayout } = patchLayerForLocaleBaseDelta(
+            localized,
+            rest,
+            activeLocale,
+            defaultLocale,
+          )
+          return patchLayerForFormat(withLocaleBaseDelta, nonLayout, baseFormat, baseFormat)
         }
         const { layer: withLocaleLayout, rest: formatRest } = patchLayerForLocaleFormatLayout(
           localized,

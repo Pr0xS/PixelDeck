@@ -10,6 +10,7 @@ import { resolveFill } from '@/utils/brandColors'
 import {
   applyCanvasFormatToGroup,
   applyLocaleFormatLayoutToGroup,
+  getFormatScaleFactor,
   getProjectBaseFormat,
 } from '@/utils/canvasFormats'
 import { DEFAULT_TEXT_WIDTH } from '@/utils/textRendering'
@@ -75,6 +76,7 @@ export function CanvasTextEditor({ stageRef }: CanvasTextEditorProps) {
         activeLocale,
         activeCanvasFormat,
         settings.defaultLocale,
+        getFormatScaleFactor(rawGroup, activeCanvasFormat, baseFormat, settings.customFormats),
         baseFormat,
       )
     : undefined

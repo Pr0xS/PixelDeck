@@ -2,10 +2,11 @@ import { nanoid } from 'nanoid'
 import type {
   Project, SlideGroup, Layer, LayerType, GroupLayer,
   BackgroundLayer, CanvasBackground, ProjectSettings,
-  LocaleLayerPatch, LocaleContent, CanvasFormatId, FormatLayerPatch,
+  LocaleLayerPatch, LocaleContent, CanvasFormatId, FormatLayerPatch, LocaleLayoutDelta,
 } from '@/types'
 import { spansToMarks } from '@/utils/textRendering'
 import { mapLayerTree } from '@/utils/layerTree'
+import { LOCALE_DELTA_FIELDS } from '@/utils/canvasFormats'
 import {
   BASE_CANVAS_FORMAT,
   FORMAT_FORK_KEYS,
@@ -501,6 +502,88 @@ export const patchLayerForLocaleFormatLayout = (
   if (!Object.keys(layout).length) return { layer, rest }
   return { layer: withLocaleFormatOverride(layer, locale, format, layout), rest }
 }
+
+/**
+ * Route base-format, non-default-locale layout edits into a base-coordinate
+ * delta. Incoming values are already resolved values, so each key is derived
+ * afresh rather than accumulated onto a prior delta.
+ */
+export const patchLayerForLocaleBaseDelta = (
+  layer: Layer,
+  patch: Partial<Layer>,
+  activeLocale: string,
+  defaultLocale: string,
+): { layer: Layer; rest: Partial<Layer> } => {
+  const { layout, rest } = splitLocaleFormatLayoutPatch(patch)
+  if (activeLocale === defaultLocale || !Object.keys(layout).length) return { layer, rest }
+
+  const source = layer as unknown as Record<string, unknown>
+  const incoming = layout as unknown as Record<string, unknown>
+  const delta: LocaleLayoutDelta = { ...(layer.localeBaseDelta?.[activeLocale] ?? {}) }
+  const deriveAdditive = (key: 'x' | 'y' | 'rotation', deltaKey: 'dx' | 'dy' | 'dRotation') => {
+    const value = incoming[key]
+    const current = source[key]
+    if (typeof value === 'number' && typeof current === 'number') {
+      const derived = value - current
+      if (derived === 0) delete delta[deltaKey]
+      else delta[deltaKey] = derived
+    }
+  }
+  const deriveMultiplicative = (
+    key: 'width' | 'height' | 'fontSize' | 'scale',
+    deltaKey: 'mWidth' | 'mHeight' | 'mFontSize' | 'mScale',
+  ) => {
+    const value = incoming[key]
+    const current = source[key]
+    if (typeof value === 'number' && typeof current === 'number' && current !== 0) {
+      const derived = value / current
+      if (derived === 1) delete delta[deltaKey]
+      else delta[deltaKey] = derived
+    }
+  }
+  deriveAdditive('x', LOCALE_DELTA_FIELDS.x)
+  deriveAdditive('y', LOCALE_DELTA_FIELDS.y)
+  deriveAdditive('rotation', LOCALE_DELTA_FIELDS.rotation)
+  deriveMultiplicative('width', LOCALE_DELTA_FIELDS.width)
+  deriveMultiplicative('height', LOCALE_DELTA_FIELDS.height)
+  deriveMultiplicative('fontSize', LOCALE_DELTA_FIELDS.fontSize)
+  if (layer.type !== 'group') deriveMultiplicative('scale', LOCALE_DELTA_FIELDS.scale)
+
+  if (!Object.keys(delta).length) return { layer: withoutLocaleBaseDelta(layer, activeLocale), rest }
+
+  return {
+    layer: {
+      ...layer,
+      localeBaseDelta: { ...(layer.localeBaseDelta ?? {}), [activeLocale]: delta },
+    } as Layer,
+    rest,
+  }
+}
+
+/** Remove one locale base-delta cell and prune the parent map. */
+export const withoutLocaleBaseDelta = (layer: Layer, locale: string): Layer => {
+  if (!layer.localeBaseDelta?.[locale]) return layer
+  const { [locale]: _removed, ...remaining } = layer.localeBaseDelta
+  void _removed
+  return { ...layer, localeBaseDelta: Object.keys(remaining).length ? remaining : undefined } as Layer
+}
+
+/** Remove one key from a locale base-delta cell and prune empty maps. */
+export const withoutLocaleBaseDeltaKey = (layer: Layer, locale: string, key: string): Layer => {
+  const delta = layer.localeBaseDelta?.[locale]
+  if (!delta || !(key in delta)) return layer
+  const { [key]: _removed, ...remainingDelta } = delta as Record<string, unknown>
+  void _removed
+  if (!Object.keys(remainingDelta).length) return withoutLocaleBaseDelta(layer, locale)
+  return {
+    ...layer,
+    localeBaseDelta: { ...layer.localeBaseDelta, [locale]: remainingDelta as LocaleLayoutDelta },
+  } as Layer
+}
+
+/** Remove one locale base-delta cell across a complete layer tree. */
+export const resetLocaleBaseDeltasInLayerTree = (layers: Layer[], locale: string): Layer[] =>
+  mapLayerTree(layers, (layer) => withoutLocaleBaseDelta(layer, locale))
 
 /** Remove one locale/format override cell across a complete layer tree. */
 export const resetLocaleFormatOverridesInLayerTree = (

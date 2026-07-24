@@ -100,9 +100,12 @@ export interface EditorStore {
   clearLayerFormatOverrideKey: (layerId: string, key: string, format?: CanvasFormatId) => void
   clearLayerLocaleFormatOverride: (layerId: string, locale?: string, format?: CanvasFormatId) => void
   clearLayerLocaleFormatOverrideKey: (layerId: string, key: string, locale?: string, format?: CanvasFormatId) => void
+  clearLayerLocaleBaseDelta: (layerId: string, locale?: string) => void
+  clearLayerLocaleBaseDeltaKey: (layerId: string, key: string, locale?: string) => void
   applyLayerFormatKeyToShared: (layerId: string, key: string, format?: CanvasFormatId) => void
   resetActiveFormatLayout: (format?: CanvasFormatId) => void
   resetActiveLocaleFormatLayout: (locale?: string, format?: CanvasFormatId) => void
+  resetActiveLocaleBaseDelta: (locale?: string) => void
   shareActiveFormatOwnedLayers: (format?: CanvasFormatId) => void
   resetActiveFormatVisibility: (format?: CanvasFormatId) => void
   promoteActiveFormatLayoutToShared: (format?: CanvasFormatId) => void

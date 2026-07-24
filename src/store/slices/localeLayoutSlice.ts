@@ -1,9 +1,12 @@
-import { getProjectBaseFormat } from '@/utils/canvasFormats'
+import { getProjectBaseFormat, LOCALE_DELTA_FIELDS } from '@/utils/canvasFormats'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
 import {
   mutateActiveGroup,
   resetLocaleFormatOverridesInLayerTree,
+  resetLocaleBaseDeltasInLayerTree,
   updateLayerInTree,
+  withoutLocaleBaseDelta,
+  withoutLocaleBaseDeltaKey,
   withoutLocaleFormatOverride,
   withoutLocaleFormatOverrideKey,
 } from '../helpers'
@@ -16,6 +19,9 @@ export const createLocaleLayoutSlice = (
   | 'clearLayerLocaleFormatOverride'
   | 'clearLayerLocaleFormatOverrideKey'
   | 'resetActiveLocaleFormatLayout'
+  | 'clearLayerLocaleBaseDelta'
+  | 'clearLayerLocaleBaseDeltaKey'
+  | 'resetActiveLocaleBaseDelta'
 > => ({
   clearLayerLocaleFormatOverride: (layerId, locale, format) => {
     const targetLocale = locale ?? get().activeLocale
@@ -48,6 +54,33 @@ export const createLocaleLayoutSlice = (
     mutateActiveGroup(set, (g) => ({
       ...g,
       layers: resetLocaleFormatOverridesInLayerTree(g.layers, targetLocale, targetFormat),
+    }))
+  },
+
+  clearLayerLocaleBaseDelta: (layerId, locale) => {
+    const targetLocale = locale ?? get().activeLocale
+    mutateActiveGroup(set, (g) => ({
+      ...g,
+      layers: updateLayerInTree(g.layers, layerId, (layer) => withoutLocaleBaseDelta(layer, targetLocale)),
+    }))
+  },
+
+  clearLayerLocaleBaseDeltaKey: (layerId, key, locale) => {
+    const targetLocale = locale ?? get().activeLocale
+    const deltaKey = LOCALE_DELTA_FIELDS[key as keyof typeof LOCALE_DELTA_FIELDS]
+    if (!deltaKey) return
+    mutateActiveGroup(set, (g) => ({
+      ...g,
+      layers: updateLayerInTree(g.layers, layerId, (layer) => withoutLocaleBaseDeltaKey(layer, targetLocale, deltaKey)),
+    }))
+  },
+
+  resetActiveLocaleBaseDelta: (locale) => {
+    const targetLocale = locale ?? get().activeLocale
+    if (targetLocale === get().project.settings.defaultLocale) return
+    mutateActiveGroup(set, (g) => ({
+      ...g,
+      layers: resetLocaleBaseDeltasInLayerTree(g.layers, targetLocale),
     }))
   },
 })
