@@ -1,7 +1,7 @@
 import type { Layer, LocaleLayerPatch, TextLayer } from '@/types'
 import { effectiveLocalizationMode } from '@/utils/locale'
 import { LocaleRichTextEditor } from '@/components/text/LocaleRichTextEditor'
-import type { CellStatus, LocalizableRow } from './types'
+import { cellKey, type CellStatus, type LocalizableRow } from './types'
 import type { SlideBackgroundPreview } from './helpers'
 import { truncate } from './helpers'
 
@@ -63,7 +63,7 @@ export function TextOverrideCell({
 
   if (!isDefaultLocale && isSkipped) {
     return (
-      <div className="min-h-[80px] rounded-xl border border-dashed border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.04)] px-4 py-3 flex items-center justify-center">
+      <div className="min-h-[80px] rounded-xl border border-dashed border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.04)] px-4 py-3 flex items-center justify-center mb-3">
         <span className="text-xs text-[#f87171]">— skipped —</span>
       </div>
     )
@@ -72,7 +72,7 @@ export function TextOverrideCell({
   // Translating / queued state
   if (!isDefaultLocale && (cellStatus === 'translating' || cellStatus === 'queued')) {
     return (
-      <div className="min-h-[80px] rounded-xl border border-[rgba(124,110,246,0.3)] bg-[rgba(124,110,246,0.06)] px-4 py-3 flex items-center justify-center gap-2">
+      <div className="min-h-[80px] rounded-xl border border-[rgba(124,110,246,0.3)] bg-[rgba(124,110,246,0.06)] px-4 py-3 flex items-center justify-center gap-2 mb-3">
         <span className="text-[#7c6ef6] animate-spin text-sm">⟳</span>
         <span className="text-xs text-[#9d90f8]">{cellStatus === 'queued' ? 'Queued…' : 'Translating…'}</span>
       </div>
@@ -82,7 +82,7 @@ export function TextOverrideCell({
   // Error state
   if (!isDefaultLocale && cellStatus === 'error') {
     return (
-      <div className="min-h-[80px] rounded-xl border border-[rgba(239,68,68,0.35)] bg-[rgba(239,68,68,0.06)] px-4 py-3 space-y-2">
+      <div className="min-h-[80px] rounded-xl border border-[rgba(239,68,68,0.35)] bg-[rgba(239,68,68,0.06)] px-4 py-3 space-y-2 mb-3">
         <div className="text-xs text-[#f87171]">⚠ Translation failed</div>
         {cellError && (
           <div className="text-[10px] text-[#f87171]/70 truncate" title={cellError}>
@@ -103,7 +103,7 @@ export function TextOverrideCell({
   if (!hasOverride) {
     return (
       <div
-        className="min-h-[80px] rounded-xl border border-dashed px-4 py-3"
+        className="min-h-[80px] rounded-xl border border-dashed px-4 py-3 mb-3"
         style={{
           borderColor: isActiveColumn ? 'rgba(124,110,246,0.4)' : 'rgba(255,255,255,0.14)',
           background: isActiveColumn ? 'rgba(124,110,246,0.06)' : 'rgba(255,255,255,0.015)',
@@ -137,8 +137,11 @@ export function TextOverrideCell({
 
   return (
     <div
-      className="relative min-h-[80px] overflow-hidden rounded-xl border px-3 py-3"
+      data-cell-key={cellKey(row.layerId, locale)}
+      className="relative min-h-[80px] h-full overflow-hidden rounded-xl border px-3 py-3 mb-3"
       style={{
+        scrollMarginLeft: 320,
+        scrollMarginRight: 24,
         borderColor: cellStatus === 'done'
           ? 'rgba(52,211,153,0.5)'
           : isActiveColumn ? '#7c6ef6' : 'rgba(124,110,246,0.45)',

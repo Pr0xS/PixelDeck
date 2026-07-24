@@ -31,7 +31,9 @@ export interface SlideGroupSectionProps {
   clearLocaleContent: (slideGroupId: string, layerId: string, locale: string) => void
   getAsset: (key: string) => string | undefined
   openUploadPicker: (target: { slideGroupId: string; layerId: string; locale: string; layerType: 'phone' | 'image' }) => void
-  setEditingTextCell: (value: { layerName: string; locale: string } | null) => void
+  setEditingTextCell: (value: { layerId: string; layerName: string; locale: string; slideGroupId: string } | null) => void
+  scrollContainerRef: (el: HTMLDivElement | null) => void
+  onHorizontalScroll: (scrollLeft: number) => void
 }
 
 export function SlideGroupSection({
@@ -58,6 +60,8 @@ export function SlideGroupSection({
   getAsset,
   openUploadPicker,
   setEditingTextCell,
+  scrollContainerRef,
+  onHorizontalScroll,
 }: SlideGroupSectionProps) {
   const activeProgress = rows.filter((row) => isOverrideComplete(row, activeLocale, defaultLocale)).length
   const eligibleRows = rows.filter((r) => effectiveLocalizationMode(r.layer) !== 'skip')
@@ -68,7 +72,7 @@ export function SlideGroupSection({
 
   return (
     <section
-      className="overflow-hidden rounded-[24px] border border-white/8 bg-[#18181f]/78 shadow-[0_24px_80px_rgba(0,0,0,0.28)] backdrop-blur-xl"
+      className="overflow-hidden rounded-[24px] border border-white/8 bg-[#18181f] shadow-[0_24px_80px_rgba(0,0,0,0.28)]"
     >
       {/* Section header */}
       <button
@@ -94,14 +98,18 @@ export function SlideGroupSection({
       </button>
 
       {!collapsed && (
-        <div className="overflow-x-auto border-t border-white/8 px-4 py-4">
-          <div style={{ minWidth: 300 + locales.length * 260 }}>
+        <div
+          className="overflow-x-auto border-t border-white/8 pr-4 py-4"
+          ref={scrollContainerRef}
+          onScroll={(e) => onHorizontalScroll(e.currentTarget.scrollLeft)}
+        >
+          <div className="w-max">
             {/* Column headers */}
             <div
-              className="grid gap-3 px-2 pb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#78798b]"
+              className="grid gap-3 pr-6 pb-3 text-xs font-semibold uppercase tracking-[0.18em] text-[#78798b]"
               style={{ gridTemplateColumns }}
             >
-              <div className="px-3 py-2 sticky left-0 bg-[#18181f]/95">Layer</div>
+              <div className="py-2 pl-4 pr-3 sticky left-0 z-10 bg-[#18181f]">Layer</div>
               {locales.map((locale) => (
                 <div
                   key={locale}
@@ -118,7 +126,7 @@ export function SlideGroupSection({
             </div>
 
             {/* Rows */}
-            <div className="space-y-3 px-2">
+            <div className="pr-6">
               {rows.map((row) => {
                 const platformBadge = getPlatformBadge(row.layer.ownerFormat)
                 const mode = effectiveLocalizationMode(row.layer)
@@ -130,59 +138,58 @@ export function SlideGroupSection({
                     style={{ gridTemplateColumns }}
                   >
                     {/* Layer column — sticky left */}
-                    <div
-                      className="flex min-h-[80px] flex-col justify-between rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 sticky left-0"
-                      style={{ background: '#18181f' }}
-                    >
-                      <div className="flex items-start gap-3" style={{ paddingLeft: row.depth * 16 }}>
-                        <div
-                          className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#111118] text-sm font-semibold mt-0.5"
-                          style={{ color: row.layerType === 'text' ? '#c9c3ff' : '#d9d9e6' }}
-                        >
-                          {row.layerType === 'text' ? 'T' : row.layerType === 'phone' ? '📱' : '🖼'}
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <button
-                            type="button"
-                            onClick={() => onNavigateToLayer(row)}
-                            className="truncate font-medium text-[#d5d5df] text-sm hover:text-white transition text-left w-full"
-                            title="Go to layer in editor"
+                    <div className="sticky left-0 z-10 flex h-full flex-col pl-4" style={{ background: '#18181f' }}>
+                      <div className="flex min-h-[80px] flex-1 flex-col justify-between rounded-xl border border-white/8 bg-white/[0.02] px-4 py-3 mb-3">
+                        <div className="flex items-start gap-3" style={{ paddingLeft: row.depth * 16 }}>
+                          <div
+                            className="flex h-8 w-8 shrink-0 items-center justify-center rounded-lg border border-white/10 bg-[#111118] text-sm font-semibold mt-0.5"
+                            style={{ color: row.layerType === 'text' ? '#c9c3ff' : '#d9d9e6' }}
                           >
-                            {row.layerName}
-                          </button>
-                          <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
-                            <span className="text-[10px] uppercase tracking-[0.14em] text-[#6b6b7a]">{row.layerType}</span>
-                            {platformBadge && (
-                              <span
-                                className="text-[9px] px-1.5 py-0.5 rounded border font-medium"
-                                style={{
-                                  color: platformBadge.color,
-                                  borderColor: `${platformBadge.color}40`,
-                                  background: `${platformBadge.color}12`,
-                                }}
-                              >
-                                {platformBadge.label} only
-                              </span>
-                            )}
-                            {mode === 'skip' && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.08)] text-[#fca5a5]">
-                                skip
-                              </span>
-                            )}
-                            {mode === 'manual' && row.layerType === 'text' && (
-                              <span className="text-[9px] px-1.5 py-0.5 rounded border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] text-[#fbbf24]">
-                                manual
-                              </span>
-                            )}
+                            {row.layerType === 'text' ? 'T' : row.layerType === 'phone' ? '📱' : '🖼'}
+                          </div>
+                          <div className="min-w-0 flex-1">
+                            <button
+                              type="button"
+                              onClick={() => onNavigateToLayer(row)}
+                              className="truncate font-medium text-[#d5d5df] text-sm hover:text-white transition text-left w-full"
+                              title="Go to layer in editor"
+                            >
+                              {row.layerName}
+                            </button>
+                            <div className="flex items-center gap-1.5 mt-0.5 flex-wrap">
+                              <span className="text-[10px] uppercase tracking-[0.14em] text-[#6b6b7a]">{row.layerType}</span>
+                              {platformBadge && (
+                                <span
+                                  className="text-[9px] px-1.5 py-0.5 rounded border font-medium"
+                                  style={{
+                                    color: platformBadge.color,
+                                    borderColor: `${platformBadge.color}40`,
+                                    background: `${platformBadge.color}12`,
+                                  }}
+                                >
+                                  {platformBadge.label} only
+                                </span>
+                              )}
+                              {mode === 'skip' && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded border border-[rgba(239,68,68,0.3)] bg-[rgba(239,68,68,0.08)] text-[#fca5a5]">
+                                  skip
+                                </span>
+                              )}
+                              {mode === 'manual' && row.layerType === 'text' && (
+                                <span className="text-[9px] px-1.5 py-0.5 rounded border border-[rgba(245,158,11,0.3)] bg-[rgba(245,158,11,0.08)] text-[#fbbf24]">
+                                  manual
+                                </span>
+                              )}
+                            </div>
                           </div>
                         </div>
-                      </div>
 
-                      {/* Mode selector */}
-                      <ModeSelector
-                        layer={row.layer}
-                        onUpdate={(newMode) => onModeUpdate(row, newMode)}
-                      />
+                        {/* Mode selector */}
+                        <ModeSelector
+                          layer={row.layer}
+                          onUpdate={(newMode) => onModeUpdate(row, newMode)}
+                        />
+                      </div>
                     </div>
 
                     {/* Locale cells */}
@@ -202,7 +209,7 @@ export function SlideGroupSection({
                             formattingLostByAi={lostFormattingCells.has(cellKey(row.layerId, locale))}
                             toolbarSlot={toolbarSlotEl}
                             onEditingChange={(editing) =>
-                              setEditingTextCell(editing ? { layerName: row.layerName, locale } : null)
+                              setEditingTextCell(editing ? { layerId: row.layerId, layerName: row.layerName, locale, slideGroupId: row.slideGroupId } : null)
                             }
                             updateBaseLayer={updateLayerInSlideGroup}
                             setLocaleContent={setLocaleContent}

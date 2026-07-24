@@ -190,7 +190,7 @@ export const createLayerSlice = (
     if (!group) return
     const layer: PhoneLayer = {
       id: newId(),
-      name: 'iPhone 16 Pro',
+      name: 'Phone',
       type: 'phone',
       x: group.slideWidth / 2 - 195,
       y: group.slideHeight / 2 - 422,
