@@ -68,6 +68,27 @@ Full types: `src/types/index.ts`
 
 ---
 
+## Locale Layout Adjustment Model (3-Tier)
+
+Layout properties (`x`, `y`, `rotation`, `width`, `height`, `fontSize`, `scale`) resolve through 3 tiers, composed in order:
+
+```
+base (authored) -> auto-scaled per format -> formatOverrides[F] (absolute, pinned, per-format only)
+  -> + localeAdjust[locale][scope] (delta-valued, composes rather than wins)
+```
+
+| Tier | Storage | Semantics |
+|---|---|---|
+| Base | flat `BaseLayer` fields | authored value, auto-scaled per format |
+| Format | `formatOverrides[F]` | absolute, pinned, applies only to that exact format |
+| Locale | `localeAdjust[locale][scope]` | delta-valued (`LayoutDelta`: additive `dx/dy/dRotation`, multiplicative `mWidth/mHeight/mFontSize/mScale`); `scope` is either `BASE_CANVAS_FORMAT` (a sentinel — composes at every format, scaled by that format's factor `f`) or a specific `CanvasFormatId` (composes only at that exact format, unscaled) |
+
+One-line mental model: **the format axis pins, the locale axis adjusts.**
+
+`localeAdjust` replaced the older `localeBaseDelta`/`localeLayoutOverrides` fields (a 4-tier "most-specific-wins" model). Read path: `resolveProjectView` in `src/utils/canvasFormats.ts`. Write path: `patchLayerForLocaleAdjust` in `src/store/helpers.ts`, wired into `src/store/slices/layerSlice.ts`/`groupSlice.ts`. Reference test for exact composition semantics: `src/store/localeLayoutInvariants.test.ts`.
+
+---
+
 ## How to Add a New Layer Type
 
 1. **`src/types/index.ts`**
@@ -192,6 +213,8 @@ CLI (`cli/export.mjs`) injects `window.__EXPORT_CONFIG__` before page navigation
 - **`screenshotFit` cover/contain/fill math**: The clip rect calculation in `PhoneNode.tsx` handles aspect ratio correctly for all three modes. Do not refactor the geometry unless you are explicitly fixing and verifying that behavior.
 - **Pano gap gated on compensate**: `StageCanvas.tsx` uses `effectiveCompensationPx = group && panoCompensate ? panoCompensationPx : 0` — the gap is applied to canvas geometry only while compensation is active. Do NOT make the gap always visible unless the product decision changes again.
 - **Capture mutex is mandatory**: Any code that mutates `activeSlideGroupId`, `activeCanvasFormat`, `activeLocale`, or `panoRenderOverride` and then captures the stage MUST use `acquireCaptureLock()` from `stageCapture.ts`. Removing it causes race conditions between thumbnail generation and export.
+- **`localeAdjust`'s base-format guard is not redundant**: `applyLocaleAdjust`/`applyLocaleAdjustToGroup` in `canvasFormats.ts` explicitly skip the format-scoped `localeAdjust[locale][format]` lookup when `format === BASE_CANVAS_FORMAT`. At the base view, `localeAdjust[locale][BASE_CANVAS_FORMAT]` (base-scoped) and `localeAdjust[locale][format]` (format-scoped) are the *same map cell* — without the guard, the same delta gets applied twice. This exact double-apply shipped once during the locale-adjust rework and was caught by `localeLayoutInvariants.test.ts`. Do not remove the guard as "dead code."
+- **`LegacyLocaleLayoutFields` must not be deleted**: `migrateProjectToLocaleAdjust` in `helpers.ts` reads old projects' `localeLayoutOverrides`/`localeBaseDelta` fields through the internal-only `LegacyLocaleLayoutFields` type (via `getLegacyLocaleLayoutFields()`), even though those fields were removed from `BaseLayer` itself. This is the only way old project files on disk still migrate correctly. Deleting it as "dead code referencing deleted fields" silently destroys every legacy project's locale layout on load.
 
 ---
 

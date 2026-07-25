@@ -1,33 +1,62 @@
 /**
- * P0 safety net for the 4-tier locale layout system (base -> formatOverrides[F]
- * -> localeBaseDelta[locale] -> localeLayoutOverrides[locale][F]).
+ * P0 safety net for the current 3-tier locale layout system: base (authored)
+ * -> auto-scaled per format -> formatOverrides[F] (absolute, pinned, per-format
+ * only) -> + localeAdjust[locale][scope] (delta-valued, composes rather than
+ * wins; scope is either BASE_CANVAS_FORMAT, which composes at every format —
+ * additive dx/dy scaled by that format's factor `f`, dRotation and the
+ * multiplicative keys applied unscaled — or a specific CanvasFormatId, which
+ * composes only at that exact format, always unscaled). One-line mental
+ * model: the format axis pins, the locale axis adjusts. See AGENTS.md's
+ * "Locale Layout Adjustment Model" section for the reference table.
  *
- * Everything in this file is written and read through the PUBLIC API only:
- * store actions (updateLayer / updateChildLayer / setActiveLocale /
- * setActiveCanvasFormat / updateSettings / importProject / ...) for writes,
- * and resolveProjectView() for reads. No internal field name (localeBaseDelta,
- * localeLayoutOverrides, formatOverrides) is read or asserted against
- * directly anywhere below — this suite must survive a future rewrite of the
- * internal data model UNCHANGED (except the two BEHAVIOR assertions called
- * out explicitly at the bottom, which are expected to flip).
+ * This file predates the 3-tier model — it was written as the P0 golden-master
+ * net for the rework FROM the older 4-tier system (base -> formatOverrides[F]
+ * -> localeBaseDelta[locale] -> localeLayoutOverrides[locale][F], with
+ * most-specific-cell-wins precedence) TO the current one. That migration
+ * (P0-P4) is complete and shipped; `localeAdjust` is the sole storage for
+ * per-locale layout adjustments now — the legacy `localeBaseDelta`/
+ * `localeLayoutOverrides` fields were deleted from `BaseLayer` (P4). They
+ * survive only as an internal-only `LegacyLocaleLayoutFields` read used by
+ * `migrateProjectToLocaleAdjust` to still fold old project files on disk
+ * (Part 1b below pins exactly that path).
+ *
+ * Everything in Parts 1, 1b, and 2 below is written and read through the
+ * PUBLIC API only: store actions (updateLayer / updateChildLayer /
+ * setActiveLocale / setActiveCanvasFormat / updateSettings / importProject /
+ * ...) for writes, and resolveProjectView() for reads. No internal field
+ * name (localeAdjust, formatOverrides) is read or asserted against directly
+ * anywhere in those parts — they must survive a future rewrite of the
+ * internal data model unchanged. The migration-gate describes at the end of
+ * this file are the deliberate exception: they hand-build legacy-shaped
+ * fixtures and assert `localeAdjust` internals directly, because they exist
+ * specifically to test the migration itself.
  *
  * Part 1: a golden-master render-identity corpus, built live through the
- * store. Reused unchanged in a later phase to prove an internal rewrite
- * doesn't shift a single resolved value.
+ * store. Reused unchanged across phases to prove an internal rewrite doesn't
+ * shift a single resolved value.
  *
- * Part 1b: a FIXED legacy-JSON migration snapshot. The live corpus above is
- * built via store actions every test run and never passes through
- * migrateProject (only importProject/hydration paths run it) — being
- * live/self-consistent means a symmetric write-bug + read-bug pair could
- * cancel out and stay invisible. This snapshot decouples the frozen input
- * from whatever the live write path does at any given time.
+ * Part 1b: a FIXED legacy-JSON migration snapshot (`legacy-4tier-project.json`,
+ * frozen 4-tier-shaped data captured before the legacy fields were deleted).
+ * The live corpus above is built via store actions every test run and never
+ * passes through migrateProject (only importProject/hydration paths run it)
+ * — being live/self-consistent means a symmetric write-bug + read-bug pair
+ * could cancel out and stay invisible. This snapshot decouples the frozen
+ * input from whatever the live write path does at any given time, and is
+ * the permanent proof that old project files still migrate correctly now
+ * that the legacy fields are gone from `BaseLayer`'s type.
  *
  * Part 2: a per-authoring-context write/read mirror test — one case per
  * (locale, format) authoring context, proving a write in one context cannot
  * leak into another. This is the invariant class the shipped OverrideDot
- * wiring bug violated. Split into an INVARIANT describe (must never change)
- * and a BEHAVIOR describe (two assertions that currently encode a stale-pin
- * defect and are expected to flip once the unification ships).
+ * wiring bug violated. Originally split into an INVARIANT describe (must
+ * never change) and a separate BEHAVIOR describe holding two assertions
+ * that encoded a stale-pin defect in the old 4-tier model and were expected
+ * to flip once the unification shipped. That flip already happened (P3):
+ * both assertions were moved out of the old BEHAVIOR describe into their
+ * permanent home as cases (b) and (c) inside the "locale layout write
+ * isolation across the 4 authoring contexts" describe below (Part 2), now
+ * inside the top-level INVARIANT describe like everything else in this
+ * file — there is no more separate BEHAVIOR describe.
  */
 import { readFileSync } from 'node:fs'
 import { dirname, join } from 'node:path'
@@ -295,7 +324,7 @@ describe('INVARIANT — must never change through the rework', () => {
       expect((resolvedLayer(project, 'de', ANDROID_FORMAT, formatOnlyId) as TextLayer).fontSize).toBe(60)
     })
 
-    it('localeBaseDelta[de] alone shifts base and cascades scaled into android', () => {
+    it('base-scoped locale adjustment alone (de) shifts base and cascades scaled into android', () => {
       expect((resolvedLayer(project, 'en', BASE_FORMAT, baseDeltaOnlyId) as TextLayer).x).toBe(100)
       expect((resolvedLayer(project, 'en', ANDROID_FORMAT, baseDeltaOnlyId) as TextLayer).x)
         .toBeCloseTo(540 + (100 - 660) * s)
@@ -304,7 +333,7 @@ describe('INVARIANT — must never change through the rework', () => {
         .toBeCloseTo(540 + (100 - 660) * s + 40 * s)
     })
 
-    it('localeLayoutOverrides[de][android] alone only applies for that exact (locale, format) cell', () => {
+    it('format-scoped locale adjustment alone (de, android) only applies for that exact (locale, format) cell', () => {
       expect((resolvedLayer(project, 'en', BASE_FORMAT, formatScopedOnlyId) as TextLayer).x).toBe(100)
       expect((resolvedLayer(project, 'en', ANDROID_FORMAT, formatScopedOnlyId) as TextLayer).x)
         .toBeCloseTo(540 + (100 - 660) * s)
@@ -375,8 +404,9 @@ describe('INVARIANT — must never change through the rework', () => {
 
       // Multiplicative deltas multiply the already-resolved (format-scaled)
       // value directly by the stored ratio — they do NOT get scaled by `f`
-      // themselves (only additive x/y/rotation deltas do). See
-      // applyLocaleBaseDelta in canvasFormats.ts.
+      // themselves. Only additive dx/dy scale by `f`; dRotation applies
+      // unscaled too (rotation is not a distance). See applyLayoutDelta in
+      // canvasFormats.ts.
       expect(deBase).toMatchObject({ y: 250, width: 1500, fontSize: 150 })
       expect(deAndroid.y).toBeCloseTo(960 + (200 - 1434) * s + 50 * s) // dy IS scaled by f
       expect(deAndroid.width).toBeCloseTo(1000 * s * 1.5)
@@ -602,8 +632,11 @@ describe('INVARIANT — must never change through the rework', () => {
 
   // ───────────────────────────────────────────────────────────────────────
   // Part 2: per-authoring-context write/read mirror (cross-tier isolation)
-  // Only contexts (a) and (d) in full, plus the non-stale-pin portions of
-  // (b) and (c). The stale-pin portions live in the BEHAVIOR describe below.
+  // Contexts (a) and (d) assert only invariant, never-changes behavior.
+  // Contexts (b) and (c) also assert one value each (the stale-pin ->
+  // composes-and-tracks flip, see the BEHAVIOR->INVARIANT note in the file
+  // header) that was originally quarantined in a separate BEHAVIOR describe
+  // pre-P3 and now lives here permanently, post-flip.
   // ───────────────────────────────────────────────────────────────────────
   describe('locale layout write isolation across the 4 authoring contexts', () => {
     beforeEach(() => {
