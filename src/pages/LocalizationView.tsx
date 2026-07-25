@@ -117,8 +117,50 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
   // Cells where the last AI translation could not preserve rich-text formatting
   const [lostFormattingCells, setLostFormattingCells] = useState<Set<CellKey>>(new Set())
   // Active text-cell editing session → drives the floating styling toolbar
-  const [editingTextCell, setEditingTextCell] = useState<{ layerName: string; locale: string } | null>(null)
+  const [editingTextCell, setEditingTextCell] = useState<{ layerId: string; layerName: string; locale: string; slideGroupId: string } | null>(null)
   const [toolbarSlotEl, setToolbarSlotEl] = useState<HTMLElement | null>(null)
+
+  // ─ Synced horizontal scroll across slide-group sections
+  const scrollContainersRef = useRef<Map<string, HTMLDivElement>>(new Map())
+  const scrollRefCallbacksRef = useRef<Map<string, (el: HTMLDivElement | null) => void>>(new Map())
+  const isSyncingScrollRef = useRef(false)
+
+  const registerScrollContainer = useCallback((groupId: string) => {
+    let cb = scrollRefCallbacksRef.current.get(groupId)
+    if (!cb) {
+      cb = (el: HTMLDivElement | null) => {
+        if (el) scrollContainersRef.current.set(groupId, el)
+        else scrollContainersRef.current.delete(groupId)
+      }
+      scrollRefCallbacksRef.current.set(groupId, cb)
+    }
+    return cb
+  }, [])
+
+  const handleHorizontalScroll = useCallback((sourceGroupId: string, scrollLeft: number) => {
+    if (isSyncingScrollRef.current) return
+    isSyncingScrollRef.current = true
+    for (const [groupId, el] of scrollContainersRef.current) {
+      if (groupId === sourceGroupId) continue
+      if (el.scrollLeft !== scrollLeft) el.scrollLeft = scrollLeft
+    }
+    isSyncingScrollRef.current = false
+  }, [])
+
+  // Bring the actively-edited text cell fully into view once the docked
+  // "Text Styling" panel mounts. Runs after React commits+paints the parent
+  // re-render that adds the aside (same state update as `editingTextCell`),
+  // so geometry is reliable — unlike the child-owned rAF guess it replaces.
+  useEffect(() => {
+    if (!editingTextCell) return
+    const raf = requestAnimationFrame(() => {
+      const cellEl = document.querySelector<HTMLElement>(
+        `[data-cell-key="${cellKey(editingTextCell.layerId, editingTextCell.locale)}"]`,
+      )
+      cellEl?.scrollIntoView({ behavior: 'smooth', block: 'nearest', inline: 'nearest' })
+    })
+    return () => cancelAnimationFrame(raf)
+  }, [editingTextCell])
 
   const markFormattingLost = useCallback((key: CellKey, lost: boolean) => {
     setLostFormattingCells((prev) => {
@@ -536,6 +578,8 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
                   getAsset={getAsset}
                   openUploadPicker={openUploadPicker}
                   setEditingTextCell={setEditingTextCell}
+                  scrollContainerRef={registerScrollContainer(slideGroup.id)}
+                  onHorizontalScroll={(scrollLeft) => handleHorizontalScroll(slideGroup.id, scrollLeft)}
                 />
               ))}
 

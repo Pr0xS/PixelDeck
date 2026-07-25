@@ -122,6 +122,25 @@ export interface LocaleLayerPatch {
 }
 
 /**
+ * Per-locale layout adjustment authored in base-canvas coordinates.
+ * Additive values are projected through the active format scale at render time;
+ * multiplicative values apply to the already-resolved format value.
+ *
+ * Used by both the legacy `localeBaseDelta` tier and the new `localeAdjust`
+ * 3-tier model (scoped per format via a `Partial<Record<CanvasFormatId, ...>>`
+ * wrapper — see `BaseLayer.localeAdjust`).
+ */
+export interface LayoutDelta {
+  dx?: number;
+  dy?: number;
+  dRotation?: number;
+  mWidth?: number;
+  mHeight?: number;
+  mFontSize?: number;
+  mScale?: number;
+}
+
+/**
  * The localizable content for ONE locale. Identical shape for every locale,
  * including the default locale — this uniformity is the point (v0.6.0
  * symmetric locale model). Structurally the same payload as LocaleLayerPatch
@@ -196,14 +215,19 @@ export interface BaseLayer {
   /** Optional per-format visibility. Undefined = follows `visible`. */
   formatVisibility?: Partial<Record<CanvasFormatId, boolean>>;
   /**
-   * v0.6.0 per-locale, per-format LAYOUT overrides. Stored in the TARGET
-   * format's coordinate space — identical semantics to formatOverrides values,
-   * so render spreads them directly with no scaling. Sparse: a cell exists only
-   * when edited. NEVER the default locale (that is the base) and NEVER the base
-   * format. Layout keys only (x/y/width/height/fontSize/scale/rotation); never
-   * content, style, or model.
+   * The 3-tier `localeAdjust` unification (P1-P4): a per-locale, per-scope
+   * DELTA (never absolute) layout adjustment. Scope is a `CanvasFormatId`,
+   * where `BASE_CANVAS_FORMAT` ('base', see `canvasFormats.ts`) means "applies
+   * to every format" and any other format id means "applies only to that
+   * format, in format-space (no scale factor)". Both cells COMPOSE (add on
+   * top of each other and of `formatOverrides[F]`) — there is no shadowing/
+   * winning between them, unlike the retired legacy `localeLayoutOverrides`
+   * tier. Sole storage for per-locale layout adjustments since P4 — the
+   * legacy `localeLayoutOverrides`/`localeBaseDelta` fields were deleted from
+   * this type (see `LegacyLocaleLayoutFields` below, kept solely so the
+   * migration can still read them off old project files on disk).
    */
-  localeLayoutOverrides?: Partial<Record<string, Partial<Record<CanvasFormatId, FormatLayerPatch>>>>;
+  localeAdjust?: Partial<Record<string, Partial<Record<CanvasFormatId, LayoutDelta>>>>;
   /**
    * If set, this layer belongs exclusively to one format and is invisible in all others.
    * Set automatically when a layer is added while viewing a non-base format.
@@ -216,6 +240,26 @@ export interface BaseLayer {
    * and travels with copy/paste + manifest.
    */
   localizationMode?: LocalizationMode;
+}
+
+/**
+ * P4 of the `localeAdjust` unification: `localeLayoutOverrides` and
+ * `localeBaseDelta` were deleted from `BaseLayer` — new projects must never
+ * write them again. Old project files saved on disk (and the frozen
+ * `legacy-4tier-project.json` migration fixture) can still contain these
+ * keys in their raw, pre-migration JSON, so `migrateProjectToLocaleAdjust`
+ * (in `store/helpers.ts`) still needs to read them off the RAW incoming
+ * layer. This type exists SOLELY for that one-time read — via an explicit
+ * `(layer as unknown as LegacyLocaleLayoutFields)` cast on pre-migration raw
+ * data, never a blanket `any` cast on the whole layer — plus for tests that
+ * hand-build legacy-shaped fixtures to exercise the migration directly. Do
+ * not reintroduce these fields on `BaseLayer` itself.
+ */
+export interface LegacyLocaleLayoutFields {
+  /** @deprecated Legacy pre-P4 field. Read-only, migration input. */
+  localeLayoutOverrides?: Partial<Record<string, Partial<Record<CanvasFormatId, FormatLayerPatch>>>>;
+  /** @deprecated Legacy pre-P4 field. Read-only, migration input. */
+  localeBaseDelta?: Partial<Record<string, LayoutDelta>>;
 }
 
 export type LayerType = 'background' | 'phone' | 'text' | 'image' | 'shape' | 'emoji' | 'brand' | 'group';

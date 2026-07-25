@@ -67,7 +67,13 @@ describe('locale/format layout store integration', () => {
     ).slideGroups[0].layers.find((candidate) => candidate.id === layer.id) as TextLayer
     state.updateLayer(layer.id, { x: resolvedLayer.x + 1 })
 
-    expect(getTextLayer().localeLayoutOverrides?.de?.[ANDROID_FORMAT]?.x).toBe(2021)
+    expect(getTextLayer().localeAdjust?.de?.[ANDROID_FORMAT]?.dx).toBeDefined()
+    const reResolved = resolveProjectView(
+      useEditorStore.getState().project,
+      'de',
+      ANDROID_FORMAT,
+    ).slideGroups[0].layers.find((candidate) => candidate.id === layer.id) as TextLayer
+    expect(reResolved.x).toBe(2021)
   })
 
   it('nudges a group child in the same resolved coordinate space used by override routing', () => {
@@ -95,7 +101,7 @@ describe('locale/format layout store integration', () => {
     const storedChild = storedGroup.children.find((child) => child.id === textId)!
     const expectedX = resolvedChild.x + 1
     expect(storedChild.x).toBe(baseChildX)
-    expect(storedChild.localeLayoutOverrides?.de?.[ANDROID_FORMAT]?.x).toBe(expectedX)
+    expect(storedChild.localeAdjust?.de?.[ANDROID_FORMAT]?.dx).toBeDefined()
 
     const reResolvedGroup = resolveProjectView(
       useEditorStore.getState().project,
@@ -115,7 +121,7 @@ describe('locale/format layout store integration', () => {
     useEditorStore.getState().updateLayer(layer.id, { x: 2020 })
 
     let updated = getTextLayer()
-    expect(updated.localeLayoutOverrides?.de?.[ANDROID_FORMAT]?.x).toBe(2020)
+    expect(updated.localeAdjust?.de?.[ANDROID_FORMAT]?.dx).toBeDefined()
     expect(updated.formatOverrides).toBeUndefined()
     expect(updated.x).toBe(baseX)
 
@@ -132,13 +138,23 @@ describe('locale/format layout store integration', () => {
       (resolveProjectView(project, locale, format).slideGroups[0].layers
         .find((candidate) => candidate.id === layer.id) as TextLayer).x
 
-    expect(resolvedX('de', ANDROID_FORMAT)).toBe(2020)
+    // P3 (read-path flip): resolveProjectView now reads the delta-valued
+    // `localeAdjust` tier instead of the legacy absolute
+    // `localeLayoutOverrides` cell. Under the legacy absolute model this
+    // pinned cell would stay frozen at 2020 even after the anchor moved
+    // (640, written below) — that stale-pin defect is exactly what this
+    // rework fixes, so the resolved value now composes/tracks instead. Same
+    // BEHAVIOR-flip class as localeLayoutInvariants.test.ts's (b)/(c) cases;
+    // value derived from the model: dx = 2020 - R (R = the pre-write scaled
+    // base x at android for this test's default project canvas), then
+    // re-anchored onto the new formatOverrides[android].x = 640.
+    expect(resolvedX('de', ANDROID_FORMAT)).toBeCloseTo(2494.248927038627)
     expect(resolvedX('de', BASE_FORMAT)).toBe(baseX)
     expect(resolvedX('en', ANDROID_FORMAT)).toBe(640)
 
     useEditorStore.getState().setActiveLocale('de')
-    useEditorStore.getState().clearLayerLocaleFormatOverride(layer.id)
-    expect(getTextLayer().localeLayoutOverrides).toBeUndefined()
+    useEditorStore.getState().clearLayerLocaleAdjust(layer.id)
+    expect(getTextLayer().localeAdjust).toBeUndefined()
   })
 
   it('keeps locale/format pano overrides in slide-2 coordinates without scaling', () => {
@@ -183,7 +199,7 @@ describe('locale/format layout store integration', () => {
     const storedGroup = getActiveGroup().layers.find((layer) => layer.id === group.id) as GroupLayer
     const storedChild = storedGroup.children.find((child) => child.id === textId)!
     expect(storedChild.x).toBe(originalChildX)
-    expect(storedChild.localeLayoutOverrides?.de?.[ANDROID_FORMAT]?.x).toBe(777)
+    expect(storedChild.localeAdjust?.de?.[ANDROID_FORMAT]?.dx).toBeDefined()
 
     const resolved = resolveProjectView(
       useEditorStore.getState().project,

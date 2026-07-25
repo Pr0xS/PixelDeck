@@ -9,7 +9,8 @@ import { RichTextToolbar } from '@/components/text/RichTextToolbar'
 import { resolveFill } from '@/utils/brandColors'
 import {
   applyCanvasFormatToGroup,
-  applyLocaleFormatLayoutToGroup,
+  applyLocaleAdjustToGroup,
+  getFormatScaleFactor,
   getProjectBaseFormat,
 } from '@/utils/canvasFormats'
 import { DEFAULT_TEXT_WIDTH } from '@/utils/textRendering'
@@ -70,12 +71,12 @@ export function CanvasTextEditor({ stageRef }: CanvasTextEditorProps) {
   const rawGroup = slideGroups.find((g) => g.id === activeSlideGroupId)
   const baseFormat = getProjectBaseFormat({ settings })
   const group = rawGroup
-    ? applyLocaleFormatLayoutToGroup(
+    ? applyLocaleAdjustToGroup(
         applyCanvasFormatToGroup(rawGroup, activeCanvasFormat, baseFormat, settings.customFormats),
         activeLocale,
         activeCanvasFormat,
         settings.defaultLocale,
-        baseFormat,
+        getFormatScaleFactor(rawGroup, activeCanvasFormat, baseFormat, settings.customFormats),
       )
     : undefined
   const found = editingTextId && group ? findTextLayer(group.layers, editingTextId) : null

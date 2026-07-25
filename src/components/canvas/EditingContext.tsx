@@ -6,7 +6,7 @@ import {
   BASE_CANVAS_FORMAT,
   CANVAS_FORMAT_PRESETS,
   countFormatAdjustments,
-  countLocaleFormatAdjustments,
+  countLocaleAdjustments,
   getFormatLabel,
   getProjectActiveFormats,
   getProjectBaseFormat,
@@ -240,9 +240,10 @@ export function EditingContextBar() {
               </button>
               {locales.filter((locale) => locale !== defaultLocale).map((locale) => {
                 const isActive = activeLocale === locale
-                const count = rawGroup && activeCanvasFormat !== baseFormat
-                  ? countLocaleFormatAdjustments(rawGroup, locale, activeCanvasFormat, defaultLocale, baseFormat)
-                  : 0
+                // `activeCanvasFormat` doubles as the `localeAdjust` scope: at
+                // the Base tab it already equals BASE_CANVAS_FORMAT, so one
+                // call covers both the base-scoped and format-scoped count.
+                const count = rawGroup ? countLocaleAdjustments(rawGroup, locale, activeCanvasFormat) : 0
                 const label = getLanguageName(locale)
                 return (
                   <button
@@ -278,7 +279,7 @@ export function EditingContextAlert() {
     shareActiveFormatOwnedLayers,
     resetActiveFormatVisibility,
     promoteActiveFormatLayoutToShared,
-    resetActiveLocaleFormatLayout,
+    resetActiveLocaleAdjust,
   } = useEditorStore(
     useShallow((state) => ({
       project: state.project,
@@ -291,7 +292,7 @@ export function EditingContextAlert() {
       shareActiveFormatOwnedLayers: state.shareActiveFormatOwnedLayers,
       resetActiveFormatVisibility: state.resetActiveFormatVisibility,
       promoteActiveFormatLayoutToShared: state.promoteActiveFormatLayoutToShared,
-      resetActiveLocaleFormatLayout: state.resetActiveLocaleFormatLayout,
+      resetActiveLocaleAdjust: state.resetActiveLocaleAdjust,
     })),
   )
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -310,8 +311,10 @@ export function EditingContextAlert() {
   const formatCount = activeGroup && isFormatScoped
     ? countFormatAdjustments(activeGroup, activeCanvasFormat, baseFormat)
     : 0
-  const localeCount = activeGroup && isFormatScoped && isLocaleScoped
-    ? countLocaleFormatAdjustments(activeGroup, activeLocale, activeCanvasFormat, defaultLocale, baseFormat)
+  // `activeCanvasFormat` doubles as the `localeAdjust` scope: at the Base tab
+  // it already equals BASE_CANVAS_FORMAT, so one call covers both scopes.
+  const localeCount = activeGroup && isLocaleScoped
+    ? countLocaleAdjustments(activeGroup, activeLocale, activeCanvasFormat)
     : 0
 
   const runFormatAction = (action: (format: CanvasFormatId) => void) => {
@@ -323,8 +326,8 @@ export function EditingContextAlert() {
     runFormatAction(promoteActiveFormatLayoutToShared)
   }
 
-  const handleLocaleReset = () => {
-    resetActiveLocaleFormatLayout()
+  const handleLocaleAdjustReset = () => {
+    resetActiveLocaleAdjust()
     setActionsOpen(false)
   }
 
@@ -351,7 +354,7 @@ export function EditingContextAlert() {
               ? 'Position & size scoped to this pairing · New layers stay format-only · Content & style shared'
               : isFormatScoped
                 ? 'Layout and new layers scoped to this format · Text & colors shared'
-                : `Layout edits do not apply in Base for ${localeLabel} · Switch to a platform tab to adjust position & size · Content & style remain shared`}
+                : `Layout changes apply only to ${localeLabel} · Content & style remain shared`}
           </p>
         </div>
         <div className="flex shrink-0 items-center gap-1.5">
@@ -365,7 +368,7 @@ export function EditingContextAlert() {
           >
             ↩ Base + Default
           </button>
-          {isFormatScoped && (
+          {(isFormatScoped || isLocaleScoped) && (
             <div className="relative" ref={actionsRef}>
               <button
                 onClick={() => setActionsOpen((open) => !open)}
@@ -375,38 +378,42 @@ export function EditingContextAlert() {
               </button>
               {actionsOpen && (
                 <div className="absolute right-0 top-full z-50 mt-1.5 w-72 overflow-hidden rounded-lg border border-[rgba(255,255,255,0.12)] bg-[#1c1c26] shadow-2xl">
-                  <div className="border-b border-[rgba(255,255,255,0.08)] px-3 py-2">
-                    <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[#fbbf24]">{formatLabel} format actions</p>
-                    <p className="mt-0.5 text-[10px] text-[#6b6b7a]">{formatCount} format adjustment{formatCount !== 1 ? 's' : ''} on this slide</p>
-                  </div>
-                  <button className={actionItemClass} onClick={() => runFormatAction(resetActiveFormatLayout)}>
-                    Reset format layout
-                    <span className="mt-0.5 block text-[10px] text-[#6b6b7a]">Remove all layout/model overrides for this format.</span>
-                  </button>
-                  <button className={actionItemClass} onClick={() => runFormatAction(shareActiveFormatOwnedLayers)}>
-                    Make format layers shared
-                    <span className="mt-0.5 block text-[10px] text-[#6b6b7a]">Convert layers created only in this format into shared layers.</span>
-                  </button>
-                  <button className={actionItemClass} onClick={() => runFormatAction(resetActiveFormatVisibility)}>
-                    Reset format visibility
-                    <span className="mt-0.5 block text-[10px] text-[#6b6b7a]">Clear hide/show decisions for this format.</span>
-                  </button>
-                  <div className="h-px bg-[rgba(255,255,255,0.08)]" />
-                  <button className={actionItemClass} onClick={handlePromoteLayout}>
-                    Use format layout as shared…
-                    <span className="mt-0.5 block text-[10px] text-[#f59e0b]">Promotes this format layout into Base. Affects other formats.</span>
-                  </button>
+                  {isFormatScoped && <>
+                    <div className="border-b border-[rgba(255,255,255,0.08)] px-3 py-2">
+                      <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[#fbbf24]">{formatLabel} format actions</p>
+                      <p className="mt-0.5 text-[10px] text-[#6b6b7a]">{formatCount} format adjustment{formatCount !== 1 ? 's' : ''} on this slide</p>
+                    </div>
+                    <button className={actionItemClass} onClick={() => runFormatAction(resetActiveFormatLayout)}>
+                      Reset format layout
+                      <span className="mt-0.5 block text-[10px] text-[#6b6b7a]">Remove all layout/model overrides for this format.</span>
+                    </button>
+                    <button className={actionItemClass} onClick={() => runFormatAction(shareActiveFormatOwnedLayers)}>
+                      Make format layers shared
+                      <span className="mt-0.5 block text-[10px] text-[#6b6b7a]">Convert layers created only in this format into shared layers.</span>
+                    </button>
+                    <button className={actionItemClass} onClick={() => runFormatAction(resetActiveFormatVisibility)}>
+                      Reset format visibility
+                      <span className="mt-0.5 block text-[10px] text-[#6b6b7a]">Clear hide/show decisions for this format.</span>
+                    </button>
+                    <div className="h-px bg-[rgba(255,255,255,0.08)]" />
+                    <button className={actionItemClass} onClick={handlePromoteLayout}>
+                      Use format layout as shared…
+                      <span className="mt-0.5 block text-[10px] text-[#f59e0b]">Promotes this format layout into Base. Affects other formats.</span>
+                    </button>
+                  </>}
                   {isLocaleScoped && (
                     <section className="mt-1 border-t border-[rgba(255,255,255,0.12)]" aria-label={`${formatLabel} and ${localeLabel} actions`}>
                       <div className="border-b border-[rgba(255,255,255,0.08)] px-3 py-2">
-                        <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[#22d3c5]">{formatLabel} × {localeLabel}</p>
+                        <p className="text-[9px] font-semibold uppercase tracking-[0.15em] text-[#22d3c5]">{isFormatScoped ? `${formatLabel} × ${localeLabel}` : `${localeLabel} base layout`}</p>
                         <p className="mt-0.5 text-[10px] text-[#6b6b7a]">
-                          {localeCount} position and size adjustment{localeCount !== 1 ? 's' : ''} for this pairing
+                          {localeCount} position and size adjustment{localeCount !== 1 ? 's' : ''} for {isFormatScoped ? 'this pairing' : 'this locale'}
                         </p>
                       </div>
-                      <button className={actionItemClass} onClick={handleLocaleReset}>
-                        Reset pairing layout
-                        <span className="mt-0.5 block text-[10px] text-[#22d3c5]">Remove all position and size adjustments for this pairing.</span>
+                      <button className={actionItemClass} onClick={handleLocaleAdjustReset}>
+                        {isFormatScoped ? 'Reset pairing layout' : 'Reset locale base layout'}
+                        <span className="mt-0.5 block text-[10px] text-[#22d3c5]">
+                          {isFormatScoped ? 'Remove all position and size adjustments for this pairing.' : 'Remove all base-layout adjustments for this locale.'}
+                        </span>
                       </button>
                     </section>
                   )}

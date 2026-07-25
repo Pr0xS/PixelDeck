@@ -40,7 +40,7 @@ export function ImageOverrideCell({
   if (isDefaultLocale) {
     return (
       <div
-        className="min-h-[80px] rounded-xl border px-3 py-3"
+        className="min-h-[80px] h-full rounded-xl border px-3 py-3 mb-3"
         style={{
           borderColor: isActiveColumn ? 'rgba(124,110,246,0.45)' : 'rgba(255,255,255,0.08)',
           background: isActiveColumn ? 'rgba(124,110,246,0.08)' : 'rgba(255,255,255,0.02)',
@@ -77,7 +77,7 @@ export function ImageOverrideCell({
 
   if (isSkipped) {
     return (
-      <div className="min-h-[80px] rounded-xl border border-dashed border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.04)] px-4 py-3 flex items-center justify-center">
+      <div className="min-h-[80px] rounded-xl border border-dashed border-[rgba(239,68,68,0.2)] bg-[rgba(239,68,68,0.04)] px-4 py-3 flex items-center justify-center mb-3">
         <span className="text-xs text-[#f87171]">— skipped —</span>
       </div>
     )
@@ -85,7 +85,7 @@ export function ImageOverrideCell({
 
   return (
     <div
-      className="min-h-[128px] rounded-xl border px-3 py-3"
+      className="min-h-[128px] h-full rounded-xl border px-3 py-3 mb-3"
       style={{
         borderColor: previewSrc
           ? isActiveColumn ? '#7c6ef6' : 'rgba(124,110,246,0.45)'

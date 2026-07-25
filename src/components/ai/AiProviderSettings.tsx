@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { testAiConnection } from '@/ai/features/testConnection'
 import { listModels, searchModels } from '@/ai/models'
 import { AI_PROVIDERS, getDefaultModel } from '@/ai/providers'
 import { useApiKeysStore } from '@/store/apiKeys'
@@ -32,6 +33,10 @@ export function AiProviderSettings() {
   const [modelError, setModelError] = useState<string | null>(null)
   const [modelResultSignature, setModelResultSignature] = useState('')
   const [modelLoadNonce, setModelLoadNonce] = useState(0)
+  const [testState, setTestState] = useState<'idle' | 'testing' | 'success' | 'error'>('idle')
+  const [testResult, setTestResult] = useState<string | null>(null)
+  const [testError, setTestError] = useState<string | null>(null)
+  const [testSignature, setTestSignature] = useState('')
 
   function keyValue(p: AiProvider) {
     if (p === 'openai') return openaiKey
@@ -69,6 +74,29 @@ export function AiProviderSettings() {
       : activeModelError
         ? 'Connection failed'
         : `${visibleModels.length} from provider`
+  const isCurrentTestResult = hasActiveKey && testSignature === modelSignature
+  const visibleTestState = isCurrentTestResult ? testState : 'idle'
+
+  async function runConnectionTest() {
+    const auth = {
+      provider,
+      apiKey: activeKey,
+      model: activeModel,
+      baseUrl: provider === 'custom' ? customBaseUrl.trim() : undefined,
+    }
+    setTestState('testing')
+    setTestError(null)
+    setTestResult(null)
+    setTestSignature(modelSignature)
+    try {
+      const translated = await testAiConnection(auth)
+      setTestResult(translated)
+      setTestState('success')
+    } catch (error) {
+      setTestError(error instanceof Error ? error.message : 'Unknown error.')
+      setTestState('error')
+    }
+  }
 
   useEffect(() => {
     let cancelled = false
@@ -159,6 +187,37 @@ export function AiProviderSettings() {
               {activeProvider.keyUrl.replace(/^https?:\/\//, '')}
             </a>
           </p>
+        )}
+      </div>
+
+      <div className="mb-4">
+        <label className={labelCls}>Test Connection</label>
+        <button
+          type="button"
+          onClick={() => void runConnectionTest()}
+          disabled={!hasActiveKey || visibleTestState === 'testing'}
+          className="rounded-md border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-xs text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)] disabled:opacity-40 disabled:cursor-not-allowed"
+        >
+          {visibleTestState === 'testing' ? 'Testing…' : 'Test Connection'}
+        </button>
+        {visibleTestState === 'success' && (
+          <div className="mt-2 rounded-lg border border-[rgba(74,222,128,0.25)] bg-[rgba(74,222,128,0.08)] px-3 py-3">
+            <p className="text-xs text-[#86efac] leading-relaxed">
+              ✓ Connection works — translated &quot;Hello, world!&quot; to Spanish: &quot;{testResult}&quot;
+            </p>
+          </div>
+        )}
+        {visibleTestState === 'error' && (
+          <div className="mt-2 rounded-lg border border-[rgba(248,113,113,0.25)] bg-[rgba(248,113,113,0.08)] px-3 py-3">
+            <p className="text-xs text-[#fca5a5] leading-relaxed">{testError}</p>
+            <button
+              type="button"
+              onClick={() => void runConnectionTest()}
+              className="mt-3 rounded-md border border-[rgba(255,255,255,0.12)] px-3 py-1.5 text-xs text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)]"
+            >
+              Retry
+            </button>
+          </div>
         )}
       </div>
 

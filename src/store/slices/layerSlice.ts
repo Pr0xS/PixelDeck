@@ -2,7 +2,7 @@ import type {
   Layer, GroupLayer,
   PhoneLayer, TextLayer, ImageLayer, ShapeLayer, EmojiLayer, BrandLayer,
 } from '@/types'
-import { getProjectBaseFormat } from '@/utils/canvasFormats'
+import { BASE_CANVAS_FORMAT, getProjectBaseFormat, resolveLayerLocaleAdjustBaseOnly } from '@/utils/canvasFormats'
 import { DEFAULT_TEXT_WIDTH } from '@/utils/textRendering'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
 import {
@@ -11,10 +11,9 @@ import {
   mutateActiveGroup,
   getActiveGroup,
   patchLayerForLocale,
-  patchLayerForLocaleFormatLayout,
+  patchLayerForLocaleAdjust,
   patchLayerForFormat,
   seedLocaleContent,
-  splitLocaleFormatLayoutPatch,
 } from '../helpers'
 
 export const createLayerSlice = (
@@ -111,6 +110,25 @@ export const createLayerSlice = (
         return
       }
     }
+    // For the format-scoped, non-default-locale branch only, pre-resolve the
+    // `localeAdjust` write's `R` value BEFORE mutating (see the perf writeup
+    // in the deepwork doc — measured comfortably under budget). Base-scoped
+    // writes get `resolved` for free (raw === resolved there) so no
+    // pre-resolution is needed for them.
+    let formatScopedResolved: Layer | undefined
+    if (activeLocale !== defaultLocale && activeCanvasFormat !== baseFormat) {
+      const activeGroup = getActiveGroup(get)
+      if (activeGroup) {
+        formatScopedResolved = resolveLayerLocaleAdjustBaseOnly(
+          activeGroup,
+          layerId,
+          activeLocale,
+          activeCanvasFormat,
+          baseFormat,
+          project.settings.customFormats,
+        )
+      }
+    }
     mutateActiveGroup(set, (g) => ({
       ...g,
       layers: g.layers.map((l) => {
@@ -120,16 +138,32 @@ export const createLayerSlice = (
           return patchLayerForFormat(localized, rest, activeCanvasFormat, baseFormat)
         }
         if (activeCanvasFormat === baseFormat) {
-          const { rest: nonLayout } = splitLocaleFormatLayoutPatch(rest)
-          return patchLayerForFormat(localized, nonLayout, baseFormat, baseFormat)
+          // Base scope: raw === resolved, so `localized` doubles as
+          // `resolved` for free (no pre-resolution needed).
+          const { layer: withLocaleAdjust, rest: nonLayout } = patchLayerForLocaleAdjust(
+            localized,
+            rest,
+            activeLocale,
+            defaultLocale,
+            BASE_CANVAS_FORMAT,
+            localized,
+          )
+          return patchLayerForFormat(withLocaleAdjust, nonLayout, baseFormat, baseFormat)
         }
-        const { layer: withLocaleLayout, rest: formatRest } = patchLayerForLocaleFormatLayout(
-          localized,
-          rest,
-          activeLocale,
-          activeCanvasFormat,
-        )
-        return patchLayerForFormat(withLocaleLayout, formatRest, activeCanvasFormat, baseFormat)
+        // Format-scoped write: derive+write the localeAdjust[locale][format]
+        // cell using the pre-resolved `R` computed before mutation. Skip if
+        // resolution failed (layer filtered out of this format's view).
+        const { layer: withLocaleAdjust, rest: formatRest } = formatScopedResolved
+          ? patchLayerForLocaleAdjust(
+              localized,
+              rest,
+              activeLocale,
+              defaultLocale,
+              activeCanvasFormat,
+              formatScopedResolved,
+            )
+          : { layer: localized, rest }
+        return patchLayerForFormat(withLocaleAdjust, formatRest, activeCanvasFormat, baseFormat)
       }),
     }))
   },
@@ -190,7 +224,7 @@ export const createLayerSlice = (
     if (!group) return
     const layer: PhoneLayer = {
       id: newId(),
-      name: 'iPhone 16 Pro',
+      name: 'Phone',
       type: 'phone',
       x: group.slideWidth / 2 - 195,
       y: group.slideHeight / 2 - 422,

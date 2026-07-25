@@ -1,11 +1,10 @@
-import { getProjectBaseFormat } from '@/utils/canvasFormats'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
 import {
   mutateActiveGroup,
-  resetLocaleFormatOverridesInLayerTree,
+  resetLocaleAdjustsInLayerTree,
   updateLayerInTree,
-  withoutLocaleFormatOverride,
-  withoutLocaleFormatOverrideKey,
+  withoutLocaleAdjust,
+  withoutLocaleAdjustKey,
 } from '../helpers'
 
 export const createLocaleLayoutSlice = (
@@ -13,41 +12,41 @@ export const createLocaleLayoutSlice = (
   get: EditorGet,
 ): Pick<
   EditorStore,
-  | 'clearLayerLocaleFormatOverride'
-  | 'clearLayerLocaleFormatOverrideKey'
-  | 'resetActiveLocaleFormatLayout'
+  | 'clearLayerLocaleAdjust'
+  | 'clearLayerLocaleAdjustKey'
+  | 'resetActiveLocaleAdjust'
 > => ({
-  clearLayerLocaleFormatOverride: (layerId, locale, format) => {
+  // ─ `localeAdjust` tier (unified base-scoped + format-scoped locale
+  // adjustments). Scope is `BASE_CANVAS_FORMAT` for the base-scoped cell or
+  // an active (non-base) format id for the format-scoped cell — both
+  // compose, so callers must pass the exact scope they mean to clear.
+  clearLayerLocaleAdjust: (layerId, locale, scope) => {
     const targetLocale = locale ?? get().activeLocale
-    const targetFormat = format ?? get().activeCanvasFormat
+    const targetScope = scope ?? get().activeCanvasFormat
     mutateActiveGroup(set, (g) => ({
       ...g,
       layers: updateLayerInTree(g.layers, layerId, (layer) =>
-        withoutLocaleFormatOverride(layer, targetLocale, targetFormat)),
+        withoutLocaleAdjust(layer, targetLocale, targetScope)),
     }))
   },
 
-  clearLayerLocaleFormatOverrideKey: (layerId, key, locale, format) => {
+  clearLayerLocaleAdjustKey: (layerId, key, locale, scope) => {
     const targetLocale = locale ?? get().activeLocale
-    const targetFormat = format ?? get().activeCanvasFormat
+    const targetScope = scope ?? get().activeCanvasFormat
     mutateActiveGroup(set, (g) => ({
       ...g,
       layers: updateLayerInTree(g.layers, layerId, (layer) =>
-        withoutLocaleFormatOverrideKey(layer, targetLocale, targetFormat, key)),
+        withoutLocaleAdjustKey(layer, targetLocale, targetScope, key)),
     }))
   },
 
-  resetActiveLocaleFormatLayout: (locale, format) => {
+  resetActiveLocaleAdjust: (locale, scope) => {
     const targetLocale = locale ?? get().activeLocale
-    const targetFormat = format ?? get().activeCanvasFormat
-    const project = get().project
-    if (
-      targetLocale === project.settings.defaultLocale
-      || targetFormat === getProjectBaseFormat(project)
-    ) return
+    const targetScope = scope ?? get().activeCanvasFormat
+    if (targetLocale === get().project.settings.defaultLocale) return
     mutateActiveGroup(set, (g) => ({
       ...g,
-      layers: resetLocaleFormatOverridesInLayerTree(g.layers, targetLocale, targetFormat),
+      layers: resetLocaleAdjustsInLayerTree(g.layers, targetLocale, targetScope),
     }))
   },
 })

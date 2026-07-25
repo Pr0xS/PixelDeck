@@ -159,13 +159,12 @@ function AlignmentSection({
 // ─── Layout Tab ───────────────────────────────────────────────────────────────
 
 function LayoutTab({ layer }: { layer: Layer }) {
-  const { updateLayer, project, activeSlideGroupId, activeCanvasFormat, activeLocale, editingGroupId, setLayerFormatVisibility } = useEditorStore(
+  const { updateLayer, project, activeSlideGroupId, activeCanvasFormat, editingGroupId, setLayerFormatVisibility } = useEditorStore(
     useShallow((s) => ({
       updateLayer: s.updateLayer,
       project: s.project,
       activeSlideGroupId: s.activeSlideGroupId,
       activeCanvasFormat: s.activeCanvasFormat,
-      activeLocale: s.activeLocale,
       editingGroupId: s.editingGroupId,
       setLayerFormatVisibility: s.setLayerFormatVisibility,
     }))
@@ -209,8 +208,6 @@ function LayoutTab({ layer }: { layer: Layer }) {
 
   // Active formats for platform visibility chips
   const activeFormats: CanvasFormatId[] = getProjectActiveFormats(project)
-  const baseFormat = getProjectBaseFormat(project)
-  const localeLayoutGated = activeLocale !== project.settings.defaultLocale && activeCanvasFormat === baseFormat
 
   return (
     <div className="space-y-4">
@@ -288,11 +285,6 @@ function LayoutTab({ layer }: { layer: Layer }) {
 
       {/* Position / Size / Rotation — not applicable for background */}
       <div className={panelSectionCls}>
-        {localeLayoutGated && (
-          <p className="mb-3 text-[10px] text-[#22d3ee]">
-            Layout changes do not apply in Base for {getLanguageName(activeLocale)}. Switch to a platform tab to adjust position and size.
-          </p>
-        )}
         {!isBackground && (
           <>
             <SliderField label="X" value={layer.x} min={xMin} max={xMax} unit="px" onChange={(v) => upd({ x: v })} onInteractionStart={pauseTemporal} onInteractionEnd={resumeTemporal} labelAddon={<OverrideDot layerId={layer.id} propKey="x" />} />
@@ -432,7 +424,7 @@ export function PropertiesPanel() {
     activeCanvasFormat,
     activeLocale,
     clearLayerFormatOverride,
-    clearLayerLocaleFormatOverride,
+    clearLayerLocaleAdjust,
     syncLayerFormatToShared,
     makeLayerShared,
     copyLayerStyle,
@@ -449,7 +441,7 @@ export function PropertiesPanel() {
       activeCanvasFormat: s.activeCanvasFormat,
       activeLocale: s.activeLocale,
       clearLayerFormatOverride: s.clearLayerFormatOverride,
-      clearLayerLocaleFormatOverride: s.clearLayerLocaleFormatOverride,
+      clearLayerLocaleAdjust: s.clearLayerLocaleAdjust,
       syncLayerFormatToShared: s.syncLayerFormatToShared,
       makeLayerShared: s.makeLayerShared,
       copyLayerStyle: s.copyLayerStyle,
@@ -526,8 +518,13 @@ export function PropertiesPanel() {
   const activeFormatInfo = getCanvasFormat(activeCanvasFormat, project.settings.customFormats)
   const isBaseFormat = activeCanvasFormat === baseCanvasFormat
   const selectedHasFormatOverride = Boolean(rawSelectedLayer?.formatOverrides?.[activeCanvasFormat])
-  const activeLocaleLayoutOverride = rawSelectedLayer?.localeLayoutOverrides?.[activeLocale]?.[activeCanvasFormat]
-  const localeAdjustmentCount = Object.keys(activeLocaleLayoutOverride ?? {}).length
+  // P3: `activeCanvasFormat` doubles as the `localeAdjust` scope key — at the
+  // Base tab it already equals `BASE_CANVAS_FORMAT`, so this one read covers
+  // both the base-scoped and format-scoped cell via the same code path (the
+  // "2 near-duplicate banners" this replaces used to read 2 different legacy
+  // fields for exactly this base-vs-format split).
+  const activeLocaleAdjust = rawSelectedLayer?.localeAdjust?.[activeLocale]?.[activeCanvasFormat]
+  const localeAdjustCount = Object.keys(activeLocaleAdjust ?? {}).length
   const isDefaultLocale = activeLocale === project.settings.defaultLocale
   const activeLocaleLabel = getLanguageName(activeLocale)
   const isBackgroundSelected = selectedLayer?.type === 'background'
@@ -635,15 +632,22 @@ export function PropertiesPanel() {
               </div>
             )}
 
-            {rawSelectedLayer && !isDefaultLocale && !isBaseFormat && localeAdjustmentCount > 0 && (
-              <div className="mb-3 rounded-lg border border-[rgba(34,211,238,0.25)] bg-[rgba(34,211,238,0.08)] px-3 py-2">
+            {rawSelectedLayer && !isDefaultLocale && localeAdjustCount > 0 && (
+              <div
+                className="mb-3 rounded-lg border px-3 py-2"
+                style={{
+                  borderColor: isBaseFormat ? 'rgba(124,110,246,0.3)' : 'rgba(34,211,238,0.25)',
+                  background: isBaseFormat ? 'rgba(124,110,246,0.08)' : 'rgba(34,211,238,0.08)',
+                }}
+              >
                 <div className="flex items-center justify-between gap-2">
-                  <span className="text-[10px] text-[#22d3ee]">
-                    {localeAdjustmentCount} locale adjustment{localeAdjustmentCount !== 1 ? 's' : ''} for {activeLocaleLabel} · {activeFormatInfo.label}
+                  <span className="text-[10px]" style={{ color: isBaseFormat ? '#9d90f8' : '#22d3ee' }}>
+                    {localeAdjustCount} locale layout adjustment{localeAdjustCount !== 1 ? 's' : ''} for {activeLocaleLabel} · {isBaseFormat ? 'Base (applies on top of every format, including ones with their own overrides)' : activeFormatInfo.label}
                   </span>
                   <button
-                    onClick={() => clearLayerLocaleFormatOverride(rawSelectedLayer!.id)}
-                    className="shrink-0 text-[10px] text-[#22d3ee] underline hover:text-white"
+                    onClick={() => clearLayerLocaleAdjust(rawSelectedLayer!.id, activeLocale, activeCanvasFormat)}
+                    className="shrink-0 text-[10px] underline hover:text-white"
+                    style={{ color: isBaseFormat ? '#9d90f8' : '#22d3ee' }}
                   >
                     Reset
                   </button>

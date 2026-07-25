@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import type { BackgroundLayer, GroupLayer, ImageLayer, Layer, PhoneLayer, Project, SlideGroup, TextLayer } from '@/types'
 import {
   assertProjectShape,
-  LOCALE_SYMMETRIC_SCHEMA_VERSION,
+  LOCALE_ADJUST_SCHEMA_VERSION,
   migrateProject,
   patchLayerForLocale,
   stripDataUrls,
@@ -298,14 +298,14 @@ describe('foldLayerToSymmetric / localeContent migration', () => {
         defaultSlideHeight: 2796,
         defaultLocale: 'en',
         brandName: 'My App',
-        schemaVersion: LOCALE_SYMMETRIC_SCHEMA_VERSION,
+        schemaVersion: LOCALE_ADJUST_SCHEMA_VERSION,
       },
     })
 
     const current = migrateProject(currentProject)
 
-    expect(legacy.settings.schemaVersion).toBe(LOCALE_SYMMETRIC_SCHEMA_VERSION)
-    expect(current.settings.schemaVersion).toBe(LOCALE_SYMMETRIC_SCHEMA_VERSION)
+    expect(legacy.settings.schemaVersion).toBe(LOCALE_ADJUST_SCHEMA_VERSION)
+    expect(current.settings.schemaVersion).toBe(LOCALE_ADJUST_SCHEMA_VERSION)
   })
 
   it('migrates legacy locale override spans to marks before folding content', () => {

@@ -1,0 +1,594 @@
+{
+  "id": "4aREKev3eW",
+  "name": "Untitled Project",
+  "createdAt": "2026-07-25T08:19:17.651Z",
+  "updatedAt": "2026-07-25T08:19:17.665Z",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "My App",
+    "baseCanvasFormat": "base",
+    "activeFormats": [
+      "android-phone"
+    ],
+    "customFormats": [],
+    "pano": {
+      "gapPx": 24,
+      "compensate": false
+    },
+    "locales": [
+      "en",
+      "de"
+    ]
+  },
+  "slideGroups": [
+    {
+      "id": "60MlpKOFHH",
+      "name": "Slide 1",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "slideNames": [
+        "slide-01"
+      ],
+      "layers": [
+        {
+          "id": "QuflAJF7G6",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.58,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": []
+        }
+      ]
+    },
+    {
+      "id": "pTryVLkWN7",
+      "name": "Slide 2",
+      "numSlides": 1,
+      "slideWidth": 1320,
+      "slideHeight": 2868,
+      "slideNames": [
+        "slide-01"
+      ],
+      "layers": [
+        {
+          "id": "wRSRB2_YvF",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.58,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": []
+        },
+        {
+          "id": "VqSHfzrTqF",
+          "name": "Text",
+          "type": "text",
+          "x": 100,
+          "y": 200,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your headline",
+          "fontFamily": "Sora",
+          "fontSize": 100,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "letterSpacing": -4,
+          "lineHeight": 1,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Your headline"
+            }
+          }
+        },
+        {
+          "id": "-GI9Dnn22Q",
+          "name": "Text",
+          "type": "text",
+          "x": 100,
+          "y": 200,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your headline",
+          "fontFamily": "Sora",
+          "fontSize": 100,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "letterSpacing": -4,
+          "lineHeight": 1,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Your headline"
+            }
+          },
+          "formatOverrides": {
+            "android-phone": {
+              "x": 300,
+              "fontSize": 60
+            }
+          }
+        },
+        {
+          "id": "5OKvRKZ2b3",
+          "name": "Text",
+          "type": "text",
+          "x": 100,
+          "y": 200,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your headline",
+          "fontFamily": "Sora",
+          "fontSize": 100,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "letterSpacing": -4,
+          "lineHeight": 1,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Your headline"
+            }
+          },
+          "localeBaseDelta": {
+            "de": {
+              "dx": 40
+            }
+          }
+        },
+        {
+          "id": "jLQBvXScqW",
+          "name": "Text",
+          "type": "text",
+          "x": 100,
+          "y": 200,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your headline",
+          "fontFamily": "Sora",
+          "fontSize": 100,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "letterSpacing": -4,
+          "lineHeight": 1,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Your headline"
+            }
+          },
+          "localeLayoutOverrides": {
+            "de": {
+              "android-phone": {
+                "x": 777
+              }
+            }
+          }
+        },
+        {
+          "id": "uYydwfERLH",
+          "name": "Text",
+          "type": "text",
+          "x": 100,
+          "y": 200,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your headline",
+          "fontFamily": "Sora",
+          "fontSize": 100,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "letterSpacing": -4,
+          "lineHeight": 1,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Your headline"
+            }
+          },
+          "formatOverrides": {
+            "android-phone": {
+              "x": 500,
+              "fontSize": 50
+            }
+          },
+          "localeBaseDelta": {
+            "de": {
+              "dx": 60,
+              "dRotation": 15
+            }
+          },
+          "localeLayoutOverrides": {
+            "de": {
+              "android-phone": {
+                "x": 900
+              }
+            }
+          }
+        },
+        {
+          "id": "NXcdIOvm25",
+          "name": "Group",
+          "type": "group",
+          "x": 100,
+          "y": 200,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "children": [
+            {
+              "id": "Xf6UAm40Kd",
+              "name": "Text",
+              "type": "text",
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "text": "Your headline",
+              "fontFamily": "Sora",
+              "fontSize": 100,
+              "fontWeight": 800,
+              "fill": "#ffffff",
+              "letterSpacing": -4,
+              "lineHeight": 1,
+              "align": "left",
+              "width": 1000,
+              "localeContent": {
+                "en": {
+                  "text": "Your headline"
+                }
+              },
+              "localeLayoutOverrides": {
+                "de": {
+                  "android-phone": {
+                    "x": 30
+                  }
+                }
+              }
+            },
+            {
+              "id": "N20chidkAo",
+              "name": "Shape",
+              "type": "shape",
+              "x": 100,
+              "y": 0,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "shapeType": "rect",
+              "width": 600,
+              "height": 400,
+              "fill": {
+                "type": "linear",
+                "angle": 120,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#FF6F61"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              },
+              "cornerRadius": 40
+            }
+          ]
+        },
+        {
+          "id": "ECxyq6cd4N",
+          "name": "Text",
+          "type": "text",
+          "x": 100,
+          "y": 200,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your headline",
+          "fontFamily": "Sora",
+          "fontSize": 100,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "letterSpacing": -4,
+          "lineHeight": 1,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Your headline"
+            }
+          },
+          "localeBaseDelta": {
+            "de": {
+              "dy": 50,
+              "mWidth": 1.5,
+              "mFontSize": 1.5
+            }
+          }
+        },
+        {
+          "id": "qrhXlk9MvH",
+          "name": "Text",
+          "type": "text",
+          "x": 100,
+          "y": 200,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your headline",
+          "fontFamily": "Sora",
+          "fontSize": 100,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "letterSpacing": -4,
+          "lineHeight": 1,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Your headline"
+            }
+          },
+          "formatOverrides": {
+            "android-phone": {
+              "width": 700
+            }
+          },
+          "localeBaseDelta": {
+            "de": {
+              "mWidth": 2
+            }
+          },
+          "localeLayoutOverrides": {
+            "de": {
+              "android-phone": {
+                "width": 1800
+              }
+            }
+          }
+        },
+        {
+          "id": "o0K6I4LKz6",
+          "name": "Phone",
+          "type": "phone",
+          "x": 465,
+          "y": 1012,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "model": "iphone-16-pro",
+          "scale": 2,
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {}
+          },
+          "localeBaseDelta": {
+            "de": {
+              "mScale": 1.5
+            }
+          }
+        },
+        {
+          "id": "f5DOR2KR-o",
+          "name": "Group",
+          "type": "group",
+          "x": 100,
+          "y": 200,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "children": [
+            {
+              "id": "_3uf2J6fAb",
+              "name": "Text",
+              "type": "text",
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "text": "Your headline",
+              "fontFamily": "Sora",
+              "fontSize": 100,
+              "fontWeight": 800,
+              "fill": "#ffffff",
+              "letterSpacing": -4,
+              "lineHeight": 1,
+              "align": "left",
+              "width": 1000,
+              "localeContent": {
+                "en": {
+                  "text": "Your headline"
+                }
+              },
+              "localeBaseDelta": {
+                "de": {
+                  "dx": 20
+                }
+              }
+            },
+            {
+              "id": "3kVAq631E0",
+              "name": "Shape",
+              "type": "shape",
+              "x": 100,
+              "y": 0,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "shapeType": "rect",
+              "width": 600,
+              "height": 400,
+              "fill": {
+                "type": "linear",
+                "angle": 120,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#FF6F61"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              },
+              "cornerRadius": 40
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "-7mcfJqYEV",
+      "name": "Slide 3",
+      "numSlides": 2,
+      "slideWidth": 1320,
+      "slideHeight": 2868,
+      "slideNames": [
+        "slide-01",
+        "slide-02"
+      ],
+      "layers": [
+        {
+          "id": "ul_Jic9jBk",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.58,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": []
+        },
+        {
+          "id": "rn0_MgyAbu",
+          "name": "Text",
+          "type": "text",
+          "x": 1720,
+          "y": 200,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your headline",
+          "fontFamily": "Sora",
+          "fontSize": 100,
+          "fontWeight": 800,
+          "fill": "#ffffff",
+          "letterSpacing": -4,
+          "lineHeight": 1,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Your headline"
+            }
+          },
+          "localeBaseDelta": {
+            "de": {
+              "dx": 50
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

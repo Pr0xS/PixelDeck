@@ -83,7 +83,7 @@ export function LocaleBar({
                     className="rounded-full border border-[#7c6ef6]/30 bg-[#7c6ef6]/10 px-3 py-2 text-xs font-medium text-[#d8d2ff] transition hover:border-[#7c6ef6]/60 hover:bg-[#7c6ef6]/18 hover:text-white"
                     title="Change default language"
                   >
-                    Change source
+                    Change default
                   </button>
                 ) : (
                   <button

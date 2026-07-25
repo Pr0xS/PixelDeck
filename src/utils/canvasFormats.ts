@@ -5,12 +5,13 @@ import type {
   CustomFormatId,
   GroupLayer,
   Layer,
+  LayoutDelta,
   PhoneLayer,
   Project,
   SlideGroup,
 } from '@/types'
 import { getModelForPlatform } from '@/assets/mockups/specs'
-import { mapLayerTree } from '@/utils/layerTree'
+import { findLayerInTree, forEachLayerTree, mapLayerTree } from '@/utils/layerTree'
 import { applyLocale } from './locale'
 
 export const CANVAS_FORMAT_PRESETS = [
@@ -46,6 +47,17 @@ export const FORMAT_FORK_KEYS = [...FORMAT_LAYOUT_KEYS, 'model'] as const
 
 /** Locale layout forks spatial keys only; it never swaps a device model. */
 export const LOCALE_LAYOUT_FORK_KEYS = FORMAT_LAYOUT_KEYS
+
+/** Maps locale layout properties to their base-coordinate delta fields. */
+export const LOCALE_DELTA_FIELDS = {
+  x: 'dx',
+  y: 'dy',
+  rotation: 'dRotation',
+  width: 'mWidth',
+  height: 'mHeight',
+  fontSize: 'mFontSize',
+  scale: 'mScale',
+} as const satisfies Record<typeof LOCALE_LAYOUT_FORK_KEYS[number], keyof LayoutDelta>
 
 export function isCustomFormatId(id: CanvasFormatId): id is CustomFormatId {
   return id.startsWith('custom:')
@@ -154,6 +166,33 @@ export function getFormatCanvasDims(
  */
 function fitCenterScale(fromW: number, fromH: number, toW: number, toH: number): number {
   return Math.min(toW / fromW, toH / fromH)
+}
+
+/**
+ * Return the fit-centre scale used by applyCanvasFormatToGroup for this group.
+ * Kept parallel to that engine deliberately; tests guard against math drift.
+ */
+export function getFormatScaleFactor(
+  group: SlideGroup,
+  format: CanvasFormatId,
+  baseFormat: CanvasFormatId,
+  customFormats?: CustomCanvasFormat[],
+): number {
+  if (format === baseFormat) return 1
+  const target = getFormatCanvasDims(group, format, baseFormat, customFormats)
+  return fitCenterScale(group.slideWidth, group.slideHeight, target.width, target.height)
+}
+
+/** Build base-to-format scale factors before applyCanvasFormat replaces group dimensions. */
+export function buildFormatScaleMap(
+  project: Project,
+  format: CanvasFormatId,
+  baseFormat: CanvasFormatId,
+): ReadonlyMap<string, number> {
+  return new Map(project.slideGroups.map((group) => [
+    group.id,
+    getFormatScaleFactor(group, format, baseFormat, project.settings.customFormats),
+  ]))
 }
 
 /**
@@ -307,45 +346,161 @@ export function applyCanvasFormat(project: Project, format: CanvasFormatId): Pro
 }
 
 /**
- * Third render pass: merge target-space locale/format layout overrides onto a
- * project already resolved by applyCanvasFormat. Values are spread as-is.
+ * Apply one per-key `LayoutDelta` to an already format-resolved layer.
+ * Shared math for the `localeAdjust` model — NOT legacy despite the deltas
+ * it was originally built for: `applyLocaleAdjust` calls this TWICE (once at
+ * the group's format scale factor `f` for the base-scoped cell, once at
+ * factor `1` for the format-scoped cell, since that one is already authored
+ * in format-space). Additive keys (x/y) are scaled by `f`; rotation is not;
+ * multiplicative keys (width/height/fontSize/scale) multiply the
+ * already-resolved value directly and are never scaled by `f` themselves.
  */
-export function applyLocaleFormatLayout(project: Project, locale: string, format: CanvasFormatId): Project {
-  const baseFormat = getProjectBaseFormat(project)
-  if (locale === project.settings.defaultLocale || format === baseFormat) return project
-  return {
-    ...project,
-    slideGroups: project.slideGroups.map((group) => ({
-      ...group,
-      layers: mapLayerTree(group.layers, (layer) => {
-        const patch = layer.localeLayoutOverrides?.[locale]?.[format]
-        return patch ? ({ ...layer, ...patch, id: layer.id, type: layer.type } as Layer) : layer
-      }),
-    })),
+export function applyLayoutDelta(layer: Layer, delta: LayoutDelta | undefined, f: number): Layer {
+  if (!delta) return layer
+  const next = { ...layer } as Layer & Record<string, unknown>
+  const add = (property: 'x' | 'y' | 'rotation', deltaKey: 'dx' | 'dy' | 'dRotation') => {
+    const value = delta[deltaKey]
+    if (typeof value === 'number' && typeof layer[property] === 'number') {
+      next[property] = layer[property] + value * (property === 'rotation' ? 1 : f)
+    }
   }
+  add('x', LOCALE_DELTA_FIELDS.x)
+  add('y', LOCALE_DELTA_FIELDS.y)
+  add('rotation', LOCALE_DELTA_FIELDS.rotation)
+
+  const multiply = (property: 'width' | 'height' | 'fontSize' | 'scale', multiplier: number | undefined) => {
+    const value = next[property]
+    if (typeof multiplier === 'number' && typeof value === 'number' && value !== 0) {
+      next[property] = value * multiplier
+    }
+  }
+  multiply('width', delta[LOCALE_DELTA_FIELDS.width])
+  multiply('height', delta[LOCALE_DELTA_FIELDS.height])
+  multiply('fontSize', delta[LOCALE_DELTA_FIELDS.fontSize])
+  if (layer.type !== 'group') multiply('scale', delta[LOCALE_DELTA_FIELDS.scale])
+  return next as Layer
 }
 
-/** Group-scoped locale/format layout resolver for callers without project settings. */
-export function applyLocaleFormatLayoutToGroup(
+/**
+ * P1 of the 3-tier `localeAdjust` unification. Merges a layer's per-locale
+ * adjustment deltas onto an already format-resolved layer, per the deepwork
+ * spec's composition precedence:
+ *
+ *   base (authored) -> auto-scaled per format -> formatOverrides[F] (pinned)
+ *     -> + localeAdjust[L][BASE] * f   (composes, every format)
+ *       -> + localeAdjust[L][F] * 1    (composes, this format only, format-space)
+ *
+ * Both cells COMPOSE — there is no "wins"/shadowing here. Reuses
+ * `applyLayoutDelta` for the actual per-key math (same additive/
+ * multiplicative rules), called twice: once with the group's format scale
+ * factor for the base-scoped cell, once with factor 1 for the format-scoped
+ * cell (already authored in format space).
+ */
+export function applyLocaleAdjust(layer: Layer, locale: string, format: CanvasFormatId, f: number): Layer {
+  const baseScoped = layer.localeAdjust?.[locale]?.[BASE_CANVAS_FORMAT]
+  // `localeAdjust[locale][BASE_CANVAS_FORMAT]` and `localeAdjust[locale][format]`
+  // are the LITERAL SAME map cell when format === BASE_CANVAS_FORMAT — guard so
+  // the base-scoped cell is never composed twice at the base format view.
+  const formatScoped = format === BASE_CANVAS_FORMAT ? undefined : layer.localeAdjust?.[locale]?.[format]
+  const withBaseScoped = applyLayoutDelta(layer, baseScoped, f)
+  return applyLayoutDelta(withBaseScoped, formatScoped, 1)
+}
+
+/** Group-scoped `localeAdjust` resolver, mirroring `applyCanvasFormatToGroup`. */
+export function applyLocaleAdjustToGroup(
   group: SlideGroup,
   locale: string,
   format: CanvasFormatId,
   defaultLocale: string,
-  baseFormat: CanvasFormatId,
+  scaleFactor: number,
 ): SlideGroup {
-  if (locale === defaultLocale || format === baseFormat) return group
+  if (locale === defaultLocale) return group
+  // Mirror the same base/format collapse guard as applyLocaleAdjust: at the
+  // base format, localeAdjust[locale][format] IS localeAdjust[locale][BASE],
+  // so only probe it separately when format is a distinct, non-base cell.
+  const checkFormatScoped = format !== BASE_CANVAS_FORMAT
+  let hasApplicableAdjust = false
+  forEachLayerTree(group.layers, (layer) => {
+    if (layer.localeAdjust?.[locale]?.[BASE_CANVAS_FORMAT] || (checkFormatScoped && layer.localeAdjust?.[locale]?.[format])) {
+      hasApplicableAdjust = true
+    }
+  })
+  if (!hasApplicableAdjust) return group
   return {
     ...group,
-    layers: mapLayerTree(group.layers, (layer) => {
-      const patch = layer.localeLayoutOverrides?.[locale]?.[format]
-      return patch ? ({ ...layer, ...patch, id: layer.id, type: layer.type } as Layer) : layer
-    }),
+    layers: mapLayerTree(group.layers, (layer) => applyLocaleAdjust(layer, locale, format, scaleFactor)),
   }
 }
 
-/** Resolve content, format projection, then locale/format layout in precedence order. */
+/** Project-wide `localeAdjust` projection. Mirrors `applyCanvasFormat`. */
+export function applyLocaleAdjustProject(
+  project: Project,
+  locale: string,
+  format: CanvasFormatId,
+  scaleByGroupId: ReadonlyMap<string, number>,
+): Project {
+  if (locale === project.settings.defaultLocale) return project
+  const slideGroups = project.slideGroups.map((group) => applyLocaleAdjustToGroup(
+    group,
+    locale,
+    format,
+    project.settings.defaultLocale,
+    scaleByGroupId.get(group.id) ?? 1,
+  ))
+  if (slideGroups.every((group, index) => group === project.slideGroups[index])) return project
+  return {
+    ...project,
+    slideGroups,
+  }
+}
+
+/**
+ * Resolve a single layer's value for (locale, format), including the
+ * base-scoped `localeAdjust[locale][BASE]` cell but EXCLUDING the
+ * format-scoped `localeAdjust[locale][format]` cell. Used by the migration
+ * to compute `R` (the "resolved value before this cell") when deriving a
+ * delta from a legacy absolute `localeLayoutOverrides` cell, and by the
+ * write path to pre-resolve the format-scoped write's anchor — reuses the
+ * real render path instead of hand-rolling the scale/override arithmetic a
+ * second time.
+ */
+export function resolveLayerLocaleAdjustBaseOnly(
+  group: SlideGroup,
+  layerId: string,
+  locale: string,
+  format: CanvasFormatId,
+  baseFormat: CanvasFormatId,
+  customFormats?: CustomCanvasFormat[],
+): Layer | undefined {
+  const scaleFactor = getFormatScaleFactor(group, format, baseFormat, customFormats)
+  const formatResolvedGroup = applyCanvasFormatToGroup(group, format, baseFormat, customFormats)
+  const resolvedLayer = findLayerInTree(formatResolvedGroup.layers, layerId)
+  if (!resolvedLayer) return undefined
+  const originalLayer = findLayerInTree(group.layers, layerId)
+  const baseScoped = originalLayer?.localeAdjust?.[locale]?.[BASE_CANVAS_FORMAT]
+  return applyLayoutDelta(resolvedLayer, baseScoped, scaleFactor)
+}
+
+/**
+ * Resolve content, format projection, then locale/format layout in precedence order.
+ *
+ * Reads the `localeAdjust` tier exclusively via `applyLocaleAdjustProject`.
+ * The legacy 4-tier engine (`localeBaseDelta`/`localeLayoutOverrides`) was
+ * fully retired in P4 (fields deleted, functions deleted) — do not re-add a
+ * second read pass here: composing two read paths over the same data would
+ * double-count every delta (see git history / deepwork doc for the P1
+ * double-apply investigation this guarded against before the read-path
+ * flip).
+ */
 export function resolveProjectView(project: Project, locale: string, format: CanvasFormatId): Project {
-  return applyLocaleFormatLayout(applyCanvasFormat(applyLocale(project, locale), format), locale, format)
+  const baseFormat = getProjectBaseFormat(project)
+  const scaleByGroupId = buildFormatScaleMap(project, format, baseFormat)
+  return applyLocaleAdjustProject(
+    applyCanvasFormat(applyLocale(project, locale), format),
+    locale,
+    format,
+    scaleByGroupId,
+  )
 }
 
 /**
@@ -498,20 +653,19 @@ export function countFormatAdjustments(
   return group.layers.reduce((sum, layer) => sum + countLayer(layer), 0)
 }
 
-/** Count non-empty locale/format layout override cells, including group children. */
-export function countLocaleFormatAdjustments(
-  group: SlideGroup,
-  locale: string,
-  format: CanvasFormatId,
-  defaultLocale: string,
-  baseFormat: CanvasFormatId,
-): number {
-  if (locale === defaultLocale || format === baseFormat) return 0
-
+/**
+ * Unified `localeAdjust[locale][scope]` counter — `scope` is
+ * `BASE_CANVAS_FORMAT` for the base-scoped count or an active (non-base)
+ * format id for the format-scoped count. Both scopes read through this same
+ * code path, closing the old "no indicator on a non-base tab for a
+ * base-scoped-only adjustment" visibility gap for any caller that queries
+ * the base scope regardless of the active tab.
+ */
+export function countLocaleAdjustments(group: SlideGroup, locale: string, scope: CanvasFormatId): number {
   let count = 0
   mapLayerTree(group.layers, (layer) => {
-    const patch = layer.localeLayoutOverrides?.[locale]?.[format]
-    if (patch && Object.keys(patch).length > 0) count++
+    const delta = layer.localeAdjust?.[locale]?.[scope]
+    if (delta && Object.keys(delta).length > 0) count++
     return layer
   })
   return count

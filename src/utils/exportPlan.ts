@@ -1,6 +1,5 @@
 import type { CanvasFormatId, Project, SlideGroup } from '@/types'
-import { applyCanvasFormat, applyLocaleFormatLayout, getFormatLabel, isCustomFormatId } from './canvasFormats'
-import { applyLocale } from './locale'
+import { getFormatLabel, isCustomFormatId, resolveProjectView } from './canvasFormats'
 
 export type ExportPlanScope = 'current-group' | 'project'
 export type ExportPlanPanoMode = 'split' | 'whole'
@@ -99,13 +98,8 @@ export function buildExportPlan(project: Project, options: BuildExportPlanOption
   const entries: ExportPlanEntry[] = []
 
   for (const locale of locales) {
-    const localizedProject = applyLocale(project, locale)
     for (const formatId of formatIds) {
-      const resolvedProject = applyLocaleFormatLayout(
-        applyCanvasFormat(localizedProject, formatId),
-        locale,
-        formatId,
-      )
+      const resolvedProject = resolveProjectView(project, locale, formatId)
       const formatLabel = getFormatLabel(formatId, customFormats)
       for (const group of resolvedProject.slideGroups) {
         if (selectedGroupIds && !selectedGroupIds.has(group.id)) continue

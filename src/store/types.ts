@@ -98,11 +98,12 @@ export interface EditorStore {
   removeCustomFormat: (id: CustomFormatId) => void
   updateCustomFormat: (id: CustomFormatId, patch: Partial<Pick<CustomCanvasFormat, 'label' | 'width' | 'height'>>) => void
   clearLayerFormatOverrideKey: (layerId: string, key: string, format?: CanvasFormatId) => void
-  clearLayerLocaleFormatOverride: (layerId: string, locale?: string, format?: CanvasFormatId) => void
-  clearLayerLocaleFormatOverrideKey: (layerId: string, key: string, locale?: string, format?: CanvasFormatId) => void
   applyLayerFormatKeyToShared: (layerId: string, key: string, format?: CanvasFormatId) => void
   resetActiveFormatLayout: (format?: CanvasFormatId) => void
-  resetActiveLocaleFormatLayout: (locale?: string, format?: CanvasFormatId) => void
+  /** `localeAdjust[locale][scope]` — scope is `BASE_CANVAS_FORMAT` or an active format id. */
+  clearLayerLocaleAdjust: (layerId: string, locale?: string, scope?: CanvasFormatId) => void
+  clearLayerLocaleAdjustKey: (layerId: string, key: string, locale?: string, scope?: CanvasFormatId) => void
+  resetActiveLocaleAdjust: (locale?: string, scope?: CanvasFormatId) => void
   shareActiveFormatOwnedLayers: (format?: CanvasFormatId) => void
   resetActiveFormatVisibility: (format?: CanvasFormatId) => void
   promoteActiveFormatLayoutToShared: (format?: CanvasFormatId) => void
