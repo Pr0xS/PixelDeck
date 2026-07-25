@@ -7,6 +7,23 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.0](https://github.com/Pr0xS/PixelDeck/compare/v0.6.1...v0.7.0) - 2026-07-25
+
+### Added
+
+- Editing a layer's layout (position, size, rotation) while on the Base format tab with a non-default locale active now works, instead of being blocked with a warning. The adjustment is stored as a delta relative to the base value and composes across every active format, so a locale-wide fix (e.g. longer German text) no longer needs to be repeated per format.
+- A "Test Connection" button in AI provider settings that exercises the real chat-completion path (translating a short fixed string) instead of just listing models, so it catches providers/models that list fine but fail at call time.
+
+### Changed
+
+- Unified per-locale layout storage from two fields (`localeBaseDelta`, `localeLayoutOverrides`) into one (`localeAdjust`), with a single composing model instead of a most-specific-wins one: format overrides stay absolute/pinned, locale adjustments now always compose on top of them instead of occasionally being shadowed by them. Existing projects migrate automatically.
+- The layout-override indicator next to position/size fields now shows independently for format pins and locale adjustments (previously a locale adjustment could be silently shadowed by a format override with no visual indication).
+
+### Fixed
+
+- A per-format locale layout adjustment no longer goes stale when the shared base layout or a format override is edited afterward — it now tracks those upstream edits instead of silently freezing at whatever value it was pinned to.
+- Localization table: renamed "Change source" button to "Change default"; default phone layer name changed from "iPhone 16 Pro" to generic "Phone"; fixed sticky Layer column peek-through and scroll jump; synced horizontal scroll across all slide-group sections; added a real trailing gutter after the last locale column; kept the edited text cell fully visible when the docked styling panel opens.
+
 ## [0.6.1](https://github.com/Pr0xS/PixelDeck/compare/v0.6.0...v0.6.1) - 2026-07-20
 
 ### Added
