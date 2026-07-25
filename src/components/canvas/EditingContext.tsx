@@ -6,8 +6,7 @@ import {
   BASE_CANVAS_FORMAT,
   CANVAS_FORMAT_PRESETS,
   countFormatAdjustments,
-  countLocaleBaseDeltaAdjustments,
-  countLocaleFormatAdjustments,
+  countLocaleAdjustments,
   getFormatLabel,
   getProjectActiveFormats,
   getProjectBaseFormat,
@@ -241,11 +240,10 @@ export function EditingContextBar() {
               </button>
               {locales.filter((locale) => locale !== defaultLocale).map((locale) => {
                 const isActive = activeLocale === locale
-                const count = rawGroup
-                  ? activeCanvasFormat === baseFormat
-                    ? countLocaleBaseDeltaAdjustments(rawGroup, locale)
-                    : countLocaleFormatAdjustments(rawGroup, locale, activeCanvasFormat, defaultLocale, baseFormat)
-                  : 0
+                // `activeCanvasFormat` doubles as the `localeAdjust` scope: at
+                // the Base tab it already equals BASE_CANVAS_FORMAT, so one
+                // call covers both the base-scoped and format-scoped count.
+                const count = rawGroup ? countLocaleAdjustments(rawGroup, locale, activeCanvasFormat) : 0
                 const label = getLanguageName(locale)
                 return (
                   <button
@@ -281,8 +279,7 @@ export function EditingContextAlert() {
     shareActiveFormatOwnedLayers,
     resetActiveFormatVisibility,
     promoteActiveFormatLayoutToShared,
-    resetActiveLocaleFormatLayout,
-    resetActiveLocaleBaseDelta,
+    resetActiveLocaleAdjust,
   } = useEditorStore(
     useShallow((state) => ({
       project: state.project,
@@ -295,8 +292,7 @@ export function EditingContextAlert() {
       shareActiveFormatOwnedLayers: state.shareActiveFormatOwnedLayers,
       resetActiveFormatVisibility: state.resetActiveFormatVisibility,
       promoteActiveFormatLayoutToShared: state.promoteActiveFormatLayoutToShared,
-      resetActiveLocaleFormatLayout: state.resetActiveLocaleFormatLayout,
-      resetActiveLocaleBaseDelta: state.resetActiveLocaleBaseDelta,
+      resetActiveLocaleAdjust: state.resetActiveLocaleAdjust,
     })),
   )
   const [actionsOpen, setActionsOpen] = useState(false)
@@ -315,10 +311,10 @@ export function EditingContextAlert() {
   const formatCount = activeGroup && isFormatScoped
     ? countFormatAdjustments(activeGroup, activeCanvasFormat, baseFormat)
     : 0
+  // `activeCanvasFormat` doubles as the `localeAdjust` scope: at the Base tab
+  // it already equals BASE_CANVAS_FORMAT, so one call covers both scopes.
   const localeCount = activeGroup && isLocaleScoped
-    ? isFormatScoped
-      ? countLocaleFormatAdjustments(activeGroup, activeLocale, activeCanvasFormat, defaultLocale, baseFormat)
-      : countLocaleBaseDeltaAdjustments(activeGroup, activeLocale)
+    ? countLocaleAdjustments(activeGroup, activeLocale, activeCanvasFormat)
     : 0
 
   const runFormatAction = (action: (format: CanvasFormatId) => void) => {
@@ -330,13 +326,8 @@ export function EditingContextAlert() {
     runFormatAction(promoteActiveFormatLayoutToShared)
   }
 
-  const handleLocaleReset = () => {
-    resetActiveLocaleFormatLayout()
-    setActionsOpen(false)
-  }
-
-  const handleLocaleBaseDeltaReset = () => {
-    resetActiveLocaleBaseDelta()
+  const handleLocaleAdjustReset = () => {
+    resetActiveLocaleAdjust()
     setActionsOpen(false)
   }
 
@@ -418,7 +409,7 @@ export function EditingContextAlert() {
                           {localeCount} position and size adjustment{localeCount !== 1 ? 's' : ''} for {isFormatScoped ? 'this pairing' : 'this locale'}
                         </p>
                       </div>
-                      <button className={actionItemClass} onClick={isFormatScoped ? handleLocaleReset : handleLocaleBaseDeltaReset}>
+                      <button className={actionItemClass} onClick={handleLocaleAdjustReset}>
                         {isFormatScoped ? 'Reset pairing layout' : 'Reset locale base layout'}
                         <span className="mt-0.5 block text-[10px] text-[#22d3c5]">
                           {isFormatScoped ? 'Remove all position and size adjustments for this pairing.' : 'Remove all base-layout adjustments for this locale.'}

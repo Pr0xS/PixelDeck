@@ -125,8 +125,17 @@ describe('buildExportPlan', () => {
       letterSpacing: 0,
       lineHeight: 1.2,
       align: 'left',
-      localeLayoutOverrides: {
-        de: { 'android-phone': { x: 200 } },
+      // P3: `buildExportPlan` routes through `resolveProjectView`, which now
+      // reads the delta-valued `localeAdjust` tier exclusively (the legacy
+      // `localeLayoutOverrides` field is no longer read, only still written
+      // by the store's dual-write — irrelevant here since this fixture is
+      // hand-built, not store-driven). dx chosen so the resolved (de,
+      // android) value lands on the same 200 this fixture targeted under
+      // the legacy absolute model: dx = 200 - R, where R is this layer's
+      // scaled base x (100) at the android-phone preset for this file's
+      // 1320x2868 group canvas.
+      localeAdjust: {
+        de: { 'android-phone': { dx: 34.89539748953973 } },
       },
     }
     const scopedProject: Project = {
@@ -147,9 +156,9 @@ describe('buildExportPlan', () => {
       return batch?.group.layers.find((layer) => layer.id === text.id)?.x
     }
 
-    expect(layerX('de', 'android-phone')).toBe(200)
-    expect(layerX('en', 'android-phone')).not.toBe(200)
-    expect(layerX('de', 'iphone-69')).not.toBe(200)
+    expect(layerX('de', 'android-phone')).toBeCloseTo(200)
+    expect(layerX('en', 'android-phone')).not.toBeCloseTo(200)
+    expect(layerX('de', 'iphone-69')).not.toBeCloseTo(200)
   })
 })
 

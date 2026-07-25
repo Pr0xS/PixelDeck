@@ -6,13 +6,12 @@ import {
   mutateActiveGroup,
   getActiveGroup,
   patchLayerForLocale,
-  patchLayerForLocaleBaseDelta,
-  patchLayerForLocaleFormatLayout,
+  patchLayerForLocaleAdjust,
   patchLayerForFormat,
   updateLayerInTree,
   seedLocaleContent,
 } from '../helpers'
-import { getProjectBaseFormat } from '@/utils/canvasFormats'
+import { BASE_CANVAS_FORMAT, getProjectBaseFormat, resolveLayerLocaleAdjustBaseOnly } from '@/utils/canvasFormats'
 
 export const createGroupSlice = (
   set: EditorSet,
@@ -218,6 +217,23 @@ export const createGroupSlice = (
     const { project, activeCanvasFormat, activeLocale } = get()
     const baseFormat = getProjectBaseFormat(project)
     const defaultLocale = project.settings.defaultLocale
+    // Pre-resolve the format-scoped `localeAdjust` write's `R` value BEFORE
+    // mutating (mirrors layerSlice.ts's updateLayer). Resolved against the
+    // child's id within its owning group's tree.
+    let formatScopedResolved: Layer | undefined
+    if (activeLocale !== defaultLocale && activeCanvasFormat !== baseFormat) {
+      const activeGroup = getActiveGroup(get)
+      if (activeGroup) {
+        formatScopedResolved = resolveLayerLocaleAdjustBaseOnly(
+          activeGroup,
+          childId,
+          activeLocale,
+          activeCanvasFormat,
+          baseFormat,
+          project.settings.customFormats,
+        )
+      }
+    }
     mutateActiveGroup(set, (g) => ({
       ...g,
       layers: updateLayerInTree(g.layers, groupId, (layer) => layer.type === 'group'
@@ -229,21 +245,32 @@ export const createGroupSlice = (
                 return patchLayerForFormat(localized, rest, activeCanvasFormat, baseFormat)
               }
               if (activeCanvasFormat === baseFormat) {
-                const { layer: withLocaleBaseDelta, rest: nonLayout } = patchLayerForLocaleBaseDelta(
+                // Base scope: raw === resolved, so `localized` doubles as
+                // `resolved` for free.
+                const { layer: withLocaleAdjust, rest: nonLayout } = patchLayerForLocaleAdjust(
                   localized,
                   rest,
                   activeLocale,
                   defaultLocale,
+                  BASE_CANVAS_FORMAT,
+                  localized,
                 )
-                return patchLayerForFormat(withLocaleBaseDelta, nonLayout, baseFormat, baseFormat)
+                return patchLayerForFormat(withLocaleAdjust, nonLayout, baseFormat, baseFormat)
               }
-              const { layer: withLocaleLayout, rest: formatRest } = patchLayerForLocaleFormatLayout(
-                localized,
-                rest,
-                activeLocale,
-                activeCanvasFormat,
-              )
-              return patchLayerForFormat(withLocaleLayout, formatRest, activeCanvasFormat, baseFormat)
+              // Format-scoped write: uses the pre-resolved `R` computed
+              // before mutation. Skip if resolution failed (layer filtered
+              // out of this format's view).
+              const { layer: withLocaleAdjust, rest: formatRest } = formatScopedResolved
+                ? patchLayerForLocaleAdjust(
+                    localized,
+                    rest,
+                    activeLocale,
+                    defaultLocale,
+                    activeCanvasFormat,
+                    formatScopedResolved,
+                  )
+                : { layer: localized, rest }
+              return patchLayerForFormat(withLocaleAdjust, formatRest, activeCanvasFormat, baseFormat)
             }),
           }
         : layer),

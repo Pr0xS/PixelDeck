@@ -2,11 +2,12 @@ import { nanoid } from 'nanoid'
 import type {
   Project, SlideGroup, Layer, LayerType, GroupLayer,
   BackgroundLayer, CanvasBackground, ProjectSettings,
-  LocaleLayerPatch, LocaleContent, CanvasFormatId, FormatLayerPatch, LocaleLayoutDelta,
+  LocaleLayerPatch, LocaleContent, CanvasFormatId, FormatLayerPatch, LayoutDelta,
+  LegacyLocaleLayoutFields,
 } from '@/types'
 import { spansToMarks } from '@/utils/textRendering'
 import { mapLayerTree } from '@/utils/layerTree'
-import { LOCALE_DELTA_FIELDS } from '@/utils/canvasFormats'
+import { LOCALE_DELTA_FIELDS, resolveLayerLocaleAdjustBaseOnly } from '@/utils/canvasFormats'
 import {
   BASE_CANVAS_FORMAT,
   FORMAT_FORK_KEYS,
@@ -17,6 +18,15 @@ import type { EditorSet, EditorGet } from './types'
 
 /** Bumped by each one-time project-shape migration. See migrateProject(). */
 export const LOCALE_SYMMETRIC_SCHEMA_VERSION = 1
+
+/**
+ * Bumped by the `localeAdjust` unification migration. See
+ * migrateProjectToLocaleAdjust() / migrateProject(). Old project files on
+ * disk may still carry the legacy `localeBaseDelta`/`localeLayoutOverrides`
+ * fields (deleted from `BaseLayer`'s type in P4) — this migration folds
+ * them INTO `localeAdjust`, the sole locale-layout storage since P4.
+ */
+export const LOCALE_ADJUST_SCHEMA_VERSION = 2
 
 export { findLayerInTree, mapLayerTree, updateLayerInTree } from '@/utils/layerTree'
 
@@ -229,6 +239,157 @@ export function seedLocaleContent(layer: Layer, defaultLocale: string): Layer {
   return { ...layer, localeContent: { [defaultLocale]: content } } as Layer
 }
 
+/**
+ * Read the legacy pre-P4 `localeBaseDelta`/`localeLayoutOverrides` fields off
+ * a RAW (pre-migration) layer. These fields were deleted from `BaseLayer`'s
+ * public type in P4 — new projects never carry them — but old project files
+ * saved on disk (and the frozen `legacy-4tier-project.json` migration
+ * fixture) can still contain these keys in their raw JSON, and this
+ * migration is the one place that still needs to read them. Explicit
+ * narrow cast to `LegacyLocaleLayoutFields` (not a blanket `any` on the
+ * whole layer) so this stays the single, obvious, greppable escape hatch —
+ * do not delete this read or replace it with an `any` cast; that would
+ * silently drop every legacy project's locale layout on load.
+ */
+function getLegacyLocaleLayoutFields(layer: Layer): LegacyLocaleLayoutFields {
+  return layer as unknown as LegacyLocaleLayoutFields
+}
+
+/**
+ * Migration: fold the legacy 4-tier locale layout fields (`localeBaseDelta`,
+ * `localeLayoutOverrides`) into the 3-tier `localeAdjust` field, per the
+ * deepwork spec's algorithm. Reads the legacy fields defensively (see
+ * `getLegacyLocaleLayoutFields`) since they no longer exist on `BaseLayer`'s
+ * type — this is read-only migration input, never written back.
+ *
+ * Returns the migrated project plus a `dropped` counter for keys that could
+ * not be expressed as a delta (multiplicative R===0 zero-guard, dead
+ * base-format cells, or keys outside the 7 fork keys) — surfaced so callers
+ * can assert on it directly (dropped keys can't be fixture-ized cleanly
+ * through the public store API).
+ */
+export function migrateProjectToLocaleAdjust(project: Project): { project: Project; dropped: number } {
+  const baseFormat = BASE_CANVAS_FORMAT
+  let dropped = 0
+
+  const slideGroups = project.slideGroups.map((group) => {
+    // Step 1: fold localeBaseDelta[locale] -> localeAdjust[locale][BASE] verbatim.
+    const step1Layers = mapLayerTree(group.layers, (layer) => {
+      const legacyBaseDelta = getLegacyLocaleLayoutFields(layer).localeBaseDelta
+      if (!legacyBaseDelta) return layer
+      let localeAdjust = layer.localeAdjust
+      for (const [locale, delta] of Object.entries(legacyBaseDelta)) {
+        if (!delta || !Object.keys(delta).length) continue
+        localeAdjust = {
+          ...(localeAdjust ?? {}),
+          [locale]: {
+            ...(localeAdjust?.[locale] ?? {}),
+            [baseFormat]: { ...delta },
+          },
+        }
+      }
+      return localeAdjust !== layer.localeAdjust ? ({ ...layer, localeAdjust } as Layer) : layer
+    })
+    const step1Group: SlideGroup = { ...group, layers: step1Layers }
+
+    // Step 2: convert localeLayoutOverrides[locale][format] cells (format !== base)
+    // into localeAdjust[locale][format] deltas, derived against R (the value
+    // resolved via the real render path, INCLUDING the just-folded base-scoped
+    // delta, EXCLUDING this cell).
+    const step2Layers = mapLayerTree(step1Group.layers, (layer) => {
+      const legacyLayoutOverrides = getLegacyLocaleLayoutFields(layer).localeLayoutOverrides
+      if (!legacyLayoutOverrides) return layer
+      let localeAdjust = layer.localeAdjust
+      for (const [locale, byFormat] of Object.entries(legacyLayoutOverrides)) {
+        if (!byFormat) continue
+        for (const [format, patch] of Object.entries(byFormat)) {
+          if (!patch) continue
+          // Dead cell: no writer ever produces localeLayoutOverrides[locale][baseFormat].
+          // Count keys (not cells) to match the documented "dropped counts keys" contract.
+          if (format === baseFormat) {
+            dropped += Object.keys(patch).length
+            continue
+          }
+          const resolvedFormat = format as CanvasFormatId
+          const R = resolveLayerLocaleAdjustBaseOnly(
+            step1Group,
+            layer.id,
+            locale,
+            resolvedFormat,
+            baseFormat,
+            project.settings.customFormats,
+          )
+          if (!R) {
+            // Layer filtered out of this format's resolved view entirely
+            // (ownerFormat mismatch, formatVisibility[format] === false, …) —
+            // every key in this cell is unrepresentable, so count them all
+            // rather than silently dropping the whole cell uncounted.
+            dropped += Object.keys(patch).length
+            continue
+          }
+          const { delta, dropped: keyDropped } = deriveLocaleAdjustDelta(patch, R)
+          dropped += keyDropped
+          if (!Object.keys(delta).length) continue
+          localeAdjust = {
+            ...(localeAdjust ?? {}),
+            [locale]: {
+              ...(localeAdjust?.[locale] ?? {}),
+              [resolvedFormat]: {
+                ...(localeAdjust?.[locale]?.[resolvedFormat] ?? {}),
+                ...delta,
+              },
+            },
+          }
+        }
+      }
+      return localeAdjust !== layer.localeAdjust ? ({ ...layer, localeAdjust } as Layer) : layer
+    })
+
+    return { ...step1Group, layers: step2Layers }
+  })
+
+  return { project: { ...project, slideGroups }, dropped }
+}
+
+/**
+ * Derive a `LayoutDelta` from one legacy absolute `localeLayoutOverrides`
+ * patch cell, given `R` (the resolved value excluding that cell). Additive
+ * for x/y/rotation (`d = V - R`), multiplicative for width/height/fontSize/
+ * scale (`m = V / R`). Prunes no-ops (0/1). Drops (and counts) keys outside
+ * the 7 fork keys, and multiplicative keys where `R === 0` (inexpressible as
+ * a ratio).
+ */
+export function deriveLocaleAdjustDelta(patch: FormatLayerPatch, R: Layer): { delta: LayoutDelta; dropped: number } {
+  const delta: LayoutDelta = {}
+  let localDropped = 0
+  const rSource = R as unknown as Record<string, unknown>
+  const additiveKeys = new Set(['x', 'y', 'rotation'])
+  for (const [key, value] of Object.entries(patch)) {
+    const deltaKey = (LOCALE_DELTA_FIELDS as Record<string, keyof LayoutDelta>)[key]
+    if (!deltaKey) {
+      localDropped++ // key outside the 7 fork keys — no legit writer produced it
+      continue
+    }
+    const rValue = rSource[key]
+    if (typeof value !== 'number' || typeof rValue !== 'number') {
+      localDropped++
+      continue
+    }
+    if (additiveKeys.has(key)) {
+      const derived = value - rValue
+      if (derived !== 0) (delta as Record<string, number>)[deltaKey] = derived
+    } else {
+      if (rValue === 0) {
+        localDropped++ // inexpressible as a ratio
+        continue
+      }
+      const derived = value / rValue
+      if (derived !== 1) (delta as Record<string, number>)[deltaKey] = derived
+    }
+  }
+  return { delta, dropped: localDropped }
+}
+
 export function newSlideGroup(overrides?: Partial<SlideGroup>): SlideGroup {
   const bgLayer = createBackgroundLayer()
   const { layers: overrideLayers, ...otherOverrides } = overrides ?? {}
@@ -315,6 +476,11 @@ export function migrateProject(raw: Project): Project {
   }
   if ((project.settings.schemaVersion ?? 0) < LOCALE_SYMMETRIC_SCHEMA_VERSION) {
     project.settings = { ...project.settings, schemaVersion: LOCALE_SYMMETRIC_SCHEMA_VERSION }
+  }
+  if ((project.settings.schemaVersion ?? 0) < LOCALE_ADJUST_SCHEMA_VERSION) {
+    const { project: migrated } = migrateProjectToLocaleAdjust(project)
+    project.slideGroups = migrated.slideGroups
+    project.settings = { ...project.settings, schemaVersion: LOCALE_ADJUST_SCHEMA_VERSION }
   }
   return project
 }
@@ -429,168 +595,134 @@ export const withFormatOverride = (layer: Layer, format: CanvasFormatId, patch: 
   },
 } as Layer)
 
-/** Merge a target-space layout patch into one locale/format override cell. */
-export const withLocaleFormatOverride = (
-  layer: Layer,
-  locale: string,
-  format: CanvasFormatId,
-  patch: FormatLayerPatch,
-): Layer => ({
-  ...layer,
-  localeLayoutOverrides: {
-    ...(layer.localeLayoutOverrides ?? {}),
-    [locale]: {
-      ...(layer.localeLayoutOverrides?.[locale] ?? {}),
-      [format]: {
-        ...(layer.localeLayoutOverrides?.[locale]?.[format] ?? {}),
-        ...patch,
-      },
-    },
-  },
-} as Layer)
-
-/** Remove one locale/format override cell and prune empty parent maps. */
-export const withoutLocaleFormatOverride = (
-  layer: Layer,
-  locale: string,
-  format: CanvasFormatId,
-): Layer => {
-  if (!layer.localeLayoutOverrides?.[locale]?.[format]) return layer
-  const { [format]: _removedFormat, ...remainingFormats } = layer.localeLayoutOverrides[locale]
-  void _removedFormat
-  const { [locale]: _removedLocale, ...remainingLocales } = layer.localeLayoutOverrides
-  void _removedLocale
-  const localeLayoutOverrides = Object.keys(remainingFormats).length
-    ? { ...remainingLocales, [locale]: remainingFormats }
-    : remainingLocales
-  return {
-    ...layer,
-    localeLayoutOverrides: Object.keys(localeLayoutOverrides).length ? localeLayoutOverrides : undefined,
-  } as Layer
-}
-
-/** Remove one key from a locale/format override cell and prune empty maps. */
-export const withoutLocaleFormatOverrideKey = (
-  layer: Layer,
-  locale: string,
-  format: CanvasFormatId,
-  key: string,
-): Layer => {
-  const patch = layer.localeLayoutOverrides?.[locale]?.[format]
-  if (!patch || !(key in patch)) return layer
-  const { [key]: _removedKey, ...remainingPatch } = patch as Record<string, unknown>
-  void _removedKey
-  if (!Object.keys(remainingPatch).length) return withoutLocaleFormatOverride(layer, locale, format)
-  const localeLayoutOverrides = {
-    ...layer.localeLayoutOverrides,
-    [locale]: {
-      ...layer.localeLayoutOverrides![locale],
-      [format]: remainingPatch as FormatLayerPatch,
-    },
-  }
-  return { ...layer, localeLayoutOverrides } as Layer
-}
-
-/** Route layout keys into one locale/format override cell. */
-export const patchLayerForLocaleFormatLayout = (
-  layer: Layer,
-  patch: Partial<Layer>,
-  locale: string,
-  format: CanvasFormatId,
-): { layer: Layer; rest: Partial<Layer> } => {
-  const { layout, rest } = splitLocaleFormatLayoutPatch(patch)
-  if (!Object.keys(layout).length) return { layer, rest }
-  return { layer: withLocaleFormatOverride(layer, locale, format, layout), rest }
-}
-
 /**
- * Route base-format, non-default-locale layout edits into a base-coordinate
- * delta. Incoming values are already resolved values, so each key is derived
- * afresh rather than accumulated onto a prior delta.
+ * Derive+merge a `LayoutDelta` for one `localeAdjust[locale][scope]` cell —
+ * the single write path for non-default-locale layout edits. `scope` is
+ * `BASE_CANVAS_FORMAT` for the base-authoring-context write, or the active
+ * (non-base) format id for the format-scoped write.
+ *
+ * `resolved` is the format-resolved value the incoming patch is relative to,
+ * EXCLUDING this cell:
+ *  - base-scoped (`scope === BASE_CANVAS_FORMAT`): raw === resolved there, so
+ *    callers can just pass the (pre-patch) layer itself — free, no extra
+ *    resolution needed.
+ *  - format-scoped: callers MUST pre-resolve this via
+ *    `resolveLayerLocaleAdjustBaseOnly` (or equivalent) BEFORE calling, since
+ *    it needs `formatOverrides[F]` + the already-composed base-scoped delta
+ *    factored in — this is the one non-trivial cost this write path carries
+ *    (measured comfortably under budget, see the deepwork doc's perf writeup).
+ *
+ * Reuses `deriveLocaleAdjustDelta` (the exact derive/prune math shared with
+ * the migration) rather than re-deriving a second time. Replace-not-
+ * accumulate semantics per key: each written key's delta is recomputed fresh
+ * against `resolved`, not accumulated onto any prior stored delta. Prunes
+ * no-op keys (0/1) and empty parent maps.
  */
-export const patchLayerForLocaleBaseDelta = (
+export const patchLayerForLocaleAdjust = (
   layer: Layer,
   patch: Partial<Layer>,
-  activeLocale: string,
+  locale: string,
   defaultLocale: string,
+  scope: CanvasFormatId,
+  resolved: Layer,
 ): { layer: Layer; rest: Partial<Layer> } => {
   const { layout, rest } = splitLocaleFormatLayoutPatch(patch)
-  if (activeLocale === defaultLocale || !Object.keys(layout).length) return { layer, rest }
+  if (locale === defaultLocale || !Object.keys(layout).length) return { layer, rest }
 
-  const source = layer as unknown as Record<string, unknown>
-  const incoming = layout as unknown as Record<string, unknown>
-  const delta: LocaleLayoutDelta = { ...(layer.localeBaseDelta?.[activeLocale] ?? {}) }
-  const deriveAdditive = (key: 'x' | 'y' | 'rotation', deltaKey: 'dx' | 'dy' | 'dRotation') => {
-    const value = incoming[key]
-    const current = source[key]
-    if (typeof value === 'number' && typeof current === 'number') {
-      const derived = value - current
-      if (derived === 0) delete delta[deltaKey]
-      else delta[deltaKey] = derived
+  const { delta: derivedDelta } = deriveLocaleAdjustDelta(layout as FormatLayerPatch, resolved)
+  const existing = layer.localeAdjust?.[locale]?.[scope] ?? {}
+  const merged: Record<string, number> = { ...(existing as Record<string, number>) }
+  for (const layoutKey of Object.keys(layout)) {
+    const deltaKey = (LOCALE_DELTA_FIELDS as Record<string, keyof LayoutDelta>)[layoutKey]
+    if (!deltaKey) continue
+    if (deltaKey in derivedDelta) merged[deltaKey] = (derivedDelta as Record<string, number>)[deltaKey]
+    else delete merged[deltaKey]
+  }
+
+  if (!Object.keys(merged).length) {
+    if (!layer.localeAdjust?.[locale]?.[scope]) return { layer, rest }
+    const { [scope]: _removedScope, ...remainingScopes } = layer.localeAdjust[locale]
+    void _removedScope
+    const { [locale]: _removedLocale, ...remainingLocales } = layer.localeAdjust
+    void _removedLocale
+    const localeAdjust = Object.keys(remainingScopes).length
+      ? { ...remainingLocales, [locale]: remainingScopes }
+      : remainingLocales
+    return {
+      layer: { ...layer, localeAdjust: Object.keys(localeAdjust).length ? localeAdjust : undefined } as Layer,
+      rest,
     }
   }
-  const deriveMultiplicative = (
-    key: 'width' | 'height' | 'fontSize' | 'scale',
-    deltaKey: 'mWidth' | 'mHeight' | 'mFontSize' | 'mScale',
-  ) => {
-    const value = incoming[key]
-    const current = source[key]
-    if (typeof value === 'number' && typeof current === 'number' && current !== 0) {
-      const derived = value / current
-      if (derived === 1) delete delta[deltaKey]
-      else delta[deltaKey] = derived
-    }
-  }
-  deriveAdditive('x', LOCALE_DELTA_FIELDS.x)
-  deriveAdditive('y', LOCALE_DELTA_FIELDS.y)
-  deriveAdditive('rotation', LOCALE_DELTA_FIELDS.rotation)
-  deriveMultiplicative('width', LOCALE_DELTA_FIELDS.width)
-  deriveMultiplicative('height', LOCALE_DELTA_FIELDS.height)
-  deriveMultiplicative('fontSize', LOCALE_DELTA_FIELDS.fontSize)
-  if (layer.type !== 'group') deriveMultiplicative('scale', LOCALE_DELTA_FIELDS.scale)
-
-  if (!Object.keys(delta).length) return { layer: withoutLocaleBaseDelta(layer, activeLocale), rest }
 
   return {
     layer: {
       ...layer,
-      localeBaseDelta: { ...(layer.localeBaseDelta ?? {}), [activeLocale]: delta },
+      localeAdjust: {
+        ...(layer.localeAdjust ?? {}),
+        [locale]: {
+          ...(layer.localeAdjust?.[locale] ?? {}),
+          [scope]: merged as LayoutDelta,
+        },
+      },
     } as Layer,
     rest,
   }
 }
 
-/** Remove one locale base-delta cell and prune the parent map. */
-export const withoutLocaleBaseDelta = (layer: Layer, locale: string): Layer => {
-  if (!layer.localeBaseDelta?.[locale]) return layer
-  const { [locale]: _removed, ...remaining } = layer.localeBaseDelta
-  void _removed
-  return { ...layer, localeBaseDelta: Object.keys(remaining).length ? remaining : undefined } as Layer
+/**
+ * Remove one `localeAdjust[locale][scope]` cell and prune empty parent
+ * maps. `scope` is `BASE_CANVAS_FORMAT` for the base-scoped cell or an
+ * active (non-base) format id for the format-scoped cell — both cells
+ * compose rather than shadow, so this only ever clears its own scope.
+ */
+export const withoutLocaleAdjust = (layer: Layer, locale: string, scope: CanvasFormatId): Layer => {
+  if (!layer.localeAdjust?.[locale]?.[scope]) return layer
+  const { [scope]: _removedScope, ...remainingScopes } = layer.localeAdjust[locale]
+  void _removedScope
+  const { [locale]: _removedLocale, ...remainingLocales } = layer.localeAdjust
+  void _removedLocale
+  const localeAdjust = Object.keys(remainingScopes).length
+    ? { ...remainingLocales, [locale]: remainingScopes }
+    : remainingLocales
+  return { ...layer, localeAdjust: Object.keys(localeAdjust).length ? localeAdjust : undefined } as Layer
 }
 
-/** Remove one key from a locale base-delta cell and prune empty maps. */
-export const withoutLocaleBaseDeltaKey = (layer: Layer, locale: string, key: string): Layer => {
-  const delta = layer.localeBaseDelta?.[locale]
-  if (!delta || !(key in delta)) return layer
-  const { [key]: _removed, ...remainingDelta } = delta as Record<string, unknown>
+/**
+ * Remove one key from a `localeAdjust[locale][scope]` cell and prune empty
+ * maps. Accepts a LAYOUT key (e.g. `'x'`), translating internally via
+ * `LOCALE_DELTA_FIELDS` (`OverrideDot` always passes layout keys).
+ */
+export const withoutLocaleAdjustKey = (
+  layer: Layer,
+  locale: string,
+  scope: CanvasFormatId,
+  layoutKey: string,
+): Layer => {
+  const deltaKey = (LOCALE_DELTA_FIELDS as Record<string, keyof LayoutDelta>)[layoutKey]
+  if (!deltaKey) return layer
+  const delta = layer.localeAdjust?.[locale]?.[scope]
+  if (!delta || !(deltaKey in delta)) return layer
+  const { [deltaKey]: _removed, ...remainingDelta } = delta as Record<string, unknown>
   void _removed
-  if (!Object.keys(remainingDelta).length) return withoutLocaleBaseDelta(layer, locale)
+  if (!Object.keys(remainingDelta).length) return withoutLocaleAdjust(layer, locale, scope)
   return {
     ...layer,
-    localeBaseDelta: { ...layer.localeBaseDelta, [locale]: remainingDelta as LocaleLayoutDelta },
+    localeAdjust: {
+      ...layer.localeAdjust,
+      [locale]: {
+        ...layer.localeAdjust![locale],
+        [scope]: remainingDelta as LayoutDelta,
+      },
+    },
   } as Layer
 }
 
-/** Remove one locale base-delta cell across a complete layer tree. */
-export const resetLocaleBaseDeltasInLayerTree = (layers: Layer[], locale: string): Layer[] =>
-  mapLayerTree(layers, (layer) => withoutLocaleBaseDelta(layer, locale))
-
-/** Remove one locale/format override cell across a complete layer tree. */
-export const resetLocaleFormatOverridesInLayerTree = (
+/** Remove one `localeAdjust[locale][scope]` cell across a complete layer tree. */
+export const resetLocaleAdjustsInLayerTree = (
   layers: Layer[],
   locale: string,
-  format: CanvasFormatId,
-): Layer[] => mapLayerTree(layers, (layer) => withoutLocaleFormatOverride(layer, locale, format))
+  scope: CanvasFormatId,
+): Layer[] => mapLayerTree(layers, (layer) => withoutLocaleAdjust(layer, locale, scope))
 
 export const withoutFormatOverride = (layer: Layer, format: CanvasFormatId): Layer => {
   if (!layer.formatOverrides?.[format]) return layer
