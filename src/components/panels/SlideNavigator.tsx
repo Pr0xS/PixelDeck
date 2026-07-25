@@ -239,6 +239,9 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
 
   const viewProject = applyCanvasFormat(project, activeCanvasFormat)
   const activeGroup = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
+  // Whether ANY slide group in the project is a pano/strip — not just the active
+  // one — since panoSettings.compensate is a project-wide setting.
+  const hasPano = project.slideGroups.some((g) => g.numSlides > 1)
 
   // The formats currently active for this project
   // Export targets — Base is used when no platform or custom formats are active.
@@ -327,7 +330,9 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
       className="h-20 flex items-center gap-3 px-3 shrink-0 border-t"
       style={{ background: '#18181f', borderColor }}
     >
-      <div className="flex flex-col gap-1.5 shrink-0 pr-3 border-r border-[rgba(255,255,255,0.06)]">
+      {/* Width matches LayersPanel (w-56 = 224px) minus this footer's own left px-3 (12px)
+          inset, so the divider lines up exactly under the sidebar's right edge. */}
+      <div className="flex flex-col gap-1.5 shrink-0 w-[212px] pr-3 border-r border-[rgba(255,255,255,0.06)]">
         <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6b6b7a]">Slides</div>
         {activeGroup && (
           <div className="flex items-center gap-1.5">
@@ -346,29 +351,33 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
             ))}
           </div>
         )}
-        {activeGroup && activeGroup.numSlides > 1 && (
-          <label className="flex items-center gap-1.5 text-[10px] text-[#6b6b7a]">
-            <input
-              type="checkbox"
-              checked={panoSettings.compensate}
-              onChange={(e) => updatePanoSettings({ compensate: e.target.checked })}
-              className="h-3 w-3 accent-[#7c6ef6]"
-              title="When enabled, export/preview skip this gap between slides"
-            />
-            <span>Compensate</span>
-            <span className="ml-1">Gap</span>
-            <input
-              type="number"
-              min={0}
-              max={MAX_PANO_COMPENSATION_PX}
-              value={panoSettings.gapPx}
-              onChange={(e) => updatePanoSettings({ gapPx: parseInt(e.target.value, 10) || 0 })}
-              className="w-12 rounded border border-[rgba(255,255,255,0.1)] bg-[#0f0f13] px-1 py-0.5 text-right text-[#e8e8f0] focus:outline-none"
-              title="Store preview gap shown in editor and preview"
-            />
-            <span>px</span>
-          </label>
-        )}
+        {/* Always rendered (even with no pano groups) so this column's height never
+            shifts the numSlides buttons when switching between Single/Pano/Strip. */}
+        <label
+          className={`flex items-center gap-1.5 text-[10px] ${hasPano ? 'text-[#6b6b7a]' : 'text-[#4a4a57]'}`}
+        >
+          <input
+            type="checkbox"
+            checked={hasPano && panoSettings.compensate}
+            disabled={!hasPano}
+            onChange={(e) => updatePanoSettings({ compensate: e.target.checked })}
+            className="h-3 w-3 accent-[#7c6ef6] disabled:opacity-40 disabled:cursor-not-allowed"
+            title="When enabled, export/preview skip this gap between slides"
+          />
+          <span>Compensate</span>
+          <span className="ml-1">Gap</span>
+          <input
+            type="number"
+            min={0}
+            max={MAX_PANO_COMPENSATION_PX}
+            value={panoSettings.gapPx}
+            disabled={!hasPano}
+            onChange={(e) => updatePanoSettings({ gapPx: parseInt(e.target.value, 10) || 0 })}
+            className="w-12 rounded border border-[rgba(255,255,255,0.1)] bg-[#0f0f13] px-1 py-0.5 text-right text-[#e8e8f0] focus:outline-none disabled:opacity-40 disabled:cursor-not-allowed"
+            title="Store preview gap shown in editor and preview"
+          />
+          <span>px</span>
+        </label>
       </div>
 
       <div className="flex items-center gap-2 flex-1 overflow-x-auto min-w-0">

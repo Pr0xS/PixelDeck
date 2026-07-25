@@ -1,5 +1,5 @@
 <p align="center">
-  <a href="https://pr0xs.github.io/PixelDeck/" aria-label="PixelDeck live demo">
+  <a href="https://pr0xs.github.io/PixelDeck/" aria-label="Try PixelDeck in your browser">
     <img src="public/logo.svg" alt="PixelDeck" width="260" />
   </a>
 </p>
@@ -9,7 +9,7 @@
 ### App Store & Play Store Screenshot Generator — Visual Editor + CLI
 
 [![GitHub stars](https://img.shields.io/github/stars/Pr0xS/PixelDeck?style=social)](https://github.com/Pr0xS/PixelDeck/stargazers)
-[![Live Demo](https://img.shields.io/badge/demo-live-success.svg)](https://pr0xs.github.io/PixelDeck/)
+[![Try the App](https://img.shields.io/badge/try%20it-in%20browser-success.svg)](https://pr0xs.github.io/PixelDeck/)
 [![License: MIT](https://img.shields.io/badge/License-MIT-blue.svg)](LICENSE)
 [![CI](https://github.com/Pr0xS/PixelDeck/actions/workflows/ci.yml/badge.svg)](https://github.com/Pr0xS/PixelDeck/actions)
 [![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](CONTRIBUTING.md)
@@ -19,7 +19,7 @@
 
 PixelDeck is a free **App Store screenshot generator** and **device mockup maker** for indie developers and mobile teams. Create polished App Store and Google Play screenshots with a layer-based canvas editor — drag device mockups, headlines, gradients, and shapes onto your screens — then automate PNG export for every screen, locale, and device size from a headless CLI. Free, open-source, and 100% local.
 
-### 🚀 [Try the Live Demo →](https://pr0xs.github.io/PixelDeck/)
+### 🚀 [Try the App →](https://pr0xs.github.io/PixelDeck/)
 
 No install, no sign-up. Everything runs in your browser.
 
@@ -113,7 +113,7 @@ Export at any pixel ratio via the CLI. Match `slideWidth`/`slideHeight` to your 
 
 ## Quick Start
 
-The fastest way to try PixelDeck is the **[live demo](https://pr0xs.github.io/PixelDeck/)**, with nothing to install.
+The fastest way to try PixelDeck is the **[hosted app](https://pr0xs.github.io/PixelDeck/)**, with nothing to install.
 
 ### Run locally
 
