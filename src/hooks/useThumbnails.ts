@@ -178,7 +178,9 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>) {
   useEffect(() => {
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     let idleCallbackId: number | null = null
-    const start = () => { void precacheLowResThumbnails() }
+    const start = () => {
+      precacheLowResThumbnails().catch((err) => console.error('[PixelDeck] precache failed', err))
+    }
 
     if ('requestIdleCallback' in window) {
       idleCallbackId = window.requestIdleCallback(start)
@@ -191,6 +193,30 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>) {
       if (timeoutId !== null) globalThis.clearTimeout(timeoutId)
     }
   }, [project.id, slideGroupIds, precacheLowResThumbnails])
+
+  // ── Visibility recovery ──────────────────────────────────────────────────
+  // Backgrounded/discarded tabs suspend rAF entirely, which can cause capture
+  // polling loops to exit early and leave thumbnails blank with no retry path.
+  // When the tab becomes visible again, silently re-trigger capture for any
+  // group whose thumbnails look incomplete.
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState !== 'visible') return
+
+      const { project: currentProject, activeSlideGroupId: currentActiveGroupId } = useEditorStore.getState()
+      const needsCapture = currentProject.slideGroups.some((group) => {
+        const existing = thumbnailsRef.current[group.id]
+        return !existing || existing.length < group.numSlides || !existing.slice(0, group.numSlides).every(Boolean)
+      })
+      if (!needsCapture) return
+
+      precacheLowResThumbnails().catch((err) => console.error('[PixelDeck] precache failed', err))
+      if (currentActiveGroupId) captureGroup(currentActiveGroupId)
+    }
+
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+    return () => document.removeEventListener('visibilitychange', handleVisibilityChange)
+  }, [precacheLowResThumbnails, captureGroup, activeSlideGroupId, project])
 
   // ── High-res preview capture (cache-first) ─────────────────────────────────
   const captureAllHighRes = useCallback(async (options: { panoCompensationPx?: number; panoCompensate?: boolean } = {}) => {

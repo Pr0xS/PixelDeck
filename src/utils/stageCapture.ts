@@ -49,14 +49,18 @@ export function withIdentityTransform<T>(stage: Konva.Stage, fn: () => T): T {
   }
 }
 
+const MIN_POLLS = 3
+
 export async function waitForStage(
   stageRef: RefObject<Konva.Stage | null>,
   timeoutMs = DEFAULT_SETTLE_TIMEOUT_MS,
 ): Promise<Konva.Stage | null> {
   const start = performance.now()
-  while (performance.now() - start < timeoutMs) {
+  let polls = 0
+  while (polls < MIN_POLLS || performance.now() - start < timeoutMs) {
     if (stageRef.current && stageRef.current.width() > 0) return stageRef.current
     await nextFrame()
+    polls += 1
   }
   return stageRef.current
 }
@@ -70,9 +74,11 @@ export async function waitForStageSettled(
   const start = performance.now()
   let stableFrames = 0
   let lastCount = -1
+  let polls = 0
 
-  while (performance.now() - start < timeoutMs) {
+  while (polls < MIN_POLLS || performance.now() - start < timeoutMs) {
     await nextFrame()
+    polls += 1
     const images = stage.find('Image')
     const allLoaded = images.every((node) => {
       const img = (node as Konva.Image).image()
