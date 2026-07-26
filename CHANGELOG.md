@@ -7,6 +7,12 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.7.1](https://github.com/Pr0xS/PixelDeck/compare/v0.7.0...v0.7.1) - 2026-07-26
+
+### Fixed
+
+- Nav thumbnails no longer go permanently blank after a tab is backgrounded for a long time (or the browser restarts and the tab is revisited). The capture polling loops (`waitForStage`/`waitForStageSettled`) were bounded by wall-clock time but could only advance via `requestAnimationFrame`, which browsers fully suspend for hidden tabs — on resume the clock had already passed the timeout before a single frame fired, so the capture silently gave up with no retry path. Thumbnails are now silently re-captured on `visibilitychange` when the tab becomes visible again.
+
 ## [0.7.0](https://github.com/Pr0xS/PixelDeck/compare/v0.6.1...v0.7.0) - 2026-07-25
 
 ### Added
