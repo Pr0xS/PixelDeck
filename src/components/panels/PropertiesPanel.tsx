@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useMemo, useState } from 'react'
 import type { FocusEvent } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
@@ -37,7 +37,7 @@ import { EmojiProperties } from '@/components/properties/EmojiProperties'
 import { BrandProperties } from '@/components/properties/BrandProperties'
 import { ShapeProperties } from '@/components/properties/ShapeProperties'
 import { GroupProperties } from '@/components/properties/GroupProperties'
-import { getCanvasFormat, getFormatCanvasDims, getFormatLabel, getProjectActiveFormats, getProjectBaseFormat, resolveProjectView } from '@/utils/canvasFormats'
+import { getCanvasFormat, getFormatCanvasDims, getFormatLabel, getProjectActiveFormats, getProjectBaseFormat, resolveGroupView } from '@/utils/canvasFormats'
 import type { CanvasFormatId } from '@/types'
 import { getLayerBBox, getUnionBBox, computeAlignPatch, type AlignAxis } from '@/utils/alignLayers'
 import { getLanguageName } from '@/utils/locale'
@@ -455,9 +455,11 @@ export function PropertiesPanel() {
   const editingTextId = useEditorStore((s) => s.editingTextId)
   const [activeTab, setActiveTab] = useState<PanelTab>('layout')
 
-  const viewProject = resolveProjectView(project, activeLocale, activeCanvasFormat)
-  const activeGroup: SlideGroup | undefined = viewProject.slideGroups.find((group) => group.id === activeSlideGroupId)
   const rawActiveGroup: SlideGroup | undefined = project.slideGroups.find((group) => group.id === activeSlideGroupId)
+  const activeGroup = useMemo(
+    () => rawActiveGroup && resolveGroupView(rawActiveGroup, project.settings, activeLocale, activeCanvasFormat),
+    [rawActiveGroup, project.settings, activeLocale, activeCanvasFormat],
+  )
 
   let selectedLayer: Layer | null = null
   let rawSelectedLayer: Layer | null = null

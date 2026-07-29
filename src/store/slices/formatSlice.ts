@@ -64,7 +64,6 @@ export const createFormatSlice = (
   | 'setLayerFormatVisibility'
   | 'setLayerOnlyInFormat'
   | 'clearLayerFormatVisibility'
-  | 'toggleActiveFormat'
   | 'addCustomFormat'
   | 'removeCustomFormat'
   | 'updateCustomFormat'
@@ -193,25 +192,6 @@ export const createFormatSlice = (
           get().project.settings.customFormats,
         )[0]
       }),
-    }))
-  },
-
-  toggleActiveFormat: (format) => {
-    const { project, activeCanvasFormat } = get()
-    const baseFormat = getProjectBaseFormat(project)
-    if (format === 'base' || format === baseFormat) return // can't remove base
-    const currentFormats = getProjectActiveFormats(project)
-    let newList: CanvasFormatId[]
-    if (currentFormats.includes(format)) {
-      newList = currentFormats.filter((f) => f !== format)
-    } else {
-      newList = [...currentFormats, format]
-    }
-    set((state) => ({
-      project: touchProject(state.project, {
-        settings: { ...state.project.settings, baseCanvasFormat: BASE_CANVAS_FORMAT, activeFormats: newList },
-      }),
-      ...(activeCanvasFormat === format ? { activeCanvasFormat: baseFormat } : {}),
     }))
   },
 

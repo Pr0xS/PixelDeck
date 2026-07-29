@@ -9,7 +9,7 @@ import { OverrideDot } from '@/components/properties/OverrideDot'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { FileUploadButton } from '@/components/ui/FileUploadButton'
-import { PHONE_MODELS, getPhoneSpec } from '@/assets/mockups/specs'
+import { computePhoneFitScale, PHONE_MODELS, getPhoneSpec } from '@/assets/mockups/specs'
 import {
   inputCls,
   labelCls,
@@ -107,6 +107,11 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
   const previewSrc = layer.screenshotPath ? assets[layer.screenshotPath]?.dataUrl ?? layer.screenshotDataUrl : layer.screenshotDataUrl
   const screenshotLabel = layer.screenshotPath ? layer.screenshotPath : layer.screenshotDataUrl ? 'Inline (legacy)' : null
 
+  // Only phone-shaped devices have a status bar. Watches (round/squircle screens) and
+  // frameless screens have `statusBar.height === 0` in their spec — the properties UI
+  // should not offer controls that render nothing.
+  const hasStatusBar = getPhoneSpec(layer.model).statusBar.height > 0
+
   return (
     <div className="space-y-4">
       <div className={panelSectionCls}>
@@ -114,7 +119,17 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
           <label className={labelCls + ' !mb-0'}>Phone Model</label>
           <OverrideDot layerId={layer.id} propKey="model" />
         </div>
-        <select value={layer.model} onChange={(e) => upd({ model: e.target.value as PhoneLayer['model'] })} className={inputCls}>
+        <select
+          value={layer.model}
+          onChange={(e) => {
+            const nextModel = e.target.value as PhoneLayer['model']
+            const activeGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
+            const nextSpec = getPhoneSpec(nextModel)
+            const nextScale = activeGroup ? computePhoneFitScale(activeGroup.slideHeight, nextSpec) : layer.scale
+            upd({ model: nextModel, scale: nextScale })
+          }}
+          className={inputCls}
+        >
           {PHONE_MODELS.map((m) => (
             <option key={m.id} value={m.id}>{m.label}</option>
           ))}
@@ -158,64 +173,66 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
         )
       })()}
 
-      <div className={panelSectionCls}>
-        {/* Status bar toggle */}
-        <div className="mb-3 flex items-center justify-between">
-          <label className={labelCls + ' !mb-0'}>Status Bar</label>
-          <ToggleSwitch
-            checked={layer.showStatusBar ?? true}
-            onChange={(checked) => upd({ showStatusBar: checked })}
-            ariaLabel="Toggle status bar"
-          />
-        </div>
-        {/* Controls — only shown when status bar is on */}
-        {(layer.showStatusBar ?? true) && (
-          <div className="space-y-3">
-            {/* Background type */}
-            <div>
-              <label className={labelCls}>Background</label>
-              <SegmentedControl
-                value={layer.statusBarBg ?? 'transparent'}
-                options={[
-                  { value: 'transparent', label: 'Transparent' },
-                  { value: 'solid', label: 'Solid' },
-                ]}
-                onChange={(b) => upd({ statusBarBg: b })}
-                className="grid grid-cols-2 gap-2"
-                optionClassName="rounded-lg border px-3 py-2 text-xs transition-colors"
-              />
-            </div>
-
-            {/* Colour picker — only for solid */}
-            {(layer.statusBarBg ?? 'transparent') === 'solid' && (
+      {hasStatusBar && (
+        <div className={panelSectionCls}>
+          {/* Status bar toggle */}
+          <div className="mb-3 flex items-center justify-between">
+            <label className={labelCls + ' !mb-0'}>Status Bar</label>
+            <ToggleSwitch
+              checked={layer.showStatusBar ?? true}
+              onChange={(checked) => upd({ showStatusBar: checked })}
+              ariaLabel="Toggle status bar"
+            />
+          </div>
+          {/* Controls — only shown when status bar is on */}
+          {(layer.showStatusBar ?? true) && (
+            <div className="space-y-3">
+              {/* Background type */}
               <div>
-                <label className={labelCls}>Color</label>
-                <ColorField
-                  value={layer.statusBarColor ?? '#000000'}
-                  onChange={(v) => upd({ statusBarColor: v })}
-                  onInteractionStart={pauseTemporal}
-                  onInteractionEnd={resumeTemporal}
+                <label className={labelCls}>Background</label>
+                <SegmentedControl
+                  value={layer.statusBarBg ?? 'transparent'}
+                  options={[
+                    { value: 'transparent', label: 'Transparent' },
+                    { value: 'solid', label: 'Solid' },
+                  ]}
+                  onChange={(b) => upd({ statusBarBg: b })}
+                  className="grid grid-cols-2 gap-2"
+                  optionClassName="rounded-lg border px-3 py-2 text-xs transition-colors"
                 />
               </div>
-            )}
 
-            {/* Icon theme */}
-            <div>
-              <label className={labelCls}>Icons</label>
-              <SegmentedControl
-                value={layer.statusBarTheme ?? 'dark'}
-                options={[
-                  { value: 'dark', label: '🌙 Dark' },
-                  { value: 'light', label: '☀️ Light' },
-                ]}
-                onChange={(t) => upd({ statusBarTheme: t })}
-                className="grid grid-cols-2 gap-2"
-                optionClassName="rounded-lg border px-3 py-2 text-xs transition-colors"
-              />
+              {/* Colour picker — only for solid */}
+              {(layer.statusBarBg ?? 'transparent') === 'solid' && (
+                <div>
+                  <label className={labelCls}>Color</label>
+                  <ColorField
+                    value={layer.statusBarColor ?? '#000000'}
+                    onChange={(v) => upd({ statusBarColor: v })}
+                    onInteractionStart={pauseTemporal}
+                    onInteractionEnd={resumeTemporal}
+                  />
+                </div>
+              )}
+
+              {/* Icon theme */}
+              <div>
+                <label className={labelCls}>Icons</label>
+                <SegmentedControl
+                  value={layer.statusBarTheme ?? 'dark'}
+                  options={[
+                    { value: 'dark', label: '🌙 Dark' },
+                    { value: 'light', label: '☀️ Light' },
+                  ]}
+                  onChange={(t) => upd({ statusBarTheme: t })}
+                  className="grid grid-cols-2 gap-2"
+                  optionClassName="rounded-lg border px-3 py-2 text-xs transition-colors"
+                />
+              </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
 
       <div className={panelSectionCls}>
         <div className="mb-1 flex items-center justify-between">

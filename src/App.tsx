@@ -11,7 +11,7 @@ import { EditingContextAlert, EditingContextBar } from '@/components/canvas/Edit
 import { AppLoadingScreen } from '@/components/AppLoadingScreen'
 import { useThumbnails } from '@/hooks/useThumbnails'
 import { useEditorStore, useUndoRedo } from '@/store'
-import { applyCanvasFormat, resolveProjectView } from '@/utils/canvasFormats'
+import { applyCanvasFormat, resolveGroupView } from '@/utils/canvasFormats'
 import { registerStage } from '@/utils/stageRegistry'
 import { getScopedEditingIndicator } from '@/utils/scopedEditingIndicator'
 
@@ -55,10 +55,11 @@ export default function App() {
     previewThumbs,
     isCapturingPreview,
     isPrecachingThumbnails,
-    hasCompletedInitialPrecache,
+    precacheFreezeFrame,
+    captureNow,
     captureAllHighRes,
     cancelPreviewCapture,
-  } = useThumbnails(stageRef)
+  } = useThumbnails(stageRef, hasCompletedInitialLoad)
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setHasMetMinimumSplashTime(true), INITIAL_SPLASH_MIN_MS)
@@ -66,16 +67,22 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => setHasCompletedInitialLoad(true), 3000)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
+
+  useEffect(() => {
     if (hasCompletedInitialLoad) return
     if (!hasMetMinimumSplashTime) return
 
-    // An empty project has no thumbnails to capture, so it is ready as soon as
-    // the brief branded entrance has had time to settle.
-    if (!hasCompletedInitialPrecache && project.slideGroups.length > 0) return
+    // Only the visible group gates first paint; background thumbnails precache at idle.
+    if (project.slideGroups.length > 0) {
+      if (!activeSlideGroupId || !thumbnails[activeSlideGroupId]) return
+    }
 
     const timeoutId = window.setTimeout(() => setHasCompletedInitialLoad(true), 0)
     return () => window.clearTimeout(timeoutId)
-  }, [hasCompletedInitialLoad, hasCompletedInitialPrecache, hasMetMinimumSplashTime, project.slideGroups.length])
+  }, [hasCompletedInitialLoad, hasMetMinimumSplashTime, project.slideGroups.length, activeSlideGroupId, thumbnails])
   useEffect(() => {
     if (project.slideGroups.length === 0) return
     const groupExists = project.slideGroups.some((g) => g.id === activeSlideGroupId)
@@ -174,9 +181,9 @@ export default function App() {
             activeCanvasFormat,
           } = useEditorStore.getState()
           if (!selection?.layerId) return
-          const resolvedProject = resolveProjectView(p, activeLocale, activeCanvasFormat)
-          const grp = resolvedProject.slideGroups.find((g) => g.id === gid)
-          if (!grp) return
+          const rawGroup = p.slideGroups.find((group) => group.id === gid)
+          if (!rawGroup) return
+          const grp = resolveGroupView(rawGroup, p.settings, activeLocale, activeCanvasFormat)
           if (egi) {
             const groupLayer = grp.layers.find((l) => l.id === egi)
             if (groupLayer?.type === 'group') {
@@ -279,14 +286,16 @@ export default function App() {
                 >
                   <div style={{ position: 'absolute', top: 0, right: 0, left: 0, height: 2, pointerEvents: 'none', background: scopedEditingIndicator.horizontalFrameBackground }} />
                   <div style={{ position: 'absolute', right: 0, bottom: 0, left: 0, height: 2, pointerEvents: 'none', background: scopedEditingIndicator.horizontalFrameBackground }} />
-                  <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 2, pointerEvents: 'none', background: scopedEditingIndicator.verticalFrameBackground }} />
-                  <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 2, pointerEvents: 'none', background: scopedEditingIndicator.verticalFrameBackground }} />
+                  <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 2, pointerEvents: 'none', background: scopedEditingIndicator.leftFrameBackground }} />
+                  <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 2, pointerEvents: 'none', background: scopedEditingIndicator.rightFrameBackground }} />
                 </div>
               )}
-              {isPrecachingThumbnails && (
-                <div
+              {isPrecachingThumbnails && precacheFreezeFrame && (
+                <img
                   aria-hidden="true"
-                  style={{ position: 'absolute', inset: 0, background: '#111118', zIndex: 5, pointerEvents: 'all' }}
+                  src={precacheFreezeFrame}
+                  alt=""
+                  style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'all', objectFit: 'fill', width: '100%', height: '100%', background: '#111118' }}
                 />
               )}
             </div>
@@ -296,7 +305,7 @@ export default function App() {
           <PropertiesPanel />
         </div>
       </div>
-      <SlideNavigator thumbnails={thumbnails} stageRef={stageRef} onOpenPreview={() => setPreviewOpen(true)} />
+      <SlideNavigator thumbnails={thumbnails} stageRef={stageRef} onCaptureThumbnail={(groupId) => { void captureNow(groupId) }} onOpenPreview={() => setPreviewOpen(true)} />
 
       <PreviewModal
         open={previewOpen}

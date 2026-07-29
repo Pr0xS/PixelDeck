@@ -94,50 +94,6 @@ describe('setActiveFamily', () => {
   })
 })
 
-describe('toggleActiveFormat', () => {
-  it('adds an inactive format and removes it when toggled again', () => {
-    const formatId = 'ipad-13'
-    expect(useEditorStore.getState().project.settings.activeFormats).not.toContain(formatId)
-
-    useEditorStore.getState().toggleActiveFormat(formatId)
-    expect(useEditorStore.getState().project.settings.activeFormats).toContain(formatId)
-
-    useEditorStore.getState().toggleActiveFormat(formatId)
-    expect(useEditorStore.getState().project.settings.activeFormats).not.toContain(formatId)
-  })
-
-  it('reverts to the base format when the current active format is removed', () => {
-    useEditorStore.getState().setActiveCanvasFormat('android-phone')
-
-    useEditorStore.getState().toggleActiveFormat('android-phone')
-
-
-    expect(useEditorStore.getState().activeCanvasFormat).toBe('base')
-    expect(useEditorStore.getState().project.settings.activeFormats).not.toContain('android-phone')
-  })
-
-  it('preserves scoped groups when disabling and re-enabling a format', () => {
-    const group = getActiveGroup()
-    useEditorStore.getState().updateProject({ slideGroups: [{ ...group, formats: ['android-phone'] }] })
-
-    useEditorStore.getState().toggleActiveFormat('android-phone')
-    expect(useEditorStore.getState().project.slideGroups[0].formats).toEqual(['android-phone'])
-
-    useEditorStore.getState().toggleActiveFormat('android-phone')
-    expect(useEditorStore.getState().project.slideGroups[0].formats).toEqual(['android-phone'])
-    expect(useEditorStore.getState().project.settings.activeFormats).toContain('android-phone')
-  })
-
-  it('does not toggle off the base format', () => {
-    const before = useEditorStore.getState().project.settings.activeFormats
-
-    useEditorStore.getState().toggleActiveFormat('base')
-
-
-    expect(useEditorStore.getState().project.settings.activeFormats).toEqual(before)
-  })
-})
-
 describe('format visibility', () => {
   it('sets a layer visible only in the target format', () => {
     useEditorStore.getState().addText()

@@ -74,6 +74,9 @@ export interface EditorStore {
   /** Ephemeral override for capture/export — null means "use project.settings.pano". */
   panoRenderOverride: { gapPx: number; compensate: boolean } | null
   setPanoRenderOverride: (override: { gapPx: number; compensate: boolean } | null) => void
+  /** True while the shared stage is temporarily cycling groups for nav thumbnails. */
+  isPrecachingThumbnails: boolean
+  setIsPrecachingThumbnails: (value: boolean) => void
   /** Convenience: update project.settings.pano (undoable). */
   updatePanoSettings: (patch: Partial<PanoSettings>) => void
 
@@ -98,7 +101,6 @@ export interface EditorStore {
   setLayerFormatVisibility: (layerId: string, format: CanvasFormatId, visible: boolean | undefined) => void
   setLayerOnlyInFormat: (layerId: string, format?: CanvasFormatId) => void
   clearLayerFormatVisibility: (layerId: string) => void
-  toggleActiveFormat: (format: CanvasFormatId) => void
   addCustomFormat: (label: string, width: number, height: number) => void
   removeCustomFormat: (id: CustomFormatId) => void
   updateCustomFormat: (id: CustomFormatId, patch: Partial<Pick<CustomCanvasFormat, 'label' | 'width' | 'height'>>) => void
@@ -122,6 +124,8 @@ export interface EditorStore {
   addSlideGroup: () => void
   removeSlideGroup: (id: string) => void
   setActiveSlideGroup: (id: string) => void
+  /** Switch the shared canvas for an internal capture without clearing UI selection state. */
+  setCaptureSlideGroup: (id: string) => void
   updateSlideGroup: (id: string, patch: Partial<SlideGroup>) => void
   duplicateSlideGroup: (id: string) => void
   forkSlideGroupForFormat: (sourceGroupId: string, targetFormatId: CanvasFormatId, options?: { blank?: boolean }) => string

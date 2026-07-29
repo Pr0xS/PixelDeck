@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type Konva from 'konva'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
-import { applyCanvasFormat, countFormatAdjustments, getCanvasFormat, getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat, groupTargetsFormat } from '@/utils/canvasFormats'
+import { countFormatAdjustments, getCanvasFormat, getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat, groupTargetsFormat } from '@/utils/canvasFormats'
 import { exportProjectImages, type ProjectExportScope, type ProjectImageExportResult } from '@/utils/multiFormatExport'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
 import { downloadDataUrl } from '@/utils/export'
@@ -45,9 +45,12 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
   const [stageReady, setStageReady] = useState(false)
 
   // Derived values
-  const viewProject = applyCanvasFormat(project, activeCanvasFormat)
-  const activeGroup = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
+  const rawActiveGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
   const baseFormat = getProjectBaseFormat(project)
+  const activeGroup = useMemo(() => rawActiveGroup && ({
+    ...rawActiveGroup,
+    ...getFormatCanvasDims(rawActiveGroup, activeCanvasFormat, baseFormat, project.settings.customFormats),
+  }), [rawActiveGroup, activeCanvasFormat, baseFormat, project.settings.customFormats])
   const exportableFormats = getExportTargets(project)
   const projectLocales = Array.from(new Set(project.settings.locales?.length
     ? project.settings.locales
@@ -57,7 +60,6 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
   const selectedGroupCount = exportScope === 'current-group' ? 1 : project.slideGroups.length
   const exportSummary = `${selectedGroupCount} group${selectedGroupCount === 1 ? '' : 's'} · ${selectedExportFormats.length} format${selectedExportFormats.length === 1 ? '' : 's'} · ${selectedExportLocales.length} locale${selectedExportLocales.length === 1 ? '' : 's'}`
   const hasPanoGroups = project.slideGroups.some((g) => g.numSlides > 1)
-  const rawActiveGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
 
   // Initialize state when modal opens (adjust-state-during-render pattern, same as original SlideNavigator)
   const [wasOpen, setWasOpen] = useState(false)

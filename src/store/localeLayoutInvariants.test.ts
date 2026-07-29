@@ -63,7 +63,8 @@ import { dirname, join } from 'node:path'
 import { fileURLToPath } from 'node:url'
 import { beforeAll, beforeEach, describe, expect, it } from 'vitest'
 import type { CanvasFormatId, GroupLayer, Layer, LegacyLocaleLayoutFields, PhoneLayer, Project, TextLayer } from '@/types'
-import { resolveProjectView } from '@/utils/canvasFormats'
+import { getPhoneSpec } from '@/assets/mockups/specs'
+import { resolveGroupView, resolveProjectView } from '@/utils/canvasFormats'
 import { migrateProjectToLocaleAdjust, migrateProject } from './helpers'
 import { useEditorStore } from './index'
 
@@ -94,7 +95,16 @@ function findLayerInProject(project: Project, layerId: string): Layer {
 }
 
 function resolvedLayer(project: Project, locale: string, format: CanvasFormatId, layerId: string): Layer {
-  return findLayerInProject(resolveProjectView(project, locale, format), layerId)
+  if (resolutionPath === 'project') return findLayerInProject(resolveProjectView(project, locale, format), layerId)
+  for (const group of project.slideGroups) {
+    try {
+      findLayerInProject({ ...project, slideGroups: [group] }, layerId)
+      return findLayerInProject({ ...project, slideGroups: [resolveGroupView(group, project.settings, locale, format)] }, layerId)
+    } catch {
+      // Try the next group.
+    }
+  }
+  throw new Error(`layer ${layerId} not found in project`)
 }
 
 function resetStore() {
@@ -113,8 +123,18 @@ function resetStore() {
 // android-phone preset (1080x1920). Computed once, reused for every
 // expected-value formula below (same pattern as canvasFormats.test.ts).
 const s = Math.min(1080 / 1320, 1920 / 2868)
+// The phone fixture's iPhone is auto-swapped to Pixel in android-phone. Its
+// area-preserving model rebase applies before fit-centre and locale scaling.
+const phoneSwapScale = Math.sqrt(
+  (getPhoneSpec('iphone-16-pro').frameWidth * getPhoneSpec('iphone-16-pro').frameHeight)
+  / (getPhoneSpec('pixel-9').frameWidth * getPhoneSpec('pixel-9').frameHeight),
+)
 
-describe('INVARIANT — must never change through the rework', () => {
+let resolutionPath: 'project' | 'group'
+
+describe.each(['project', 'group'] as const)('%s resolution path', (path) => {
+  beforeEach(() => { resolutionPath = path })
+  describe('INVARIANT — must never change through the rework', () => {
   // ───────────────────────────────────────────────────────────────────────
   // Part 1: golden-master render-identity corpus
   // ───────────────────────────────────────────────────────────────────────
@@ -247,7 +267,7 @@ describe('INVARIANT — must never change through the rework', () => {
       store.addPhone()
       phoneScaleId = lastLayerId()
       store.setActiveLocale('de')
-      store.updateLayer(phoneScaleId, { scale: 3.0 }) // mScale = 3.0/2.0 = 1.5 (default phone scale is 2.0)
+      store.updateLayer(phoneScaleId, { scale: 1.5 }) // mScale = 1.5/1.0 = 1.5 (fit-centred default scale is 1.0)
       store.setActiveLocale('en')
 
       // 10. [Recommended #1] Group CHILD with a BASE-SCOPED delta (the fixture
@@ -440,10 +460,10 @@ describe('INVARIANT — must never change through the rework', () => {
       const deBase = resolvedLayer(project, 'de', BASE_FORMAT, phoneScaleId) as PhoneLayer
       const deAndroid = resolvedLayer(project, 'de', ANDROID_FORMAT, phoneScaleId) as PhoneLayer
 
-      expect(enBase.scale).toBe(2.0)
-      expect(enAndroid.scale).toBeCloseTo(2.0 * s)
-      expect(deBase.scale).toBeCloseTo(3.0) // 2.0 * mScale(1.5)
-      expect(deAndroid.scale).toBeCloseTo(2.0 * s * 1.5)
+      expect(enBase.scale).toBe(1.0)
+      expect(enAndroid.scale).toBeCloseTo(s * phoneSwapScale)
+      expect(deBase.scale).toBeCloseTo(1.5) // 1.0 * mScale(1.5)
+      expect(deAndroid.scale).toBeCloseTo(s * phoneSwapScale * 1.5)
     })
 
     it('[Recommended #1] group child with a BASE-SCOPED delta (not just a format-scoped override) cascades scaled into android', () => {
@@ -609,9 +629,9 @@ describe('INVARIANT — must never change through the rework', () => {
       const phDeBase = resolvedLayer(project, 'de', BASE_FORMAT, ids.phoneScaleId) as PhoneLayer
       const phDeAndroid = resolvedLayer(project, 'de', ANDROID_FORMAT, ids.phoneScaleId) as PhoneLayer
       expect(phEnBase.scale).toBe(2.0)
-      expect(phEnAndroid.scale).toBeCloseTo(2.0 * s)
+      expect(phEnAndroid.scale).toBeCloseTo(2.0 * s * phoneSwapScale)
       expect(phDeBase.scale).toBeCloseTo(3.0)
-      expect(phDeAndroid.scale).toBeCloseTo(2.0 * s * 1.5)
+      expect(phDeAndroid.scale).toBeCloseTo(2.0 * s * phoneSwapScale * 1.5)
 
       const group2EnBase = resolvedLayer(project, 'en', BASE_FORMAT, ids.group2Id) as GroupLayer
       const group2EnAndroid = resolvedLayer(project, 'en', ANDROID_FORMAT, ids.group2Id) as GroupLayer
@@ -798,6 +818,7 @@ describe('INVARIANT — must never change through the rework', () => {
       // NOT clobbered back to the old base+delta (140) and NOT lost (back to 300).
       expect((resolvedLayer(project, 'de', BASE_FORMAT, id) as TextLayer).x).toBe(340)
     })
+  })
   })
 })
 

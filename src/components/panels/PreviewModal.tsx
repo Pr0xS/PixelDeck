@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
 import { getLanguageName } from '@/utils/locale'
-import { getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat, selectFormatViewGroups } from '@/utils/canvasFormats'
 import type { BackgroundLayer, CanvasFormatId } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
@@ -33,16 +33,18 @@ export function PreviewModal({
   cancelCapture,
   initialLocale,
 }: PreviewModalProps) {
-  const settings = useEditorStore((s) => s.project.settings)
-  const slideGroups = useEditorStore((s) => s.project.slideGroups)
+  const project = useEditorStore((s) => s.project)
+  const settings = project.settings
   const activeSlideGroupId = useEditorStore((s) => s.activeSlideGroupId)
   const activeLocale = useEditorStore((s) => s.activeLocale)
   const activeCanvasFormat = useEditorStore((s) => s.activeCanvasFormat)
+  const activeFamily = useEditorStore((s) => s.activeFamily)
   const setActiveSlideGroup = useEditorStore((s) => s.setActiveSlideGroup)
   const panoSettings = useEditorStore((s) => s.project.settings.pano) ?? { gapPx: 24, compensate: false }
   const setPanoRenderOverride = useEditorStore((s) => s.setPanoRenderOverride)
   const updatePanoSettings = useEditorStore((s) => s.updatePanoSettings)
 
+  const slideGroups = selectFormatViewGroups(project, activeCanvasFormat, activeFamily)
   const locales = settings.locales ?? [settings.defaultLocale]
   const platformFormats = getExportTargets({ settings })
 

@@ -145,6 +145,33 @@ describe('assertProjectShape', () => {
 })
 
 describe('migrateProject', () => {
+  it('splits legacy desktop-scoped groups into the new desktop, TV, and vision families', () => {
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ formats: ['mac', 'appletv', 'visionpro'], layers: [makeBackgroundLayer()] })],
+    })
+
+    const migrated = migrateProject(project)
+
+    expect(migrated.slideGroups.map((group) => group.formats)).toEqual([['mac'], ['appletv'], ['visionpro']])
+    expect(new Set(migrated.slideGroups.map((group) => group.id)).size).toBe(3)
+  })
+
+  it('preserves custom formats on the first split group and re-IDs cloned layers', () => {
+    const layer = makeTextLayer()
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ formats: ['mac', 'appletv', 'custom:wide'], layers: [layer] })],
+    })
+
+    const migrated = migrateProject(project)
+
+    expect(migrated.slideGroups.map((group) => group.formats)).toEqual([['mac', 'custom:wide'], ['appletv']])
+    const firstText = migrated.slideGroups[0]!.layers.find((candidate) => candidate.type === 'text')!
+    const secondText = migrated.slideGroups[1]!.layers.find((candidate) => candidate.type === 'text')!
+    expect(firstText.id).toBe(layer.id)
+    expect(secondText.id).not.toBe(layer.id)
+    expect(migrated.slideGroups[0]!.slideNames).not.toBe(migrated.slideGroups[1]!.slideNames)
+  })
+
   it('inserts a default background layer when a slide group has none', () => {
     const project = makeProject({ slideGroups: [makeSlideGroup({ layers: [makeTextLayer()] })] })
 

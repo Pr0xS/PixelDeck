@@ -280,7 +280,7 @@ export function LayersPanel() {
     else if (key === 'image') imageInputRef.current?.click()
   }
   const insertTools = [
-    { key: 'phone', icon: '📱', label: 'Phone' },
+    { key: 'phone', icon: '📱', label: 'Devices' },
     { key: 'text', icon: 'T', label: 'Text' },
     { key: 'shape', icon: '▭', label: 'Shape' },
     { key: 'emoji', icon: '😀', label: 'Emoji' },

@@ -1,6 +1,6 @@
 import type { BackgroundLayer, CanvasFormatId, GroupLayer, Layer, Project, SlideGroup } from '@/types'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
-import { createBackgroundLayer, touchProject, newSlideGroup, newId, mutateActiveGroup } from '../helpers'
+import { cloneLayerWithNewIds, createBackgroundLayer, touchProject, newSlideGroup, newId, mutateActiveGroup } from '../helpers'
 import { planContentSync, type ContentSyncPlan } from '@/utils/contentSync'
 import {
   appendFormatToFamilyGroups,
@@ -35,6 +35,22 @@ function emptyContentSyncPlan(layers: Layer[]): ContentSyncPlan {
   return { entries: [], layers, updatedCount: 0, skippedCount: 0 }
 }
 
+function getSlideGroupActivationPatch(state: EditorStore, id: string) {
+  const target = state.project.slideGroups.find((group) => group.id === id)
+  if (!target) return {}
+  const family = getGroupFamilyKey(target) ?? state.activeFamily
+  const familyFormats = selectFamilyFormats(state.project, family)
+  const format = familyFormats.includes(state.activeCanvasFormat)
+    ? state.activeCanvasFormat
+    : getProjectBaseFormat(state.project)
+  return {
+    activeSlideGroupId: id,
+    activeFamily: family,
+    activeCanvasFormat: format,
+    lastGroupByFamily: { ...state.lastGroupByFamily, [family]: id },
+  }
+}
+
 export const createSlideGroupSlice = (
   set: EditorSet,
   get: EditorGet,
@@ -43,6 +59,7 @@ export const createSlideGroupSlice = (
   | 'addSlideGroup'
   | 'removeSlideGroup'
   | 'setActiveSlideGroup'
+  | 'setCaptureSlideGroup'
   | 'updateSlideGroup'
   | 'duplicateSlideGroup'
   | 'forkSlideGroupForFormat'
@@ -93,12 +110,15 @@ export const createSlideGroupSlice = (
   },
 
   setActiveSlideGroup: (id) => set((state) => ({
-      activeSlideGroupId: id,
-      lastGroupByFamily: { ...state.lastGroupByFamily, [state.activeFamily]: id },
-      selection: null,
-      editingGroupId: null,
-      selectedAccentIndex: null,
-    })),
+    ...getSlideGroupActivationPatch(state, id),
+    selection: null,
+    editingGroupId: null,
+    selectedAccentIndex: null,
+  })),
+
+  setCaptureSlideGroup: (id) => set((state) => (
+    getSlideGroupActivationPatch(state, id)
+  )),
 
   updateSlideGroup: (id, patch) => {
     set((s) => ({
@@ -285,14 +305,6 @@ export const createSlideGroupSlice = (
     })
   },
 })
-
-function cloneLayerWithNewIds(layer: Layer): Layer {
-  const clone = JSON.parse(JSON.stringify(layer)) as Layer
-  const reId = (value: Layer): Layer => value.type === 'group'
-    ? { ...value, id: newId(), children: (value as GroupLayer).children.map(reId) } as Layer
-    : { ...value, id: newId() } as Layer
-  return reId(clone)
-}
 
 function scaleLocaleAdjust(layer: Layer, scaleFactor: number): Layer {
   const localeAdjust = layer.localeAdjust && Object.fromEntries(Object.entries(layer.localeAdjust).map(([locale, scopes]) => [

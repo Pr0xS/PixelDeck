@@ -30,10 +30,13 @@ import {
   FORMAT_PLATFORM,
   getFormatFamilyKey,
   getFormatScaleFactor,
+  resolveGroupView,
+  resolveProjectView,
   selectFormatViewGroups,
   selectProjectFamilies,
 } from './canvasFormats'
 import type { CustomCanvasFormat, Layer, PhoneLayer, Project, SlideGroup, TextLayer, ShapeLayer } from '@/types'
+import { getPhoneSpec } from '@/assets/mockups/specs'
 
 const makeText = (partial?: Partial<TextLayer>): TextLayer => ({
   id: 't1', name: 'Title', type: 'text',
@@ -78,8 +81,10 @@ const newBuiltInFormats = [
   { id: 'apple-watch', label: 'Apple Watch', width: 422, height: 514, platform: 'ios', family: 'watch' },
   { id: 'wear-os', label: 'Wear OS', width: 480, height: 480, platform: 'android', family: 'watch' },
   { id: 'mac', label: 'Mac', width: 2880, height: 1800, platform: 'ios', family: 'desktop' },
-  { id: 'appletv', label: 'Apple TV', width: 3840, height: 2160, platform: 'ios', family: 'desktop' },
-  { id: 'visionpro', label: 'Vision Pro', width: 3840, height: 2160, platform: 'ios', family: 'desktop' },
+  { id: 'appletv', label: 'Apple TV', width: 3840, height: 2160, platform: 'ios', family: 'tv' },
+  { id: 'visionpro', label: 'Vision Pro', width: 3840, height: 2160, platform: 'ios', family: 'vr' },
+  { id: 'steam', label: 'Steam', width: 1920, height: 1080, platform: null, family: 'game' },
+  { id: 'meta-quest', label: 'Meta Quest', width: 2560, height: 1440, platform: null, family: 'vr' },
 ] as const
 
 describe('additional built-in canvas formats', () => {
@@ -192,17 +197,17 @@ describe('groupTargetsFormat', () => {
 })
 
 describe('derived format families', () => {
-  it('keeps non-base tab targeting byte-identical to groupTargetsFormat', () => {
+  it('scopes concrete format views to their selected family', () => {
     const project = makeProject()
     project.slideGroups = [
       makeGroup([], { id: 'phone', formats: ['iphone-69', 'android-phone'] }),
       makeGroup([], { id: 'tablet', formats: ['ipad-13'] }),
       makeGroup([], { id: 'legacy', formats: undefined }),
+      makeGroup([], { id: 'vr', formats: ['visionpro'] }),
     ]
-    for (const format of ['iphone-69', 'ipad-13', 'apple-watch', 'visionpro'] as const) {
-      expect(selectFormatViewGroups(project, format, 'phone').map((group) => group.id))
-        .toEqual(project.slideGroups.filter((group) => groupTargetsFormat(group, format)).map((group) => group.id))
-    }
+    expect(selectFormatViewGroups(project, 'iphone-69', 'phone').map((group) => group.id))
+      .toEqual(['phone', 'legacy'])
+    expect(selectFormatViewGroups(project, 'visionpro', 'vr').map((group) => group.id)).toEqual(['vr'])
   })
 
   it('derives project families from groups that exist', () => {
@@ -212,15 +217,32 @@ describe('derived format families', () => {
   })
 
   it('uses anchors that never upscale another family member', () => {
-    for (const family of ['phone', 'tablet', 'watch', 'desktop'] as const) {
+    for (const family of ['phone', 'tablet', 'watch', 'desktop', 'tv', 'vr', 'game'] as const) {
       const anchor = FORMAT_FAMILY_ANCHOR[family]
       const group = makeGroup([], { slideWidth: getCanvasFormat(anchor).width, slideHeight: getCanvasFormat(anchor).height })
       for (const preset of CANVAS_FORMAT_PRESETS) {
-        if (getFormatFamilyKey(preset.id) === family) {
+        if (family !== 'game' && getFormatFamilyKey(preset.id) === family) {
           expect(getFormatScaleFactor(group, preset.id, BASE_CANVAS_FORMAT)).toBeLessThanOrEqual(1)
         }
       }
     }
+  })
+
+  it('uses each single-format family anchor without rescaling', () => {
+    for (const family of ['desktop', 'tv', 'vr'] as const) {
+      const anchor = FORMAT_FAMILY_ANCHOR[family]
+      const group = makeGroup([], { slideWidth: getCanvasFormat(anchor).width, slideHeight: getCanvasFormat(anchor).height })
+      expect(getFormatScaleFactor(group, anchor, BASE_CANVAS_FORMAT)).toBe(1)
+    }
+  })
+
+  it('keeps Meta Quest on the frameless family surface after joining VR', () => {
+    const phone: PhoneLayer = {
+      id: 'phone-1', name: 'Phone', type: 'phone', x: 0, y: 0, rotation: 0, opacity: 1, visible: true, locked: false,
+      model: 'iphone-16-pro', scale: 1, screenshotFit: 'cover', screenshotOffsetX: 0, screenshotOffsetY: 0,
+    }
+    const resolved = resolveLayerFormat(phone, 'meta-quest', false, 1320, 2868, 2560, 1440) as PhoneLayer
+    expect(resolved.model).toBe('screen-16-9')
   })
 })
 
@@ -344,6 +366,33 @@ describe('applyCanvasFormatToGroup', () => {
   })
 })
 
+describe('resolveGroupView', () => {
+  it.each([
+    ['base format', 'en', BASE_CANVAS_FORMAT],
+    ['concrete format with overrides', 'en', 'android-phone'],
+    ['non-default locale with locale adjustments', 'de', 'android-phone'],
+  ] as const)('matches the full-project projection for %s', (_label, locale, format) => {
+    const target = makeGroup([
+      makeText({
+        localeContent: { de: { text: 'Hallo' } },
+        formatOverrides: { 'android-phone': { x: 700 } },
+        localeAdjust: {
+          de: {
+            base: { dx: 20 },
+            'android-phone': { dx: 30 },
+          },
+        },
+      }),
+      makeShape({ formatVisibility: { 'android-phone': false } }),
+    ], { id: 'target' })
+    const project = makeProject({ activeFormats: ['android-phone'] })
+    project.slideGroups = [target, makeGroup([makeText({ id: 'other-layer' })], { id: 'other' })]
+
+    expect(resolveGroupView(target, project.settings, locale, format))
+      .toEqual(resolveProjectView(project, locale, format).slideGroups.find((group) => group.id === target.id))
+  })
+})
+
 describe('resolveLayerFormat — groups', () => {
   it('resolves children visibility inside groups', () => {
     const hidden = makeShape({ id: 'c1', formatVisibility: { 'android-phone': false } })
@@ -436,16 +485,16 @@ describe('resolveLayerFormat — phone model auto-swap', () => {
     expect(resolved.model).toBe('pixel-9-plain') // explicit override wins
   })
 
-  it('does NOT swap model when format is iOS (same platform as model)', () => {
+  it('swaps model to the tablet family surface even when platform already matches', () => {
     const phone = makePhone({ model: 'iphone-16-pro' })
     const resolved = resolveLayerFormat(phone, 'ipad-13', false, 1320, 2868, 2064, 2752) as PhoneLayer
-    expect(resolved.model).toBe('iphone-16-pro')
+    expect(resolved.model).toBe('ipad-13')
   })
 
-  it('swaps pixel model to iphone when format is ipad-13', () => {
+  it('swaps pixel model to the ipad-13 tablet family surface when format is ipad-13', () => {
     const phone = makePhone({ model: 'pixel-9' })
     const resolved = resolveLayerFormat(phone, 'ipad-13', false, 1320, 2868, 2064, 2752) as PhoneLayer
-    expect(resolved.model).toBe('iphone-16-pro')
+    expect(resolved.model).toBe('ipad-13')
   })
 
   it('passes model through unchanged for base format', () => {
@@ -453,6 +502,89 @@ describe('resolveLayerFormat — phone model auto-swap', () => {
     const resolved = resolveLayerFormat(phone, BASE_CANVAS_FORMAT, true, 1320, 2868, 1320, 2868) as PhoneLayer
     expect(resolved.model).toBe('iphone-16-pro')
     expect(resolved).toBe(phone) // identity: base returns untouched
+  })
+
+  it('uses the active non-phone family default surface in the base view', () => {
+    const phone = makePhone({ model: 'iphone-16-pro' })
+    const resolved = resolveLayerFormat(
+      phone, BASE_CANVAS_FORMAT, true, 1320, 2868, 1320, 2868, undefined, 'canvas', 'watch',
+    ) as PhoneLayer
+    expect(resolved.model).toBe('apple-watch')
+  })
+
+  it('preserves centre through fit-centre scaling when projecting to a vision format', () => {
+    const phone = makePhone({ x: 170, y: 310, scale: 1.2 })
+    const resolved = resolveLayerFormat(phone, 'visionpro', false, 1320, 2868, 3840, 2160) as PhoneLayer
+    const factor = Math.min(3840 / 1320, 2160 / 2868)
+    const oldSpec = getPhoneSpec(phone.model)
+    const nextSpec = getPhoneSpec(resolved.model)
+    const expectedCentreX = 3840 / 2 + (phone.x + oldSpec.frameWidth * phone.scale / 2 - 1320 / 2) * factor
+    const expectedCentreY = 2160 / 2 + (phone.y + oldSpec.frameHeight * phone.scale / 2 - 2868 / 2) * factor
+
+    expect(resolved.model).toBe('screen-16-9')
+    expect(resolved.x + nextSpec.frameWidth * resolved.scale / 2).toBeCloseTo(expectedCentreX)
+    expect(resolved.y + nextSpec.frameHeight * resolved.scale / 2).toBeCloseTo(expectedCentreY)
+    expect(nextSpec.frameWidth / nextSpec.frameHeight).toBeCloseTo(1920 / 1080)
+  })
+
+  it('preserves centre in the base view for a vision-family group', () => {
+    const phone = makePhone({ x: 170, y: 310, scale: 1.2 })
+    const resolved = resolveLayerFormat(
+      phone, BASE_CANVAS_FORMAT, true, 1320, 2868, 1320, 2868, undefined, 'canvas', 'vr',
+    ) as PhoneLayer
+    const oldSpec = getPhoneSpec(phone.model)
+    const nextSpec = getPhoneSpec(resolved.model)
+
+    expect(resolved.model).toBe('screen-16-9')
+    expect(resolved.x + nextSpec.frameWidth * resolved.scale / 2)
+      .toBeCloseTo(phone.x + oldSpec.frameWidth * phone.scale / 2)
+    expect(resolved.y + nextSpec.frameHeight * resolved.scale / 2)
+      .toBeCloseTo(phone.y + oldSpec.frameHeight * phone.scale / 2)
+  })
+
+  it('keeps an unchanged phone-family base phone by reference', () => {
+    const phone = makePhone({ model: 'iphone-16-pro' })
+    const resolved = resolveLayerFormat(
+      phone, BASE_CANVAS_FORMAT, true, 1320, 2868, 1320, 2868, undefined, 'canvas', 'phone',
+    )
+
+    expect(resolved).toBe(phone)
+  })
+
+  it('preserves rendered area and centre when swapping to a tablet surface', () => {
+    const phone = makePhone({ x: 170, y: 310, scale: 1.2 })
+    const resolved = resolveLayerFormat(phone, 'ipad-13', false, 1320, 2868, 2064, 2752) as PhoneLayer
+    const factor = Math.min(2064 / 1320, 2752 / 2868)
+    const oldSpec = getPhoneSpec(phone.model)
+    const nextSpec = getPhoneSpec(resolved.model)
+    const oldArea = oldSpec.frameWidth * phone.scale * oldSpec.frameHeight * phone.scale * factor ** 2
+    const nextArea = nextSpec.frameWidth * resolved.scale * nextSpec.frameHeight * resolved.scale
+    const expectedCentreX = 2064 / 2 + (phone.x + oldSpec.frameWidth * phone.scale / 2 - 1320 / 2) * factor
+    const expectedCentreY = 2752 / 2 + (phone.y + oldSpec.frameHeight * phone.scale / 2 - 2868 / 2) * factor
+
+    expect(resolved.model).toBe('ipad-13')
+    expect(nextArea).toBeCloseTo(oldArea)
+    expect(resolved.x + nextSpec.frameWidth * resolved.scale / 2).toBeCloseTo(expectedCentreX)
+    expect(resolved.y + nextSpec.frameHeight * resolved.scale / 2).toBeCloseTo(expectedCentreY)
+  })
+
+  it('preserves a nested phone centre in group-relative coordinates', () => {
+    const phone = makePhone({ x: 170, y: 310, scale: 1.2 })
+    const group: Layer = {
+      id: 'group', name: 'Group', type: 'group', x: 200, y: 300, rotation: 0, opacity: 1, visible: true, locked: false,
+      children: [phone], scale: 1,
+    } as Layer
+    const resolved = resolveLayerFormat(group, 'visionpro', false, 1320, 2868, 3840, 2160) as import('@/types').GroupLayer
+    const child = resolved.children[0] as PhoneLayer
+    const factor = Math.min(3840 / 1320, 2160 / 2868)
+    const oldSpec = getPhoneSpec(phone.model)
+    const nextSpec = getPhoneSpec(child.model)
+
+    expect(child.model).toBe('screen-16-9')
+    expect(child.x + nextSpec.frameWidth * child.scale / 2)
+      .toBeCloseTo((phone.x + oldSpec.frameWidth * phone.scale / 2) * factor)
+    expect(child.y + nextSpec.frameHeight * child.scale / 2)
+      .toBeCloseTo((phone.y + oldSpec.frameHeight * phone.scale / 2) * factor)
   })
 })
 

@@ -46,6 +46,15 @@ describe('addLayer', () => {
     expect(selection?.slideGroupId).toBe(activeSlideGroupId)
     expect(selection?.layerId).toBeDefined()
   })
+
+  it('seeds a family-default device when adding a device outside the phone family', () => {
+    const activeGroup = getActiveGroup()
+    useEditorStore.getState().updateSlideGroup(activeGroup.id, { formats: ['apple-watch'] })
+    useEditorStore.getState().addPhone()
+
+    const device = getActiveGroup().layers.find((layer) => layer.type === 'phone') as PhoneLayer
+    expect(device.model).toBe('apple-watch')
+  })
 })
 
 // ─── updateLayer ──────────────────────────────────────────────────────────────

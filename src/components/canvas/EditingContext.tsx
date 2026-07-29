@@ -7,9 +7,12 @@ import {
   countFormatAdjustments,
   countLocaleAdjustments,
   FORMAT_FAMILY,
+  FORMAT_FAMILY_LABELS,
+  FORMAT_FAMILY_ORDER,
   getFormatLabel,
   getFormatFamilyKey,
   getGroupFamilyKey,
+  hasFormatLayout,
   getProjectActiveFormats,
   getProjectBaseFormat,
   groupTargetsFormat,
@@ -23,9 +26,6 @@ import { getScopedEditingIndicator } from '@/utils/scopedEditingIndicator'
 import { CreateFormatLayoutModal } from '@/components/panels/CreateFormatLayoutModal'
 import { ContentSyncModal } from '@/components/panels/ContentSyncModal'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
-
-const FORMAT_FAMILY_ORDER = ['phone', 'tablet', 'watch', 'desktop'] as const
-const FORMAT_FAMILY_LABELS = { phone: 'Phone', tablet: 'Tablet', watch: 'Watch', desktop: 'TV & Desktop' } as const
 
 function useDismissOnOutsideClick(
   open: boolean,
@@ -107,13 +107,14 @@ export function EditingContextBar() {
   const activeFormats: CanvasFormatId[] = getProjectActiveFormats({ settings })
   const families = selectProjectFamilies(project)
   const hasMultipleFamilies = families.length >= 2
+  const isCreated = (formatId: CanvasFormatId) => activeFormats.includes(formatId) && hasFormatLayout(project, formatId)
   const activeFamilyFormats = selectFamilyFormats(project, activeFamily)
-    .filter((formatId) => activeFormats.includes(formatId))
+    .filter(isCreated)
   const activeFamilyPresetFormats = activeFamilyFormats.filter((formatId): formatId is BuiltInFormatId => !isCustomFormatId(formatId))
   const activeFamilyCustomFormats = activeFamilyFormats.filter(isCustomFormatId)
   const familyEntries = families.map((family) => {
     const formats = selectFamilyFormats(project, family)
-      .filter((formatId) => activeFormats.includes(formatId))
+      .filter(isCreated)
     return {
       family,
       presetFormats: formats.filter((formatId): formatId is BuiltInFormatId => !isCustomFormatId(formatId)),
@@ -135,7 +136,6 @@ export function EditingContextBar() {
   const localeCount = rawGroup && isLocaleScoped
     ? countLocaleAdjustments(rawGroup, activeLocale, activeCanvasFormat)
     : 0
-  const formatExists = (formatId: CanvasFormatId) => activeFormats.includes(formatId)
   const setActiveCanvasFormat = (formatId: CanvasFormatId) => {
     const targetFamily = getFormatFamilyKey(formatId)
     if (formatId !== baseFormat && targetFamily && targetFamily !== activeFamily) {
@@ -153,7 +153,7 @@ export function EditingContextBar() {
   const selectFormat = setActiveCanvasFormat
   const uncreatedFormats = CANVAS_FORMAT_PRESETS
     .map((format) => format.id)
-    .filter((formatId) => !formatExists(formatId))
+    .filter((formatId) => !isCreated(formatId))
   // `group.formats` is canonical family membership, not "currently active"
   // (a fresh fork gets every built-in preset in its family up front). What
   // actually decides whether this deletion empties the family is whether any
@@ -565,8 +565,10 @@ export function EditingContextAlert() {
           {isLocaleScoped && <span className="h-1.5 w-1.5 rounded-full bg-[#22d3c5] shadow-[0_0_7px_rgba(34,211,197,0.7)]" />}
         </div>
         <p className="min-w-0 truncate text-[11px] leading-4 text-[#b7b7c5]">
-          <strong className="font-semibold text-[#f4f4f7]">
-            {isFormatScoped && isLocaleScoped ? `${formatLabel} × ${localeLabel}` : isFormatScoped ? formatLabel : localeLabel}
+          <strong className="font-semibold">
+            {isFormatScoped && <span className="text-[#f59e0b]">{formatLabel}</span>}
+            {isFormatScoped && isLocaleScoped && <span className="mx-1 text-[#565664]">×</span>}
+            {isLocaleScoped && <span className="text-[#22d3c5]">{localeLabel}</span>}
           </strong>
           <span className="mx-1.5 text-[#565664]">—</span>
           {isFormatScoped && isLocaleScoped
@@ -580,7 +582,7 @@ export function EditingContextAlert() {
             setActiveCanvasFormat(baseFormat)
             setActiveLocale(defaultLocale)
           }}
-          className="shrink-0 rounded-md px-2 py-1 text-[10px] text-[#c9c9d4] transition-colors hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
+          className="shrink-0 rounded-md border border-[rgba(255,255,255,0.12)] bg-[rgba(255,255,255,0.035)] px-2 py-1 text-[10px] text-[#c9c9d4] transition-colors hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.07)] hover:text-white"
           title="Return to the shared base format and default locale"
         >
           ↩ Base + Default

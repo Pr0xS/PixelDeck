@@ -57,6 +57,8 @@ export const useEditorStore = create<EditorStore>()(
       lastGroupByFamily: {},
       panoRenderOverride: null as { gapPx: number; compensate: boolean } | null,
       setPanoRenderOverride: (override) => set({ panoRenderOverride: override }),
+      isPrecachingThumbnails: false,
+      setIsPrecachingThumbnails: (value) => set({ isPrecachingThumbnails: value }),
       updatePanoSettings: (patch) => set((s) => ({
         project: touchProject(s.project, {
           settings: {

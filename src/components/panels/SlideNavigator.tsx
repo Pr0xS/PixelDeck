@@ -7,7 +7,7 @@ import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove 
 import { CSS } from '@dnd-kit/utilities'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
-import { applyCanvasFormat, BASE_CANVAS_FORMAT, getExportTargets, selectFormatViewGroups } from '@/utils/canvasFormats'
+import { BASE_CANVAS_FORMAT, getExportTargets, getFormatCanvasDims, getProjectBaseFormat, selectFormatViewGroups } from '@/utils/canvasFormats'
 import { MAX_PANO_COMPENSATION_PX } from '@/utils/panoGeometry'
 import type { BackgroundLayer, SlideGroup } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
@@ -22,6 +22,7 @@ interface ContextMenu {
 interface SlideNavigatorProps {
   thumbnails: ThumbnailMap
   stageRef: React.RefObject<Konva.Stage | null>
+  onCaptureThumbnail: (groupId: string) => void
   onOpenPreview: () => void
 }
 
@@ -47,6 +48,7 @@ interface SortableGroupItemProps {
   renameValue: string
   renameInputRef: React.RefObject<HTMLInputElement | null>
   thumbnails: ThumbnailMap
+  captureThumbnail: (groupId: string) => void
   THUMB_H: number
   handleContextMenu: (e: React.MouseEvent, groupId: string) => void
   startRename: (groupId: string, currentName: string) => void
@@ -65,6 +67,7 @@ function SortableGroupItem({
   renameValue,
   renameInputRef,
   thumbnails,
+  captureThumbnail,
   THUMB_H,
   handleContextMenu,
   startRename,
@@ -167,7 +170,10 @@ function SortableGroupItem({
                       overflow: 'hidden',
                       flexShrink: 0,
                     }}
-                    onClick={() => setActiveSlideGroup(group.id)}
+                    onClick={() => {
+                      setActiveSlideGroup(group.id)
+                      if (!thumb) captureThumbnail(group.id)
+                    }}
                   >
                     {thumb ? (
                       <img
@@ -204,7 +210,7 @@ function SortableGroupItem({
   )
 }
 
-export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNavigatorProps) {
+export function SlideNavigator({ thumbnails, stageRef, onCaptureThumbnail, onOpenPreview }: SlideNavigatorProps) {
   const {
     project,
     activeSlideGroupId,
@@ -241,7 +247,14 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   const [renameValue, setRenameValue] = useState('')
   const renameInputRef = useRef<HTMLInputElement>(null)
 
-  const viewProject = applyCanvasFormat(project, activeCanvasFormat)
+  const baseFormat = getProjectBaseFormat(project)
+  const viewProject = {
+    ...project,
+    slideGroups: project.slideGroups.map((group) => ({
+      ...group,
+      ...getFormatCanvasDims(group, activeCanvasFormat, baseFormat, project.settings.customFormats),
+    })),
+  }
   const visibleGroups = selectFormatViewGroups(viewProject, activeCanvasFormat, activeFamily)
   const activeGroup = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
   // Whether ANY slide group in the project is a pano/strip — not just the active
@@ -411,6 +424,7 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
                   renameValue={renameValue}
                   renameInputRef={renameInputRef}
                   thumbnails={thumbnails}
+                  captureThumbnail={onCaptureThumbnail}
                   THUMB_H={THUMB_H}
                   handleContextMenu={handleContextMenu}
                   startRename={startRename}

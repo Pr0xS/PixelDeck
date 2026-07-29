@@ -1,12 +1,10 @@
 import { describe, expect, it } from 'vitest'
-import type { Project, SlideGroup, TextLayer } from '@/types'
+import type { SlideGroup, TextLayer } from '@/types'
 import {
   applyCanvasFormatToGroup,
   applyLocaleAdjust,
-  applyLocaleAdjustProject,
   applyLocaleAdjustToGroup,
   BASE_CANVAS_FORMAT,
-  buildFormatScaleMap,
   getFormatScaleFactor,
 } from './canvasFormats'
 
@@ -22,12 +20,6 @@ const makeText = (partial: Partial<TextLayer> = {}): TextLayer => ({
 const makeGroup = (partial: Partial<SlideGroup> = {}): SlideGroup => ({
   id: 'group', name: 'Slide', numSlides: 1, slideWidth: 1320, slideHeight: 2868,
   layers: [makeText({ width: 400 })], slideNames: ['slide-01'], ...partial,
-})
-
-const makeProject = (group = makeGroup()): Project => ({
-  id: 'project', name: 'Project', createdAt: '', updatedAt: '',
-  settings: { defaultSlideWidth: 1320, defaultSlideHeight: 2868, defaultLocale: 'en', brandName: 'App' },
-  slideGroups: [group],
 })
 
 // Fit-center scale factor from the 1320x2868 group used throughout this file
@@ -103,28 +95,22 @@ describe('applyLocaleAdjust — P1 3-tier localeAdjust read path', () => {
     expect(layer.x).toBeCloseTo(600 + 30 * f)
   })
 
-  it('[case 6] applyLocaleAdjustToGroup / applyLocaleAdjustProject are a no-op at the default locale, even if localeAdjust[defaultLocale] exists', () => {
+  it('[case 6] applyLocaleAdjustToGroup is a no-op at the default locale, even if localeAdjust[defaultLocale] exists', () => {
     const layer = makeText({ x: 100, localeAdjust: { en: { [BASE_CANVAS_FORMAT]: { dx: 999 } } } })
     const group = makeGroup({ layers: [layer] })
-    const project = makeProject(group)
 
     const resolvedGroup = applyLocaleAdjustToGroup(group, 'en', ANDROID_FORMAT, 'en', 0.5)
-    const resolvedProject = applyLocaleAdjustProject(project, 'en', ANDROID_FORMAT, new Map([[group.id, 0.5]]))
 
     // Identity short-circuit: default-locale is skipped before any per-layer
     // resolution runs, regardless of what localeAdjust[defaultLocale] holds.
     expect(resolvedGroup).toBe(group)
-    expect(resolvedProject).toBe(project)
   })
 })
 
 // ─────────────────────────────────────────────────────────────────────────
-// Ported from the deleted `canvasFormats.locale-base-delta.test.ts` (P4
-// zombie-file cleanup): pure `getFormatScaleFactor`/`buildFormatScaleMap`
-// scale-safety tests that never touched the legacy `applyLocaleFormatLayout`
-// engine and remain fully valid against the current model unchanged.
+// Pure getFormatScaleFactor scale-safety tests.
 // ─────────────────────────────────────────────────────────────────────────
-describe('getFormatScaleFactor / buildFormatScaleMap scale safety', () => {
+describe('getFormatScaleFactor scale safety', () => {
   it('matches the scale actually used by applyCanvasFormatToGroup', () => {
     const group = makeGroup()
     const factor = getFormatScaleFactor(group, ANDROID_FORMAT, BASE_CANVAS_FORMAT)
@@ -133,18 +119,6 @@ describe('getFormatScaleFactor / buildFormatScaleMap scale safety', () => {
     const projected = resolved.layers[0] as TextLayer
 
     expect(projected.width! / source.width!).toBeCloseTo(factor)
-  })
-
-  it('captures pre-format dimensions in the scale map before target dimensions replace them', () => {
-    const project = makeProject()
-    const scaleMap = buildFormatScaleMap(project, ANDROID_FORMAT, BASE_CANVAS_FORMAT)
-    const postFormatProject = {
-      ...project,
-      slideGroups: [applyCanvasFormatToGroup(project.slideGroups[0], ANDROID_FORMAT, BASE_CANVAS_FORMAT)],
-    }
-
-    expect(scaleMap.get('group')).toBeCloseTo(Math.min(1080 / 1320, 1920 / 2868))
-    expect(buildFormatScaleMap(postFormatProject, ANDROID_FORMAT, BASE_CANVAS_FORMAT).get('group')).toBe(1)
   })
 
   // Guards the dropped `numSlides` multiplier in getFormatScaleFactor: n

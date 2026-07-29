@@ -63,7 +63,7 @@ describe('updateSlideGroup', () => {
 })
 
 describe('setActiveSlideGroup', () => {
-  it('does not mutate the active format during a group sweep', () => {
+  it('derives family and format from the target group during a cross-family sweep', () => {
     const activeGroup = getActiveGroup()
     const watchGroupId = 'watch-group'
     const appleWatch = 'apple-watch' as CanvasFormatId
@@ -78,7 +78,35 @@ describe('setActiveSlideGroup', () => {
 
     for (const group of useEditorStore.getState().project.slideGroups) useEditorStore.getState().setActiveSlideGroup(group.id)
 
-    expect(useEditorStore.getState().activeCanvasFormat).toBe('android-phone')
+    expect(useEditorStore.getState().activeFamily).toBe('watch')
+    expect(useEditorStore.getState().activeCanvasFormat).toBe(BASE_CANVAS_FORMAT)
+    expect(useEditorStore.getState().lastGroupByFamily.watch).toBe(watchGroupId)
+  })
+
+  it('does not write a dangling active group or family memory for an unknown id', () => {
+    const before = useEditorStore.getState()
+
+    useEditorStore.getState().setActiveSlideGroup('missing-group')
+
+    const after = useEditorStore.getState()
+    expect(after.activeSlideGroupId).toBe(before.activeSlideGroupId)
+    expect(after.activeFamily).toBe(before.activeFamily)
+    expect(after.activeCanvasFormat).toBe(before.activeCanvasFormat)
+    expect(after.lastGroupByFamily).toEqual(before.lastGroupByFamily)
+  })
+})
+
+describe('setCaptureSlideGroup', () => {
+  it('does not write a dangling active group or family memory for an unknown id', () => {
+    const before = useEditorStore.getState()
+
+    useEditorStore.getState().setCaptureSlideGroup('missing-group')
+
+    const after = useEditorStore.getState()
+    expect(after.activeSlideGroupId).toBe(before.activeSlideGroupId)
+    expect(after.activeFamily).toBe(before.activeFamily)
+    expect(after.activeCanvasFormat).toBe(before.activeCanvasFormat)
+    expect(after.lastGroupByFamily).toEqual(before.lastGroupByFamily)
   })
 })
 
@@ -366,15 +394,15 @@ describe('deleteFormatLayout', () => {
 })
 
 describe('format-family layout actions', () => {
-  it('keeps Base views family-scoped after creating a desktop layout', () => {
+  it('keeps Base views family-scoped after creating a vision layout', () => {
     useEditorStore.getState().createFormatLayout('visionpro', {
       content: 'copy', sourceFormat: BASE_CANVAS_FORMAT,
     })
     const project = useEditorStore.getState().project
 
-    expect(selectFormatViewGroups(project, BASE_CANVAS_FORMAT, 'desktop')).toHaveLength(1)
+    expect(selectFormatViewGroups(project, BASE_CANVAS_FORMAT, 'vr')).toHaveLength(1)
     expect(selectFormatViewGroups(project, BASE_CANVAS_FORMAT, 'phone')).toHaveLength(1)
-    expect(selectProjectFamilies(project)).toEqual(['phone', 'desktop'])
+    expect(selectProjectFamilies(project)).toEqual(['phone', 'vr'])
   })
 
   it('pins a Base-source fork only to its source family', () => {
@@ -435,7 +463,7 @@ describe('format-family layout actions', () => {
     })
     const state = useEditorStore.getState()
 
-    expect(state.activeFamily).toBe('desktop')
+    expect(state.activeFamily).toBe('vr')
     expect(state.activeCanvasFormat).toBe('visionpro')
     expect(createdGroupIds).toContain(state.activeSlideGroupId)
   })
@@ -462,7 +490,7 @@ describe('format-family layout actions', () => {
     const project = useEditorStore.getState().project
 
     for (const group of project.slideGroups) {
-      const matchingFamilies = ['phone', 'tablet', 'watch', 'desktop'] as const
+      const matchingFamilies = ['phone', 'tablet', 'watch', 'desktop', 'tv', 'vr', 'game'] as const
       const matching = matchingFamilies.filter((family) => group.formats?.every((format) => selectFamilyFormats(project, family).includes(format)))
       expect(matching).toHaveLength(1)
     }

@@ -75,15 +75,16 @@ export async function waitForStageSettled(
   let stableFrames = 0
   let lastCount = -1
   let polls = 0
+  let images: ReturnType<typeof stage.find> | null = null
 
   while (polls < MIN_POLLS || performance.now() - start < timeoutMs) {
     await nextFrame()
     polls += 1
-    const images = stage.find('Image')
+    if (!images || polls % 3 === 1) images = stage.find('Image')
     const allLoaded = images.every((node) => {
       const img = (node as Konva.Image).image()
       if (!img) return false
-      if (img instanceof HTMLImageElement) return img.complete && img.naturalWidth > 0
+      if (img instanceof HTMLImageElement) return img.complete
       return true
     })
 
@@ -99,8 +100,11 @@ export async function waitForStageSettled(
   console.warn('[PixelDeck] stage did not settle before capture timeout — capturing anyway')
 }
 
-export async function waitForStageCaptureReady(stage: Konva.Stage): Promise<void> {
-  await waitForStageSettled(stage)
+export async function waitForStageCaptureReady(
+  stage: Konva.Stage,
+  options: { quietFrames?: number; timeoutMs?: number } = {},
+): Promise<void> {
+  await waitForStageSettled(stage, options)
   await nextFrame()
   await nextFrame()
 }

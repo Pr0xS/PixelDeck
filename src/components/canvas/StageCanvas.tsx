@@ -4,7 +4,7 @@ import type Konva from 'konva'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
-import { resolveProjectView } from '@/utils/canvasFormats'
+import { resolveGroupView } from '@/utils/canvasFormats'
 import { getEffectivePano } from '@/utils/panoGeometry'
 import type { Layer as AppLayer, BackgroundLayer } from '@/types'
 import { CanvasTextEditor } from './CanvasTextEditor'
@@ -59,11 +59,11 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   const ctrlRef = useCtrlKey()
   const assets = useAssetStore((s) => s.assets)
   const addAsset = useAssetStore((s) => s.addAsset)
-  const viewProject = useMemo(
-    () => resolveProjectView(project, activeLocale, activeCanvasFormat),
-    [project, activeLocale, activeCanvasFormat],
+  const rawActiveGroup = project.slideGroups.find((candidate) => candidate.id === activeSlideGroupId)
+  const group = useMemo(
+    () => rawActiveGroup && resolveGroupView(rawActiveGroup, project.settings, activeLocale, activeCanvasFormat),
+    [rawActiveGroup, project.settings, activeLocale, activeCanvasFormat],
   )
-  const group = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
   const { gapPx: panoCompensationPx, compensate: panoCompensate } = getEffectivePano(projectPano, panoRenderOverride)
   const selectedLayerIsText = useMemo(() => {
     const layerId = selection?.layerId
