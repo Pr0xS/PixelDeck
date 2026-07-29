@@ -66,6 +66,32 @@ describe('buildExportPlan', () => {
       .toEqual(new Set(['android-phone']))
   })
 
+  it('omits groups outside the target format scope', () => {
+    const scopedProject: Project = {
+      ...project,
+      slideGroups: [
+        group('phone', 'Phone', ['Phone']),
+        { ...group('tablet', 'Tablet', ['Tablet']), formats: ['ipad-13'] },
+      ],
+    }
+
+    const plan = buildExportPlan(scopedProject, {
+      locales: ['en'],
+      formatIds: ['android-phone', 'ipad-13'],
+    })
+
+    expect(plan.batches.map((batch) => [batch.formatId, batch.group.id])).toEqual([
+      ['android-phone', 'phone'],
+      ['ipad-13', 'phone'],
+      ['ipad-13', 'tablet'],
+    ])
+  })
+
+  it('exports only unpinned groups when explicitly requested to export base', () => {
+    const plan = buildExportPlan({ ...project, slideGroups: [group('legacy', 'Legacy', ['Legacy']), { ...group('watch', 'Watch', ['Watch']), formats: ['apple-watch'] }] }, { locales: ['en'], formatIds: ['base'] })
+    expect(plan.batches.map((batch) => batch.group.id)).toEqual(['legacy'])
+  })
+
   it('enumerates every slide in pano groups and supports a single whole-pano target', () => {
     const split = buildExportPlan(project, { formatIds: ['base'], locales: ['en'] })
     expect(split.batches.find((batch) => batch.group.id === 'hero')?.entries.map((entry) => entry.slideIndex))

@@ -9,6 +9,7 @@ import type {
   Template,
   PanoSettings,
 } from '@/types'
+import type { ContentSyncPlan } from '@/utils/contentSync'
 
 // ─── EditorStore interface ────────────────────────────────────────────────────
 
@@ -67,6 +68,9 @@ export interface EditorStore {
 
   // ─ Canvas format state (transient preview/export context)
   activeCanvasFormat: CanvasFormatId
+  activeFamily: import('@/utils/canvasFormats').FormatFamilyKey
+  lastFormatByFamily: Partial<Record<import('@/utils/canvasFormats').FormatFamilyKey, CanvasFormatId>>
+  lastGroupByFamily: Partial<Record<import('@/utils/canvasFormats').FormatFamilyKey, string>>
   /** Ephemeral override for capture/export — null means "use project.settings.pano". */
   panoRenderOverride: { gapPx: number; compensate: boolean } | null
   setPanoRenderOverride: (override: { gapPx: number; compensate: boolean } | null) => void
@@ -87,6 +91,7 @@ export interface EditorStore {
 
   // ─ Canvas format actions
   setActiveCanvasFormat: (format: CanvasFormatId) => void
+  setActiveFamily: (family: import('@/utils/canvasFormats').FormatFamilyKey) => void
   makeLayerShared: (layerId: string) => void
   clearLayerFormatOverride: (layerId: string, format?: CanvasFormatId) => void
   syncLayerFormatToShared: (layerId: string, format?: CanvasFormatId) => void
@@ -119,6 +124,14 @@ export interface EditorStore {
   setActiveSlideGroup: (id: string) => void
   updateSlideGroup: (id: string, patch: Partial<SlideGroup>) => void
   duplicateSlideGroup: (id: string) => void
+  forkSlideGroupForFormat: (sourceGroupId: string, targetFormatId: CanvasFormatId, options?: { blank?: boolean }) => string
+  pinSlideGroupsToFormats: (groupIds: string[], formats: CanvasFormatId[]) => void
+  addFormatToFamily: (formatId: CanvasFormatId) => void
+  pullContentFromFamily: (sourceFamily: import('@/utils/canvasFormats').FormatFamilyKey) => ContentSyncPlan
+  /** Atomically fork every uncovered source group into a target format layout. */
+  createFormatLayout: (targetFormatId: CanvasFormatId, options: { content: 'copy' | 'blank'; sourceFormat: CanvasFormatId }) => { createdGroupIds: string[] }
+  /** Remove a format's dedicated layouts and unpin it from shared layouts. */
+  deleteFormatLayout: (formatId: CanvasFormatId) => void
   reorderSlideGroups: (ids: string[]) => void
 
   // ─ Layer actions

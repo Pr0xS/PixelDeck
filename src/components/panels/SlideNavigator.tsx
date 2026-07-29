@@ -7,7 +7,7 @@ import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove 
 import { CSS } from '@dnd-kit/utilities'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
-import { applyCanvasFormat, getExportTargets } from '@/utils/canvasFormats'
+import { applyCanvasFormat, BASE_CANVAS_FORMAT, getExportTargets, selectFormatViewGroups } from '@/utils/canvasFormats'
 import { MAX_PANO_COMPENSATION_PX } from '@/utils/panoGeometry'
 import type { BackgroundLayer, SlideGroup } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
@@ -209,24 +209,28 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
     project,
     activeSlideGroupId,
     setActiveSlideGroup,
+    setActiveCanvasFormat,
     addSlideGroup,
     removeSlideGroup,
     duplicateSlideGroup,
     updateSlideGroup,
     reorderSlideGroups,
     activeCanvasFormat,
+    activeFamily,
     panoSettings,
     updatePanoSettings,
   } = useEditorStore(useShallow((s) => ({
     project: s.project,
     activeSlideGroupId: s.activeSlideGroupId,
     setActiveSlideGroup: s.setActiveSlideGroup,
+    setActiveCanvasFormat: s.setActiveCanvasFormat,
     addSlideGroup: s.addSlideGroup,
     removeSlideGroup: s.removeSlideGroup,
     duplicateSlideGroup: s.duplicateSlideGroup,
     updateSlideGroup: s.updateSlideGroup,
     reorderSlideGroups: s.reorderSlideGroups,
     activeCanvasFormat: s.activeCanvasFormat,
+    activeFamily: s.activeFamily,
     panoSettings: s.project.settings.pano ?? { gapPx: 24, compensate: false },
     updatePanoSettings: s.updatePanoSettings,
   })))
@@ -238,6 +242,7 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   const renameInputRef = useRef<HTMLInputElement>(null)
 
   const viewProject = applyCanvasFormat(project, activeCanvasFormat)
+  const visibleGroups = selectFormatViewGroups(viewProject, activeCanvasFormat, activeFamily)
   const activeGroup = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
   // Whether ANY slide group in the project is a pano/strip — not just the active
   // one — since panoSettings.compensate is a project-wide setting.
@@ -280,6 +285,12 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
     setContextMenu({ groupId, x: e.clientX, y })
   }
 
+  const selectSlideGroup = (id: string) => {
+    const group = project.slideGroups.find((candidate) => candidate.id === id)
+    if (group && !visibleGroups.some((visibleGroup) => visibleGroup.id === group.id)) setActiveCanvasFormat(BASE_CANVAS_FORMAT)
+    setActiveSlideGroup(id)
+  }
+
   const handleMenuAction = (action: string, groupId: string) => {
     setContextMenu(null)
     switch (action) {
@@ -298,7 +309,7 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   // Build flat slide list with global sequential numbers (used for globalNum lookup)
   const flatSlides: FlatSlide[] = []
   let globalNum = 0
-  for (const group of viewProject.slideGroups) {
+  for (const group of visibleGroups) {
     const bgLayer = group.layers.find((l) => l.type === 'background') as BackgroundLayer | undefined
     const bgFill = bgLayer?.fill ?? group.background?.fill
     const bgCss = bgFill ? fillToCss(bgFill) : '#1a1a2e'
@@ -319,10 +330,14 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const ids = viewProject.slideGroups.map((g) => g.id)
+    const ids = visibleGroups.map((g) => g.id)
     const oldIndex = ids.indexOf(active.id as string)
     const newIndex = ids.indexOf(over.id as string)
-    reorderSlideGroups(arrayMove(ids, oldIndex, newIndex))
+    const reorderedVisibleIds = arrayMove(ids, oldIndex, newIndex)
+    let nextVisibleIndex = 0
+    reorderSlideGroups(project.slideGroups.map((group) => (
+      visibleGroups.some((visibleGroup) => visibleGroup.id === group.id) ? reorderedVisibleIds[nextVisibleIndex++] : group.id
+    )))
   }
 
   return (
@@ -382,8 +397,8 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
 
       <div className="flex items-center gap-2 flex-1 overflow-x-auto min-w-0">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={viewProject.slideGroups.map((g) => g.id)} strategy={horizontalListSortingStrategy}>
-            {viewProject.slideGroups.map((group, groupIdx) => {
+          <SortableContext items={visibleGroups.map((g) => g.id)} strategy={horizontalListSortingStrategy}>
+            {visibleGroups.map((group, groupIdx) => {
               const groupSlides = flatSlides.filter((fs) => fs.group.id === group.id)
               return (
                 <SortableGroupItem
@@ -399,7 +414,7 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
                   THUMB_H={THUMB_H}
                   handleContextMenu={handleContextMenu}
                   startRename={startRename}
-                  setActiveSlideGroup={setActiveSlideGroup}
+                  setActiveSlideGroup={selectSlideGroup}
                   commitRename={commitRename}
                   setRenamingId={setRenamingId}
                   setRenameValue={setRenameValue}
@@ -454,17 +469,18 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
           {[
             { action: 'rename', label: 'Rename' },
             { action: 'duplicate', label: 'Duplicate' },
-            { action: 'delete', label: 'Delete', danger: true },
-          ].map(({ action, label, danger }) => (
+          ].map(({ action, label }) => (
             <button
               key={action}
               className="w-full text-left px-3 py-2 text-xs hover:bg-[rgba(255,255,255,0.06)] transition-colors"
-              style={{ color: danger ? '#f87171' : '#e8e8f0' }}
+              style={{ color: '#e8e8f0' }}
               onClick={() => handleMenuAction(action, contextMenu.groupId)}
             >
               {label}
             </button>
           ))}
+          <div className="my-1 border-t border-[rgba(255,255,255,0.08)]" />
+          <button className="w-full text-left px-3 py-2 text-xs text-[#f87171] hover:bg-[rgba(255,255,255,0.06)] transition-colors" onClick={() => handleMenuAction('delete', contextMenu.groupId)}>Delete</button>
         </div>
       )}
     </footer>

@@ -16,8 +16,22 @@ import {
   applyCanvasFormat,
   getCanvasFormat,
   getExportTargets,
+  getFormatLabel,
   getFormatPlatform,
+  groupTargetsFormat,
+  resolveForkSourceFormat,
+  selectForkSourceCandidates,
+  selectForkSourceGroups,
   normalizeActiveFormats,
+  CANVAS_FORMAT_PRESETS,
+  DEFAULT_ACTIVE_CANVAS_FORMATS,
+  FORMAT_FAMILY,
+  FORMAT_FAMILY_ANCHOR,
+  FORMAT_PLATFORM,
+  getFormatFamilyKey,
+  getFormatScaleFactor,
+  selectFormatViewGroups,
+  selectProjectFamilies,
 } from './canvasFormats'
 import type { CustomCanvasFormat, Layer, PhoneLayer, Project, SlideGroup, TextLayer, ShapeLayer } from '@/types'
 
@@ -58,6 +72,36 @@ const makeProject = (settings?: Partial<Project['settings']>): Project => ({
 const customFormat: CustomCanvasFormat = {
   id: 'custom:square', label: 'Square', width: 1080, height: 1080,
 }
+
+const newBuiltInFormats = [
+  { id: 'ipad-11', label: 'iPad 11"', width: 1668, height: 2420, platform: 'ios', family: 'tablet' },
+  { id: 'apple-watch', label: 'Apple Watch', width: 422, height: 514, platform: 'ios', family: 'watch' },
+  { id: 'wear-os', label: 'Wear OS', width: 480, height: 480, platform: 'android', family: 'watch' },
+  { id: 'mac', label: 'Mac', width: 2880, height: 1800, platform: 'ios', family: 'desktop' },
+  { id: 'appletv', label: 'Apple TV', width: 3840, height: 2160, platform: 'ios', family: 'desktop' },
+  { id: 'visionpro', label: 'Vision Pro', width: 3840, height: 2160, platform: 'ios', family: 'desktop' },
+] as const
+
+describe('additional built-in canvas formats', () => {
+  it.each(newBuiltInFormats)('provides $label preset dimensions', ({ id, label, width, height }) => {
+    expect(CANVAS_FORMAT_PRESETS).toContainEqual({ id, label, width, height })
+  })
+
+  it.each(newBuiltInFormats)('maps $label to its platform and family', ({ id, platform, family }) => {
+    expect(FORMAT_PLATFORM[id]).toBe(platform)
+    expect(FORMAT_FAMILY[id]).toBe(family)
+    expect(getFormatPlatform(id)).toBe(platform)
+  })
+
+  it.each(newBuiltInFormats)('returns the $label format label', ({ id, label }) => {
+    expect(getFormatLabel(id)).toBe(label)
+  })
+
+  it('keeps only iPhone and Android Phone as the default active formats', () => {
+    expect(DEFAULT_ACTIVE_CANVAS_FORMATS).toEqual(['iphone-69', 'android-phone'])
+    expect(getProjectActiveFormats(makeProject())).toEqual(['iphone-69', 'android-phone'])
+  })
+})
 
 describe('custom canvas formats', () => {
   it('resolves a custom format and throws for an unknown format', () => {
@@ -131,6 +175,126 @@ describe('getFormatCanvasDims', () => {
   })
 })
 
+describe('groupTargetsFormat', () => {
+  it('keeps legacy unscoped groups in every format', () => {
+    const group = makeGroup([])
+    expect(groupTargetsFormat(group, 'iphone-69')).toBe(true)
+    expect(groupTargetsFormat(group, 'ipad-13')).toBe(true)
+    expect(groupTargetsFormat(group, BASE_CANVAS_FORMAT)).toBe(true)
+  })
+
+  it('limits scoped groups except for their always-available base authoring view', () => {
+    const group = makeGroup([], { formats: ['ipad-13'] })
+    expect(groupTargetsFormat(group, 'ipad-13')).toBe(true)
+    expect(groupTargetsFormat(group, 'android-phone')).toBe(false)
+    expect(groupTargetsFormat(group, BASE_CANVAS_FORMAT)).toBe(true)
+  })
+})
+
+describe('derived format families', () => {
+  it('keeps non-base tab targeting byte-identical to groupTargetsFormat', () => {
+    const project = makeProject()
+    project.slideGroups = [
+      makeGroup([], { id: 'phone', formats: ['iphone-69', 'android-phone'] }),
+      makeGroup([], { id: 'tablet', formats: ['ipad-13'] }),
+      makeGroup([], { id: 'legacy', formats: undefined }),
+    ]
+    for (const format of ['iphone-69', 'ipad-13', 'apple-watch', 'visionpro'] as const) {
+      expect(selectFormatViewGroups(project, format, 'phone').map((group) => group.id))
+        .toEqual(project.slideGroups.filter((group) => groupTargetsFormat(group, format)).map((group) => group.id))
+    }
+  })
+
+  it('derives project families from groups that exist', () => {
+    const project = makeProject()
+    project.slideGroups.push(makeGroup([], { id: 'watch', formats: ['apple-watch'] }))
+    expect(selectProjectFamilies(project)).toEqual(['phone', 'watch'])
+  })
+
+  it('uses anchors that never upscale another family member', () => {
+    for (const family of ['phone', 'tablet', 'watch', 'desktop'] as const) {
+      const anchor = FORMAT_FAMILY_ANCHOR[family]
+      const group = makeGroup([], { slideWidth: getCanvasFormat(anchor).width, slideHeight: getCanvasFormat(anchor).height })
+      for (const preset of CANVAS_FORMAT_PRESETS) {
+        if (getFormatFamilyKey(preset.id) === family) {
+          expect(getFormatScaleFactor(group, preset.id, BASE_CANVAS_FORMAT)).toBeLessThanOrEqual(1)
+        }
+      }
+    }
+  })
+})
+
+describe('selectForkSourceGroups', () => {
+  it.each([
+    ['unscoped at base', undefined, BASE_CANVAS_FORMAT, ['g1']],
+    ['unscoped at a non-base source', undefined, 'iphone-69', ['g1']],
+    ['single-format scoped at base versus its format', ['iphone-69'], BASE_CANVAS_FORMAT, []],
+    ['single-format scoped at its format', ['iphone-69'], 'iphone-69', ['g1']],
+    ['fully covered target', ['iphone-69', 'ipad-13'], 'iphone-69', []],
+    ['unrelated scope', ['apple-watch'], 'iphone-69', []],
+  ] as const)('%s', (_label, formats, sourceFormat, expectedIds) => {
+    const project = makeProject()
+    project.slideGroups = [makeGroup([], { formats: formats ? [...formats] : undefined })]
+
+    expect(selectForkSourceGroups(project, sourceFormat, 'ipad-13').map((group) => group.id)).toEqual(expectedIds)
+  })
+})
+
+describe('fork source candidate resolution', () => {
+  it.each([
+    {
+      name: 'a fresh unscoped project',
+      project: makeProject(),
+      targetFormatId: 'ipad-13',
+      activeCanvasFormat: BASE_CANVAS_FORMAT,
+      activeSlideGroupId: 'g1',
+    },
+    {
+      name: 'a post-first-fork pinned project',
+      project: makeProject({ activeFormats: ['iphone-69', 'android-phone', 'ipad-13'] }),
+      targetFormatId: 'apple-watch',
+      activeCanvasFormat: BASE_CANVAS_FORMAT,
+      activeSlideGroupId: 'phone',
+    },
+    {
+      name: 'a stale active format whose family was deleted',
+      project: makeProject({ activeFormats: ['iphone-69', 'android-phone', 'ipad-13'] }),
+      targetFormatId: 'ipad-13',
+      activeCanvasFormat: 'ipad-13',
+      activeSlideGroupId: 'phone',
+    },
+    {
+      name: 'an active group unrelated to every viable source',
+      project: makeProject({ activeFormats: ['iphone-69', 'ipad-13'] }),
+      targetFormatId: 'ipad-13',
+      activeCanvasFormat: BASE_CANVAS_FORMAT,
+      activeSlideGroupId: 'target-only',
+    },
+  ] as const)('always returns a candidate for $name', ({ project, targetFormatId, activeCanvasFormat, activeSlideGroupId }) => {
+    if (activeSlideGroupId === 'phone') {
+      project.slideGroups = [
+        makeGroup([], { id: 'phone', formats: ['iphone-69', 'android-phone'] }),
+        makeGroup([], { id: 'ipad', formats: ['ipad-13'] }),
+      ]
+    }
+    if (activeSlideGroupId === 'target-only') {
+      project.slideGroups = [
+        makeGroup([], { id: 'phone', formats: ['iphone-69'] }),
+        makeGroup([], { id: 'target-only', formats: ['ipad-13'] }),
+      ]
+    }
+
+    const candidates = selectForkSourceCandidates(project, targetFormatId)
+    const resolved = resolveForkSourceFormat(project, activeCanvasFormat, activeSlideGroupId, targetFormatId)
+
+    expect(candidates.length === 0 || candidates.includes(resolved)).toBe(true)
+    if (activeCanvasFormat === 'ipad-13' && targetFormatId === 'ipad-13') {
+      expect(resolved).not.toBe('ipad-13')
+      expect(candidates).toContain(resolved)
+    }
+  })
+})
+
 describe('applyCanvasFormatToGroup', () => {
   it('base format passes layers through untouched', () => {
     const text = makeText()
@@ -192,6 +356,28 @@ describe('resolveLayerFormat — groups', () => {
     const resolved = resolveLayerFormat(groupLayer, 'android-phone', false, 1320, 2868, 1080, 1920)
     expect(resolved).not.toBeNull()
     expect((resolved as { children: Layer[] }).children.map((c) => c.id)).toEqual(['c2'])
+  })
+
+  it('scales child coordinates from the group-local origin, matching baked forks', () => {
+    const child = makeShape({ id: 'child', x: 10, y: 20 })
+    const groupLayer: Layer = { id: 'grp', name: 'Group', type: 'group', x: 200, y: 300, rotation: 0, opacity: 1, visible: true, locked: false, children: [child] } as Layer
+    const resolved = resolveLayerFormat(groupLayer, 'appletv', false, 1320, 2868, 3840, 2160) as import('@/types').GroupLayer
+    const factor = Math.min(3840 / 1320, 2160 / 2868)
+
+    expect(resolved.children[0].x).toBeCloseTo(10 * factor)
+    expect(resolved.children[0].y).toBeCloseTo(20 * factor)
+  })
+
+  it('round-trips group-child coordinates through a letterboxed format', () => {
+    const child = makeShape({ id: 'child', x: 69.75, y: 120.25 })
+    const groupLayer: Layer = { id: 'grp', name: 'Group', type: 'group', x: 200, y: 300, rotation: 0, opacity: 1, visible: true, locked: false, children: [child] } as Layer
+    const inFormat = resolveLayerFormat(groupLayer, 'appletv', false, 1320, 2868, 3840, 2160) as import('@/types').GroupLayer
+    const roundTripped = mapLayerToAuthoringSpace(
+      inFormat.children[0], 'appletv', BASE_CANVAS_FORMAT, 1320, 2868, undefined, 'origin',
+    )
+
+    expect(roundTripped.x).toBeCloseTo(child.x)
+    expect(roundTripped.y).toBeCloseTo(child.y)
   })
 })
 

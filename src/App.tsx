@@ -260,7 +260,7 @@ export default function App() {
             <EditingContextBar />
 
             {/* Canvas fills remaining height — StageCanvas takes full space */}
-            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ flex: 1, position: 'relative', zIndex: 0, overflow: 'hidden' }}>
               <StageCanvas stageRef={stageRef} />
               <EditingContextAlert />
               {isPrecachingThumbnails && (

@@ -58,7 +58,7 @@ export type PhoneModel = 'iphone-16-pro' | 'iphone-16-pro-plain' | 'pixel-9' | '
 
 // ─── Canvas Formats ──────────────────────────────────────────────────────────
 
-export type BuiltInFormatId = 'base' | 'iphone-69' | 'android-phone' | 'ipad-13' | 'android-tablet'
+export type BuiltInFormatId = 'base' | 'iphone-69' | 'android-phone' | 'ipad-13' | 'android-tablet' | 'ipad-11' | 'apple-watch' | 'wear-os' | 'mac' | 'appletv' | 'visionpro'
 export type CustomFormatId = `custom:${string}`
 export type CanvasFormatId = BuiltInFormatId | CustomFormatId
 
@@ -474,6 +474,13 @@ export interface CanvasBackground {
 export interface SlideGroup {
   id: string;
   name: string;
+  /**
+   * Family membership. All entries MUST belong to one FORMAT_FAMILY (or be
+   * custom formats adopted by that family). Undefined = default (phone) family.
+   * The group's own slideWidth/slideHeight are this family's authoring canvas;
+   * each listed format is a similarity transform of it.
+   */
+  formats?: CanvasFormatId[];
   /** Number of adjacent output slides sharing this canvas. 1 = single, 2 = pano */
   numSlides: number;
   slideWidth: number;

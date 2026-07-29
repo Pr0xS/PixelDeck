@@ -1,5 +1,5 @@
 import type { CanvasFormatId, Project, SlideGroup } from '@/types'
-import { getFormatLabel, isCustomFormatId, resolveProjectView } from './canvasFormats'
+import { BASE_CANVAS_FORMAT, getFormatLabel, groupTargetsFormat, isCustomFormatId, resolveProjectView } from './canvasFormats'
 
 export type ExportPlanScope = 'current-group' | 'project'
 export type ExportPlanPanoMode = 'split' | 'whole'
@@ -103,6 +103,9 @@ export function buildExportPlan(project: Project, options: BuildExportPlanOption
       const formatLabel = getFormatLabel(formatId, customFormats)
       for (const group of resolvedProject.slideGroups) {
         if (selectedGroupIds && !selectedGroupIds.has(group.id)) continue
+        if (formatId === BASE_CANVAS_FORMAT
+          ? group.formats !== undefined
+          : !groupTargetsFormat(group, formatId)) continue
 
         const imageTargets = panoMode === 'whole' && group.numSlides > 1
           ? [{ slideIndex: null, sourceName: group.name || 'pano' }]

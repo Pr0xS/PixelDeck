@@ -353,7 +353,7 @@ describe('INVARIANT — must never change through the rework', () => {
       expect(deAndroid).toMatchObject({ x: 900, fontSize: 50, rotation: 15 })
     })
 
-    it('group child scales through the same canvas-anchored fit-center transform and its locale/format override pins the resolved value', () => {
+    it('group child scales from its group-local origin and its locale/format override pins the resolved value', () => {
       const groupEnBase = resolvedLayer(project, 'en', BASE_FORMAT, groupId) as GroupLayer
       const groupEnAndroid = resolvedLayer(project, 'en', ANDROID_FORMAT, groupId) as GroupLayer
       const groupDeBase = resolvedLayer(project, 'de', BASE_FORMAT, groupId) as GroupLayer
@@ -365,11 +365,9 @@ describe('INVARIANT — must never change through the rework', () => {
       const childDeAndroid = groupDeAndroid.children.find((c) => c.id === childId)!
 
       expect(childEnBase.x).toBe(childOriginalX)
-      // Children are resolved through the same canvas-anchored fit-center
-      // transform as top-level layers (resolveLayerFormat recurses per-child
-      // with the group's fromW/fromH/toW/toH), not a pure origin-relative
-      // multiply — this anchor invariance is exactly what this fixture guards.
-      expect(childEnAndroid.x).toBeCloseTo(540 + (childOriginalX - 660) * s)
+      // Group children are Konva-local coordinates, so they use an origin
+      // anchor instead of the canvas-centre translation used by top-level layers.
+      expect(childEnAndroid.x).toBeCloseTo(childOriginalX * s)
       expect(childDeBase.x).toBe(childOriginalX) // no base delta on the child
       expect(childDeAndroid.x).toBe(childOriginalX + 30) // locale/format override wins, absolute
     })
@@ -460,9 +458,9 @@ describe('INVARIANT — must never change through the rework', () => {
       const child2DeAndroid = group2DeAndroid.children.find((c) => c.id === child2Id)!
 
       expect(child2EnBase.x).toBe(child2OriginalX)
-      expect(child2EnAndroid.x).toBeCloseTo(540 + (child2OriginalX - 660) * s)
+      expect(child2EnAndroid.x).toBeCloseTo(child2OriginalX * s)
       expect(child2DeBase.x).toBe(child2OriginalX + 20) // base delta applies at scaleFactor=1 in base format
-      expect(child2DeAndroid.x).toBeCloseTo(540 + (child2OriginalX - 660) * s + 20 * s) // cascades scaled
+      expect(child2DeAndroid.x).toBeCloseTo((child2OriginalX + 20) * s) // local coordinate and delta both scale from origin
     })
 
     it('[Oracle P0 follow-in] a formatOverrides anchor composes with an unshadowed base-scoped multiplicative+additive delta (multiplicative analogue of T1)', () => {
@@ -574,7 +572,7 @@ describe('INVARIANT — must never change through the rework', () => {
       const childDeBase = groupDeBase.children.find((c) => c.id === ids.childId)!
       const childDeAndroid = groupDeAndroid.children.find((c) => c.id === ids.childId)!
       expect(childEnBase.x).toBe(ids.childOriginalX)
-      expect(childEnAndroid.x).toBeCloseTo(540 + (ids.childOriginalX - 660) * s)
+      expect(childEnAndroid.x).toBeCloseTo(ids.childOriginalX * s)
       expect(childDeBase.x).toBe(ids.childOriginalX)
       expect(childDeAndroid.x).toBe(ids.childOriginalX + 30)
 
@@ -624,9 +622,9 @@ describe('INVARIANT — must never change through the rework', () => {
       const child2DeBase = group2DeBase.children.find((c) => c.id === ids.child2Id)!
       const child2DeAndroid = group2DeAndroid.children.find((c) => c.id === ids.child2Id)!
       expect(child2EnBase.x).toBe(ids.child2OriginalX)
-      expect(child2EnAndroid.x).toBeCloseTo(540 + (ids.child2OriginalX - 660) * s)
+      expect(child2EnAndroid.x).toBeCloseTo(ids.child2OriginalX * s)
       expect(child2DeBase.x).toBe(ids.child2OriginalX + 20)
-      expect(child2DeAndroid.x).toBeCloseTo(540 + (ids.child2OriginalX - 660) * s + 20 * s)
+      expect(child2DeAndroid.x).toBeCloseTo((ids.child2OriginalX + 20) * s)
     })
   })
 

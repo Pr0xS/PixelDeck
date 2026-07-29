@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react'
 import type Konva from 'konva'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
-import { applyCanvasFormat, countFormatAdjustments, getCanvasFormat, getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { applyCanvasFormat, countFormatAdjustments, getCanvasFormat, getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat, groupTargetsFormat } from '@/utils/canvasFormats'
 import { exportProjectImages, type ProjectExportScope, type ProjectImageExportResult } from '@/utils/multiFormatExport'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
 import { downloadDataUrl } from '@/utils/export'
@@ -247,6 +247,7 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
                     ? getFormatCanvasDims(rawActiveGroup, formatId, baseFormat, project.settings.customFormats)
                     : getCanvasFormat(formatId, project.settings.customFormats)
                   const isChecked = selectedExportFormats.includes(formatId)
+                  const hasLayouts = project.slideGroups.some((group) => groupTargetsFormat(group, formatId))
                   const adjustments = rawActiveGroup
                     ? countFormatAdjustments(rawActiveGroup, formatId, baseFormat)
                     : 0
@@ -269,7 +270,7 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
                         {getFormatLabel(formatId, project.settings.customFormats)}
                       </span>
                       <span className="text-[10px] text-[#6b6b7a] shrink-0">
-                        {format.width}×{format.height}
+                        {format.width}×{format.height}{!hasLayouts && ' · no layouts; nothing will export'}
                       </span>
                       {adjustments > 0 ? (
                         <span className="text-[9px] text-[#f59e0b] bg-[rgba(245,158,11,0.1)] rounded px-1 py-px shrink-0">

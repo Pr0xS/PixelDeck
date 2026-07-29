@@ -2,7 +2,15 @@ import { create, type StateCreator } from 'zustand'
 import { useStore } from 'zustand'
 import { temporal } from 'zundo'
 import type { Layer, LayerType, Selection } from '@/types'
-import { BASE_CANVAS_FORMAT } from '@/utils/canvasFormats'
+import {
+  BASE_CANVAS_FORMAT,
+  getGroupFamilyKey,
+  getProjectActiveFormats,
+  getProjectBaseFormat,
+  selectFamilyFormats,
+  selectFamilyGroups,
+  selectProjectFamilies,
+} from '@/utils/canvasFormats'
 import type { EditorStore } from './types'
 import { newProject, migrateProject, assertProjectShape, touchProject, stripDataUrls } from './helpers'
 import { createSelectionSlice } from './slices/selectionSlice'
@@ -44,6 +52,9 @@ export const useEditorStore = create<EditorStore>()(
       pendingContentFocusLayerId: null as string | null,
       activeLocale: 'en',
       activeCanvasFormat: BASE_CANVAS_FORMAT,
+      activeFamily: 'phone',
+      lastFormatByFamily: {},
+      lastGroupByFamily: {},
       panoRenderOverride: null as { gapPx: number; compensate: boolean } | null,
       setPanoRenderOverride: (override) => set({ panoRenderOverride: override }),
       updatePanoSettings: (patch) => set((s) => ({
@@ -94,10 +105,15 @@ const PROJECT_STORAGE_KEY = 'pixeldeck-project'
     if (project) {
       assertProjectShape(project)
       const normalizedProject = migrateProject(project)
+      const restoredGroup = normalizedProject.slideGroups.find((group) => group.id === activeSlideGroupId)
+        ?? normalizedProject.slideGroups[0]
       useEditorStore.setState({
         project: normalizedProject,
         activeSlideGroupId: activeSlideGroupId ?? '',
         activeCanvasFormat: BASE_CANVAS_FORMAT,
+        activeFamily: restoredGroup ? (getGroupFamilyKey(restoredGroup) ?? 'phone') : 'phone',
+        lastFormatByFamily: {},
+        lastGroupByFamily: {},
       })
       // Don't let the initial hydration pollute the undo history
       useEditorStore.temporal.getState().clear()
@@ -106,6 +122,34 @@ const PROJECT_STORAGE_KEY = 'pixeldeck-project'
     // localStorage unavailable or data corrupt — start fresh
   }
 })()
+
+// zundo restores only `project`; keep transient navigation pointed at a valid
+// family/group/format whenever undo or redo swaps that project reference.
+useEditorStore.subscribe((state, prev) => {
+  if (state.project === prev.project) return
+  const groups = state.project.slideGroups
+  const families = selectProjectFamilies(state.project)
+  const activeFamily = families.includes(state.activeFamily)
+    ? state.activeFamily
+    : (groups[0] ? (getGroupFamilyKey(groups[0]) ?? 'phone') : 'phone')
+  const activeSlideGroupId = groups.some((group) => (
+    group.id === state.activeSlideGroupId && getGroupFamilyKey(group) === activeFamily
+  ))
+    ? state.activeSlideGroupId
+    : (selectFamilyGroups(state.project, activeFamily)[0]?.id ?? groups[0]?.id ?? '')
+  const activeFormats = selectFamilyFormats(state.project, activeFamily)
+    .filter((format) => getProjectActiveFormats(state.project).includes(format))
+  const baseFormat = getProjectBaseFormat(state.project)
+  const activeCanvasFormat = state.activeCanvasFormat === baseFormat || activeFormats.includes(state.activeCanvasFormat)
+    ? state.activeCanvasFormat
+    : baseFormat
+  if (
+    activeSlideGroupId === state.activeSlideGroupId
+    && activeFamily === state.activeFamily
+    && activeCanvasFormat === state.activeCanvasFormat
+  ) return
+  useEditorStore.setState({ activeSlideGroupId, activeFamily, activeCanvasFormat })
+})
 
 // Save to localStorage whenever project structure or active group changes.
 // Selection / zoom / editingGroupId are intentionally excluded (transient UI).

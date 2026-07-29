@@ -19,6 +19,12 @@ export const CANVAS_FORMAT_PRESETS = [
   { id: 'android-phone', label: 'Android Phone', width: 1080, height: 1920 },
   { id: 'ipad-13', label: 'iPad 13"', width: 2064, height: 2752 },
   { id: 'android-tablet', label: 'Android Tablet 10"', width: 1600, height: 2560 },
+  { id: 'ipad-11', label: 'iPad 11"', width: 1668, height: 2420 },
+  { id: 'apple-watch', label: 'Apple Watch', width: 422, height: 514 },
+  { id: 'wear-os', label: 'Wear OS', width: 480, height: 480 },
+  { id: 'mac', label: 'Mac', width: 2880, height: 1800 },
+  { id: 'appletv', label: 'Apple TV', width: 3840, height: 2160 },
+  { id: 'visionpro', label: 'Vision Pro', width: 3840, height: 2160 },
 ] as const satisfies readonly { id: CanvasFormatId; label: string; width: number; height: number }[]
 
 export const BASE_CANVAS_FORMAT: CanvasFormatId = 'base'
@@ -40,6 +46,42 @@ export const FORMAT_PLATFORM: Record<BuiltInFormatId, 'ios' | 'android'> = {
   'ipad-13': 'ios',
   'android-phone': 'android',
   'android-tablet': 'android',
+  'ipad-11': 'ios',
+  'apple-watch': 'ios',
+  'wear-os': 'android',
+  mac: 'ios',
+  appletv: 'ios',
+  visionpro: 'ios',
+}
+
+/**
+ * Presentation-only format family lookup. `base` is the authoring sentinel,
+ * not an independently exportable preset; it is labelled phone solely to keep
+ * this exhaustive built-in map straightforward until family-specific bases are
+ * introduced in a later phase.
+ */
+export const FORMAT_FAMILY: Record<BuiltInFormatId, 'phone' | 'tablet' | 'watch' | 'desktop'> = {
+  base: 'phone',
+  'iphone-69': 'phone',
+  'android-phone': 'phone',
+  'ipad-13': 'tablet',
+  'android-tablet': 'tablet',
+  'ipad-11': 'tablet',
+  'apple-watch': 'watch',
+  'wear-os': 'watch',
+  mac: 'desktop',
+  appletv: 'desktop',
+  visionpro: 'desktop',
+}
+
+export type FormatFamilyKey = 'phone' | 'tablet' | 'watch' | 'desktop'
+
+/** Stable authoring canvas for every derived format family. */
+export const FORMAT_FAMILY_ANCHOR: Record<FormatFamilyKey, BuiltInFormatId> = {
+  phone: 'iphone-69',
+  tablet: 'ipad-13',
+  watch: 'apple-watch',
+  desktop: 'appletv',
 }
 
 /** Layout keys + model — model forks per format (auto-swap + manual override). */
@@ -84,6 +126,12 @@ export function getFormatLabel(id: CanvasFormatId, customFormats?: CustomCanvasF
     'android-phone': 'Android',
     'ipad-13': 'iPad',
     'android-tablet': 'Android Tab',
+    'ipad-11': 'iPad 11"',
+    'apple-watch': 'Apple Watch',
+    'wear-os': 'Wear OS',
+    mac: 'Mac',
+    appletv: 'Apple TV',
+    visionpro: 'Vision Pro',
   }
   return labels[id]
 }
@@ -91,6 +139,131 @@ export function getFormatLabel(id: CanvasFormatId, customFormats?: CustomCanvasF
 export function getProjectBaseFormat(project: Pick<Project, 'settings'>): CanvasFormatId {
   void project
   return BASE_CANVAS_FORMAT
+}
+
+/**
+ * Whether a slide group participates in a format. The base sentinel always
+ * targets a group's own authored dimensions, even for format-scoped groups.
+ */
+export function groupTargetsFormat(group: SlideGroup, format: CanvasFormatId): boolean {
+  return format === BASE_CANVAS_FORMAT || group.formats === undefined || group.formats.includes(format)
+}
+
+/** Return a built-in format's family. Custom formats are adopted by groups. */
+export function getFormatFamilyKey(formatId: CanvasFormatId): FormatFamilyKey | null {
+  return isCustomFormatId(formatId) ? null : FORMAT_FAMILY[formatId]
+}
+
+/**
+ * Resolve family membership from a group's first built-in format. Unscoped
+ * groups retain the legacy/default phone family; custom-only groups are
+ * deliberately singleton and therefore have no named family.
+ */
+export function getGroupFamilyKey(group: SlideGroup): FormatFamilyKey | null {
+  if (group.formats === undefined) return 'phone'
+  return group.formats.map(getFormatFamilyKey).find((family): family is FormatFamilyKey => family !== null) ?? null
+}
+
+/** Canonical preset set plus custom formats explicitly adopted by this family. */
+export function selectFamilyFormats(project: Project, family: FormatFamilyKey): CanvasFormatId[] {
+  const builtIns = CANVAS_FORMAT_PRESETS
+    .map((format) => format.id)
+    .filter((format) => FORMAT_FAMILY[format] === family)
+  const customs = project.slideGroups.flatMap((group) => (
+    getGroupFamilyKey(group) === family
+      ? (group.formats ?? []).filter(isCustomFormatId)
+      : []
+  ))
+  return Array.from(new Set([...builtIns, ...customs]))
+}
+
+/** All groups belonging to one named built-in family, retaining project order. */
+export function selectFamilyGroups(project: Project, family: FormatFamilyKey): SlideGroup[] {
+  return project.slideGroups.filter((group) => getGroupFamilyKey(group) === family)
+}
+
+/** Add a format to every group in a family, preserving unscoped canonical membership. */
+export function appendFormatToFamilyGroups(
+  project: Project,
+  family: FormatFamilyKey,
+  formatId: CanvasFormatId,
+): SlideGroup[] {
+  return project.slideGroups.map((group) => (
+    getGroupFamilyKey(group) !== family || group.formats?.includes(formatId)
+      ? group
+      : { ...group, formats: Array.from(new Set([...(group.formats ?? selectFamilyFormats(project, family)), formatId])) }
+  ))
+}
+
+/** Named built-in families currently represented by at least one group. */
+export function selectProjectFamilies(project: Project): FormatFamilyKey[] {
+  return Array.from(new Set(project.slideGroups.flatMap((group) => {
+    const family = getGroupFamilyKey(group)
+    return family === null ? [] : [family]
+  })))
+}
+
+/** Select groups displayed by a format tab; Base is explicitly family-scoped. */
+export function selectFormatViewGroups(
+  project: Project,
+  format: CanvasFormatId,
+  family: FormatFamilyKey,
+): SlideGroup[] {
+  return format === BASE_CANVAS_FORMAT
+    ? selectFamilyGroups(project, family)
+    : project.slideGroups.filter((group) => groupTargetsFormat(group, format))
+}
+
+/**
+ * Select source groups that participate in a source format but do not already
+ * have a dedicated target-format layout. Unscoped groups are only sources from
+ * the base view so creating a format family cannot duplicate another family.
+ */
+export function selectForkSourceGroups(
+  project: Project,
+  sourceFormat: CanvasFormatId,
+  targetFormatId: CanvasFormatId,
+): SlideGroup[] {
+  return project.slideGroups.filter((group) => (
+    (sourceFormat === BASE_CANVAS_FORMAT
+      ? group.formats === undefined
+      : groupTargetsFormat(group, sourceFormat))
+    && !(group.formats !== undefined && groupTargetsFormat(group, targetFormatId))
+  ))
+}
+
+/** All non-empty source families available for creating a target layout. */
+export function selectForkSourceCandidates(project: Project, targetFormatId: CanvasFormatId): CanvasFormatId[] {
+  return Array.from(new Set([
+    ...(project.slideGroups.some((group) => group.formats === undefined) ? [BASE_CANVAS_FORMAT] : []),
+    ...getProjectActiveFormats(project),
+    ...project.slideGroups.flatMap((group) => group.formats ?? []),
+  ])).filter((format) => (
+    format !== targetFormatId && selectForkSourceGroups(project, format, targetFormatId).length > 0
+  ))
+}
+
+/**
+ * Choose a viable source family when the Base tab has no remaining unscoped
+ * groups. This keeps source selection explicit in the UI while providing a
+ * useful default after a project has already been forked once.
+ */
+export function resolveForkSourceFormat(
+  project: Project,
+  activeCanvasFormat: CanvasFormatId,
+  activeSlideGroupId: string,
+  targetFormatId: CanvasFormatId,
+): CanvasFormatId {
+  const candidates = selectForkSourceCandidates(project, targetFormatId)
+  if (candidates.length === 0) return BASE_CANVAS_FORMAT
+  if (candidates.includes(activeCanvasFormat)) return activeCanvasFormat
+  if (candidates.includes(BASE_CANVAS_FORMAT)) return BASE_CANVAS_FORMAT
+
+  const activeGroup = project.slideGroups.find((group) => group.id === activeSlideGroupId)
+  const activeGroupFormat = activeGroup?.formats?.find((format) => candidates.includes(format))
+  if (activeGroupFormat) return activeGroupFormat
+
+  return candidates[0]!
 }
 
 export function getProjectActiveFormats(project: Pick<Project, 'settings'>): CanvasFormatId[] {
@@ -252,6 +425,22 @@ function scaleLayer(
 }
 
 /**
+ * Bake the same fit-centre projection used by format resolution into a layer.
+ * Callers that fork an independently authored group use this once; normal
+ * resolution continues to use the private `scaleLayer` path above.
+ */
+export function scaleLayerToCanvas<T extends Layer>(
+  layer: T,
+  fromW: number,
+  fromH: number,
+  toW: number,
+  toH: number,
+  scaleFactor?: number,
+): T {
+  return scaleLayer(layer, fromW, fromH, toW, toH, scaleFactor) as T
+}
+
+/**
  * Resolve a single layer for a format view.
  * - Filters out layers hidden in this format.
  * - Base format: layers pass through untouched (authoring space).
@@ -267,6 +456,7 @@ export function resolveLayerFormat(
   toW: number,
   toH: number,
   customFormats?: CustomCanvasFormat[],
+  anchor: 'canvas' | 'origin' = 'canvas',
 ): Layer | null {
   // If layer is owned by a specific format, only show it in that format
   if (layer.ownerFormat !== undefined && layer.ownerFormat !== format) return null
@@ -291,7 +481,7 @@ export function resolveLayerFormat(
         }
       }
     }
-    const scaled = scaleLayer(effectiveLayer, fromW, fromH, toW, toH)
+    const scaled = scaleLayer(effectiveLayer, fromW, fromH, toW, toH, undefined, anchor)
     const patch = layer.formatOverrides?.[format]
     resolved = patch ? ({ ...scaled, ...patch, id: layer.id, type: layer.type } as Layer) : scaled
   }
@@ -301,7 +491,7 @@ export function resolveLayerFormat(
     return {
       ...(resolved as GroupLayer),
       children: original.children
-        .map((child) => resolveLayerFormat(child, format, isBase, fromW, fromH, toW, toH, customFormats))
+        .map((child) => resolveLayerFormat(child, format, isBase, fromW, fromH, toW, toH, customFormats, 'origin'))
         .filter((child): child is Layer => Boolean(child)),
     }
   }
@@ -518,6 +708,7 @@ export function mapLayerToAuthoringSpace<T extends Layer>(
   groupW: number,
   groupH: number,
   customFormats?: CustomCanvasFormat[],
+  anchor: 'canvas' | 'origin' = 'canvas',
 ): T {
   if (activeFormat === baseFormat) return layer
   const active = getCanvasFormat(activeFormat, customFormats)
@@ -525,7 +716,7 @@ export function mapLayerToAuthoringSpace<T extends Layer>(
   // Inverse factor: 1/s_fwd — do NOT recompute min() in the reverse direction.
   const sFwd = fitCenterScale(groupW, groupH, active.width, active.height)
   const sInv = 1 / sFwd
-  return scaleLayer(layer, active.width, active.height, groupW, groupH, sInv) as T
+  return scaleLayer(layer, active.width, active.height, groupW, groupH, sInv, anchor) as T
 }
 
 function withoutFormatOverride(layer: Layer, format: CanvasFormatId): Layer {
@@ -567,6 +758,11 @@ export function promoteFormatOverridesToSharedInLayerTree(
 ): Layer[] {
   if (format === baseFormat) return layers
 
+  const childIds = new Set<string>()
+  forEachLayerTree(layers, (layer) => {
+    if (layer.type === 'group') layer.children.forEach((child) => childIds.add(child.id))
+  })
+
   return mapLayerTree(layers, (layer) => {
     const patch = layer.formatOverrides?.[format]
     if (!patch) return layer
@@ -583,6 +779,7 @@ export function promoteFormatOverridesToSharedInLayerTree(
       groupW,
       groupH,
       customFormats,
+      childIds.has(layer.id) ? 'origin' : 'canvas',
     ) as unknown as Record<string, unknown>
     const sharedPatch: Record<string, unknown> = {}
     for (const key of Object.keys(patch)) sharedPatch[key] = mapped[key]
@@ -604,22 +801,22 @@ export function makeOwnedFormatLayersSharedInLayerTree(
   groupH: number,
   customFormats?: CustomCanvasFormat[],
 ): Layer[] {
-  function makeShared(layer: Layer): Layer {
+  function makeShared(layer: Layer, anchor: 'canvas' | 'origin'): Layer {
     const mapped = format === baseFormat
       ? layer
-      : mapLayerToAuthoringSpace(layer, format, baseFormat, groupW, groupH, customFormats)
+      : mapLayerToAuthoringSpace(layer, format, baseFormat, groupW, groupH, customFormats, anchor)
     return withoutFormatVisibility({ ...mapped, ownerFormat: undefined } as Layer, format)
   }
 
-  function visit(layer: Layer): Layer {
-    if (layer.ownerFormat === format) return makeShared(layer)
+  function visit(layer: Layer, anchor: 'canvas' | 'origin' = 'canvas'): Layer {
+    if (layer.ownerFormat === format) return makeShared(layer, anchor)
     if (layer.type === 'group') {
-      return { ...layer, children: (layer as GroupLayer).children.map(visit) } as Layer
+      return { ...layer, children: (layer as GroupLayer).children.map((child) => visit(child, 'origin')) } as Layer
     }
     return layer
   }
 
-  return layers.map(visit)
+  return layers.map((layer) => visit(layer))
 }
 
 /**

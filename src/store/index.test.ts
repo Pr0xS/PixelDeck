@@ -74,6 +74,23 @@ describe('updateLayer', () => {
     const shapeAfter = getActiveGroup().layers.find((l) => l.id === shapeLayer.id)!
     expect(shapeAfter.opacity).toBe(1) // unchanged
   })
+
+  it('does not trigger a second state update when navigation remains valid', () => {
+    useEditorStore.getState().addText()
+    const textLayer = getActiveGroup().layers.find((layer) => layer.type === 'text')!
+    const before = useEditorStore.getState()
+    let updates = 0
+    const unsubscribe = useEditorStore.subscribe(() => { updates += 1 })
+
+    useEditorStore.getState().updateLayer(textLayer.id, { opacity: 0.42 })
+    unsubscribe()
+
+    const after = useEditorStore.getState()
+    expect(updates).toBe(1)
+    expect(after.activeSlideGroupId).toBe(before.activeSlideGroupId)
+    expect(after.activeFamily).toBe(before.activeFamily)
+    expect(after.activeCanvasFormat).toBe(before.activeCanvasFormat)
+  })
 })
 
 describe('updateLayer — locale content sync', () => {

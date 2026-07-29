@@ -1,6 +1,39 @@
-import type { Layer } from '@/types'
+import type { BackgroundLayer, CanvasFormatId, GroupLayer, Layer, Project, SlideGroup } from '@/types'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
-import { touchProject, newSlideGroup, newId } from '../helpers'
+import { createBackgroundLayer, touchProject, newSlideGroup, newId, mutateActiveGroup } from '../helpers'
+import { planContentSync, type ContentSyncPlan } from '@/utils/contentSync'
+import {
+  appendFormatToFamilyGroups,
+  BASE_CANVAS_FORMAT,
+  FORMAT_FAMILY_ANCHOR,
+  getFormatCanvasDims,
+  getFormatFamilyKey,
+  getFormatScaleFactor,
+  getProjectActiveFormats,
+  getProjectBaseFormat,
+  getGroupFamilyKey,
+  scaleLayerToCanvas,
+  selectFamilyFormats,
+  selectFamilyGroups,
+  selectForkSourceGroups,
+  type FormatFamilyKey,
+} from '@/utils/canvasFormats'
+
+export function resolveContentSyncSourceGroup(
+  project: Project,
+  activeFamily: FormatFamilyKey,
+  activeSlideGroupId: string,
+  sourceFamily: FormatFamilyKey,
+): SlideGroup | undefined {
+  if (sourceFamily === activeFamily) return undefined
+  const activeFamilyGroups = selectFamilyGroups(project, activeFamily)
+  const activeIndex = activeFamilyGroups.findIndex((group) => group.id === activeSlideGroupId)
+  return activeIndex < 0 ? undefined : selectFamilyGroups(project, sourceFamily)[activeIndex]
+}
+
+function emptyContentSyncPlan(layers: Layer[]): ContentSyncPlan {
+  return { entries: [], layers, updatedCount: 0, skippedCount: 0 }
+}
 
 export const createSlideGroupSlice = (
   set: EditorSet,
@@ -12,17 +45,25 @@ export const createSlideGroupSlice = (
   | 'setActiveSlideGroup'
   | 'updateSlideGroup'
   | 'duplicateSlideGroup'
+  | 'forkSlideGroupForFormat'
+  | 'pinSlideGroupsToFormats'
+  | 'addFormatToFamily'
+  | 'pullContentFromFamily'
+  | 'createFormatLayout'
+  | 'deleteFormatLayout'
   | 'reorderSlideGroups'
 > => ({
   // ─ SlideGroup actions
   addSlideGroup: () => {
     const { project } = get()
     const n = project.slideGroups.length + 1
+    const activeGroup = project.slideGroups.find((candidate) => candidate.id === get().activeSlideGroupId)
     const group = newSlideGroup({
       name: `Slide ${n}`,
       slideWidth: project.settings.defaultSlideWidth,
       slideHeight: project.settings.defaultSlideHeight,
       slideNames: ['slide-01'],
+      formats: activeGroup?.formats ? [...activeGroup.formats] : undefined,
     })
     set((s) => ({
       project: touchProject(s.project, { slideGroups: [...s.project.slideGroups, group] }),
@@ -34,15 +75,30 @@ export const createSlideGroupSlice = (
     set((s) => {
       const groups = s.project.slideGroups.filter((g) => g.id !== id)
       const activeId =
-        s.activeSlideGroupId === id ? (groups[0]?.id ?? '') : s.activeSlideGroupId
+        groups.some((group) => group.id === s.activeSlideGroupId)
+          ? s.activeSlideGroupId
+          : (groups[0]?.id ?? '')
+      const activeGroup = groups.find((group) => group.id === activeId)
+      const activeFamily = activeGroup ? (getGroupFamilyKey(activeGroup) ?? 'phone') : 'phone'
+      const activeCanvasFormat = selectFamilyFormats(s.project, activeFamily).includes(s.activeCanvasFormat)
+        ? s.activeCanvasFormat
+        : getProjectBaseFormat(s.project)
       return {
         project: touchProject(s.project, { slideGroups: groups }),
         activeSlideGroupId: activeId,
+        activeFamily,
+        activeCanvasFormat,
       }
     })
   },
 
-  setActiveSlideGroup: (id) => set({ activeSlideGroupId: id, selection: null, editingGroupId: null, selectedAccentIndex: null }),
+  setActiveSlideGroup: (id) => set((state) => ({
+      activeSlideGroupId: id,
+      lastGroupByFamily: { ...state.lastGroupByFamily, [state.activeFamily]: id },
+      selection: null,
+      editingGroupId: null,
+      selectedAccentIndex: null,
+    })),
 
   updateSlideGroup: (id, patch) => {
     set((s) => ({
@@ -71,12 +127,153 @@ export const createSlideGroupSlice = (
       ...JSON.parse(JSON.stringify(src)),
       id: newId(),
       name: `${src.name} (copy)`,
-      layers: src.layers.map((l: Layer) => ({ ...JSON.parse(JSON.stringify(l)), id: newId() })),
+      layers: src.layers.map((layer: Layer) => cloneLayerWithNewIds(layer)),
     }
     set((s) => ({
       project: touchProject(s.project, { slideGroups: [...s.project.slideGroups, clone] }),
       activeSlideGroupId: clone.id,
     }))
+  },
+
+  forkSlideGroupForFormat: (sourceGroupId, targetFormatId, options) => {
+    const { project } = get()
+    const source = project.slideGroups.find((group) => group.id === sourceGroupId)
+    if (!source) return ''
+
+    const baseFormat = getProjectBaseFormat(project)
+    const family = getFormatFamilyKey(targetFormatId) ?? 'phone'
+    const anchor = FORMAT_FAMILY_ANCHOR[family]
+    const target = getFormatCanvasDims(source, anchor, baseFormat, project.settings.customFormats)
+    const scaleFactor = getFormatScaleFactor(source, anchor, baseFormat, project.settings.customFormats)
+    const fork = buildFormatFork(project, family, source, target, scaleFactor, options)
+
+    set((state) => ({
+      project: touchProject(state.project, { slideGroups: [...state.project.slideGroups, fork] }),
+      activeSlideGroupId: fork.id,
+    }))
+    return fork.id
+  },
+
+  pinSlideGroupsToFormats: (groupIds, formats) => {
+    const ids = new Set(groupIds)
+    set((state) => ({
+      project: touchProject(state.project, {
+        slideGroups: state.project.slideGroups.map((group) => (
+          ids.has(group.id) ? { ...group, formats: [...formats] } : group
+        )),
+      }),
+    }))
+  },
+
+  addFormatToFamily: (formatId) => {
+    const family = getFormatFamilyKey(formatId) ?? 'phone'
+    set((state) => {
+      const activeFormats = getProjectActiveFormats(state.project)
+      return {
+        project: touchProject(state.project, {
+          settings: {
+            ...state.project.settings,
+            activeFormats: activeFormats.includes(formatId) ? activeFormats : [...activeFormats, formatId],
+          },
+          slideGroups: appendFormatToFamilyGroups(state.project, family, formatId),
+        }),
+      }
+    })
+  },
+
+  pullContentFromFamily: (sourceFamily) => {
+    const { project, activeFamily, activeSlideGroupId } = get()
+    const activeGroup = project.slideGroups.find((group) => group.id === activeSlideGroupId)
+    const sourceGroup = resolveContentSyncSourceGroup(project, activeFamily, activeSlideGroupId, sourceFamily)
+    if (!activeGroup || !sourceGroup) return emptyContentSyncPlan(activeGroup?.layers ?? [])
+    const plan = planContentSync(sourceGroup.layers, activeGroup.layers)
+    mutateActiveGroup(set, (group) => ({ ...group, layers: plan.layers }))
+    return plan
+  },
+
+  createFormatLayout: (targetFormatId, options) => {
+    if (targetFormatId === BASE_CANVAS_FORMAT) return { createdGroupIds: [] }
+    const { project } = get()
+    const targetFamily = getFormatFamilyKey(targetFormatId) ?? 'phone'
+    if (selectFamilyGroups(project, targetFamily).length > 0) {
+      get().addFormatToFamily(targetFormatId)
+      const activeGroupId = selectFamilyGroups(get().project, targetFamily)[0]?.id ?? ''
+      set({ activeFamily: targetFamily, activeCanvasFormat: targetFormatId, activeSlideGroupId: activeGroupId })
+      return { createdGroupIds: [] }
+    }
+    const baseFormat = getProjectBaseFormat(project)
+    const sourceGroups = selectForkSourceGroups(project, options.sourceFormat, targetFormatId)
+    if (sourceGroups.length === 0) return { createdGroupIds: [] }
+
+    const sourceFamily = options.sourceFormat === BASE_CANVAS_FORMAT
+      ? 'phone'
+      : (getFormatFamilyKey(options.sourceFormat) ?? 'phone')
+    const pinFormats = selectFamilyFormats(project, sourceFamily)
+    const forks = sourceGroups.map((source) => {
+      const anchor = FORMAT_FAMILY_ANCHOR[targetFamily]
+      const target = getFormatCanvasDims(source, anchor, baseFormat, project.settings.customFormats)
+      const scaleFactor = getFormatScaleFactor(source, anchor, baseFormat, project.settings.customFormats)
+      return buildFormatFork(project, targetFamily, source, target, scaleFactor, { content: options.content })
+    })
+    const createdGroupIds = forks.map((fork) => fork.id)
+
+    set((state) => ({
+      project: touchProject(state.project, {
+        settings: {
+          ...state.project.settings,
+          activeFormats: getProjectActiveFormats(state.project).includes(targetFormatId)
+            ? getProjectActiveFormats(state.project)
+            : [...getProjectActiveFormats(state.project), targetFormatId],
+        },
+        slideGroups: [
+          ...state.project.slideGroups.map((group) => (
+            sourceGroups.some((source) => source.id === group.id)
+              && group.formats === undefined
+              && pinFormats.length > 0
+              ? { ...group, formats: [...pinFormats] }
+              : group
+          )),
+          ...forks,
+        ],
+      }),
+      activeSlideGroupId: createdGroupIds[0],
+      activeFamily: targetFamily,
+      activeCanvasFormat: targetFormatId,
+    }))
+    return { createdGroupIds }
+  },
+
+  deleteFormatLayout: (formatId: CanvasFormatId) => {
+    const { project } = get()
+    const family = getFormatFamilyKey(formatId) ?? 'phone'
+    const remainingActiveFormats = getProjectActiveFormats(project).filter((format) => format !== formatId)
+    const familyStillActive = selectFamilyFormats(project, family)
+      .some((format) => remainingActiveFormats.includes(format))
+    const groups = familyStillActive
+      ? project.slideGroups
+      : project.slideGroups.filter((group) => getGroupFamilyKey(group) !== family)
+    // Match the SlideNavigator guard: a project must always retain one slide group.
+    if (groups.length === 0) return
+
+    set((state) => {
+      const activeGroupId = groups.some((group) => group.id === state.activeSlideGroupId)
+        ? state.activeSlideGroupId
+        : (groups[0]?.id ?? '')
+      return {
+        project: touchProject(state.project, {
+          settings: {
+            ...state.project.settings,
+            activeFormats: remainingActiveFormats,
+          },
+          slideGroups: groups,
+        }),
+        activeSlideGroupId: activeGroupId,
+        activeCanvasFormat: state.activeCanvasFormat === formatId
+          ? getProjectBaseFormat(state.project)
+          : state.activeCanvasFormat,
+        activeFamily: getGroupFamilyKey(groups.find((group) => group.id === activeGroupId)!) ?? 'phone',
+      }
+    })
   },
 
   reorderSlideGroups: (ids) => {
@@ -88,3 +285,46 @@ export const createSlideGroupSlice = (
     })
   },
 })
+
+function cloneLayerWithNewIds(layer: Layer): Layer {
+  const clone = JSON.parse(JSON.stringify(layer)) as Layer
+  const reId = (value: Layer): Layer => value.type === 'group'
+    ? { ...value, id: newId(), children: (value as GroupLayer).children.map(reId) } as Layer
+    : { ...value, id: newId() } as Layer
+  return reId(clone)
+}
+
+function scaleLocaleAdjust(layer: Layer, scaleFactor: number): Layer {
+  const localeAdjust = layer.localeAdjust && Object.fromEntries(Object.entries(layer.localeAdjust).map(([locale, scopes]) => [
+    locale,
+    Object.fromEntries(Object.entries(scopes ?? {}).map(([scope, delta]) => [
+      scope,
+      scope === BASE_CANVAS_FORMAT && delta
+        ? { ...delta, ...(typeof delta.dx === 'number' ? { dx: delta.dx * scaleFactor } : {}), ...(typeof delta.dy === 'number' ? { dy: delta.dy * scaleFactor } : {}) }
+        : delta,
+    ])),
+  ]))
+  if (layer.type === 'group') {
+    return { ...layer, ...(localeAdjust ? { localeAdjust } : {}), children: (layer as GroupLayer).children.map((child) => scaleLocaleAdjust(child, scaleFactor)) } as Layer
+  }
+  return localeAdjust ? { ...layer, localeAdjust } as Layer : layer
+}
+
+function buildFormatFork(
+  project: import('@/types').Project,
+  family: import('@/utils/canvasFormats').FormatFamilyKey,
+  source: SlideGroup,
+  target: { width: number; height: number },
+  scaleFactor: number,
+  options?: { blank?: boolean; content?: 'copy' | 'blank' },
+): SlideGroup {
+  const numSlides = source.numSlides ?? 1
+  const sourceBackground = source.layers.find((layer): layer is BackgroundLayer => layer.type === 'background')
+  const blank = options?.content === 'blank' || options?.blank === true
+  const layers = blank
+    ? [createBackgroundLayer({ fill: sourceBackground?.fill ?? source.background?.fill })]
+    : source.layers.map((layer) =>
+    scaleLocaleAdjust(scaleLayerToCanvas(cloneLayerWithNewIds(layer), source.slideWidth * numSlides, source.slideHeight, target.width * numSlides, target.height, scaleFactor), scaleFactor),
+  )
+  return { ...source, id: newId(), name: source.name, slideWidth: target.width, slideHeight: target.height, layers, formats: selectFamilyFormats(project, family) }
+}

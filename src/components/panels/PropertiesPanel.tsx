@@ -207,7 +207,8 @@ function LayoutTab({ layer }: { layer: Layer }) {
   }
 
   // Active formats for platform visibility chips
-  const activeFormats: CanvasFormatId[] = getProjectActiveFormats(project)
+  const activeFormats: CanvasFormatId[] = rawGroup?.formats?.filter((format) => getProjectActiveFormats(project).includes(format))
+    ?? getProjectActiveFormats(project)
 
   return (
     <div className="space-y-4">

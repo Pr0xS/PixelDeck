@@ -1,5 +1,5 @@
 import type { BrandColor, Template } from '@/types'
-import { normalizeProjectFormats, BASE_CANVAS_FORMAT } from '@/utils/canvasFormats'
+import { normalizeProjectFormats, BASE_CANVAS_FORMAT, getGroupFamilyKey } from '@/utils/canvasFormats'
 import { projectToTemplate, applyTemplate, extractInlineScreenshots } from '@/utils/templates'
 import { isProjectExportBundle } from '@/utils/projectAssets'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
@@ -89,6 +89,9 @@ export const createProjectSlice = (
       selectedAccentIndex: null,
       activeLocale: project.settings.defaultLocale ?? 'en',
       activeCanvasFormat: BASE_CANVAS_FORMAT,
+      activeFamily: project.slideGroups[0] ? (getGroupFamilyKey(project.slideGroups[0]) ?? 'phone') : 'phone',
+      lastFormatByFamily: {},
+      lastGroupByFamily: {},
     })
     // Clear undo history — undo must not cross project boundaries
     clearHistory()
@@ -105,6 +108,9 @@ export const createProjectSlice = (
       selectedAccentIndex: null,
       activeLocale: 'en',
       activeCanvasFormat: BASE_CANVAS_FORMAT,
+      activeFamily: project.slideGroups[0] ? (getGroupFamilyKey(project.slideGroups[0]) ?? 'phone') : 'phone',
+      lastFormatByFamily: {},
+      lastGroupByFamily: {},
     })
     // Clear undo history — new project starts fresh
     clearHistory()
@@ -137,6 +143,9 @@ export const createProjectSlice = (
       selectedAccentIndex: null,
       activeLocale: project.settings.defaultLocale ?? 'en',
       activeCanvasFormat: BASE_CANVAS_FORMAT,
+      activeFamily: project.slideGroups[0] ? (getGroupFamilyKey(project.slideGroups[0]) ?? 'phone') : 'phone',
+      lastFormatByFamily: {},
+      lastGroupByFamily: {},
     })
     // Clear undo history — new project starts fresh
     clearHistory()
