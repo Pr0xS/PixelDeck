@@ -13,6 +13,7 @@ import { useThumbnails } from '@/hooks/useThumbnails'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { applyCanvasFormat, resolveProjectView } from '@/utils/canvasFormats'
 import { registerStage } from '@/utils/stageRegistry'
+import { getScopedEditingIndicator } from '@/utils/scopedEditingIndicator'
 
 // Lazy-load the localization view — it's a separate mode and not needed on initial load.
 const LocalizationView = lazy(() =>
@@ -30,14 +31,17 @@ export default function App() {
     registerStage(stageRef.current)
     return () => registerStage(null)
   })
-  const { project, activeSlideGroupId, setActiveSlideGroup, exitGroupEdit, editingGroupId } =
+  const { project, activeSlideGroupId, activeCanvasFormat, activeLocale, setActiveSlideGroup, exitGroupEdit, editingGroupId } =
     useEditorStore(useShallow((s) => ({
       project: s.project,
       activeSlideGroupId: s.activeSlideGroupId,
+      activeCanvasFormat: s.activeCanvasFormat,
+      activeLocale: s.activeLocale,
       setActiveSlideGroup: s.setActiveSlideGroup,
       exitGroupEdit: s.exitGroupEdit,
       editingGroupId: s.editingGroupId,
     })))
+  const scopedEditingIndicator = getScopedEditingIndicator(project, activeLocale, activeCanvasFormat)
   const { undo, redo } = useUndoRedo()
   const [view, setView] = useState<'editor' | 'localization'>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -258,11 +262,24 @@ export default function App() {
           >
             {/* Both editing axes share one compact top bar. */}
             <EditingContextBar />
+            <EditingContextAlert />
 
             {/* Canvas fills remaining height — StageCanvas takes full space */}
             <div style={{ flex: 1, position: 'relative', zIndex: 0, overflow: 'hidden' }}>
               <StageCanvas stageRef={stageRef} />
-              <EditingContextAlert />
+              {(scopedEditingIndicator.isFormatScoped || scopedEditingIndicator.isLocaleScoped) && (
+                <div
+                  aria-hidden="true"
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 1,
+                    pointerEvents: 'none',
+                    border: '2px solid transparent',
+                    borderImage: `${scopedEditingIndicator.accent} 1`,
+                  }}
+                />
+              )}
               {isPrecachingThumbnails && (
                 <div
                   aria-hidden="true"
