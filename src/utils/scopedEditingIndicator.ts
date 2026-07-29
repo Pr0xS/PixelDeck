@@ -10,9 +10,12 @@ export function getScopedEditingIndicator(
   const defaultLocale = project.settings.defaultLocale
   const isFormatScoped = activeCanvasFormat !== baseFormat
   const isLocaleScoped = activeLocale !== defaultLocale
-  const accent = isFormatScoped && isLocaleScoped
-    ? 'linear-gradient(90deg, #f59e0b 0%, #f59e0b 42%, #22d3c5 58%, #22d3c5 100%)'
+  const horizontalFrameBackground = isFormatScoped && isLocaleScoped
+    ? 'linear-gradient(90deg, #f59e0b 0%, #f59e0b 50%, #22d3c5 50%, #22d3c5 100%)'
+    : isFormatScoped ? '#f59e0b' : '#22d3c5'
+  const verticalFrameBackground = isFormatScoped && isLocaleScoped
+    ? 'linear-gradient(180deg, #f59e0b 0%, #f59e0b 50%, #22d3c5 50%, #22d3c5 100%)'
     : isFormatScoped ? '#f59e0b' : '#22d3c5'
 
-  return { baseFormat, defaultLocale, isFormatScoped, isLocaleScoped, accent }
+  return { baseFormat, defaultLocale, isFormatScoped, isLocaleScoped, horizontalFrameBackground, verticalFrameBackground }
 }

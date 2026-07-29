@@ -547,7 +547,7 @@ export function EditingContextAlert() {
     })),
   )
 
-  const { baseFormat, defaultLocale, isFormatScoped, isLocaleScoped, accent } = getScopedEditingIndicator(
+  const { baseFormat, defaultLocale, isFormatScoped, isLocaleScoped } = getScopedEditingIndicator(
     project,
     activeLocale,
     activeCanvasFormat,
@@ -558,14 +558,13 @@ export function EditingContextAlert() {
   const localeLabel = getLanguageName(activeLocale)
 
   return (
-    <div className="relative flex h-9 shrink-0 items-center gap-3 border-b border-[rgba(255,255,255,0.08)] bg-[#18181f] px-3">
-      <div className="absolute inset-x-0 top-0 h-0.5 opacity-90" style={{ background: accent }} />
-      <div className="flex shrink-0 items-center gap-1.5" aria-hidden="true">
-        {isFormatScoped && <span className="h-1.5 w-1.5 rounded-full bg-[#f59e0b] shadow-[0_0_7px_rgba(245,158,11,0.75)]" />}
-        {isLocaleScoped && <span className="h-1.5 w-1.5 rounded-full bg-[#22d3c5] shadow-[0_0_7px_rgba(34,211,197,0.7)]" />}
-      </div>
-      <div className="min-w-0 flex-1">
-        <p className="text-[11px] leading-4 text-[#b7b7c5]">
+    <div className="flex h-9 shrink-0 items-center justify-center border-b border-[rgba(255,255,255,0.08)] bg-[#18181f] px-3">
+      <div className="flex min-w-0 max-w-full items-center justify-center gap-3">
+        <div className="flex shrink-0 items-center gap-1.5" aria-hidden="true">
+          {isFormatScoped && <span className="h-1.5 w-1.5 rounded-full bg-[#f59e0b] shadow-[0_0_7px_rgba(245,158,11,0.75)]" />}
+          {isLocaleScoped && <span className="h-1.5 w-1.5 rounded-full bg-[#22d3c5] shadow-[0_0_7px_rgba(34,211,197,0.7)]" />}
+        </div>
+        <p className="min-w-0 truncate text-[11px] leading-4 text-[#b7b7c5]">
           <strong className="font-semibold text-[#f4f4f7]">
             {isFormatScoped && isLocaleScoped ? `${formatLabel} × ${localeLabel}` : isFormatScoped ? formatLabel : localeLabel}
           </strong>
@@ -576,17 +575,17 @@ export function EditingContextAlert() {
               ? 'Layout and new layers scoped to this format · Text & colors shared'
               : `Layout changes apply only to ${localeLabel} · Content & style remain shared`}
         </p>
+        <button
+          onClick={() => {
+            setActiveCanvasFormat(baseFormat)
+            setActiveLocale(defaultLocale)
+          }}
+          className="shrink-0 rounded-md px-2 py-1 text-[10px] text-[#c9c9d4] transition-colors hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
+          title="Return to the shared base format and default locale"
+        >
+          ↩ Base + Default
+        </button>
       </div>
-      <button
-        onClick={() => {
-          setActiveCanvasFormat(baseFormat)
-          setActiveLocale(defaultLocale)
-        }}
-        className="shrink-0 rounded-md px-2 py-1 text-[10px] text-[#c9c9d4] transition-colors hover:bg-[rgba(255,255,255,0.08)] hover:text-white"
-        title="Return to the shared base format and default locale"
-      >
-        ↩ Base + Default
-      </button>
     </div>
   )
 }

@@ -275,10 +275,13 @@ export default function App() {
                     inset: 0,
                     zIndex: 1,
                     pointerEvents: 'none',
-                    border: '2px solid transparent',
-                    borderImage: `${scopedEditingIndicator.accent} 1`,
                   }}
-                />
+                >
+                  <div style={{ position: 'absolute', top: 0, right: 0, left: 0, height: 2, pointerEvents: 'none', background: scopedEditingIndicator.horizontalFrameBackground }} />
+                  <div style={{ position: 'absolute', right: 0, bottom: 0, left: 0, height: 2, pointerEvents: 'none', background: scopedEditingIndicator.horizontalFrameBackground }} />
+                  <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 2, pointerEvents: 'none', background: scopedEditingIndicator.verticalFrameBackground }} />
+                  <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 2, pointerEvents: 'none', background: scopedEditingIndicator.verticalFrameBackground }} />
+                </div>
               )}
               {isPrecachingThumbnails && (
                 <div
