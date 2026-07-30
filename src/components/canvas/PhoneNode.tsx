@@ -1,7 +1,7 @@
 import { useMemo, useRef } from 'react'
 import { Group, Rect, Image } from 'react-konva'
 import type Konva from 'konva'
-import useImage from 'use-image'
+import { useCachedImage } from '@/hooks/useCachedImage'
 import type { PhoneLayer } from '@/types'
 import { getPhoneSpec } from '@/assets/mockups/specs'
 import { IPHONE_16_PRO_SVG } from '@/assets/mockups/iphone-16-pro'
@@ -92,7 +92,7 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
     () => `data:image/svg+xml;base64,${btoa(unescape(encodeURIComponent(svgString)))}`,
     [svgString],
   )
-  const [frameImage] = useImage(svgDataUrl)
+  const [frameImage] = useCachedImage(svgDataUrl)
 
   // Resolve screenshot source: prefer path-based (from asset store), fallback to inline
   // Subscribe to `assets` (the data object) — not `getAsset` (stable function ref).
@@ -103,7 +103,7 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
     : (layer.screenshotDataUrl ?? '')
 
   // Load screenshot
-  const [screenshotImage] = useImage(screenshotSrc)
+  const [screenshotImage] = useCachedImage(screenshotSrc)
 
   // Solid status bar shrinks the screenshot area from the top
   const isSolidSb = layer.showStatusBar !== false && (layer.statusBarBg ?? 'transparent') === 'solid'

@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { Image } from 'react-konva'
-import useImage from 'use-image'
+import { useCachedImage } from '@/hooks/useCachedImage'
 import type Konva from 'konva'
 import type { ImageLayer } from '@/types'
 import { useAssetStore } from '@/store/assets'
@@ -24,7 +24,7 @@ interface ImageNodeProps {
 export function ImageNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: ImageNodeProps) {
   const assets = useAssetStore((s) => s.assets)
   const imageSrc = assets[layer.src]?.dataUrl ?? layer.src
-  const [image] = useImage(imageSrc)
+  const [image] = useCachedImage(imageSrc)
   const nodeRef = useRef<Konva.Image>(null)
   const currentSize = useRef({ w: layer.width, h: layer.height })
   useEffect(() => { currentSize.current = { w: layer.width, h: layer.height } }, [layer.width, layer.height])

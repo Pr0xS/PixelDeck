@@ -10,6 +10,7 @@ import { StageCanvas } from '@/components/canvas/StageCanvas'
 import { EditingContextAlert, EditingContextBar } from '@/components/canvas/EditingContext'
 import { AppLoadingScreen } from '@/components/AppLoadingScreen'
 import { useThumbnails } from '@/hooks/useThumbnails'
+import { useImageCacheWarmer } from '@/hooks/useImageCacheWarmer'
 import { useEditorStore, useUndoRedo } from '@/store'
 import { applyCanvasFormat, resolveGroupView } from '@/utils/canvasFormats'
 import { registerStage } from '@/utils/stageRegistry'
@@ -60,6 +61,7 @@ export default function App() {
     captureAllHighRes,
     cancelPreviewCapture,
   } = useThumbnails(stageRef, hasCompletedInitialLoad)
+  useImageCacheWarmer(hasCompletedInitialLoad)
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setHasMetMinimumSplashTime(true), INITIAL_SPLASH_MIN_MS)
