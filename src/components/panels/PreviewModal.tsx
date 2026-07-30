@@ -294,7 +294,14 @@ export function PreviewModal({
                       {/* Slide card */}
                       <button
                         className="group/slide shrink-0 flex flex-col gap-0 text-left"
-                        onClick={() => { setActiveSlideGroup(group.id); onClose() }}
+                        onClick={() => {
+                          // Navigating to a slide commits the previewed format/locale
+                          // (already live on the store) instead of restoring the
+                          // pre-open snapshot when the modal closes.
+                          restoreRef.current = null
+                          setActiveSlideGroup(group.id)
+                          onClose()
+                        }}
                       >
                         <div
                           className="overflow-hidden rounded-2xl border transition-all duration-200 group-hover/slide:scale-[1.02] group-hover/slide:border-[rgba(124,110,246,0.65)]"
