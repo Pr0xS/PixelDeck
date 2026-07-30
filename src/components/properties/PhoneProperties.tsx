@@ -126,7 +126,13 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
             const activeGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
             const nextSpec = getPhoneSpec(nextModel)
             const nextScale = activeGroup ? computePhoneFitScale(activeGroup.slideHeight, nextSpec) : layer.scale
-            upd({ model: nextModel, scale: nextScale })
+            upd({
+              model: nextModel,
+              scale: nextScale,
+              ...(nextSpec.statusBar.height === 0
+                ? { showStatusBar: undefined, statusBarBg: undefined, statusBarTheme: undefined, statusBarColor: undefined }
+                : {}),
+            })
           }}
           className={inputCls}
         >

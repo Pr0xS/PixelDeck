@@ -1,4 +1,4 @@
-import type { BackgroundLayer, CanvasFormatId, GroupLayer, Layer, Project, SlideGroup } from '@/types'
+import type { BackgroundLayer, CanvasFormatId, GroupLayer, Layer, PhoneLayer, Project, SlideGroup } from '@/types'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
 import { cloneLayerWithNewIds, createBackgroundLayer, touchProject, newSlideGroup, newId, mutateActiveGroup } from '../helpers'
 import { planContentSync, type ContentSyncPlan } from '@/utils/contentSync'
@@ -6,11 +6,14 @@ import {
   appendFormatToFamilyGroups,
   BASE_CANVAS_FORMAT,
   FORMAT_FAMILY_ANCHOR,
+  FAMILY_SURFACE,
   getFormatCanvasDims,
   getFormatFamilyKey,
+  getFamilyDefaultPhoneModel,
   getFormatScaleFactor,
   getProjectActiveFormats,
   getProjectBaseFormat,
+  rebasePhoneModelSwap,
   getGroupFamilyKey,
   scaleLayerToCanvas,
   selectFamilyFormats,
@@ -18,6 +21,7 @@ import {
   selectForkSourceGroups,
   type FormatFamilyKey,
 } from '@/utils/canvasFormats'
+import { mapLayerTree } from '@/utils/layerTree'
 
 export function resolveContentSyncSourceGroup(
   project: Project,
@@ -335,8 +339,30 @@ function buildFormatFork(
   const blank = options?.content === 'blank' || options?.blank === true
   const layers = blank
     ? [createBackgroundLayer({ fill: sourceBackground?.fill ?? source.background?.fill })]
-    : source.layers.map((layer) =>
-    scaleLocaleAdjust(scaleLayerToCanvas(cloneLayerWithNewIds(layer), source.slideWidth * numSlides, source.slideHeight, target.width * numSlides, target.height, scaleFactor), scaleFactor),
-  )
+    : mapLayerTree(source.layers.map((layer) =>
+      scaleLocaleAdjust(scaleLayerToCanvas(cloneLayerWithNewIds(layer), source.slideWidth * numSlides, source.slideHeight, target.width * numSlides, target.height, scaleFactor), scaleFactor),
+    ), (layer) => {
+      const sourceFamily = getGroupFamilyKey(source)
+      const belongsToSourceFamily = (format: CanvasFormatId) => sourceFamily !== null && getFormatFamilyKey(format) === sourceFamily
+      const formatOverrides = layer.formatOverrides && Object.fromEntries(
+        Object.entries(layer.formatOverrides).filter(([format]) => !belongsToSourceFamily(format as CanvasFormatId)),
+      )
+      const formatVisibility = layer.formatVisibility && Object.fromEntries(
+        Object.entries(layer.formatVisibility).filter(([format]) => !belongsToSourceFamily(format as CanvasFormatId)),
+      )
+      const { ownerFormat, ...withoutOwnerFormat } = layer
+      const pruned: Layer = {
+        ...withoutOwnerFormat,
+        ...(formatOverrides && Object.keys(formatOverrides).length > 0 ? { formatOverrides } : {}),
+        ...(formatVisibility && Object.keys(formatVisibility).length > 0 ? { formatVisibility } : {}),
+        ...(ownerFormat !== undefined && !belongsToSourceFamily(ownerFormat) ? { ownerFormat } : {}),
+      } as Layer
+
+      const familyDefault = getFamilyDefaultPhoneModel(family)
+      const familyModels = Object.values(FAMILY_SURFACE[family])
+      return pruned.type === 'phone' && familyDefault !== undefined && !familyModels.includes(pruned.model)
+        ? rebasePhoneModelSwap(pruned as PhoneLayer, familyDefault, target.width * numSlides, target.height)
+        : pruned
+    })
   return { ...source, id: newId(), name: source.name, slideWidth: target.width, slideHeight: target.height, layers, formats: selectFamilyFormats(project, family) }
 }

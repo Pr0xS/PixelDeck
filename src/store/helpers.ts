@@ -134,7 +134,7 @@ export const STYLE_KEYS: Partial<Record<LayerType, string[]>> = {
   emoji: ['emoji', 'fontSize', 'blur', 'shadow', 'opacity'],
   brand: ['nameColor', 'nameFontSize', 'nameFontFamily', 'nameFontWeight', 'logoSize', 'direction', 'gap', 'blur', 'shadow', 'opacity'],
   image: ['cornerRadius', 'blur', 'shadow', 'opacity'],
-  phone: ['model', 'scale', 'screenshotFit', 'screenshotOffsetX', 'screenshotOffsetY', 'showStatusBar', 'statusBarTheme', 'statusBarBg', 'statusBarColor', 'border', 'blur', 'shadow', 'opacity'],
+  phone: ['scale', 'screenshotFit', 'screenshotOffsetX', 'screenshotOffsetY', 'showStatusBar', 'statusBarTheme', 'statusBarBg', 'statusBarColor', 'border', 'blur', 'shadow', 'opacity'],
   group: ['blur', 'shadow', 'opacity'],
 }
 

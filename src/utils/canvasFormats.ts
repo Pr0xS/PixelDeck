@@ -140,13 +140,20 @@ export function rebasePhoneModelSwap(
   const nextW = newSpec.frameWidth * nextScale
   const nextH = newSpec.frameHeight * nextScale
 
-  return {
+  const next: PhoneLayer = {
     ...layer,
     model: nextModel,
     scale: nextScale,
     x: layer.x + (oldW - nextW) / 2,
     y: layer.y + (oldH - nextH) / 2,
   }
+  if (newSpec.statusBar.height === 0) {
+    delete next.showStatusBar
+    delete next.statusBarBg
+    delete next.statusBarTheme
+    delete next.statusBarColor
+  }
+  return next
 }
 
 /** Layout keys + model — model forks per format (auto-swap + manual override). */
@@ -531,12 +538,11 @@ export function resolveLayerFormat(
   let resolved: Layer
   if (isBase) {
     const familyDefault = family ? getFamilyDefaultPhoneModel(family) : undefined
-    const isLegacyPhoneModel = layer.type === 'phone' && (
-      layer.model === 'iphone-16-pro' || layer.model === 'pixel-9'
-      || layer.model === 'iphone-16-pro-plain' || layer.model === 'pixel-9-plain'
-    )
-    resolved = layer.type === 'phone' && familyDefault && isLegacyPhoneModel
-      ? rebasePhoneModelSwap(layer, familyDefault, fromW, fromH)
+    const familyModels = family ? Object.values(FAMILY_SURFACE[family]) : []
+    const needsRebase = layer.type === 'phone' && familyDefault !== undefined
+      && !familyModels.includes((layer as PhoneLayer).model)
+    resolved = needsRebase
+      ? rebasePhoneModelSwap(layer as PhoneLayer, familyDefault, fromW, fromH)
       : layer
   } else {
     // Phone model auto-swap: a format family's surface takes precedence; phone
