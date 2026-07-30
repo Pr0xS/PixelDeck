@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import type { BuiltInFormatId, CanvasFormatId, CustomFormatId } from '@/types'
@@ -40,6 +40,77 @@ function useDismissOnOutsideClick(
     document.addEventListener('mousedown', handlePointerDown)
     return () => document.removeEventListener('mousedown', handlePointerDown)
   }, [open, ref, close])
+}
+
+/**
+ * Sliding active-tab underline.
+ *
+ * - One instance per tab row.
+ * - Must be a DIRECT CHILD (last element) of a `relative` row container.
+ * - Every tab button in that row carries `data-tab-key`, including the
+ *   "Default"/"Base" button.
+ * - Measures with `offsetLeft`/`offsetWidth` — NOT `getBoundingClientRect()`.
+ *   The family accordion translates the tab strip (`translate-x-*`) while
+ *   opening; layout offsets are transform-immune, so measurements stay stable.
+ *   The bar inherits the strip's translate for free because it lives inside it.
+ */
+function SlidingUnderline({
+  accentClass,
+  activeKey,
+  enabled = true,
+}: {
+  /** Tailwind bg- class, e.g. `bg-[#f59e0b]` or `bg-[#22d3c5]`. */
+  accentClass: string
+  /** Matches `data-tab-key` on the currently active tab button. */
+  activeKey: string
+  /** Set `false` to fade out (e.g. collapsed accordion panel). */
+  enabled?: boolean
+}) {
+  const barRef = useRef<HTMLSpanElement>(null)
+
+  useLayoutEffect(() => {
+    const bar = barRef.current
+    const row = bar?.parentElement
+    if (!bar || !row) return
+
+    // Find the active tab.  CSS.escape guards locale codes and `custom:…` ids.
+    const target = enabled
+      ? row.querySelector<HTMLElement>(`[data-tab-key="${CSS.escape(activeKey)}"]`)
+      : null
+
+    if (!target) {
+      // Fade out in place — retain the last transform/width so re-showing the
+      // same tab is a fade-in, not a slide from the row origin.
+      bar.style.opacity = '0'
+      return
+    }
+
+    const measure = () => {
+      // offsetLeft is relative to the row (the offsetParent), and is
+      // *unaffected* by CSS transforms on ancestor accordion strips.
+      bar.style.transform = `translateX(${target.offsetLeft}px)`
+      bar.style.width = `${target.offsetWidth}px`
+      bar.style.opacity = '1'
+    }
+    measure()
+
+    // Observe the row (catches a sibling tab growing, shifting offsetLeft) and
+    // the active tab itself (catches its label / ●N badge changing width).
+    // Both fire from pure DOM mutations (e.g. the ●N badge appearing) with no
+    // React re-render of SlidingUnderline needed.
+    const observer = new ResizeObserver(measure)
+    observer.observe(row)
+    observer.observe(target)
+    return () => observer.disconnect()
+  }, [activeKey, enabled])
+
+  return (
+    <span
+      ref={barRef}
+      aria-hidden="true"
+      className={`pointer-events-none absolute bottom-0 left-0 h-0.5 w-0 rounded-full opacity-0 transition-[transform,width,opacity] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${accentClass}`}
+    />
+  )
 }
 
 /** The two editing axes share one piece of persistent editor chrome. */
@@ -199,16 +270,30 @@ export function EditingContextBar() {
   }
   const actionItemClass = 'w-full px-3 py-2 text-left text-[11px] text-[#e8e8f0] transition-colors hover:bg-[rgba(255,255,255,0.06)]'
 
+  // `border-b-2 border-transparent` reserves the 2px the old inline underline
+  // occupied, so removing it shifts no text.  The sliding bar overlays this strip.
   const tabClass = (active: boolean) =>
-    `flex h-full shrink-0 items-center gap-1 whitespace-nowrap px-2.5 text-[11px] font-medium transition-colors ${
+    `flex h-full shrink-0 items-center gap-1 whitespace-nowrap border-b-2 border-transparent px-2.5 text-[11px] font-medium transition-colors ${
       active ? 'text-white' : 'text-[#6b6b7a] hover:text-[#e8e8f0]'
     }`
+  // Base is deliberately rendered inside EVERY family strip: `selectFormatViewGroups`
+  // scopes the base view to that family's groups, so Base is per-family in effect.
+  const renderBaseTab = () => (
+    <button
+      onClick={() => selectFormat(baseFormat)}
+      data-tab-key={baseFormat}
+      className={tabClass(activeCanvasFormat === baseFormat)}
+      title="Base — shared authoring canvas. Not exported directly."
+    >
+      Base
+    </button>
+  )
   const renderPresetTab = (formatId: BuiltInFormatId) => {
     const isActive = activeCanvasFormat === formatId
     const count = rawGroup ? countFormatAdjustments(rawGroup, formatId, baseFormat) : 0
     const label = getFormatLabel(formatId, settings.customFormats)
     return <div key={formatId} className="group/tab flex h-full shrink-0 items-center">
-      <button onClick={() => setActiveCanvasFormat(formatId)} className={tabClass(isActive)} style={{ borderBottom: isActive ? '2px solid #f59e0b' : '2px solid transparent' }} title={`${label} format · ${count} layout adjustment${count !== 1 ? 's' : ''}`}>
+      <button onClick={() => setActiveCanvasFormat(formatId)} data-tab-key={formatId} className={tabClass(isActive)} title={`${label} format · ${count} layout adjustment${count !== 1 ? 's' : ''}`}>
         {label}{count > 0 && <span className="text-[9px] font-bold text-[#fbbf24]">●{count}</span>}
       </button>
       <div className="pointer-events-none -ml-0.5 flex h-full w-4 shrink-0 items-center justify-center opacity-0 transition-opacity group-hover/tab:pointer-events-auto group-hover/tab:opacity-100">
@@ -218,7 +303,7 @@ export function EditingContextBar() {
   }
   const renderCustomTab = (formatId: CustomFormatId) => (
     <div key={formatId} className="group/tab flex h-full shrink-0 items-center">
-      <button onClick={() => setActiveCanvasFormat(formatId)} className={tabClass(activeCanvasFormat === formatId)} style={{ borderBottom: activeCanvasFormat === formatId ? '2px solid #f59e0b' : '2px solid transparent' }}>
+      <button onClick={() => setActiveCanvasFormat(formatId)} data-tab-key={formatId} className={tabClass(activeCanvasFormat === formatId)}>
         {getFormatLabel(formatId, settings.customFormats)}
       </button>
       <button onClick={() => removeCustomFormat(formatId)} className="-ml-2 pr-1 text-xs text-[#6b6b7a] opacity-0 transition-opacity group-hover/tab:opacity-100 hover:text-[#f87171]" title="Remove format">×</button>
@@ -251,59 +336,81 @@ export function EditingContextBar() {
             <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#6b6254]">Format</span>
           </div>
           {hasMultipleFamilies ? (
-            <div className="flex min-w-0 items-stretch overflow-x-auto" aria-label="Format family">
+            <div
+              role="group"
+              aria-label="Format family"
+              className="flex h-full min-w-0 items-stretch gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+            >
               {familyEntries.map(({ family, presetFormats, customFormats }) => {
                 const expanded = activeFamily === family
+                const memberCount = presetFormats.length + customFormats.length
+                const panelId = `format-family-${family}`
                 return (
-                  <div key={family} className="flex h-full shrink-0 items-stretch">
+                  <div
+                    key={family}
+                    className={`flex h-full shrink-0 items-stretch rounded-t-[5px] transition-[background-color,box-shadow] duration-200 ease-out motion-reduce:transition-none ${
+                      expanded
+                        ? 'bg-[rgba(255,255,255,0.035)] shadow-[inset_0_1px_0_rgba(245,158,11,0.14)]'
+                        : 'hover:bg-[rgba(255,255,255,0.02)]'
+                    }`}
+                  >
                     <button
                       onClick={() => setActiveFamily(family)}
-                      className={`flex h-full shrink-0 items-center px-1.5 text-[8px] font-semibold uppercase tracking-[0.15em] transition-colors ${
-                        expanded
-                          ? 'bg-[rgba(245,158,11,0.1)] text-[#b68b3c]'
-                          : 'text-[#575461] hover:text-[#a29daa]'
-                      }`}
                       aria-expanded={expanded}
-                    >
-                      {FORMAT_FAMILY_LABELS[family]}{expanded && <span className="ml-1 text-[9px]">▾</span>}
-                    </button>
-                    <div
-                      className={`flex h-full min-w-0 overflow-hidden transition-[max-width,opacity] duration-200 ease-out ${
-                        expanded ? 'max-w-[34rem] opacity-100' : 'pointer-events-none max-w-0 opacity-0'
+                      aria-controls={panelId}
+                      title={
+                        expanded
+                          ? `${FORMAT_FAMILY_LABELS[family]} formats`
+                          : `Switch to ${FORMAT_FAMILY_LABELS[family]} — ${memberCount} format${memberCount !== 1 ? 's' : ''}`
+                      }
+                      className={`flex h-full shrink-0 items-center gap-1.5 whitespace-nowrap px-2 text-[8px] font-semibold uppercase tracking-[0.16em] transition-colors duration-200 ease-out motion-reduce:transition-none ${
+                        expanded
+                          ? 'text-[#e0a951]' : 'text-[#5c5967] hover:text-[#a29daa]'
                       }`}
-                      aria-hidden={!expanded}
                     >
-                      <div className="flex h-full min-w-max items-stretch border-l border-[rgba(245,158,11,0.12)]">
-                        <button
-                          onClick={() => selectFormat(baseFormat)}
-                          tabIndex={expanded ? 0 : -1}
-                          className={tabClass(activeCanvasFormat === baseFormat)}
-                          style={{ borderBottom: activeCanvasFormat === baseFormat ? '2px solid #f59e0b' : '2px solid transparent' }}
-                          title="Base — shared authoring canvas. Not exported directly."
+                      {FORMAT_FAMILY_LABELS[family]}
+                      <span
+                        aria-hidden="true"
+                        className={`grid h-3.5 min-w-3.5 place-items-center rounded-[3px] px-1 text-[8px] font-bold leading-none tabular-nums transition-colors duration-200 ease-out motion-reduce:transition-none ${
+                          expanded
+                            ? 'bg-[rgba(245,158,11,0.10)] text-[#e0a951]'
+                            : 'bg-[rgba(255,255,255,0.05)] text-[#6f6b7b]'
+                        }`}
+                      >
+                        {memberCount}
+                      </span>
+                    </button>
+
+                    {/* Level 1 — animated track. `0fr -> 1fr` resolves against the
+                        tabs' real max-content width, so the full 220ms is visible
+                        motion (the old max-w-[34rem] finished in ~55ms then stalled). */}
+                    <div
+                      id={panelId}
+                      inert={!expanded}
+                      className={`grid h-full transition-[grid-template-columns] duration-[220ms] ease-[cubic-bezier(0.22,1,0.36,1)] motion-reduce:transition-none ${
+                        expanded ? 'grid-cols-[1fr]' : 'grid-cols-[0fr]'
+                      }`}
+                    >
+                      {/* Level 2 — clipper. `min-w-0` + `overflow-hidden` are BOTH
+                          required or the 0fr track will never collapse. */}
+                      <div className="flex h-full min-w-0 overflow-hidden">
+                        {/* Level 3 — intrinsic content + fade/slide. */}
+                        <div
+                          className={`relative flex h-full min-w-max items-stretch border-l transition-[opacity,translate,transform,border-color] duration-150 ease-out motion-reduce:transition-none ${
+                            expanded
+                              ? 'translate-x-0 border-[rgba(255,255,255,0.07)] opacity-100 delay-[50ms]'
+                              : '-translate-x-1.5 border-transparent opacity-0 delay-0'
+                          }`}
                         >
-                          Base
-                        </button>
-                        {presetFormats.map((formatId) => {
-                          const isActive = activeCanvasFormat === formatId
-                          const count = rawGroup ? countFormatAdjustments(rawGroup, formatId, baseFormat) : 0
-                          const label = getFormatLabel(formatId, settings.customFormats)
-                          return <div key={formatId} className="group/tab flex h-full shrink-0 items-center">
-                            <button onClick={() => setActiveCanvasFormat(formatId)} tabIndex={expanded ? 0 : -1} className={tabClass(isActive)} style={{ borderBottom: isActive ? '2px solid #f59e0b' : '2px solid transparent' }} title={`${label} format · ${count} layout adjustment${count !== 1 ? 's' : ''}`}>
-                              {label}{count > 0 && <span className="text-[9px] font-bold text-[#fbbf24]">●{count}</span>}
-                            </button>
-                            <div className="pointer-events-none -ml-0.5 flex h-full w-4 shrink-0 items-center justify-center opacity-0 transition-opacity group-hover/tab:pointer-events-auto group-hover/tab:opacity-100">
-                              <button onClick={() => setDeleteTarget(formatId)} tabIndex={expanded ? 0 : -1} className="flex h-4 w-4 items-center justify-center rounded text-xs text-[#6b6b7a] transition-colors hover:bg-[rgba(248,113,113,0.1)] hover:text-[#f87171]" title={`Delete ${label} layout`} aria-label={`Delete ${label} layout`}>×</button>
-                            </div>
-                          </div>
-                        })}
-                        {customFormats.map((formatId) => (
-                          <div key={formatId} className="group/tab flex h-full shrink-0 items-center">
-                            <button onClick={() => setActiveCanvasFormat(formatId)} tabIndex={expanded ? 0 : -1} className={tabClass(activeCanvasFormat === formatId)} style={{ borderBottom: activeCanvasFormat === formatId ? '2px solid #f59e0b' : '2px solid transparent' }}>
-                              {getFormatLabel(formatId, settings.customFormats)}
-                            </button>
-                            <button onClick={() => removeCustomFormat(formatId)} tabIndex={expanded ? 0 : -1} className="-ml-2 pr-1 text-xs text-[#6b6b7a] opacity-0 transition-opacity group-hover/tab:opacity-100 hover:text-[#f87171]" title="Remove format">×</button>
-                          </div>
-                        ))}
+                          {renderBaseTab()}
+                          {presetFormats.map(renderPresetTab)}
+                          {customFormats.map(renderCustomTab)}
+                          <SlidingUnderline
+                            accentClass="bg-[#f59e0b]"
+                            activeKey={activeCanvasFormat}
+                            enabled={expanded}
+                          />
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -311,17 +418,11 @@ export function EditingContextBar() {
               })}
             </div>
           ) : (
-            <div className="flex min-w-0 items-stretch overflow-x-auto">
-              <button
-                onClick={() => selectFormat(baseFormat)}
-                className={tabClass(activeCanvasFormat === baseFormat)}
-                style={{ borderBottom: activeCanvasFormat === baseFormat ? '2px solid #f59e0b' : '2px solid transparent' }}
-                title="Base — shared authoring canvas. Not exported directly."
-              >
-                Base
-              </button>
+            <div className="relative flex h-full min-w-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+              {renderBaseTab()}
               {activeFamilyPresetFormats.map(renderPresetTab)}
               {activeFamilyCustomFormats.map(renderCustomTab)}
+              <SlidingUnderline accentClass="bg-[#f59e0b]" activeKey={activeCanvasFormat} />
             </div>
           )}
 
@@ -414,11 +515,11 @@ export function EditingContextBar() {
               <span className="h-1.5 w-1.5 rounded-full bg-[#22d3c5] shadow-[0_0_7px_rgba(34,211,197,0.35)]" />
               <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#526d69]">Locale</span>
             </div>
-            <div className="flex min-w-0 items-stretch">
+            <div className="relative flex h-full min-w-0 items-stretch">
               <button
                 onClick={() => setActiveLocale(defaultLocale)}
+                data-tab-key={defaultLocale}
                 className={tabClass(activeLocale === defaultLocale)}
-                style={{ borderBottom: activeLocale === defaultLocale ? '2px solid #22d3c5' : '2px solid transparent' }}
                 title={`Default locale · ${getLanguageName(defaultLocale)}`}
               >
                 Default
@@ -434,8 +535,8 @@ export function EditingContextBar() {
                   <button
                     key={locale}
                     onClick={() => setActiveLocale(locale)}
+                    data-tab-key={locale}
                     className={tabClass(isActive)}
-                    style={{ borderBottom: isActive ? '2px solid #22d3c5' : '2px solid transparent' }}
                     title={`${label} locale · ${count} locale layout adjustment${count !== 1 ? 's' : ''}`}
                   >
                     {label}
@@ -443,6 +544,7 @@ export function EditingContextBar() {
                   </button>
                 )
               })}
+              <SlidingUnderline accentClass="bg-[#22d3c5]" activeKey={activeLocale} />
             </div>
           </section>
         )}
