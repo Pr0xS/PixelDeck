@@ -74,9 +74,6 @@ export interface EditorStore {
   /** Ephemeral override for capture/export — null means "use project.settings.pano". */
   panoRenderOverride: { gapPx: number; compensate: boolean } | null
   setPanoRenderOverride: (override: { gapPx: number; compensate: boolean } | null) => void
-  /** True while the shared stage is temporarily cycling groups for nav thumbnails. */
-  isPrecachingThumbnails: boolean
-  setIsPrecachingThumbnails: (value: boolean) => void
   /** Convenience: update project.settings.pano (undoable). */
   updatePanoSettings: (patch: Partial<PanoSettings>) => void
 

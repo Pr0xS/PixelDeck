@@ -59,8 +59,6 @@ export default function App() {
     staleGroupIds,
     previewThumbs,
     isCapturingPreview,
-    isPrecachingThumbnails,
-    precacheFreezeFrame,
     captureNow,
     captureAllHighRes,
     cancelPreviewCapture,
@@ -304,14 +302,6 @@ export default function App() {
                   <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 2, pointerEvents: 'none', background: scopedEditingIndicator.leftFrameBackground }} />
                   <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 2, pointerEvents: 'none', background: scopedEditingIndicator.rightFrameBackground }} />
                 </div>
-              )}
-              {isPrecachingThumbnails && precacheFreezeFrame && (
-                <img
-                  aria-hidden="true"
-                  src={precacheFreezeFrame}
-                  alt=""
-                  style={{ position: 'absolute', inset: 0, zIndex: 5, pointerEvents: 'all', objectFit: 'fill', width: '100%', height: '100%', background: '#111118' }}
-                />
               )}
             </div>
           </main>

@@ -26,7 +26,6 @@ export function useStageViewport({
   const panStartRef = useRef<{ clientX: number; clientY: number; vpX: number; vpY: number } | null>(null)
   const lastCenteredGroupId = useRef<string | null>(null)
   const lastContainerW = useRef(0)
-  const isPrecachingThumbnails = useEditorStore((s) => s.isPrecachingThumbnails)
 
   useEffect(() => {
     const el = containerRef.current
@@ -40,7 +39,7 @@ export function useStageViewport({
   }, [])
 
   useEffect(() => {
-    if (isPrecachingThumbnails || !containerSize.w || !containerSize.h || !group) return
+    if (!containerSize.w || !containerSize.h || !group) return
     const totalW = getPanoTotalWidth(group, panoCompensate ? panoCompensationPx : 0)
     const totalH = group.slideHeight
     const needsCenter = lastCenteredGroupId.current !== group.id || lastContainerW.current === 0
@@ -51,7 +50,7 @@ export function useStageViewport({
     const cx = (containerSize.w - totalW * currentZoom) / 2
     const cy = (containerSize.h - totalH * currentZoom) / 2
     svp(cx, cy)
-  }, [containerSize.w, containerSize.h, group?.id, isPrecachingThumbnails]) // eslint-disable-line react-hooks/exhaustive-deps
+  }, [containerSize.w, containerSize.h, group?.id]) // eslint-disable-line react-hooks/exhaustive-deps
 
   useEffect(() => {
     const el = containerRef.current
