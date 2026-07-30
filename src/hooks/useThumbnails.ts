@@ -22,8 +22,9 @@ export function getFreshThumbs(entries: PersistedThumbnailMap, groupId: string, 
   return entry?.key === key ? entry.thumbs : undefined
 }
 
-export function needsThumbnailCapture(entries: PersistedThumbnailMap, groupId: string, key: string): boolean {
-  return getFreshThumbs(entries, groupId, key) === undefined
+export function needsThumbnailCapture(entries: PersistedThumbnailMap, groupId: string, key: string, numSlides: number): boolean {
+  const thumbs = getFreshThumbs(entries, groupId, key)
+  return !thumbs || thumbs.length < numSlides || !thumbs.slice(0, numSlides).every(Boolean)
 }
 
 /** Scheduler identity: format/locale/pano swaps must request a fresh idle pass. */
@@ -255,10 +256,8 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     const hasGroupsToCapture = selectFamilyGroups(currentProject, currentFamily).some((group) => {
       if (group.id === currentGroupId) return false
       const key = getThumbnailKey(group, currentFormat, currentLocale, currentPano)
-      const existing = getFreshThumbs(thumbnailEntriesRef.current, group.id, key)
       return isBackgroundPrecacheEligible(group)
-        && (needsThumbnailCapture(thumbnailEntriesRef.current, group.id, key)
-          || !existing || existing.length < group.numSlides || !existing.slice(0, group.numSlides).every(Boolean))
+        && needsThumbnailCapture(thumbnailEntriesRef.current, group.id, key, group.numSlides)
     })
     if (!hasGroupsToCapture) {
       setHasCompletedInitialPrecache(true)
@@ -303,10 +302,8 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
             .filter((group) => {
               if (group.id === originalGroupId) return false
               const key = getThumbnailKey(group, startCanvasFormat, startLocale, startPano)
-              const existing = getFreshThumbs(thumbnailEntriesRef.current, group.id, key)
               return isBackgroundPrecacheEligible(group)
-                && (needsThumbnailCapture(thumbnailEntriesRef.current, group.id, key)
-                  || !existing || existing.length < group.numSlides || !existing.slice(0, group.numSlides).every(Boolean))
+                && needsThumbnailCapture(thumbnailEntriesRef.current, group.id, key, group.numSlides)
             })
           let lastCaptureGroupId = originalGroupId
           let restoreHappened = false
@@ -425,9 +422,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
         const state = useEditorStore.getState()
         const pano = getEffectivePano(state.project.settings.pano, state.panoRenderOverride)
         const key = getThumbnailKey(group, state.activeCanvasFormat, state.activeLocale, pano)
-        const existing = getFreshThumbs(thumbnailEntriesRef.current, group.id, key)
-        return needsThumbnailCapture(thumbnailEntriesRef.current, group.id, key)
-          || !existing || existing.length < group.numSlides || !existing.slice(0, group.numSlides).every(Boolean)
+        return needsThumbnailCapture(thumbnailEntriesRef.current, group.id, key, group.numSlides)
       })
       if (!needsCapture) return
 
@@ -591,8 +586,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
       const fresh = getFreshThumbs(thumbnailEntries, group.id, key)
       const lastKnown = thumbnailEntries[group.id]?.thumbs
       if (fresh ?? lastKnown) visibleThumbs[group.id] = fresh ?? lastKnown!
-      if (needsThumbnailCapture(thumbnailEntries, group.id, key)
-        || !fresh || fresh.length < group.numSlides || !fresh.slice(0, group.numSlides).every(Boolean)) {
+      if (needsThumbnailCapture(thumbnailEntries, group.id, key, group.numSlides)) {
         stale.add(group.id)
       }
     }

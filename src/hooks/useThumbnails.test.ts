@@ -122,9 +122,15 @@ describe('thumbnail cache keys', () => {
     const entries = { group: { key: 'iphone', thumbs: ['data:image/jpeg;base64,thumb'] } }
 
     expect(getFreshThumbs(entries, 'group', 'iphone')).toEqual(entries.group.thumbs)
-    expect(needsThumbnailCapture(entries, 'group', 'iphone')).toBe(false)
+    expect(needsThumbnailCapture(entries, 'group', 'iphone', 1)).toBe(false)
     expect(getFreshThumbs(entries, 'group', 'wearos')).toBeUndefined()
-    expect(needsThumbnailCapture(entries, 'group', 'wearos')).toBe(true)
+    expect(needsThumbnailCapture(entries, 'group', 'wearos', 1)).toBe(true)
+  })
+
+  it('requires a complete non-empty thumbnail array for every slide', () => {
+    expect(needsThumbnailCapture({ group: { key: 'key', thumbs: ['one'] } }, 'group', 'key', 2)).toBe(true)
+    expect(needsThumbnailCapture({ group: { key: 'key', thumbs: ['one', ''] } }, 'group', 'key', 2)).toBe(true)
+    expect(needsThumbnailCapture({ group: { key: 'key', thumbs: ['one', 'two'] } }, 'group', 'key', 2)).toBe(false)
   })
 
   it('changes the precache scheduler identity for format-only swaps in one family', () => {
