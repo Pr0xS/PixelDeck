@@ -1,4 +1,4 @@
-import { chat } from '@/ai/client'
+import { transportChat } from '@/ai/transport'
 import { buildDesignContext } from '@/ai/context'
 import { parseMarkedText, serializeMarkedText, stripMarkTags } from '@/ai/markedText'
 import {
@@ -69,7 +69,7 @@ export async function translateLayerText(args: {
       }),
     },
   ]
-  const raw = await chat({
+  const raw = await transportChat({
     ...args.auth,
     forceJsonMode: true,
     maxTokens: 4096,
@@ -126,7 +126,7 @@ export async function translateGroupTexts(args: {
       }),
     },
   ]
-  const raw = await chat({
+  const raw = await transportChat({
     ...args.auth,
     forceJsonMode: true,
     maxTokens: 8192,
@@ -149,7 +149,7 @@ export async function translateGroupTexts(args: {
 
 async function parseSingleTranslationWithRetry(
   raw: string,
-  args: { auth: AiAuth; messages: Parameters<typeof chat>[0]['messages']; targetLocale?: string },
+  args: { auth: AiAuth; messages: Parameters<typeof transportChat>[0]['messages']; targetLocale?: string },
 ): Promise<string> {
   try {
     return parseSingleTranslationResponse(raw, args.targetLocale)
@@ -179,7 +179,7 @@ async function parseSingleTranslationWithRetry(
 async function parseBatchTranslationWithRetry(
   raw: string,
   expectedIds: string[],
-  args: { auth: AiAuth; messages: Parameters<typeof chat>[0]['messages'] },
+  args: { auth: AiAuth; messages: Parameters<typeof transportChat>[0]['messages'] },
 ): Promise<Record<string, string>> {
   try {
     return parseBatchTranslationResponse(raw, expectedIds)
@@ -201,12 +201,12 @@ async function parseBatchTranslationWithRetry(
 
 async function retryJsonResponse(args: {
   auth: AiAuth
-  messages: Parameters<typeof chat>[0]['messages']
+  messages: Parameters<typeof transportChat>[0]['messages']
   raw: string
   maxTokens: number
   retryPrompt: string
 }): Promise<string> {
-  return chat({
+  return transportChat({
     ...args.auth,
     forceJsonMode: true,
     maxTokens: args.maxTokens,

@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react'
-import { useProjectsStore } from '@/store/projects'
+import { notifyProjectConflict, useProjectsStore } from '@/store/projects'
 import { useEditorStore } from '@/store'
 import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 import { ModalShell } from '@/components/ui/ModalShell'
 import { InlineEditableLabel } from '@/components/ui/InlineEditableLabel'
 import { FileUploadButton } from '@/components/ui/FileUploadButton'
+import { ProjectConflictError } from '@/store/storage/types'
 
 
 interface ProjectsModalProps {
@@ -35,6 +36,9 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
   const [creatingNew, setCreatingNew] = useState(false)
   const [newName, setNewName] = useState('')
   const [newNameError, setNewNameError] = useState('')
+  const [openingId, setOpeningId] = useState<string | null>(null)
+  const [creatingBusy, setCreatingBusy] = useState(false)
+  const [deletingBusy, setDeletingBusy] = useState(false)
   const newNameInputRef = useRef<HTMLInputElement>(null)
   const importInputRef = useRef<HTMLInputElement>(null)
 
@@ -47,13 +51,21 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
     setRenamingId(id)
   }
 
-  const handleOpen = (id: string) => {
+  const handleOpen = async (id: string) => {
     if (id === activeProjectId) {
       onClose()
       return
     }
-    openProject(id)
-    onClose()
+    setOpeningId(id)
+    try {
+      await openProject(id)
+      onClose()
+    } catch (err) {
+      if (err instanceof ProjectConflictError) notifyProjectConflict(err.projectId)
+      else console.error('[PixelDeck] Failed to open project', err)
+    } finally {
+      setOpeningId(null)
+    }
   }
 
   const handleNew = () => {
@@ -62,18 +74,26 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
     setNewNameError('')
   }
 
-  const handleCreateConfirm = () => {
+  const handleCreateConfirm = async () => {
     const trimmed = newName.trim()
     if (!trimmed) {
       setNewNameError('Name is required')
       return
     }
+    setCreatingBusy(true)
     try {
-      createProject(trimmed)
+      await createProject(trimmed)
       setCreatingNew(false)
       onClose()
     } catch (err) {
-      setNewNameError(err instanceof Error ? err.message : String(err))
+      if (err instanceof ProjectConflictError) {
+        notifyProjectConflict(err.projectId)
+        setNewNameError('Another tab or device changed this project. Export your local copy or reload before creating a new project.')
+      } else {
+        setNewNameError(err instanceof Error ? err.message : String(err))
+      }
+    } finally {
+      setCreatingBusy(false)
     }
   }
 
@@ -82,24 +102,37 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
     setDeleteId(id)
   }
 
-  const confirmDelete = () => {
+  const confirmDelete = async () => {
     if (!deleteId) return
-    deleteProject(deleteId)
-    if (deleteId === activeProjectId) onClose()
-    setDeleteId(null)
+    setDeletingBusy(true)
+    try {
+      await deleteProject(deleteId)
+      if (deleteId === activeProjectId) onClose()
+      setDeleteId(null)
+    } catch (err) {
+      if (err instanceof ProjectConflictError) notifyProjectConflict(err.projectId)
+      else console.error('[PixelDeck] Failed to delete project', err)
+    } finally {
+      setDeletingBusy(false)
+    }
   }
 
   const handleExportProject = async (id: string, name: string) => {
-    const json = await useProjectsStore.getState().exportProjectBundle(id)
-    const blob = new Blob([json], { type: 'application/json' })
-    const url = URL.createObjectURL(blob)
-    const slug = name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'project'
-    const a = document.createElement('a')
-    a.href = url
-    a.download = `${slug}.json`
-    a.click()
-    a.remove()
-    URL.revokeObjectURL(url)
+    try {
+      const json = await useProjectsStore.getState().exportProjectBundle(id)
+      const blob = new Blob([json], { type: 'application/json' })
+      const url = URL.createObjectURL(blob)
+      const slug = name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'project'
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `${slug}.json`
+      a.click()
+      a.remove()
+      URL.revokeObjectURL(url)
+    } catch (err) {
+      console.error('[PixelDeck] Failed to export project', err)
+      alert('Failed to export this project. Please try again.')
+    }
   }
 
   const handleImport = () => importInputRef.current?.click()
@@ -138,6 +171,7 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
         message="This cannot be undone."
         confirmLabel="Delete Project"
         danger
+        busy={deletingBusy}
         onConfirm={confirmDelete}
         onCancel={() => setDeleteId(null)}
       />
@@ -268,20 +302,20 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                 />
                 <button
                   onClick={handleCreateConfirm}
-                  disabled={!newName.trim()}
+                  disabled={!newName.trim() || creatingBusy}
                   style={{
-                    background: newName.trim() ? '#7c6ef6' : 'rgba(124,110,246,0.4)',
+                    background: newName.trim() && !creatingBusy ? '#7c6ef6' : 'rgba(124,110,246,0.4)',
                     color: '#fff',
                     border: 'none',
                     borderRadius: 6,
                     padding: '6px 14px',
                     fontSize: 12,
                     fontWeight: 600,
-                    cursor: newName.trim() ? 'pointer' : 'not-allowed',
+                    cursor: newName.trim() && !creatingBusy ? 'pointer' : 'not-allowed',
                     flexShrink: 0,
                   }}
                 >
-                  Create
+                  {creatingBusy ? 'Creating…' : 'Create'}
                 </button>
                 <button
                   onClick={() => setCreatingNew(false)}
@@ -323,7 +357,7 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
               return (
                 <div
                   key={p.id}
-                  onClick={() => !isRenaming && handleOpen(p.id)}
+                  onClick={() => !isRenaming && !openingId && void handleOpen(p.id)}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
@@ -375,7 +409,12 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                         onEditingChange={(editing) => {
                           setRenamingId(editing ? p.id : null)
                         }}
-                        onCommit={(name) => renameProject(p.id, name)}
+                        onCommit={(name) => {
+                          renameProject(p.id, name).catch((err) => {
+                            if (err instanceof ProjectConflictError) notifyProjectConflict(err.projectId)
+                            else console.error('[PixelDeck] Rename failed', err)
+                          })
+                        }}
                         inputStyle={{
                           background: 'rgba(255,255,255,0.08)',
                           border: '1px solid rgba(124,110,246,0.6)',

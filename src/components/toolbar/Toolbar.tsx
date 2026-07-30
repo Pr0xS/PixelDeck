@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore, useUndoRedo } from '@/store'
-import { useProjectsStore } from '@/store/projects'
+import { notifyProjectConflict, useProjectsStore } from '@/store/projects'
+import { ProjectConflictError } from '@/store/storage/types'
 import { BrandKitButton } from '@/components/toolbar/BrandKitButton'
 import { Logo } from '@/components/toolbar/Logo'
 
@@ -59,7 +60,10 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
   function commitName() {
     const trimmed = tempName.trim()
     if (trimmed && trimmed !== project.name) {
-      renameProject(project.id, trimmed)
+      renameProject(project.id, trimmed).catch((err) => {
+        if (err instanceof ProjectConflictError) notifyProjectConflict(err.projectId)
+        else console.error('[PixelDeck] Failed to rename project', err)
+      })
     }
     setEditingName(false)
   }

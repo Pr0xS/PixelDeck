@@ -10,15 +10,30 @@ export const nextFrame = () => new Promise<number>((resolve) => requestAnimation
 // (activeSlideGroup, panoCompensate/Px) are mutated by initial thumbnail
 // capture, preview capture, and export. They must never run concurrently.
 let captureChain: Promise<void> = Promise.resolve()
+let pendingCaptureCount = 0
+
+/** Whether a capture currently holds the mutex or is queued to acquire it. */
+export function isCaptureLocked(): boolean {
+  return pendingCaptureCount > 0
+}
 
 export function acquireCaptureLock(): Promise<() => void> {
   const prev = captureChain
+  pendingCaptureCount += 1
   let release!: () => void
   const next = new Promise<void>((resolve) => {
     release = resolve
   })
   captureChain = prev.then(() => next)
-  return prev.then(() => release)
+  return prev.then(() => {
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      pendingCaptureCount -= 1
+      release()
+    }
+  })
 }
 
 export async function runExclusiveCapture<T>(fn: () => Promise<T>): Promise<T> {

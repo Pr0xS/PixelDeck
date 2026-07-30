@@ -41,33 +41,37 @@ export async function exportProjectImages(
   options: ProjectImageExportOptions,
 ): Promise<ProjectImageExportResult[]> {
   const release = await acquireCaptureLock()
-  const store = useEditorStore.getState()
-  const originalFormat = store.activeCanvasFormat
-  const originalGroupId = store.activeSlideGroupId
-  const originalLocale = store.activeLocale
-  const projectPano = store.project.settings.pano ?? { gapPx: 24, compensate: false }
-  const project = store.project
-  const formatIds = options.formatIds.length ? options.formatIds : [originalFormat]
-  const locales = options.locales.length ? options.locales : [project.settings.defaultLocale ?? originalLocale]
-  const panoMode = options.panoMode ?? 'split'
-  const panoCompensate = panoMode === 'split' && options.panoCompensate === true
-  const panoCompensationPx = panoCompensate
-    ? normalizePanoCompensationPx(options.panoCompensationPx ?? 0)
-    : 0
-  const groupIds = options.scope === 'current-group'
-    ? [options.groupIds?.[0] ?? originalGroupId]
-    : (options.groupIds?.length ? options.groupIds : project.slideGroups.map((group) => group.id))
-  const plan = buildExportPlan(project, {
-    formatIds,
-    locales,
-    scope: options.scope,
-    groupIds,
-    panoMode,
-  })
-  const results: ProjectImageExportResult[] = []
-  const usedRelativePaths = new Set<string>()
+  let originalFormat: CanvasFormatId | undefined
+  let originalGroupId: string | undefined
+  let originalLocale: string | undefined
 
   try {
+    const store = useEditorStore.getState()
+    originalFormat = store.activeCanvasFormat
+    originalGroupId = store.activeSlideGroupId
+    originalLocale = store.activeLocale
+    const projectPano = store.project.settings.pano ?? { gapPx: 24, compensate: false }
+    const project = store.project
+    const formatIds = options.formatIds.length ? options.formatIds : [originalFormat]
+    const locales = options.locales.length ? options.locales : [project.settings.defaultLocale ?? originalLocale]
+    const panoMode = options.panoMode ?? 'split'
+    const panoCompensate = panoMode === 'split' && options.panoCompensate === true
+    const panoCompensationPx = panoCompensate
+      ? normalizePanoCompensationPx(options.panoCompensationPx ?? 0)
+      : 0
+    const groupIds = options.scope === 'current-group'
+      ? [options.groupIds?.[0] ?? originalGroupId]
+      : (options.groupIds?.length ? options.groupIds : project.slideGroups.map((group) => group.id))
+    const plan = buildExportPlan(project, {
+      formatIds,
+      locales,
+      scope: options.scope,
+      groupIds,
+      panoMode,
+    })
+    const results: ProjectImageExportResult[] = []
+    const usedRelativePaths = new Set<string>()
+
     for (const batch of plan.batches) {
       useEditorStore.getState().setActiveLocale(batch.locale)
       useEditorStore.getState().setActiveCanvasFormat(batch.formatId)
@@ -103,16 +107,15 @@ export async function exportProjectImages(
         })
       }
     }
+    return results
   } finally {
-    useEditorStore.getState().setActiveLocale(originalLocale)
-    useEditorStore.getState().setActiveCanvasFormat(originalFormat)
+    if (originalLocale !== undefined) useEditorStore.getState().setActiveLocale(originalLocale)
+    if (originalFormat !== undefined) useEditorStore.getState().setActiveCanvasFormat(originalFormat)
     useEditorStore.getState().setPanoRenderOverride(null)
-    if (useEditorStore.getState().activeSlideGroupId !== originalGroupId) {
+    if (originalGroupId !== undefined && useEditorStore.getState().activeSlideGroupId !== originalGroupId) {
       useEditorStore.getState().setActiveSlideGroup(originalGroupId)
     }
     await waitForStageCaptureReady(stage)
     release()
   }
-
-  return results
 }

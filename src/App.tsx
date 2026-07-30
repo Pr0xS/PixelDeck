@@ -15,6 +15,8 @@ import { useEditorStore, useUndoRedo } from '@/store'
 import { applyCanvasFormat, resolveGroupView } from '@/utils/canvasFormats'
 import { registerStage } from '@/utils/stageRegistry'
 import { getScopedEditingIndicator } from '@/utils/scopedEditingIndicator'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { useProjectsStore } from '@/store/projects'
 
 // Lazy-load the localization view — it's a separate mode and not needed on initial load.
 const LocalizationView = lazy(() =>
@@ -25,6 +27,7 @@ const INITIAL_SPLASH_MIN_MS = 450
 
 export default function App() {
   const stageRef = useRef<Konva.Stage>(null)
+  const conflictNotice = useProjectsStore((s) => s.conflictNotice)
 
   // Register the stage in the singleton registry so PropertiesPanel and other
   // non-canvas components can access it for bounding-box queries (alignment).
@@ -241,6 +244,14 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen flex flex-col overflow-hidden bg-[#0f0f13]">
+      <ConfirmDialog
+        open={conflictNotice !== null}
+        title="Project changed elsewhere"
+        message="This project was changed in another tab or device. Your local changes are not being saved. Save a copy of your local version, or manually reload the page to load the latest version and discard local changes."
+        confirmLabel="Save as Copy"
+        onConfirm={() => { void useProjectsStore.getState().saveConflictedProjectAsCopy() }}
+        onCancel={() => useProjectsStore.setState({ conflictNotice: null })}
+      />
       <Toolbar
         mode={view}
         onSetMode={handleSetMode}

@@ -1,9 +1,11 @@
 import { describe, it, expect, vi } from 'vitest'
-import { acquireCaptureLock, runExclusiveCapture, withIdentityTransform } from './stageCapture'
+import { acquireCaptureLock, isCaptureLocked, runExclusiveCapture, withIdentityTransform } from './stageCapture'
 
 describe('stage capture mutex', () => {
   it('serializes concurrent captures in FIFO order', async () => {
+    expect(isCaptureLocked()).toBe(false)
     const releaseA = await acquireCaptureLock()
+    expect(isCaptureLocked()).toBe(true)
     const order: string[] = []
     const pB = runExclusiveCapture(async () => { order.push('B') })
     order.push('A')
@@ -11,6 +13,7 @@ describe('stage capture mutex', () => {
     releaseA()
     await pB
     expect(order).toEqual(['A', 'B'])
+    expect(isCaptureLocked()).toBe(false)
   })
 
   it('releases the lock even if the callback throws', async () => {

@@ -3,6 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import App from './App.tsx'
 import { loadGoogleFonts } from '@/utils/fonts'
+import { abandonBootstrap, bootstrapProjects } from '@/store/projects'
 
 declare global {
   interface Window {
@@ -26,12 +27,35 @@ const ExportApp = lazy(() =>
   import('./pages/ExportApp.tsx').then((m) => ({ default: m.ExportApp })),
 )
 
-createRoot(document.getElementById('root')!).render(
-  isExportMode
-    ? <Suspense><ExportApp /></Suspense>
-    : (
-      <StrictMode>
-        <App />
-      </StrictMode>
-    )
-)
+async function mount(): Promise<void> {
+  if (!isExportMode) {
+    let bootstrapTimer: ReturnType<typeof setTimeout> | undefined
+    try {
+      await Promise.race([
+        bootstrapProjects(),
+        new Promise<never>((_, reject) => {
+          bootstrapTimer = setTimeout(() => {
+            abandonBootstrap()
+            reject(new Error('bootstrap timeout'))
+          }, 8000)
+        }),
+      ])
+    } catch (err) {
+      console.error('[PixelDeck] Project bootstrap failed', err)
+    } finally {
+      if (bootstrapTimer) clearTimeout(bootstrapTimer)
+    }
+  }
+
+  createRoot(document.getElementById('root')!).render(
+    isExportMode
+      ? <Suspense><ExportApp /></Suspense>
+      : (
+        <StrictMode>
+          <App />
+        </StrictMode>
+      )
+  )
+}
+
+mount().catch((err) => console.error('[PixelDeck] fatal mount error', err))
