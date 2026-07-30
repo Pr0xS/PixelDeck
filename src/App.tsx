@@ -10,9 +10,13 @@ import { StageCanvas } from '@/components/canvas/StageCanvas'
 import { EditingContextAlert, EditingContextBar } from '@/components/canvas/EditingContext'
 import { AppLoadingScreen } from '@/components/AppLoadingScreen'
 import { useThumbnails } from '@/hooks/useThumbnails'
+import { useImageCacheWarmer } from '@/hooks/useImageCacheWarmer'
 import { useEditorStore, useUndoRedo } from '@/store'
-import { applyCanvasFormat, resolveProjectView } from '@/utils/canvasFormats'
+import { applyCanvasFormat, resolveGroupView } from '@/utils/canvasFormats'
 import { registerStage } from '@/utils/stageRegistry'
+import { getScopedEditingIndicator } from '@/utils/scopedEditingIndicator'
+import { ConfirmDialog } from '@/components/common/ConfirmDialog'
+import { useProjectsStore } from '@/store/projects'
 
 // Lazy-load the localization view — it's a separate mode and not needed on initial load.
 const LocalizationView = lazy(() =>
@@ -23,6 +27,7 @@ const INITIAL_SPLASH_MIN_MS = 450
 
 export default function App() {
   const stageRef = useRef<Konva.Stage>(null)
+  const conflictNotice = useProjectsStore((s) => s.conflictNotice)
 
   // Register the stage in the singleton registry so PropertiesPanel and other
   // non-canvas components can access it for bounding-box queries (alignment).
@@ -30,14 +35,17 @@ export default function App() {
     registerStage(stageRef.current)
     return () => registerStage(null)
   })
-  const { project, activeSlideGroupId, setActiveSlideGroup, exitGroupEdit, editingGroupId } =
+  const { project, activeSlideGroupId, activeCanvasFormat, activeLocale, setActiveSlideGroup, exitGroupEdit, editingGroupId } =
     useEditorStore(useShallow((s) => ({
       project: s.project,
       activeSlideGroupId: s.activeSlideGroupId,
+      activeCanvasFormat: s.activeCanvasFormat,
+      activeLocale: s.activeLocale,
       setActiveSlideGroup: s.setActiveSlideGroup,
       exitGroupEdit: s.exitGroupEdit,
       editingGroupId: s.editingGroupId,
     })))
+  const scopedEditingIndicator = getScopedEditingIndicator(project, activeLocale, activeCanvasFormat)
   const { undo, redo } = useUndoRedo()
   const [view, setView] = useState<'editor' | 'localization'>('editor')
   const [previewOpen, setPreviewOpen] = useState(false)
@@ -48,13 +56,15 @@ export default function App() {
   const [hasMetMinimumSplashTime, setHasMetMinimumSplashTime] = useState(false)
   const {
     thumbnails,
+    staleGroupIds,
     previewThumbs,
     isCapturingPreview,
-    isPrecachingThumbnails,
-    hasCompletedInitialPrecache,
+    captureNow,
     captureAllHighRes,
     cancelPreviewCapture,
-  } = useThumbnails(stageRef)
+    offscreenThumbnailElement,
+  } = useThumbnails(stageRef, hasCompletedInitialLoad)
+  useImageCacheWarmer(hasCompletedInitialLoad)
 
   useEffect(() => {
     const timeoutId = window.setTimeout(() => setHasMetMinimumSplashTime(true), INITIAL_SPLASH_MIN_MS)
@@ -62,16 +72,22 @@ export default function App() {
   }, [])
 
   useEffect(() => {
+    const timeoutId = window.setTimeout(() => setHasCompletedInitialLoad(true), 3000)
+    return () => window.clearTimeout(timeoutId)
+  }, [])
+
+  useEffect(() => {
     if (hasCompletedInitialLoad) return
     if (!hasMetMinimumSplashTime) return
 
-    // An empty project has no thumbnails to capture, so it is ready as soon as
-    // the brief branded entrance has had time to settle.
-    if (!hasCompletedInitialPrecache && project.slideGroups.length > 0) return
+    // Only the visible group gates first paint; background thumbnails precache at idle.
+    if (project.slideGroups.length > 0) {
+      if (!activeSlideGroupId || !thumbnails[activeSlideGroupId]) return
+    }
 
     const timeoutId = window.setTimeout(() => setHasCompletedInitialLoad(true), 0)
     return () => window.clearTimeout(timeoutId)
-  }, [hasCompletedInitialLoad, hasCompletedInitialPrecache, hasMetMinimumSplashTime, project.slideGroups.length])
+  }, [hasCompletedInitialLoad, hasMetMinimumSplashTime, project.slideGroups.length, activeSlideGroupId, thumbnails])
   useEffect(() => {
     if (project.slideGroups.length === 0) return
     const groupExists = project.slideGroups.some((g) => g.id === activeSlideGroupId)
@@ -170,9 +186,9 @@ export default function App() {
             activeCanvasFormat,
           } = useEditorStore.getState()
           if (!selection?.layerId) return
-          const resolvedProject = resolveProjectView(p, activeLocale, activeCanvasFormat)
-          const grp = resolvedProject.slideGroups.find((g) => g.id === gid)
-          if (!grp) return
+          const rawGroup = p.slideGroups.find((group) => group.id === gid)
+          if (!rawGroup) return
+          const grp = resolveGroupView(rawGroup, p.settings, activeLocale, activeCanvasFormat)
           if (egi) {
             const groupLayer = grp.layers.find((l) => l.id === egi)
             if (groupLayer?.type === 'group') {
@@ -228,6 +244,14 @@ export default function App() {
 
   return (
     <div className="w-screen h-screen flex flex-col overflow-hidden bg-[#0f0f13]">
+      <ConfirmDialog
+        open={conflictNotice !== null}
+        title="Project changed elsewhere"
+        message="This project was changed in another tab or device. Your local changes are not being saved. Save a copy of your local version, or manually reload the page to load the latest version and discard local changes."
+        confirmLabel="Save as Copy"
+        onConfirm={() => { void useProjectsStore.getState().saveConflictedProjectAsCopy() }}
+        onCancel={() => useProjectsStore.setState({ conflictNotice: null })}
+      />
       <Toolbar
         mode={view}
         onSetMode={handleSetMode}
@@ -245,7 +269,7 @@ export default function App() {
         {/* Editor view — always mounted so the Konva stage + ResizeObserver are always alive.
             Hidden (pointer-events-none, invisible) when the localization view is on top. */}
         <div
-          className="flex flex-1 overflow-hidden"
+          className="flex min-w-0 flex-1 overflow-hidden"
           style={view === 'localization' ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
         >
           {/* Layers panel — always visible */}
@@ -258,16 +282,26 @@ export default function App() {
           >
             {/* Both editing axes share one compact top bar. */}
             <EditingContextBar />
+            <EditingContextAlert />
 
             {/* Canvas fills remaining height — StageCanvas takes full space */}
-            <div style={{ flex: 1, position: 'relative', overflow: 'hidden' }}>
+            <div style={{ flex: 1, position: 'relative', zIndex: 0, overflow: 'hidden' }}>
               <StageCanvas stageRef={stageRef} />
-              <EditingContextAlert />
-              {isPrecachingThumbnails && (
+              {(scopedEditingIndicator.isFormatScoped || scopedEditingIndicator.isLocaleScoped) && (
                 <div
                   aria-hidden="true"
-                  style={{ position: 'absolute', inset: 0, background: '#111118', zIndex: 5, pointerEvents: 'all' }}
-                />
+                  style={{
+                    position: 'absolute',
+                    inset: 0,
+                    zIndex: 1,
+                    pointerEvents: 'none',
+                  }}
+                >
+                  <div style={{ position: 'absolute', top: 0, right: 0, left: 0, height: 2, pointerEvents: 'none', background: scopedEditingIndicator.horizontalFrameBackground }} />
+                  <div style={{ position: 'absolute', right: 0, bottom: 0, left: 0, height: 2, pointerEvents: 'none', background: scopedEditingIndicator.horizontalFrameBackground }} />
+                  <div style={{ position: 'absolute', top: 0, bottom: 0, left: 0, width: 2, pointerEvents: 'none', background: scopedEditingIndicator.leftFrameBackground }} />
+                  <div style={{ position: 'absolute', top: 0, right: 0, bottom: 0, width: 2, pointerEvents: 'none', background: scopedEditingIndicator.rightFrameBackground }} />
+                </div>
               )}
             </div>
           </main>
@@ -276,7 +310,7 @@ export default function App() {
           <PropertiesPanel />
         </div>
       </div>
-      <SlideNavigator thumbnails={thumbnails} stageRef={stageRef} onOpenPreview={() => setPreviewOpen(true)} />
+      <SlideNavigator thumbnails={thumbnails} staleGroupIds={staleGroupIds} stageRef={stageRef} onCaptureThumbnail={(groupId) => { void captureNow(groupId) }} onOpenPreview={() => setPreviewOpen(true)} />
 
       <PreviewModal
         open={previewOpen}
@@ -289,6 +323,7 @@ export default function App() {
         initialLocale={previewLocale}
       />
       <AppLoadingScreen visible={!hasCompletedInitialLoad} />
+      {offscreenThumbnailElement}
     </div>
   )
 }

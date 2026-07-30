@@ -25,10 +25,8 @@ import { isLocaleContentComplete } from '@/utils/locale'
  *     survives from the original design: an incomplete promoted locale
  *     inherits the old default's content for whatever it's missing.
  *  3. Write the seeded target content into the LEGACY BASE FIELDS — this is
- *     required because applyLocale()'s fast path
- *     (`locale === defaultLocale → return project unchanged`) reads those
- *     fields directly and bypasses localeContent entirely for the default
- *     locale. Without this the canvas would keep showing the old default's
+ *     required because default-locale resolution reads those fields directly
+ *     rather than merging localeContent. Without this the canvas would keep showing the old default's
  *     content after promotion.
  * Only text/phone/image layers carry localizable content; everything else
  * passes through unchanged. Recursion into group children is handled by

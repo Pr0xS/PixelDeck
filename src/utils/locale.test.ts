@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import {
   resolveLayerLocale,
-  applyLocale,
+  applyLocaleToGroup,
   getLocalizableLayers,
   buildLocaleManifest,
   applyLocaleManifest,
@@ -108,13 +108,13 @@ describe('resolveLayerLocale', () => {
   })
 })
 
-// ─── applyLocale ──────────────────────────────────────────────────────────────
+// ─── applyLocaleToGroup ───────────────────────────────────────────────────────
 
-describe('applyLocale', () => {
-  it('returns the same project reference when locale equals defaultLocale', () => {
+describe('applyLocaleToGroup', () => {
+  it('returns the same group reference when locale equals defaultLocale', () => {
     const project = makeProject([makeTextLayer()])
-    const result = applyLocale(project, 'en')
-    expect(result).toBe(project)
+    const result = applyLocaleToGroup(project.slideGroups[0], 'en', project.settings.defaultLocale)
+    expect(result).toBe(project.slideGroups[0])
   })
 
   it('applies a text override to a TextLayer in a SlideGroup', () => {
@@ -122,18 +122,18 @@ describe('applyLocale', () => {
       localeContent: { es: { text: 'Hola mundo' } },
     })
     const project = makeProject([layer])
-    const result = applyLocale(project, 'es')
+    const result = applyLocaleToGroup(project.slideGroups[0], 'es', project.settings.defaultLocale)
 
-    expect(result).not.toBe(project)
-    const resolved = result.slideGroups[0].layers.find((l) => l.id === 'text1') as TextLayer
+    expect(result).not.toBe(project.slideGroups[0])
+    const resolved = result.layers.find((l) => l.id === 'text1') as TextLayer
     expect(resolved.text).toBe('Hola mundo')
   })
 
   it('leaves layers that have no override for the given locale unchanged', () => {
     const layer = makeTextLayer() // no localeContent
     const project = makeProject([layer])
-    const result = applyLocale(project, 'es')
-    const resolved = result.slideGroups[0].layers.find((l) => l.id === 'text1') as TextLayer
+    const result = applyLocaleToGroup(project.slideGroups[0], 'es', project.settings.defaultLocale)
+    const resolved = result.layers.find((l) => l.id === 'text1') as TextLayer
     expect(resolved.text).toBe('Hello')
   })
 
@@ -142,8 +142,8 @@ describe('applyLocale', () => {
       makeTextLayer({ localeContent: { es: { text: 'Hola mundo' } } }),
     ])
 
-    const result = applyLocale(project, 'es')
-    const resolved = result.slideGroups[0].layers.find((l) => l.id === 'text1') as TextLayer
+    const result = applyLocaleToGroup(project.slideGroups[0], 'es', project.settings.defaultLocale)
+    const resolved = result.layers.find((l) => l.id === 'text1') as TextLayer
 
     expect(resolved.text).toBe('Hola mundo')
   })

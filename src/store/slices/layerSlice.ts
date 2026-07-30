@@ -2,7 +2,14 @@ import type {
   Layer, GroupLayer,
   PhoneLayer, TextLayer, ImageLayer, ShapeLayer, EmojiLayer, BrandLayer,
 } from '@/types'
-import { BASE_CANVAS_FORMAT, getProjectBaseFormat, resolveLayerLocaleAdjustBaseOnly } from '@/utils/canvasFormats'
+import {
+  BASE_CANVAS_FORMAT,
+  getFamilyDefaultPhoneModel,
+  getGroupFamilyKey,
+  getProjectBaseFormat,
+  resolveLayerLocaleAdjustBaseOnly,
+} from '@/utils/canvasFormats'
+import { computePhoneFitScale, getPhoneSpec } from '@/assets/mockups/specs'
 import { DEFAULT_TEXT_WIDTH } from '@/utils/textRendering'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
 import {
@@ -10,6 +17,7 @@ import {
   bakeLayerScale,
   mutateActiveGroup,
   getActiveGroup,
+  getLayerDefaultsScaleFactor,
   patchLayerForLocale,
   patchLayerForLocaleAdjust,
   patchLayerForFormat,
@@ -222,18 +230,22 @@ export const createLayerSlice = (
   addPhone: () => {
     const group = getActiveGroup(get)
     if (!group) return
+    const family = getGroupFamilyKey(group) ?? 'phone'
+    const model = getFamilyDefaultPhoneModel(family) ?? 'iphone-16-pro'
+    const spec = getPhoneSpec(model)
+    const scale = computePhoneFitScale(group.slideHeight, spec)
     const layer: PhoneLayer = {
       id: newId(),
       name: 'Phone',
       type: 'phone',
-      x: group.slideWidth / 2 - 195,
-      y: group.slideHeight / 2 - 422,
+      x: (group.slideWidth - spec.frameWidth * scale) / 2,
+      y: (group.slideHeight - spec.frameHeight * scale) / 2,
       rotation: 0,
       opacity: 1,
       visible: true,
       locked: false,
-      model: 'iphone-16-pro',
-      scale: 2.0,
+      model,
+      scale,
       screenshotFit: 'cover',
       screenshotOffsetX: 0,
       screenshotOffsetY: 0,
@@ -243,30 +255,32 @@ export const createLayerSlice = (
       statusBarColor: '#000000',
     }
     get().addLayer(layer)
+    set({ pendingContentFocusLayerId: layer.id })
   },
 
   addText: () => {
     const group = getActiveGroup(get)
     if (!group) return
+    const factor = getLayerDefaultsScaleFactor(group, get().project.settings)
     const layer: TextLayer = {
       id: newId(),
       name: 'Text',
       type: 'text',
-      x: 100,
-      y: 200,
+      x: 100 * factor,
+      y: 200 * factor,
       rotation: 0,
       opacity: 1,
       visible: true,
       locked: false,
       text: 'Your headline',
       fontFamily: 'Sora',
-      fontSize: 100,
+      fontSize: 100 * factor,
       fontWeight: 800,
       fill: '#ffffff',
       letterSpacing: -4,
       lineHeight: 1.0,
       align: 'left',
-      width: DEFAULT_TEXT_WIDTH,
+      width: DEFAULT_TEXT_WIDTH * factor,
     }
     get().addLayer(layer)
   },
@@ -314,19 +328,20 @@ export const createLayerSlice = (
   addShape: () => {
     const group = getActiveGroup(get)
     if (!group) return
+    const factor = getLayerDefaultsScaleFactor(group, get().project.settings)
     const layer: ShapeLayer = {
       id: newId(),
       name: 'Shape',
       type: 'shape',
-      x: 200,
-      y: 200,
+      x: 200 * factor,
+      y: 200 * factor,
       rotation: 0,
       opacity: 1,
       visible: true,
       locked: false,
       shapeType: 'rect',
-      width: 600,
-      height: 400,
+      width: 600 * factor,
+      height: 400 * factor,
       fill: {
         type: 'linear',
         angle: 120,
@@ -335,7 +350,7 @@ export const createLayerSlice = (
           { offset: 1, color: '#EC4899' },
         ],
       },
-      cornerRadius: 40,
+      cornerRadius: 40 * factor,
     }
     get().addLayer(layer)
     set({ pendingContentFocusLayerId: layer.id })
@@ -344,18 +359,19 @@ export const createLayerSlice = (
   addEmoji: () => {
     const group = getActiveGroup(get)
     if (!group) return
+    const factor = getLayerDefaultsScaleFactor(group, get().project.settings)
     const layer: EmojiLayer = {
       id: newId(),
       name: 'Emoji',
       type: 'emoji',
-      x: group.slideWidth / 2 - 100,
-      y: group.slideHeight / 2 - 100,
+      x: group.slideWidth / 2 - 100 * factor,
+      y: group.slideHeight / 2 - 100 * factor,
       rotation: 0,
       opacity: 1,
       visible: true,
       locked: false,
       emoji: '🚀',
-      fontSize: 200,
+      fontSize: 200 * factor,
     }
     get().addLayer(layer)
     set({ pendingContentFocusLayerId: layer.id })
@@ -365,25 +381,26 @@ export const createLayerSlice = (
     const group = getActiveGroup(get)
     if (!group) return
     const { settings } = get().project
+    const factor = getLayerDefaultsScaleFactor(group, settings)
     const layer: BrandLayer = {
       id: newId(),
       name: 'Brand',
       type: 'brand',
-      x: 100,
-      y: 92,
+      x: 100 * factor,
+      y: 92 * factor,
       rotation: 0,
       opacity: 1,
       visible: true,
       locked: false,
       appName: settings.brandName,
       logoDataUrl: settings.brandLogoDataUrl,
-      logoSize: 66,
+      logoSize: 66 * factor,
       nameColor: '#E05243',
-      nameFontSize: 40,
+      nameFontSize: 40 * factor,
       nameFontFamily: 'Sora',
       nameFontWeight: 800,
       direction: 'row',
-      gap: 18,
+      gap: 18 * factor,
     }
     get().addLayer(layer)
   },
@@ -392,24 +409,25 @@ export const createLayerSlice = (
     const group = getActiveGroup(get)
     if (!group) return
     const { settings } = get().project
+    const factor = getLayerDefaultsScaleFactor(group, settings)
 
     const bg: ShapeLayer = {
       id: newId(), name: 'Chip BG', type: 'shape',
       x: 0, y: 0, rotation: 0, opacity: 1, visible: true, locked: false,
       shapeType: 'rect',
-      width: 280, height: 72,
+      width: 280 * factor, height: 72 * factor,
       fill: { type: 'linear', angle: 120, stops: [{ offset: 0, color: '#FF6F61' }, { offset: 1, color: '#EC4899' }] },
-      cornerRadius: 36,
+      cornerRadius: 36 * factor,
     }
     const label: TextLayer = {
       id: newId(), name: 'Chip Label', type: 'text',
-      x: 32, y: 20, rotation: 0, opacity: 1, visible: true, locked: false,
-      text: 'Feature', fontFamily: 'Inter', fontSize: 31, fontWeight: 700,
-      fill: '#ffffff', letterSpacing: -0.4, lineHeight: 1, align: 'left',
+      x: 32 * factor, y: 20 * factor, rotation: 0, opacity: 1, visible: true, locked: false,
+      text: 'Feature', fontFamily: 'Inter', fontSize: 31 * factor, fontWeight: 700,
+      fill: '#ffffff', letterSpacing: -0.4 * factor, lineHeight: 1, align: 'left',
     }
     const chipGroup: GroupLayer = {
       id: newId(), name: 'Chip', type: 'group',
-      x: 100, y: 600, rotation: 0, opacity: 1, visible: true, locked: false,
+      x: 100 * factor, y: 600 * factor, rotation: 0, opacity: 1, visible: true, locked: false,
       children: [bg, seedLocaleContent(label, settings.defaultLocale)],
     }
     get().addLayer(chipGroup)

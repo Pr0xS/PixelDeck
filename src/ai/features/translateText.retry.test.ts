@@ -1,13 +1,14 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest'
-import { chat } from '@/ai/client'
+import { transportChat } from '@/ai/transport'
 import { translateGroupTexts, translateLayerText } from './translateText'
 import type { Project, SlideGroup } from '@/types'
 
-vi.mock('@/ai/client', () => ({
-  chat: vi.fn(),
+vi.mock('@/ai/transport', () => ({
+  transportChat: vi.fn(),
+  transportEditImage: vi.fn(),
 }))
 
-const mockedChat = vi.mocked(chat)
+const mockedChat = vi.mocked(transportChat)
 
 const slideGroup: SlideGroup = {
   id: 'g1',

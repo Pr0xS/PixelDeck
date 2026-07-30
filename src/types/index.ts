@@ -54,11 +54,11 @@ export interface CustomFontRef {
 
 // ─── Phone Models ────────────────────────────────────────────────────────────
 
-export type PhoneModel = 'iphone-16-pro' | 'iphone-16-pro-plain' | 'pixel-9' | 'pixel-9-plain';
+export type PhoneModel = 'iphone-16-pro' | 'iphone-16-pro-plain' | 'pixel-9' | 'pixel-9-plain' | 'apple-watch' | 'wear-os' | 'ipad-13' | 'android-tablet' | 'screen-16-9' | 'screen-16-10';
 
 // ─── Canvas Formats ──────────────────────────────────────────────────────────
 
-export type BuiltInFormatId = 'base' | 'iphone-69' | 'android-phone' | 'ipad-13' | 'android-tablet'
+export type BuiltInFormatId = 'base' | 'iphone-69' | 'android-phone' | 'ipad-13' | 'android-tablet' | 'ipad-11' | 'apple-watch' | 'wear-os' | 'mac' | 'appletv' | 'visionpro' | 'steam' | 'meta-quest'
 export type CustomFormatId = `custom:${string}`
 export type CanvasFormatId = BuiltInFormatId | CustomFormatId
 
@@ -105,7 +105,7 @@ export interface PhoneModelSpec {
 
 /**
  * Per-locale override patch for a layer's localizable properties.
- * Shallow-merged on top of the base layer at render / export time via applyLocale().
+ * Shallow-merged on top of the base layer during locale resolution.
  * Only fields relevant to the layer type are used; others are ignored.
  */
 export interface LocaleLayerPatch {
@@ -202,11 +202,11 @@ export interface BaseLayer {
    * separate "override" map; every locale, including the default, is stored
    * identically here. Populated on layer creation, kept in sync by every
    * edit path (updateLayer/updateChildLayer/setLocaleContent/
-   * promoteLocaleToDefault), and read by applyLocale() for every non-default
+   * promoteLocaleToDefault), and read during resolution for every non-default
    * locale. (The TextLayer.text/marks, ImageLayer.src, PhoneLayer.
    * screenshotPath/screenshotDataUrl flat fields remain the storage for the
-   * DEFAULT locale specifically — applyLocale()'s fast path reads those
-   * directly for the current default; localeContent[defaultLocale] is kept
+   * DEFAULT locale specifically — default-locale resolution reads those
+   * directly; localeContent[defaultLocale] is kept
    * as a synced mirror of the same data for uniform access.)
    */
   localeContent?: Record<string, LocaleContent>;
@@ -474,6 +474,20 @@ export interface CanvasBackground {
 export interface SlideGroup {
   id: string;
   name: string;
+  /**
+   * Family membership. All entries MUST belong to one FORMAT_FAMILY (or be
+   * custom formats adopted by that family). Undefined = default (phone) family.
+   * The group's own slideWidth/slideHeight are this family's authoring canvas;
+   * each listed format is a similarity transform of it.
+   */
+  formats?: CanvasFormatId[];
+  /**
+   * Conceptual screen identity, shared by this slide's counterparts in other
+   * format families (e.g. the "watch" fork of this slide has the same slideKey).
+   * Unique within a family, shared across a slide's family forks. Undefined on
+   * legacy/unmigrated projects — see migrateProjectSlideKeys in store/helpers.ts.
+   */
+  slideKey?: string;
   /** Number of adjacent output slides sharing this canvas. 1 = single, 2 = pano */
   numSlides: number;
   slideWidth: number;

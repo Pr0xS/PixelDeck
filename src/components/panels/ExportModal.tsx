@@ -1,8 +1,8 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import type Konva from 'konva'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
-import { applyCanvasFormat, countFormatAdjustments, getCanvasFormat, getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { countFormatAdjustments, getCanvasFormat, getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat, groupTargetsFormat } from '@/utils/canvasFormats'
 import { exportProjectImages, type ProjectExportScope, type ProjectImageExportResult } from '@/utils/multiFormatExport'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
 import { downloadDataUrl } from '@/utils/export'
@@ -45,9 +45,12 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
   const [stageReady, setStageReady] = useState(false)
 
   // Derived values
-  const viewProject = applyCanvasFormat(project, activeCanvasFormat)
-  const activeGroup = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
+  const rawActiveGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
   const baseFormat = getProjectBaseFormat(project)
+  const activeGroup = useMemo(() => rawActiveGroup && ({
+    ...rawActiveGroup,
+    ...getFormatCanvasDims(rawActiveGroup, activeCanvasFormat, baseFormat, project.settings.customFormats),
+  }), [rawActiveGroup, activeCanvasFormat, baseFormat, project.settings.customFormats])
   const exportableFormats = getExportTargets(project)
   const projectLocales = Array.from(new Set(project.settings.locales?.length
     ? project.settings.locales
@@ -57,7 +60,6 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
   const selectedGroupCount = exportScope === 'current-group' ? 1 : project.slideGroups.length
   const exportSummary = `${selectedGroupCount} group${selectedGroupCount === 1 ? '' : 's'} · ${selectedExportFormats.length} format${selectedExportFormats.length === 1 ? '' : 's'} · ${selectedExportLocales.length} locale${selectedExportLocales.length === 1 ? '' : 's'}`
   const hasPanoGroups = project.slideGroups.some((g) => g.numSlides > 1)
-  const rawActiveGroup = project.slideGroups.find((g) => g.id === activeSlideGroupId)
 
   // Initialize state when modal opens (adjust-state-during-render pattern, same as original SlideNavigator)
   const [wasOpen, setWasOpen] = useState(false)
@@ -247,6 +249,7 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
                     ? getFormatCanvasDims(rawActiveGroup, formatId, baseFormat, project.settings.customFormats)
                     : getCanvasFormat(formatId, project.settings.customFormats)
                   const isChecked = selectedExportFormats.includes(formatId)
+                  const hasLayouts = project.slideGroups.some((group) => groupTargetsFormat(group, formatId))
                   const adjustments = rawActiveGroup
                     ? countFormatAdjustments(rawActiveGroup, formatId, baseFormat)
                     : 0
@@ -269,7 +272,7 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
                         {getFormatLabel(formatId, project.settings.customFormats)}
                       </span>
                       <span className="text-[10px] text-[#6b6b7a] shrink-0">
-                        {format.width}×{format.height}
+                        {format.width}×{format.height}{!hasLayouts && ' · no layouts; nothing will export'}
                       </span>
                       {adjustments > 0 ? (
                         <span className="text-[9px] text-[#f59e0b] bg-[rgba(245,158,11,0.1)] rounded px-1 py-px shrink-0">

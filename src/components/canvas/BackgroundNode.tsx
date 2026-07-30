@@ -1,7 +1,7 @@
 import { useRef, useEffect } from 'react'
 import { Rect, Ellipse, Group, Image as KonvaImage } from 'react-konva'
 import Konva from 'konva'
-import useImage from 'use-image'
+import { useCachedImage } from '@/hooks/useCachedImage'
 import type { BackgroundAccent, BackgroundLayer, BrandColor } from '@/types'
 import { resolveBrandColor } from '@/utils/brandColors'
 import { toTransparentColor } from '@/utils/gradients'
@@ -162,7 +162,7 @@ export function BackgroundNode({
   const groupRef = useRef<Konva.Group>(null)
 
   // Background image
-  const [bgImage] = useImage(layer.imageDataUrl ?? '')
+  const [bgImage] = useCachedImage(layer.imageDataUrl ?? '')
   const bgImageRef = useRef<Konva.Image>(null)
 
   // Apply blur filter via Konva.Filters whenever image or blur value changes

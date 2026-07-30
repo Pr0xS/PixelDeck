@@ -3,7 +3,9 @@ import type { BackgroundLayer, GroupLayer, ImageLayer, Layer, PhoneLayer, Projec
 import {
   assertProjectShape,
   LOCALE_ADJUST_SCHEMA_VERSION,
+  SLIDE_KEY_SCHEMA_VERSION,
   migrateProject,
+  migrateProjectSlideKeys,
   patchLayerForLocale,
   stripDataUrls,
 } from './helpers'
@@ -101,6 +103,27 @@ function makeSlideGroup(overrides: Partial<SlideGroup> = {}): SlideGroup {
   }
 }
 
+describe('migrateProjectSlideKeys', () => {
+  it('assigns matching positional keys across legacy families once and is idempotent', () => {
+    const project = makeProject({
+      slideGroups: [
+        makeSlideGroup({ id: 'phone-1', formats: ['iphone-69'] }),
+        makeSlideGroup({ id: 'phone-2', formats: ['iphone-69'] }),
+        makeSlideGroup({ id: 'tablet-1', formats: ['ipad-13'] }),
+        makeSlideGroup({ id: 'tablet-2', formats: ['ipad-13'] }),
+      ],
+    })
+
+    const migrated = migrateProjectSlideKeys(project)
+    const keys = new Map(migrated.slideGroups.map((group) => [group.id, group.slideKey]))
+
+    expect(keys.get('phone-1')).toBe(keys.get('tablet-1'))
+    expect(keys.get('phone-2')).toBe(keys.get('tablet-2'))
+    expect(keys.get('phone-1')).not.toBe(keys.get('phone-2'))
+    expect(migrateProjectSlideKeys(migrated)).toBe(migrated)
+  })
+})
+
 function makeProject(overrides: Partial<Project> = {}): Project {
   return {
     id: 'project-1',
@@ -145,6 +168,33 @@ describe('assertProjectShape', () => {
 })
 
 describe('migrateProject', () => {
+  it('splits legacy desktop-scoped groups into the new desktop, TV, and vision families', () => {
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ formats: ['mac', 'appletv', 'visionpro'], layers: [makeBackgroundLayer()] })],
+    })
+
+    const migrated = migrateProject(project)
+
+    expect(migrated.slideGroups.map((group) => group.formats)).toEqual([['mac'], ['appletv'], ['visionpro']])
+    expect(new Set(migrated.slideGroups.map((group) => group.id)).size).toBe(3)
+  })
+
+  it('preserves custom formats on the first split group and re-IDs cloned layers', () => {
+    const layer = makeTextLayer()
+    const project = makeProject({
+      slideGroups: [makeSlideGroup({ formats: ['mac', 'appletv', 'custom:wide'], layers: [layer] })],
+    })
+
+    const migrated = migrateProject(project)
+
+    expect(migrated.slideGroups.map((group) => group.formats)).toEqual([['mac', 'custom:wide'], ['appletv']])
+    const firstText = migrated.slideGroups[0]!.layers.find((candidate) => candidate.type === 'text')!
+    const secondText = migrated.slideGroups[1]!.layers.find((candidate) => candidate.type === 'text')!
+    expect(firstText.id).toBe(layer.id)
+    expect(secondText.id).not.toBe(layer.id)
+    expect(migrated.slideGroups[0]!.slideNames).not.toBe(migrated.slideGroups[1]!.slideNames)
+  })
+
   it('inserts a default background layer when a slide group has none', () => {
     const project = makeProject({ slideGroups: [makeSlideGroup({ layers: [makeTextLayer()] })] })
 
@@ -304,8 +354,8 @@ describe('foldLayerToSymmetric / localeContent migration', () => {
 
     const current = migrateProject(currentProject)
 
-    expect(legacy.settings.schemaVersion).toBe(LOCALE_ADJUST_SCHEMA_VERSION)
-    expect(current.settings.schemaVersion).toBe(LOCALE_ADJUST_SCHEMA_VERSION)
+    expect(legacy.settings.schemaVersion).toBe(SLIDE_KEY_SCHEMA_VERSION)
+    expect(current.settings.schemaVersion).toBe(SLIDE_KEY_SCHEMA_VERSION)
   })
 
   it('migrates legacy locale override spans to marks before folding content', () => {

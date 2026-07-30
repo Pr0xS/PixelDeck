@@ -10,15 +10,23 @@ import type {
   Project,
   SlideGroup,
 } from '@/types'
-import { getModelForPlatform } from '@/assets/mockups/specs'
+import { getModelForPlatform, getPhoneSpec } from '@/assets/mockups/specs'
 import { findLayerInTree, forEachLayerTree, mapLayerTree } from '@/utils/layerTree'
-import { applyLocale } from './locale'
+import { applyLocaleToGroup } from './locale'
 
 export const CANVAS_FORMAT_PRESETS = [
   { id: 'iphone-69', label: 'iPhone 6.9"', width: 1320, height: 2868 },
   { id: 'android-phone', label: 'Android Phone', width: 1080, height: 1920 },
   { id: 'ipad-13', label: 'iPad 13"', width: 2064, height: 2752 },
   { id: 'android-tablet', label: 'Android Tablet 10"', width: 1600, height: 2560 },
+  { id: 'ipad-11', label: 'iPad 11"', width: 1668, height: 2420 },
+  { id: 'apple-watch', label: 'Apple Watch', width: 422, height: 514 },
+  { id: 'wear-os', label: 'Wear OS', width: 480, height: 480 },
+  { id: 'mac', label: 'Mac', width: 2880, height: 1800 },
+  { id: 'appletv', label: 'Apple TV', width: 3840, height: 2160 },
+  { id: 'visionpro', label: 'Vision Pro', width: 3840, height: 2160 },
+  { id: 'steam', label: 'Steam', width: 1920, height: 1080 },
+  { id: 'meta-quest', label: 'Meta Quest', width: 2560, height: 1440 },
 ] as const satisfies readonly { id: CanvasFormatId; label: string; width: number; height: number }[]
 
 export const BASE_CANVAS_FORMAT: CanvasFormatId = 'base'
@@ -34,12 +42,118 @@ const PLATFORM_FORMAT_IDS = new Set<CanvasFormatId>(CANVAS_FORMAT_PRESETS.map((f
 export const FORMAT_LAYOUT_KEYS = ['x', 'y', 'width', 'height', 'fontSize', 'scale', 'rotation'] as const
 
 /** Which platform each format targets — drives phone model auto-swap. */
-export const FORMAT_PLATFORM: Record<BuiltInFormatId, 'ios' | 'android'> = {
+export const FORMAT_PLATFORM: Record<BuiltInFormatId, 'ios' | 'android' | null> = {
   'base': 'ios',
   'iphone-69': 'ios',
   'ipad-13': 'ios',
   'android-phone': 'android',
   'android-tablet': 'android',
+  'ipad-11': 'ios',
+  'apple-watch': 'ios',
+  'wear-os': 'android',
+  mac: 'ios',
+  appletv: 'ios',
+  visionpro: 'ios',
+  steam: null,
+  'meta-quest': null,
+}
+
+/**
+ * Presentation-only format family lookup. `base` is the authoring sentinel,
+ * not an independently exportable preset; it is labelled phone solely to keep
+ * this exhaustive built-in map straightforward until family-specific bases are
+ * introduced in a later phase.
+ */
+export const FORMAT_FAMILY: Record<BuiltInFormatId, FormatFamilyKey> = {
+  base: 'phone',
+  'iphone-69': 'phone',
+  'android-phone': 'phone',
+  'ipad-13': 'tablet',
+  'android-tablet': 'tablet',
+  'ipad-11': 'tablet',
+  'apple-watch': 'watch',
+  'wear-os': 'watch',
+  mac: 'desktop',
+  appletv: 'tv',
+  visionpro: 'vr',
+  steam: 'game',
+  'meta-quest': 'vr',
+}
+
+export type FormatFamilyKey = 'phone' | 'tablet' | 'watch' | 'desktop' | 'tv' | 'vr' | 'game'
+
+export const FORMAT_FAMILY_ORDER: readonly FormatFamilyKey[] = ['phone', 'tablet', 'watch', 'desktop', 'tv', 'vr', 'game']
+
+export const FORMAT_FAMILY_LABELS: Record<FormatFamilyKey, string> = {
+  phone: 'Phone', tablet: 'Tablet', watch: 'Watch', desktop: 'Desktop', tv: 'TV', vr: 'VR', game: 'Game',
+}
+
+/** Stable authoring canvas for every derived format family. */
+export const FORMAT_FAMILY_ANCHOR: Record<FormatFamilyKey, BuiltInFormatId> = {
+  phone: 'iphone-69',
+  tablet: 'ipad-13',
+  watch: 'apple-watch',
+  desktop: 'mac',
+  tv: 'appletv',
+  vr: 'visionpro',
+  game: 'steam',
+}
+
+/** Family-specific device surfaces, kept here to avoid a canvas/spec import cycle. */
+export const FAMILY_SURFACE: Record<FormatFamilyKey, Partial<Record<'ios' | 'android' | 'default', PhoneLayer['model']>>> = {
+  phone: {},
+  tablet: { ios: 'ipad-13', android: 'android-tablet' },
+  watch: { ios: 'apple-watch', android: 'wear-os' },
+  desktop: { ios: 'screen-16-10' },
+  tv: { ios: 'screen-16-9' },
+  vr: { default: 'screen-16-9' },
+  game: { default: 'screen-16-9' },
+}
+
+/** Default device surface for a family's Base view, when the family defines one. */
+export function getFamilyDefaultPhoneModel(family: FormatFamilyKey): PhoneLayer['model'] | undefined {
+  const surface = FAMILY_SURFACE[family]
+  return surface.default ?? surface.ios ?? surface.android
+}
+
+/**
+ * Preserve a phone layer's visual area and centre when its intrinsic device
+ * surface changes during format projection.
+ */
+export function rebasePhoneModelSwap(
+  layer: PhoneLayer,
+  nextModel: PhoneLayer['model'],
+  canvasW: number,
+  canvasH: number,
+): PhoneLayer {
+  if (nextModel === layer.model || layer.scale <= 0) return layer
+
+  const oldSpec = getPhoneSpec(layer.model)
+  const newSpec = getPhoneSpec(nextModel)
+  const oldW = oldSpec.frameWidth * layer.scale
+  const oldH = oldSpec.frameHeight * layer.scale
+  const areaScale = layer.scale * Math.sqrt(
+    (oldSpec.frameWidth * oldSpec.frameHeight) / (newSpec.frameWidth * newSpec.frameHeight),
+  )
+  const containScale = Math.min(canvasW / newSpec.frameWidth, canvasH / newSpec.frameHeight)
+  const nextScale = Math.min(areaScale, containScale)
+  const nextW = newSpec.frameWidth * nextScale
+  const nextH = newSpec.frameHeight * nextScale
+
+  const next: PhoneLayer = {
+    ...layer,
+    model: nextModel,
+    scale: nextScale,
+    x: layer.x + (oldW - nextW) / 2,
+    y: layer.y + (oldH - nextH) / 2,
+  }
+  if (newSpec.statusBar.height === 0) {
+    delete next.showStatusBar
+    delete next.statusBarBg
+    delete next.statusBarTheme
+    delete next.statusBarColor
+  }
+  return next
 }
 
 /** Layout keys + model — model forks per format (auto-swap + manual override). */
@@ -84,6 +198,14 @@ export function getFormatLabel(id: CanvasFormatId, customFormats?: CustomCanvasF
     'android-phone': 'Android',
     'ipad-13': 'iPad',
     'android-tablet': 'Android Tab',
+    'ipad-11': 'iPad 11"',
+    'apple-watch': 'Apple Watch',
+    'wear-os': 'Wear OS',
+    mac: 'Mac',
+    appletv: 'Apple TV',
+    visionpro: 'Vision Pro',
+    steam: 'Steam',
+    'meta-quest': 'Meta Quest',
   }
   return labels[id]
 }
@@ -91,6 +213,165 @@ export function getFormatLabel(id: CanvasFormatId, customFormats?: CustomCanvasF
 export function getProjectBaseFormat(project: Pick<Project, 'settings'>): CanvasFormatId {
   void project
   return BASE_CANVAS_FORMAT
+}
+
+/**
+ * Whether a slide group participates in a format. The base sentinel always
+ * targets a group's own authored dimensions, even for format-scoped groups.
+ */
+export function groupTargetsFormat(group: SlideGroup, format: CanvasFormatId): boolean {
+  return format === BASE_CANVAS_FORMAT || group.formats === undefined || group.formats.includes(format)
+}
+
+/** Return a built-in format's family. Custom formats are adopted by groups. */
+export function getFormatFamilyKey(formatId: CanvasFormatId): FormatFamilyKey | null {
+  return isCustomFormatId(formatId) ? null : FORMAT_FAMILY[formatId]
+}
+
+/**
+ * Resolve family membership from a group's first built-in format. Unscoped
+ * groups retain the legacy/default phone family; custom-only groups are
+ * deliberately singleton and therefore have no named family.
+ */
+export function getGroupFamilyKey(group: SlideGroup): FormatFamilyKey | null {
+  if (group.formats === undefined) return 'phone'
+  return group.formats.map(getFormatFamilyKey).find((family): family is FormatFamilyKey => family !== null) ?? null
+}
+
+/** Canonical preset set plus custom formats explicitly adopted by this family. */
+export function selectFamilyFormats(project: Project, family: FormatFamilyKey): CanvasFormatId[] {
+  const builtIns = CANVAS_FORMAT_PRESETS
+    .map((format) => format.id)
+    .filter((format) => FORMAT_FAMILY[format] === family)
+  const customs = project.slideGroups.flatMap((group) => (
+    getGroupFamilyKey(group) === family
+      ? (group.formats ?? []).filter(isCustomFormatId)
+      : []
+  ))
+  return Array.from(new Set([...builtIns, ...customs]))
+}
+
+/** All groups belonging to one named built-in family, retaining project order. */
+export function selectFamilyGroups(project: Project, family: FormatFamilyKey): SlideGroup[] {
+  return project.slideGroups.filter((group) => getGroupFamilyKey(group) === family)
+}
+
+/**
+ * Resolve a group's counterpart in another family — the "same conceptual
+ * slide". Prefers an explicit slideKey match; falls back to positional index
+ * within each family's group list for legacy/unlinked data (best-effort only).
+ */
+export function resolveCounterpartGroup(
+  project: Project,
+  group: SlideGroup,
+  targetFamily: FormatFamilyKey,
+): SlideGroup | undefined {
+  const targetGroups = selectFamilyGroups(project, targetFamily)
+  if (group.slideKey) {
+    const bySlideKey = targetGroups.find((candidate) => candidate.slideKey === group.slideKey)
+    if (bySlideKey) return bySlideKey
+    // Both sides fully keyed and disagreeing → there is genuinely no counterpart.
+    // Positional fallback below is a legacy bridge only, for target families
+    // that still contain unmigrated/unkeyed groups.
+    if (targetGroups.every((candidate) => candidate.slideKey)) return undefined
+  }
+  const sourceFamily = getGroupFamilyKey(group)
+  if (sourceFamily === null) return undefined
+  const sourceGroups = selectFamilyGroups(project, sourceFamily)
+  const index = sourceGroups.findIndex((candidate) => candidate.id === group.id)
+  return index < 0 ? undefined : targetGroups[index]
+}
+
+/** Whether a format has an editor layout behind it, independent of export selection. */
+export function hasFormatLayout(project: Project, formatId: CanvasFormatId): boolean {
+  const family = getFormatFamilyKey(formatId)
+  if (family === null) return project.slideGroups.some((group) => group.formats?.includes(formatId))
+
+  return selectFamilyGroups(project, family).some((group) => groupTargetsFormat(group, formatId))
+}
+
+/** Add a format to every group in a family, preserving unscoped canonical membership. */
+export function appendFormatToFamilyGroups(
+  project: Project,
+  family: FormatFamilyKey,
+  formatId: CanvasFormatId,
+): SlideGroup[] {
+  return project.slideGroups.map((group) => (
+    getGroupFamilyKey(group) !== family || group.formats?.includes(formatId)
+      ? group
+      : { ...group, formats: Array.from(new Set([...(group.formats ?? selectFamilyFormats(project, family)), formatId])) }
+  ))
+}
+
+/** Named built-in families currently represented by at least one group. */
+export function selectProjectFamilies(project: Project): FormatFamilyKey[] {
+  return Array.from(new Set(project.slideGroups.flatMap((group) => {
+    const family = getGroupFamilyKey(group)
+    return family === null ? [] : [family]
+  })))
+}
+
+/** Select groups displayed by a family-scoped format tab. */
+export function selectFormatViewGroups(
+  project: Project,
+  format: CanvasFormatId,
+  family: FormatFamilyKey,
+): SlideGroup[] {
+  return format === BASE_CANVAS_FORMAT
+    ? selectFamilyGroups(project, family)
+    : selectFamilyGroups(project, family).filter((group) => groupTargetsFormat(group, format))
+}
+
+/**
+ * Select source groups that participate in a source format but do not already
+ * have a dedicated target-format layout. Unscoped groups are only sources from
+ * the base view so creating a format family cannot duplicate another family.
+ */
+export function selectForkSourceGroups(
+  project: Project,
+  sourceFormat: CanvasFormatId,
+  targetFormatId: CanvasFormatId,
+): SlideGroup[] {
+  return project.slideGroups.filter((group) => (
+    (sourceFormat === BASE_CANVAS_FORMAT
+      ? group.formats === undefined
+      : groupTargetsFormat(group, sourceFormat))
+    && !(group.formats !== undefined && groupTargetsFormat(group, targetFormatId))
+  ))
+}
+
+/** All non-empty source families available for creating a target layout. */
+export function selectForkSourceCandidates(project: Project, targetFormatId: CanvasFormatId): CanvasFormatId[] {
+  return Array.from(new Set([
+    ...(project.slideGroups.some((group) => group.formats === undefined) ? [BASE_CANVAS_FORMAT] : []),
+    ...getProjectActiveFormats(project),
+    ...project.slideGroups.flatMap((group) => group.formats ?? []),
+  ])).filter((format) => (
+    format !== targetFormatId && selectForkSourceGroups(project, format, targetFormatId).length > 0
+  ))
+}
+
+/**
+ * Choose a viable source family when the Base tab has no remaining unscoped
+ * groups. This keeps source selection explicit in the UI while providing a
+ * useful default after a project has already been forked once.
+ */
+export function resolveForkSourceFormat(
+  project: Project,
+  activeCanvasFormat: CanvasFormatId,
+  activeSlideGroupId: string,
+  targetFormatId: CanvasFormatId,
+): CanvasFormatId {
+  const candidates = selectForkSourceCandidates(project, targetFormatId)
+  if (candidates.length === 0) return BASE_CANVAS_FORMAT
+  if (candidates.includes(activeCanvasFormat)) return activeCanvasFormat
+  if (candidates.includes(BASE_CANVAS_FORMAT)) return BASE_CANVAS_FORMAT
+
+  const activeGroup = project.slideGroups.find((group) => group.id === activeSlideGroupId)
+  const activeGroupFormat = activeGroup?.formats?.find((format) => candidates.includes(format))
+  if (activeGroupFormat) return activeGroupFormat
+
+  return candidates[0]!
 }
 
 export function getProjectActiveFormats(project: Pick<Project, 'settings'>): CanvasFormatId[] {
@@ -183,18 +464,6 @@ export function getFormatScaleFactor(
   return fitCenterScale(group.slideWidth, group.slideHeight, target.width, target.height)
 }
 
-/** Build base-to-format scale factors before applyCanvasFormat replaces group dimensions. */
-export function buildFormatScaleMap(
-  project: Project,
-  format: CanvasFormatId,
-  baseFormat: CanvasFormatId,
-): ReadonlyMap<string, number> {
-  return new Map(project.slideGroups.map((group) => [
-    group.id,
-    getFormatScaleFactor(group, format, baseFormat, project.settings.customFormats),
-  ]))
-}
-
 /**
  * Scale a layer using a uniform factor `s` anchored to the canvas centre.
  *
@@ -252,9 +521,26 @@ function scaleLayer(
 }
 
 /**
+ * Bake the same fit-centre projection used by format resolution into a layer.
+ * Callers that fork an independently authored group use this once; normal
+ * resolution continues to use the private `scaleLayer` path above.
+ */
+export function scaleLayerToCanvas<T extends Layer>(
+  layer: T,
+  fromW: number,
+  fromH: number,
+  toW: number,
+  toH: number,
+  scaleFactor?: number,
+): T {
+  return scaleLayer(layer, fromW, fromH, toW, toH, scaleFactor) as T
+}
+
+/**
  * Resolve a single layer for a format view.
  * - Filters out layers hidden in this format.
- * - Base format: layers pass through untouched (authoring space).
+ * - Base format: layers stay in authoring space, with an active family's
+ *   default device surface projected for PhoneLayers when available.
  * - Other formats: auto-scale from the group's authoring dims, then apply the
  *   format's stored layout overrides on top.
  */
@@ -267,6 +553,8 @@ export function resolveLayerFormat(
   toW: number,
   toH: number,
   customFormats?: CustomCanvasFormat[],
+  anchor: 'canvas' | 'origin' = 'canvas',
+  family: FormatFamilyKey | null = null,
 ): Layer | null {
   // If layer is owned by a specific format, only show it in that format
   if (layer.ownerFormat !== undefined && layer.ownerFormat !== format) return null
@@ -275,23 +563,32 @@ export function resolveLayerFormat(
 
   let resolved: Layer
   if (isBase) {
-    resolved = layer
+    const familyDefault = family ? getFamilyDefaultPhoneModel(family) : undefined
+    const familyModels = family ? Object.values(FAMILY_SURFACE[family]) : []
+    const needsRebase = layer.type === 'phone' && familyDefault !== undefined
+      && !familyModels.includes((layer as PhoneLayer).model)
+    resolved = needsRebase
+      ? rebasePhoneModelSwap(layer as PhoneLayer, familyDefault, fromW, fromH)
+      : layer
   } else {
-    // Phone model auto-swap: if the target format's platform differs from the
-    // model's native platform and there is no explicit model override, swap the
-    // model to the equivalent device for the target platform.
+    // Phone model auto-swap: a format family's surface takes precedence; phone
+    // and tablet retain the established platform-keyed iOS/Android behavior.
     let effectiveLayer: Layer = layer
     if (layer.type === 'phone') {
       const targetPlatform = getFormatPlatform(format)
       const phoneLayer = layer as PhoneLayer
-      if (targetPlatform !== null && (layer.formatOverrides?.[format] as Record<string, unknown> | undefined)?.model === undefined) {
-        const swappedModel = getModelForPlatform(phoneLayer.model, targetPlatform)
+      if ((layer.formatOverrides?.[format] as Record<string, unknown> | undefined)?.model === undefined) {
+        const family = getFormatFamilyKey(format)
+        const surface = family ? FAMILY_SURFACE[family] : undefined
+        const swappedModel = surface?.default
+          ?? (targetPlatform ? surface?.[targetPlatform] : undefined)
+          ?? (targetPlatform ? getModelForPlatform(phoneLayer.model, targetPlatform) : phoneLayer.model)
         if (swappedModel !== phoneLayer.model) {
-          effectiveLayer = { ...layer, model: swappedModel } as Layer
+          effectiveLayer = rebasePhoneModelSwap(phoneLayer, swappedModel, fromW, fromH)
         }
       }
     }
-    const scaled = scaleLayer(effectiveLayer, fromW, fromH, toW, toH)
+    const scaled = scaleLayer(effectiveLayer, fromW, fromH, toW, toH, undefined, anchor)
     const patch = layer.formatOverrides?.[format]
     resolved = patch ? ({ ...scaled, ...patch, id: layer.id, type: layer.type } as Layer) : scaled
   }
@@ -301,7 +598,7 @@ export function resolveLayerFormat(
     return {
       ...(resolved as GroupLayer),
       children: original.children
-        .map((child) => resolveLayerFormat(child, format, isBase, fromW, fromH, toW, toH, customFormats))
+        .map((child) => resolveLayerFormat(child, format, isBase, fromW, fromH, toW, toH, customFormats, 'origin', family))
         .filter((child): child is Layer => Boolean(child)),
     }
   }
@@ -324,12 +621,13 @@ export function applyCanvasFormatToGroup(
   const n = group.numSlides ?? 1
   const fromW = group.slideWidth * n
   const toW = target.width * n
+  const family = getGroupFamilyKey(group)
   return {
     ...group,
     slideWidth: target.width,
     slideHeight: target.height,
     layers: group.layers
-      .map((layer) => resolveLayerFormat(layer, format, isBase, fromW, group.slideHeight, toW, target.height, customFormats))
+      .map((layer) => resolveLayerFormat(layer, format, isBase, fromW, group.slideHeight, toW, target.height, customFormats, 'canvas', family))
       .filter((layer): layer is Layer => Boolean(layer)),
   }
 }
@@ -432,28 +730,6 @@ export function applyLocaleAdjustToGroup(
   }
 }
 
-/** Project-wide `localeAdjust` projection. Mirrors `applyCanvasFormat`. */
-export function applyLocaleAdjustProject(
-  project: Project,
-  locale: string,
-  format: CanvasFormatId,
-  scaleByGroupId: ReadonlyMap<string, number>,
-): Project {
-  if (locale === project.settings.defaultLocale) return project
-  const slideGroups = project.slideGroups.map((group) => applyLocaleAdjustToGroup(
-    group,
-    locale,
-    format,
-    project.settings.defaultLocale,
-    scaleByGroupId.get(group.id) ?? 1,
-  ))
-  if (slideGroups.every((group, index) => group === project.slideGroups[index])) return project
-  return {
-    ...project,
-    slideGroups,
-  }
-}
-
 /**
  * Resolve a single layer's value for (locale, format), including the
  * base-scoped `localeAdjust[locale][BASE]` cell but EXCLUDING the
@@ -484,7 +760,7 @@ export function resolveLayerLocaleAdjustBaseOnly(
 /**
  * Resolve content, format projection, then locale/format layout in precedence order.
  *
- * Reads the `localeAdjust` tier exclusively via `applyLocaleAdjustProject`.
+ * Reads the `localeAdjust` tier exclusively via `applyLocaleAdjustToGroup`.
  * The legacy 4-tier engine (`localeBaseDelta`/`localeLayoutOverrides`) was
  * fully retired in P4 (fields deleted, functions deleted) — do not re-add a
  * second read pass here: composing two read paths over the same data would
@@ -492,15 +768,56 @@ export function resolveLayerLocaleAdjustBaseOnly(
  * double-apply investigation this guarded against before the read-path
  * flip).
  */
-export function resolveProjectView(project: Project, locale: string, format: CanvasFormatId): Project {
-  const baseFormat = getProjectBaseFormat(project)
-  const scaleByGroupId = buildFormatScaleMap(project, format, baseFormat)
-  return applyLocaleAdjustProject(
-    applyCanvasFormat(applyLocale(project, locale), format),
+function resolveSlideGroupView(
+  settings: Project['settings'],
+  group: SlideGroup,
+  locale: string,
+  format: CanvasFormatId,
+  baseFormat: CanvasFormatId,
+): SlideGroup {
+  const scaleFactor = getFormatScaleFactor(group, format, baseFormat, settings.customFormats)
+  const localeResolvedGroup = applyLocaleToGroup(group, locale, settings.defaultLocale)
+  const formatResolvedGroup = applyCanvasFormatToGroup(
+    localeResolvedGroup,
+    format,
+    baseFormat,
+    settings.customFormats,
+  )
+  return applyLocaleAdjustToGroup(
+    formatResolvedGroup,
     locale,
     format,
-    scaleByGroupId,
+    settings.defaultLocale,
+    scaleFactor,
   )
+}
+
+/**
+ * Resolve one group's content, format projection, and locale layout adjustment.
+ * This is the shared per-group engine used by both full-project and hot-path views.
+ */
+export function resolveGroupView(
+  group: SlideGroup,
+  settings: Project['settings'],
+  locale: string,
+  format: CanvasFormatId,
+): SlideGroup {
+  const baseFormat = getProjectBaseFormat({ settings })
+  return resolveSlideGroupView(settings, group, locale, format, baseFormat)
+}
+
+export function resolveProjectView(
+  project: Project,
+  locale: string,
+  format: CanvasFormatId,
+): Project {
+  const baseFormat = getProjectBaseFormat(project)
+  return {
+    ...project,
+    slideGroups: project.slideGroups.map((group) =>
+      resolveSlideGroupView(project.settings, group, locale, format, baseFormat),
+    ),
+  }
 }
 
 /**
@@ -518,6 +835,7 @@ export function mapLayerToAuthoringSpace<T extends Layer>(
   groupW: number,
   groupH: number,
   customFormats?: CustomCanvasFormat[],
+  anchor: 'canvas' | 'origin' = 'canvas',
 ): T {
   if (activeFormat === baseFormat) return layer
   const active = getCanvasFormat(activeFormat, customFormats)
@@ -525,7 +843,7 @@ export function mapLayerToAuthoringSpace<T extends Layer>(
   // Inverse factor: 1/s_fwd — do NOT recompute min() in the reverse direction.
   const sFwd = fitCenterScale(groupW, groupH, active.width, active.height)
   const sInv = 1 / sFwd
-  return scaleLayer(layer, active.width, active.height, groupW, groupH, sInv) as T
+  return scaleLayer(layer, active.width, active.height, groupW, groupH, sInv, anchor) as T
 }
 
 function withoutFormatOverride(layer: Layer, format: CanvasFormatId): Layer {
@@ -567,6 +885,11 @@ export function promoteFormatOverridesToSharedInLayerTree(
 ): Layer[] {
   if (format === baseFormat) return layers
 
+  const childIds = new Set<string>()
+  forEachLayerTree(layers, (layer) => {
+    if (layer.type === 'group') layer.children.forEach((child) => childIds.add(child.id))
+  })
+
   return mapLayerTree(layers, (layer) => {
     const patch = layer.formatOverrides?.[format]
     if (!patch) return layer
@@ -583,6 +906,7 @@ export function promoteFormatOverridesToSharedInLayerTree(
       groupW,
       groupH,
       customFormats,
+      childIds.has(layer.id) ? 'origin' : 'canvas',
     ) as unknown as Record<string, unknown>
     const sharedPatch: Record<string, unknown> = {}
     for (const key of Object.keys(patch)) sharedPatch[key] = mapped[key]
@@ -604,22 +928,22 @@ export function makeOwnedFormatLayersSharedInLayerTree(
   groupH: number,
   customFormats?: CustomCanvasFormat[],
 ): Layer[] {
-  function makeShared(layer: Layer): Layer {
+  function makeShared(layer: Layer, anchor: 'canvas' | 'origin'): Layer {
     const mapped = format === baseFormat
       ? layer
-      : mapLayerToAuthoringSpace(layer, format, baseFormat, groupW, groupH, customFormats)
+      : mapLayerToAuthoringSpace(layer, format, baseFormat, groupW, groupH, customFormats, anchor)
     return withoutFormatVisibility({ ...mapped, ownerFormat: undefined } as Layer, format)
   }
 
-  function visit(layer: Layer): Layer {
-    if (layer.ownerFormat === format) return makeShared(layer)
+  function visit(layer: Layer, anchor: 'canvas' | 'origin' = 'canvas'): Layer {
+    if (layer.ownerFormat === format) return makeShared(layer, anchor)
     if (layer.type === 'group') {
-      return { ...layer, children: (layer as GroupLayer).children.map(visit) } as Layer
+      return { ...layer, children: (layer as GroupLayer).children.map((child) => visit(child, 'origin')) } as Layer
     }
     return layer
   }
 
-  return layers.map(visit)
+  return layers.map((layer) => visit(layer))
 }
 
 /**

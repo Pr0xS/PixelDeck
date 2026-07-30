@@ -1,6 +1,6 @@
 import { useRef } from 'react'
 import { Group, Image, Text } from 'react-konva'
-import useImage from 'use-image'
+import { useCachedImage } from '@/hooks/useCachedImage'
 import type Konva from 'konva'
 import type { BrandLayer } from '@/types'
 import { resolveBrandColor } from '@/utils/brandColors'
@@ -25,7 +25,7 @@ interface BrandNodeProps {
 export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: BrandNodeProps) {
   const groupRef = useRef<Konva.Group>(null)
   const brandColors = useBrandColors()
-  const [logoImage] = useImage(layer.logoDataUrl ?? '')
+  const [logoImage] = useCachedImage(layer.logoDataUrl ?? '')
 
   const hasLogo = Boolean(layer.logoDataUrl && logoImage)
 

@@ -7,6 +7,7 @@ interface ConfirmDialogProps {
   confirmLabel?: string
   cancelLabel?: string
   danger?: boolean
+  busy?: boolean
   onConfirm: () => void
   onCancel: () => void
 }
@@ -18,12 +19,15 @@ export function ConfirmDialog({
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   danger = false,
+  busy = false,
   onConfirm,
   onCancel,
 }: ConfirmDialogProps) {
   useEffect(() => {
     if (!open) return
     const onKey = (e: KeyboardEvent) => {
+      const active = document.activeElement as HTMLElement | null
+      if (active && (active.tagName === 'INPUT' || active.tagName === 'TEXTAREA' || active.isContentEditable)) return
       if (e.key === 'Escape') {
         e.preventDefault()
         onCancel()
@@ -76,6 +80,7 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onCancel}
+            disabled={busy}
             style={{
               background: 'none',
               border: '1px solid rgba(255,255,255,0.12)',
@@ -92,6 +97,7 @@ export function ConfirmDialog({
           <button
             type="button"
             onClick={onConfirm}
+            disabled={busy}
             style={{
               background: danger ? '#f87171' : '#7c6ef6',
               border: 'none',
@@ -103,7 +109,7 @@ export function ConfirmDialog({
               padding: '5px 14px',
             }}
           >
-            {confirmLabel}
+            {busy ? 'Working…' : confirmLabel}
           </button>
         </div>
       </div>

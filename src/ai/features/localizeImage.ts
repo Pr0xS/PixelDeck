@@ -1,4 +1,4 @@
-import { editImage } from '@/ai/client'
+import { transportEditImage } from '@/ai/transport'
 import { buildDesignContext } from '@/ai/context'
 import { buildImageLocalizationPrompt, IMAGE_LOCALIZATION_SYSTEM_PROMPT } from '@/ai/prompts'
 import type { Project, SlideGroup } from '@/types'
@@ -21,7 +21,7 @@ export async function generateLocalizedImage(args: {
   targetLocale: string
 }): Promise<string> {
   const context = buildDesignContext(args.project, args.slideGroup)
-  return editImage({
+  return transportEditImage({
     ...args.auth,
     imageDataUrl: args.imageDataUrl,
     prompt: [

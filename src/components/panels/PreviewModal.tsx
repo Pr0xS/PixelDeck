@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
 import { getLanguageName } from '@/utils/locale'
-import { getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat } from '@/utils/canvasFormats'
+import { getExportTargets, getFormatCanvasDims, getFormatFamilyKey, getFormatLabel, getProjectBaseFormat, selectFormatViewGroups } from '@/utils/canvasFormats'
 import type { BackgroundLayer, CanvasFormatId } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
@@ -33,16 +33,18 @@ export function PreviewModal({
   cancelCapture,
   initialLocale,
 }: PreviewModalProps) {
-  const settings = useEditorStore((s) => s.project.settings)
-  const slideGroups = useEditorStore((s) => s.project.slideGroups)
+  const project = useEditorStore((s) => s.project)
+  const settings = project.settings
   const activeSlideGroupId = useEditorStore((s) => s.activeSlideGroupId)
   const activeLocale = useEditorStore((s) => s.activeLocale)
   const activeCanvasFormat = useEditorStore((s) => s.activeCanvasFormat)
+  const activeFamily = useEditorStore((s) => s.activeFamily)
   const setActiveSlideGroup = useEditorStore((s) => s.setActiveSlideGroup)
   const panoSettings = useEditorStore((s) => s.project.settings.pano) ?? { gapPx: 24, compensate: false }
   const setPanoRenderOverride = useEditorStore((s) => s.setPanoRenderOverride)
   const updatePanoSettings = useEditorStore((s) => s.updatePanoSettings)
 
+  const slideGroups = selectFormatViewGroups(project, activeCanvasFormat, activeFamily)
   const locales = settings.locales ?? [settings.defaultLocale]
   const platformFormats = getExportTargets({ settings })
 
@@ -53,6 +55,8 @@ export function PreviewModal({
   const restoreRef = useRef<{
     locale: string
     format: CanvasFormatId
+    family: ReturnType<typeof useEditorStore.getState>['activeFamily']
+    slideGroupId: ReturnType<typeof useEditorStore.getState>['activeSlideGroupId']
   } | null>(null)
   const hasPanoGroups = slideGroups.some((g) => g.numSlides > 1)
 
@@ -66,11 +70,15 @@ export function PreviewModal({
       restoreRef.current = {
         locale: s.activeLocale,
         format: s.activeCanvasFormat,
+        family: s.activeFamily,
+        slideGroupId: s.activeSlideGroupId,
       }
       if (initialLocale) s.setActiveLocale(initialLocale)
       // Ensure a platform (export) format is active — the editor may be on Base.
       const formats = getExportTargets(s.project)
       if (!formats.includes(s.activeCanvasFormat) && formats.length > 0) {
+        const targetFamily = getFormatFamilyKey(formats[0])
+        if (targetFamily && targetFamily !== s.activeFamily) s.setActiveFamily(targetFamily)
         s.setActiveCanvasFormat(formats[0])
       }
       captureAllHighRes({ panoCompensationPx: panoSettings.gapPx, panoCompensate: panoSettings.compensate })
@@ -80,7 +88,9 @@ export function PreviewModal({
       if (restoreRef.current) {
         const s = useEditorStore.getState()
         s.setActiveLocale(restoreRef.current.locale)
+        if (s.activeFamily !== restoreRef.current.family) s.setActiveFamily(restoreRef.current.family)
         s.setActiveCanvasFormat(restoreRef.current.format)
+        s.setCaptureSlideGroup(restoreRef.current.slideGroupId)
         restoreRef.current = null
       }
     }
@@ -94,7 +104,10 @@ export function PreviewModal({
 
   const selectFormat = (format: CanvasFormatId) => {
     if (format === activeCanvasFormat) return
-    useEditorStore.getState().setActiveCanvasFormat(format)
+    const s = useEditorStore.getState()
+    const targetFamily = getFormatFamilyKey(format)
+    if (targetFamily && targetFamily !== s.activeFamily) s.setActiveFamily(targetFamily)
+    s.setActiveCanvasFormat(format)
     recapturePreview()
   }
 
@@ -129,7 +142,7 @@ export function PreviewModal({
       open={open}
       onClose={onClose}
       maxWidth="max-w-[90vw]"
-      backdropClassName="fixed inset-0 z-[9999] flex items-center justify-center bg-[rgba(0,0,0,0.82)] p-6 backdrop-blur-sm"
+      backdropClassName="fixed inset-0 z-[9999] flex items-center justify-center bg-[#08080c] p-6"
       backdropStyle={undefined}
       panelClassName="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border bg-[#18181f] shadow-2xl"
       panelStyle={{ borderColor: 'rgba(255,255,255,0.08)' }}
@@ -281,7 +294,14 @@ export function PreviewModal({
                       {/* Slide card */}
                       <button
                         className="group/slide shrink-0 flex flex-col gap-0 text-left"
-                        onClick={() => { setActiveSlideGroup(group.id); onClose() }}
+                        onClick={() => {
+                          // Navigating to a slide commits the previewed format/locale
+                          // (already live on the store) instead of restoring the
+                          // pre-open snapshot when the modal closes.
+                          restoreRef.current = null
+                          setActiveSlideGroup(group.id)
+                          onClose()
+                        }}
                       >
                         <div
                           className="overflow-hidden rounded-2xl border transition-all duration-200 group-hover/slide:scale-[1.02] group-hover/slide:border-[rgba(124,110,246,0.65)]"

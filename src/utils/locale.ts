@@ -1,9 +1,9 @@
 /**
  * locale.ts — Localization utilities for PixelDeck
  *
- * The core primitive is applyLocale(project, locale) → Project.
- * It deep-walks all layers and merges localeContent[locale] into each layer.
- * The original project is never mutated.
+ * The core resolver is applyLocaleToGroup(group, locale, defaultLocale).
+ * It deep-walks one group's layers and merges localeContent[locale] into each
+ * layer. The original group is never mutated.
  *
  * Supporting utilities:
  *   getLocalizableLayers  — enumerate all layers that have localizable content
@@ -12,7 +12,7 @@
  */
 
 import type {
-  Project, Layer, GroupLayer,
+  Project, Layer, GroupLayer, SlideGroup,
   LocaleContent, LocaleLayerPatch, LocalizationMode,
 } from '@/types'
 import { mapLayerTree } from '@/utils/layerTree'
@@ -38,22 +38,12 @@ export function resolveLayerLocale<T extends Layer>(layer: T, locale: string): T
   return mergeLocaleContentIntoLayer(layer, content)
 }
 
-/**
- * Walk an entire project and apply locale overrides to all layers.
- * Returns a new Project; the original is not mutated.
- *
- * Call this:
- *  - In ExportApp before mounting the canvas (CLI path).
- *  - In the editor when activeLocale changes (live preview).
- */
-export function applyLocale(project: Project, locale: string): Project {
-  if (locale === project.settings.defaultLocale) return project
+/** Apply locale content to one slide group without projecting unrelated groups. */
+export function applyLocaleToGroup(group: SlideGroup, locale: string, defaultLocale: string): SlideGroup {
+  if (locale === defaultLocale) return group
   return {
-    ...project,
-    slideGroups: project.slideGroups.map((g) => ({
-      ...g,
-      layers: mapLayerTree(g.layers, (layer) => resolveLayerLocale(layer, locale)),
-    })),
+    ...group,
+    layers: mapLayerTree(group.layers, (layer) => resolveLayerLocale(layer, locale)),
   }
 }
 

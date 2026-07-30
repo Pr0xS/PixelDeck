@@ -1,7 +1,8 @@
 import { useState, useRef, useEffect, lazy, Suspense } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore, useUndoRedo } from '@/store'
-import { useProjectsStore } from '@/store/projects'
+import { notifyProjectConflict, useProjectsStore } from '@/store/projects'
+import { ProjectConflictError } from '@/store/storage/types'
 import { BrandKitButton } from '@/components/toolbar/BrandKitButton'
 import { Logo } from '@/components/toolbar/Logo'
 
@@ -59,7 +60,10 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
   function commitName() {
     const trimmed = tempName.trim()
     if (trimmed && trimmed !== project.name) {
-      renameProject(project.id, trimmed)
+      renameProject(project.id, trimmed).catch((err) => {
+        if (err instanceof ProjectConflictError) notifyProjectConflict(err.projectId)
+        else console.error('[PixelDeck] Failed to rename project', err)
+      })
     }
     setEditingName(false)
   }
@@ -95,7 +99,7 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
 
   return (
     <header
-      className="h-12 flex items-center px-3 gap-4 border-b"
+      className="flex h-12 items-center gap-3 border-b px-3 max-[1099px]:gap-2 max-[1099px]:px-2"
       style={{
         background: '#18181f',
         borderColor: 'rgba(255,255,255,0.08)',
@@ -147,7 +151,7 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
             fontSize: 12,
             padding: '3px 6px',
             borderRadius: 5,
-            maxWidth: 180,
+            maxWidth: 'clamp(96px, 14vw, 180px)',
             overflow: 'hidden',
             textOverflow: 'ellipsis',
             whiteSpace: 'nowrap',
@@ -192,7 +196,8 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
           ;(e.currentTarget as HTMLButtonElement).style.color = '#a0a0b0'
         }}
       >
-        Projects
+        <span className="min-[1100px]:hidden">▦</span>
+        <span className="max-[1099px]:hidden">Projects</span>
       </button>
 
       {/* Templates button */}
@@ -221,7 +226,8 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
           ;(e.currentTarget as HTMLButtonElement).style.color = '#a0a0b0'
         }}
       >
-        🗂 Templates
+        <span>🗂</span>
+        <span className="max-[1099px]:hidden">Templates</span>
       </button>
 
       <BrandKitButton />
@@ -233,7 +239,7 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
         </span>
       )}
 
-      <div className="w-px h-6 bg-[rgba(255,255,255,0.1)]" />
+      <div className="h-6 w-px shrink-0 bg-[rgba(255,255,255,0.1)]" />
 
       {/* Undo / Redo */}
       <div className="flex items-center gap-0.5">
@@ -257,7 +263,7 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
         </button>
       </div>
 
-      <div className="w-px h-6 bg-[rgba(255,255,255,0.1)]" />
+      <div className="h-6 w-px shrink-0 bg-[rgba(255,255,255,0.1)]" />
 
       {/* Group actions */}
       <div className="flex items-center gap-1.5">
@@ -272,16 +278,16 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
         )}
       </div>
 
-      <div className="flex-1" />
+      <div className="min-w-2 flex-1" />
 
       {/* Right section */}
-      <div className="flex items-center gap-2">
+      <div className="flex shrink-0 items-center gap-2 max-[1099px]:gap-1">
         <button
           onClick={() => setSettingsOpen(true)}
           title="Open settings"
           className="text-xs text-[#e8e8f0] px-3 py-1.5 rounded border border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)] transition-colors"
         >
-          ⚙ Settings
+          <span>⚙</span><span className="max-[1099px]:hidden">Settings</span>
         </button>
 
         <button
@@ -293,7 +299,8 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
               : 'text-[#e8e8f0] border-[rgba(255,255,255,0.1)] hover:border-[rgba(255,255,255,0.2)] hover:bg-[rgba(255,255,255,0.05)]'
           }`}
         >
-          {mode === 'localization' ? 'Back to Design' : 'Localization'}
+          <span className="max-[1099px]:hidden">{mode === 'localization' ? 'Back to Design' : 'Localization'}</span>
+          <span className="min-[1100px]:hidden">◉</span>
         </button>
 
         <button
@@ -306,7 +313,7 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
             <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
             <line x1="12" y1="17" x2="12.01" y2="17"/>
           </svg>
-          Help
+          <span className="max-[1099px]:hidden">Help</span>
         </button>
 
         {/* GitHub link */}
@@ -320,7 +327,7 @@ export function Toolbar({ mode, onSetMode }: ToolbarProps) {
           <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true">
             <path d="M12 2C6.477 2 2 6.477 2 12c0 4.418 2.865 8.166 6.839 9.489.5.092.682-.217.682-.482 0-.237-.009-.868-.013-1.703-2.782.604-3.369-1.342-3.369-1.342-.454-1.154-1.11-1.462-1.11-1.462-.908-.62.069-.608.069-.608 1.003.07 1.531 1.03 1.531 1.03.892 1.529 2.341 1.087 2.91.832.092-.647.35-1.088.636-1.338-2.22-.253-4.555-1.11-4.555-4.943 0-1.091.39-1.984 1.029-2.683-.103-.253-.446-1.27.098-2.647 0 0 .84-.269 2.75 1.025A9.578 9.578 0 0 1 12 6.836a9.59 9.59 0 0 1 2.504.337c1.909-1.294 2.747-1.025 2.747-1.025.546 1.377.203 2.394.1 2.647.64.699 1.028 1.592 1.028 2.683 0 3.842-2.339 4.687-4.566 4.935.359.309.678.919.678 1.852 0 1.336-.012 2.415-.012 2.743 0 .267.18.578.688.48C19.138 20.163 22 16.418 22 12c0-5.523-4.477-10-10-10z"/>
           </svg>
-          GitHub
+          <span className="max-[1099px]:hidden">GitHub</span>
         </a>
       </div>
     </header>

@@ -2,9 +2,17 @@ import { create, type StateCreator } from 'zustand'
 import { useStore } from 'zustand'
 import { temporal } from 'zundo'
 import type { Layer, LayerType, Selection } from '@/types'
-import { BASE_CANVAS_FORMAT } from '@/utils/canvasFormats'
+import {
+  BASE_CANVAS_FORMAT,
+  getGroupFamilyKey,
+  getProjectActiveFormats,
+  getProjectBaseFormat,
+  selectFamilyFormats,
+  selectFamilyGroups,
+  selectProjectFamilies,
+} from '@/utils/canvasFormats'
 import type { EditorStore } from './types'
-import { newProject, migrateProject, assertProjectShape, touchProject, stripDataUrls } from './helpers'
+import { newProject, touchProject } from './helpers'
 import { createSelectionSlice } from './slices/selectionSlice'
 import { createLocaleSlice } from './slices/localeSlice'
 import { createLocaleLayoutSlice } from './slices/localeLayoutSlice'
@@ -18,8 +26,6 @@ import { createProjectSlice } from './slices/projectSlice'
 export type { EditorStore } from './types'
 
 // ─── Store ────────────────────────────────────────────────────────────────────
-
-let projectStorageWarningShown = false
 
 export const useEditorStore = create<EditorStore>()(
   temporal(
@@ -44,6 +50,9 @@ export const useEditorStore = create<EditorStore>()(
       pendingContentFocusLayerId: null as string | null,
       activeLocale: 'en',
       activeCanvasFormat: BASE_CANVAS_FORMAT,
+      activeFamily: 'phone',
+      lastFormatByFamily: {},
+      lastGroupByFamily: {},
       panoRenderOverride: null as { gapPx: number; compensate: boolean } | null,
       setPanoRenderOverride: (override) => set({ panoRenderOverride: override }),
       updatePanoSettings: (patch) => set((s) => ({
@@ -80,56 +89,36 @@ export const useEditorStore = create<EditorStore>()(
   )
 )
 
-// ─── Project persistence (localStorage) ─────────────────────────────────────
-// Hydrate saved project before the "init activeSlideGroupId" check below.
-const PROJECT_STORAGE_KEY = 'pixeldeck-project'
-;(function hydrateProject() {
-  try {
-    const raw = localStorage.getItem(PROJECT_STORAGE_KEY)
-    if (!raw) return
-    const { project, activeSlideGroupId } = JSON.parse(raw) as {
-      project: import('@/types').Project
-      activeSlideGroupId: string
-    }
-    if (project) {
-      assertProjectShape(project)
-      const normalizedProject = migrateProject(project)
-      useEditorStore.setState({
-        project: normalizedProject,
-        activeSlideGroupId: activeSlideGroupId ?? '',
-        activeCanvasFormat: BASE_CANVAS_FORMAT,
-      })
-      // Don't let the initial hydration pollute the undo history
-      useEditorStore.temporal.getState().clear()
-    }
-  } catch {
-    // localStorage unavailable or data corrupt — start fresh
-  }
-})()
-
-// Save to localStorage whenever project structure or active group changes.
-// Selection / zoom / editingGroupId are intentionally excluded (transient UI).
+// zundo restores only `project`; keep transient navigation pointed at a valid
+// family/group/format whenever undo or redo swaps that project reference.
 useEditorStore.subscribe((state, prev) => {
-  if (state.project === prev.project && state.activeSlideGroupId === prev.activeSlideGroupId) return
-  if (typeof localStorage === 'undefined') return
-  try {
-    localStorage.setItem(PROJECT_STORAGE_KEY, JSON.stringify({
-      project: stripDataUrls(state.project),
-      activeSlideGroupId: state.activeSlideGroupId,
-    }))
-  } catch (err) {
-    // Storage quota exceeded or unavailable. Surface once; silent failure risks data loss.
-    console.warn('[PixelDeck] Project autosave failed', err)
-    if (!projectStorageWarningShown && typeof window !== 'undefined') {
-      projectStorageWarningShown = true
-      window.setTimeout(() => {
-        alert('Project autosave failed. Export Project now to avoid losing recent changes.')
-      }, 0)
-    }
-  }
+  if (state.project === prev.project) return
+  const groups = state.project.slideGroups
+  const families = selectProjectFamilies(state.project)
+  const activeFamily = families.includes(state.activeFamily)
+    ? state.activeFamily
+    : (groups[0] ? (getGroupFamilyKey(groups[0]) ?? 'phone') : 'phone')
+  const activeSlideGroupId = groups.some((group) => (
+    group.id === state.activeSlideGroupId && getGroupFamilyKey(group) === activeFamily
+  ))
+    ? state.activeSlideGroupId
+    : (selectFamilyGroups(state.project, activeFamily)[0]?.id ?? groups[0]?.id ?? '')
+  const activeFormats = selectFamilyFormats(state.project, activeFamily)
+    .filter((format) => getProjectActiveFormats(state.project).includes(format))
+  const baseFormat = getProjectBaseFormat(state.project)
+  const activeCanvasFormat = state.activeCanvasFormat === baseFormat || activeFormats.includes(state.activeCanvasFormat)
+    ? state.activeCanvasFormat
+    : baseFormat
+  if (
+    activeSlideGroupId === state.activeSlideGroupId
+    && activeFamily === state.activeFamily
+    && activeCanvasFormat === state.activeCanvasFormat
+  ) return
+  useEditorStore.setState({ activeSlideGroupId, activeFamily, activeCanvasFormat })
 })
 
-// Init activeSlideGroupId on first load (no-op when hydrated from storage)
+// Init activeSlideGroupId for the initial in-memory project. Persisted project
+// hydration is owned exclusively by the project library store.
 const initial = useEditorStore.getState()
 if (!initial.activeSlideGroupId && initial.project.slideGroups.length > 0) {
   useEditorStore.setState({ activeSlideGroupId: initial.project.slideGroups[0].id })

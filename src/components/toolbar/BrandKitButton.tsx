@@ -32,6 +32,7 @@ export function BrandKitButton() {
         type="button"
         onClick={() => setOpen((v) => !v)}
         title="Brand Kit — manage project colors"
+        className="max-[1099px]:!px-2"
         style={{
           background: open ? 'rgba(124,110,246,0.15)' : 'none',
           border: open ? '1px solid rgba(124,110,246,0.5)' : '1px solid rgba(255,255,255,0.1)',
@@ -71,7 +72,7 @@ export function BrandKitButton() {
         ) : (
           <span>🎨</span>
         )}
-        Brand Kit
+        <span className="max-[1099px]:hidden">Brand Kit</span>
       </button>
 
       {open && (

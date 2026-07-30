@@ -12,7 +12,10 @@ import {
   BASE_CANVAS_FORMAT,
   FORMAT_FORK_KEYS,
   LOCALE_LAYOUT_FORK_KEYS,
+  getFormatFamilyKey,
   normalizeProjectFormats,
+  selectFamilyGroups,
+  selectProjectFamilies,
 } from '@/utils/canvasFormats'
 import type { EditorSet, EditorGet } from './types'
 
@@ -28,11 +31,38 @@ export const LOCALE_SYMMETRIC_SCHEMA_VERSION = 1
  */
 export const LOCALE_ADJUST_SCHEMA_VERSION = 2
 
+export const SLIDE_KEY_SCHEMA_VERSION = 3
+
 export { findLayerInTree, mapLayerTree, updateLayerInTree } from '@/utils/layerTree'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 export function newId() { return nanoid(10) }
+
+/**
+ * Proportional shrink factor for newly-added layer defaults on non-standard
+ * canvases (e.g. Apple Watch, 422×514). Clamped at 1 so it only ever shrinks
+ * defaults to fit a smaller canvas — it must never enlarge them on a canvas
+ * that's already >= the project's default size (this is what keeps it a
+ * no-op for the common case, including fixtures that resize to a
+ * same-family, slightly larger canvas like the 1320×2868 iPhone preset).
+ */
+export function getLayerDefaultsScaleFactor(group: SlideGroup, settings: ProjectSettings): number {
+  return Math.min(
+    1,
+    group.slideWidth / settings.defaultSlideWidth,
+    group.slideHeight / settings.defaultSlideHeight,
+  )
+}
+
+/** Deep-clone a layer tree while assigning fresh IDs to every node. */
+export function cloneLayerWithNewIds(layer: Layer): Layer {
+  const clone = JSON.parse(JSON.stringify(layer)) as Layer
+  const reId = (value: Layer): Layer => value.type === 'group'
+    ? { ...value, id: newId(), children: (value as GroupLayer).children.map(reId) } as Layer
+    : { ...value, id: newId() } as Layer
+  return reId(clone)
+}
 
 /**
  * Old (pre-0.6.0) project files, or files produced by the CLI manifest tool
@@ -108,7 +138,7 @@ export const STYLE_KEYS: Partial<Record<LayerType, string[]>> = {
   emoji: ['emoji', 'fontSize', 'blur', 'shadow', 'opacity'],
   brand: ['nameColor', 'nameFontSize', 'nameFontFamily', 'nameFontWeight', 'logoSize', 'direction', 'gap', 'blur', 'shadow', 'opacity'],
   image: ['cornerRadius', 'blur', 'shadow', 'opacity'],
-  phone: ['model', 'scale', 'screenshotFit', 'screenshotOffsetX', 'screenshotOffsetY', 'showStatusBar', 'statusBarTheme', 'statusBarBg', 'statusBarColor', 'border', 'blur', 'shadow', 'opacity'],
+  phone: ['scale', 'screenshotFit', 'screenshotOffsetX', 'screenshotOffsetY', 'showStatusBar', 'statusBarTheme', 'statusBarBg', 'statusBarColor', 'border', 'blur', 'shadow', 'opacity'],
   group: ['blur', 'shadow', 'opacity'],
 }
 
@@ -352,6 +382,32 @@ export function migrateProjectToLocaleAdjust(project: Project): { project: Proje
 }
 
 /**
+ * Assign missing `slideKey`s. For legacy projects with multiple families and
+ * no linkage, this is a one-time best-effort guess by position within each
+ * family's group list — the same heuristic the app would otherwise redo on
+ * every family switch. Once assigned it's frozen data and never recomputed.
+ */
+export function migrateProjectSlideKeys(project: Project): Project {
+  if (project.slideGroups.every((g) => g.slideKey)) return project
+  const families = selectProjectFamilies(project)
+  const byFamily = new Map(families.map((f) => [f, selectFamilyGroups(project, f)] as const))
+  const maxLen = Math.max(0, ...Array.from(byFamily.values()).map((groups) => groups.length))
+  const indexKeys = Array.from({ length: maxLen }, () => newId())
+  const keyByGroupId = new Map<string, string>()
+  for (const groups of byFamily.values()) {
+    groups.forEach((group, i) => {
+      if (!group.slideKey) keyByGroupId.set(group.id, indexKeys[i])
+    })
+  }
+  return {
+    ...project,
+    slideGroups: project.slideGroups.map((group) => (
+      group.slideKey ? group : { ...group, slideKey: keyByGroupId.get(group.id) ?? newId() }
+    )),
+  }
+}
+
+/**
  * Derive a `LayoutDelta` from one legacy absolute `localeLayoutOverrides`
  * patch cell, given `R` (the resolved value excluding that cell). Additive
  * for x/y/rotation (`d = V - R`), multiplicative for width/height/fontSize/
@@ -406,6 +462,7 @@ export function newSlideGroup(overrides?: Partial<SlideGroup>): SlideGroup {
     slideWidth: 1290,
     slideHeight: 2796,
     slideNames: ['slide-01'],
+    slideKey: newId(),
     ...otherOverrides,
     layers,
   }
@@ -455,12 +512,43 @@ export function assertProjectShape(value: unknown): asserts value is Project {
 }
 
 /**
+ * Split persisted pre-family-split desktop groups into one group per new family.
+ * A legacy desktop group could own mac, Apple TV, and Vision Pro simultaneously;
+ * those formats are now incompatible families and must not remain first-ID-wins.
+ */
+export function normalizeGroupFamilies<T extends Project>(project: T): T {
+  const legacyDesktopFormats = new Set<CanvasFormatId>(['mac', 'appletv', 'visionpro'])
+  const slideGroups = project.slideGroups.flatMap((group) => {
+    const formats = group.formats
+    if (!formats?.length) return [group]
+    const legacy = formats.filter((format) => legacyDesktopFormats.has(format))
+    if (legacy.length < 2) return [group]
+    const customs = formats.filter((format) => !legacyDesktopFormats.has(format))
+
+    const byFamily = new Map<string, CanvasFormatId[]>()
+    for (const format of legacy) {
+      const family = getFormatFamilyKey(format)
+      if (!family) continue
+      byFamily.set(family, [...(byFamily.get(family) ?? []), format])
+    }
+    if (byFamily.size <= 1) return [group]
+
+    return Array.from(byFamily.values()).map((familyFormats, index) => (
+      index === 0
+        ? { ...group, formats: [...familyFormats, ...customs], slideNames: [...group.slideNames] }
+        : { ...group, id: newId(), formats: familyFormats, layers: group.layers.map(cloneLayerWithNewIds), slideNames: [...group.slideNames] }
+    ))
+  })
+  return { ...project, slideGroups }
+}
+
+/**
  * Normalize + migrate a parsed project: canvas formats, legacy CanvasBackground
  * → BackgroundLayer, and legacy TextLayer.spans → marks. Shared by import and
  * localStorage hydration so both paths produce the same shape.
  */
 export function migrateProject(raw: Project): Project {
-  const project = normalizeProjectFormats(raw)
+  const project = normalizeGroupFamilies(normalizeProjectFormats(raw))
   for (const sg of project.slideGroups) {
     if (!sg.layers.some((l) => l.type === 'background')) {
       const migrated = sg.background ? bgFromLegacy(sg.background) : createBackgroundLayer()
@@ -481,6 +569,10 @@ export function migrateProject(raw: Project): Project {
     const { project: migrated } = migrateProjectToLocaleAdjust(project)
     project.slideGroups = migrated.slideGroups
     project.settings = { ...project.settings, schemaVersion: LOCALE_ADJUST_SCHEMA_VERSION }
+  }
+  if ((project.settings.schemaVersion ?? 0) < SLIDE_KEY_SCHEMA_VERSION) {
+    project.slideGroups = migrateProjectSlideKeys(project).slideGroups
+    project.settings = { ...project.settings, schemaVersion: SLIDE_KEY_SCHEMA_VERSION }
   }
   return project
 }

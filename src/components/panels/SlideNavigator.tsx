@@ -7,7 +7,7 @@ import { SortableContext, useSortable, horizontalListSortingStrategy, arrayMove 
 import { CSS } from '@dnd-kit/utilities'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
-import { applyCanvasFormat, getExportTargets } from '@/utils/canvasFormats'
+import { BASE_CANVAS_FORMAT, getExportTargets, getFormatCanvasDims, getProjectBaseFormat, selectFormatViewGroups } from '@/utils/canvasFormats'
 import { MAX_PANO_COMPENSATION_PX } from '@/utils/panoGeometry'
 import type { BackgroundLayer, SlideGroup } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
@@ -21,7 +21,9 @@ interface ContextMenu {
 
 interface SlideNavigatorProps {
   thumbnails: ThumbnailMap
+  staleGroupIds: Set<string>
   stageRef: React.RefObject<Konva.Stage | null>
+  onCaptureThumbnail: (groupId: string) => void
   onOpenPreview: () => void
 }
 
@@ -47,6 +49,8 @@ interface SortableGroupItemProps {
   renameValue: string
   renameInputRef: React.RefObject<HTMLInputElement | null>
   thumbnails: ThumbnailMap
+  staleGroupIds: Set<string>
+  captureThumbnail: (groupId: string) => void
   THUMB_H: number
   handleContextMenu: (e: React.MouseEvent, groupId: string) => void
   startRename: (groupId: string, currentName: string) => void
@@ -65,6 +69,8 @@ function SortableGroupItem({
   renameValue,
   renameInputRef,
   thumbnails,
+  staleGroupIds,
+  captureThumbnail,
   THUMB_H,
   handleContextMenu,
   startRename,
@@ -167,7 +173,10 @@ function SortableGroupItem({
                       overflow: 'hidden',
                       flexShrink: 0,
                     }}
-                    onClick={() => setActiveSlideGroup(group.id)}
+                    onClick={() => {
+                      setActiveSlideGroup(group.id)
+                      if (!thumb || staleGroupIds.has(group.id)) captureThumbnail(group.id)
+                    }}
                   >
                     {thumb ? (
                       <img
@@ -204,29 +213,33 @@ function SortableGroupItem({
   )
 }
 
-export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNavigatorProps) {
+export function SlideNavigator({ thumbnails, staleGroupIds, stageRef, onCaptureThumbnail, onOpenPreview }: SlideNavigatorProps) {
   const {
     project,
     activeSlideGroupId,
     setActiveSlideGroup,
+    setActiveCanvasFormat,
     addSlideGroup,
     removeSlideGroup,
     duplicateSlideGroup,
     updateSlideGroup,
     reorderSlideGroups,
     activeCanvasFormat,
+    activeFamily,
     panoSettings,
     updatePanoSettings,
   } = useEditorStore(useShallow((s) => ({
     project: s.project,
     activeSlideGroupId: s.activeSlideGroupId,
     setActiveSlideGroup: s.setActiveSlideGroup,
+    setActiveCanvasFormat: s.setActiveCanvasFormat,
     addSlideGroup: s.addSlideGroup,
     removeSlideGroup: s.removeSlideGroup,
     duplicateSlideGroup: s.duplicateSlideGroup,
     updateSlideGroup: s.updateSlideGroup,
     reorderSlideGroups: s.reorderSlideGroups,
     activeCanvasFormat: s.activeCanvasFormat,
+    activeFamily: s.activeFamily,
     panoSettings: s.project.settings.pano ?? { gapPx: 24, compensate: false },
     updatePanoSettings: s.updatePanoSettings,
   })))
@@ -237,7 +250,15 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   const [renameValue, setRenameValue] = useState('')
   const renameInputRef = useRef<HTMLInputElement>(null)
 
-  const viewProject = applyCanvasFormat(project, activeCanvasFormat)
+  const baseFormat = getProjectBaseFormat(project)
+  const viewProject = {
+    ...project,
+    slideGroups: project.slideGroups.map((group) => ({
+      ...group,
+      ...getFormatCanvasDims(group, activeCanvasFormat, baseFormat, project.settings.customFormats),
+    })),
+  }
+  const visibleGroups = selectFormatViewGroups(viewProject, activeCanvasFormat, activeFamily)
   const activeGroup = viewProject.slideGroups.find((g) => g.id === activeSlideGroupId)
   // Whether ANY slide group in the project is a pano/strip — not just the active
   // one — since panoSettings.compensate is a project-wide setting.
@@ -280,6 +301,12 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
     setContextMenu({ groupId, x: e.clientX, y })
   }
 
+  const selectSlideGroup = (id: string) => {
+    const group = project.slideGroups.find((candidate) => candidate.id === id)
+    if (group && !visibleGroups.some((visibleGroup) => visibleGroup.id === group.id)) setActiveCanvasFormat(BASE_CANVAS_FORMAT)
+    setActiveSlideGroup(id)
+  }
+
   const handleMenuAction = (action: string, groupId: string) => {
     setContextMenu(null)
     switch (action) {
@@ -298,7 +325,7 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   // Build flat slide list with global sequential numbers (used for globalNum lookup)
   const flatSlides: FlatSlide[] = []
   let globalNum = 0
-  for (const group of viewProject.slideGroups) {
+  for (const group of visibleGroups) {
     const bgLayer = group.layers.find((l) => l.type === 'background') as BackgroundLayer | undefined
     const bgFill = bgLayer?.fill ?? group.background?.fill
     const bgCss = bgFill ? fillToCss(bgFill) : '#1a1a2e'
@@ -319,10 +346,14 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
   const handleDragEnd = (event: DragEndEvent) => {
     const { active, over } = event
     if (!over || active.id === over.id) return
-    const ids = viewProject.slideGroups.map((g) => g.id)
+    const ids = visibleGroups.map((g) => g.id)
     const oldIndex = ids.indexOf(active.id as string)
     const newIndex = ids.indexOf(over.id as string)
-    reorderSlideGroups(arrayMove(ids, oldIndex, newIndex))
+    const reorderedVisibleIds = arrayMove(ids, oldIndex, newIndex)
+    let nextVisibleIndex = 0
+    reorderSlideGroups(project.slideGroups.map((group) => (
+      visibleGroups.some((visibleGroup) => visibleGroup.id === group.id) ? reorderedVisibleIds[nextVisibleIndex++] : group.id
+    )))
   }
 
   return (
@@ -330,9 +361,8 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
       className="h-20 flex items-center gap-3 px-3 shrink-0 border-t"
       style={{ background: '#18181f', borderColor }}
     >
-      {/* Width matches LayersPanel (w-56 = 224px) minus this footer's own left px-3 (12px)
-          inset, so the divider lines up exactly under the sidebar's right edge. */}
-      <div className="flex flex-col gap-1.5 shrink-0 w-[212px] pr-3 border-r border-[rgba(255,255,255,0.06)]">
+      {/* Width follows the responsive LayersPanel width, less this footer's 12px inset. */}
+      <div className="flex w-[196px] shrink-0 flex-col gap-1.5 border-r border-[rgba(255,255,255,0.06)] pr-3 min-[1440px]:w-[212px]">
         <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6b6b7a]">Slides</div>
         {activeGroup && (
           <div className="flex items-center gap-1.5">
@@ -382,8 +412,8 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
 
       <div className="flex items-center gap-2 flex-1 overflow-x-auto min-w-0">
         <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
-          <SortableContext items={viewProject.slideGroups.map((g) => g.id)} strategy={horizontalListSortingStrategy}>
-            {viewProject.slideGroups.map((group, groupIdx) => {
+          <SortableContext items={visibleGroups.map((g) => g.id)} strategy={horizontalListSortingStrategy}>
+            {visibleGroups.map((group, groupIdx) => {
               const groupSlides = flatSlides.filter((fs) => fs.group.id === group.id)
               return (
                 <SortableGroupItem
@@ -396,10 +426,12 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
                   renameValue={renameValue}
                   renameInputRef={renameInputRef}
                   thumbnails={thumbnails}
+                  staleGroupIds={staleGroupIds}
+                  captureThumbnail={onCaptureThumbnail}
                   THUMB_H={THUMB_H}
                   handleContextMenu={handleContextMenu}
                   startRename={startRename}
-                  setActiveSlideGroup={setActiveSlideGroup}
+                  setActiveSlideGroup={selectSlideGroup}
                   commitRename={commitRename}
                   setRenamingId={setRenamingId}
                   setRenameValue={setRenameValue}
@@ -454,17 +486,18 @@ export function SlideNavigator({ thumbnails, stageRef, onOpenPreview }: SlideNav
           {[
             { action: 'rename', label: 'Rename' },
             { action: 'duplicate', label: 'Duplicate' },
-            { action: 'delete', label: 'Delete', danger: true },
-          ].map(({ action, label, danger }) => (
+          ].map(({ action, label }) => (
             <button
               key={action}
               className="w-full text-left px-3 py-2 text-xs hover:bg-[rgba(255,255,255,0.06)] transition-colors"
-              style={{ color: danger ? '#f87171' : '#e8e8f0' }}
+              style={{ color: '#e8e8f0' }}
               onClick={() => handleMenuAction(action, contextMenu.groupId)}
             >
               {label}
             </button>
           ))}
+          <div className="my-1 border-t border-[rgba(255,255,255,0.08)]" />
+          <button className="w-full text-left px-3 py-2 text-xs text-[#f87171] hover:bg-[rgba(255,255,255,0.06)] transition-colors" onClick={() => handleMenuAction('delete', contextMenu.groupId)}>Delete</button>
         </div>
       )}
     </footer>

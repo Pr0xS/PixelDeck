@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useRef, useState } from 'react'
 import { useEditorStore } from '@/store'
 import { getPanoTotalWidth } from '@/utils/panoGeometry'
-import type { SlideGroup } from '@/types'
+import type { CanvasFormatId, SlideGroup } from '@/types'
 
 interface UseStageViewportOptions {
   group: SlideGroup | undefined
@@ -9,6 +9,10 @@ interface UseStageViewportOptions {
   panoCompensationPx: number
   setZoom: (zoom: number) => void
   setViewportPosition: (x: number, y: number) => void
+  /** Format family key (e.g. 'phone', 'watch', 'vr') — switching families triggers a full fit-to-view. */
+  activeFamily: string
+  /** Active canvas format id — switching formats within the same family re-anchors pan by relative position (see effect below), zoom untouched. */
+  activeCanvasFormat: CanvasFormatId
 }
 
 export function useStageViewport({
@@ -17,6 +21,8 @@ export function useStageViewport({
   panoCompensationPx,
   setZoom,
   setViewportPosition,
+  activeFamily,
+  activeCanvasFormat,
 }: UseStageViewportOptions) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 })
@@ -26,6 +32,8 @@ export function useStageViewport({
   const panStartRef = useRef<{ clientX: number; clientY: number; vpX: number; vpY: number } | null>(null)
   const lastCenteredGroupId = useRef<string | null>(null)
   const lastContainerW = useRef(0)
+  const lastFamilyRef = useRef<string | null>(null)
+  const prevCanvasRef = useRef<{ format: CanvasFormatId; totalW: number; totalH: number } | null>(null)
 
   useEffect(() => {
     const el = containerRef.current
@@ -143,6 +151,45 @@ export function useStageViewport({
       (containerSize.h - totalH * fitScale) / 2,
     )
   }, [group, containerSize.w, containerSize.h, setZoom, setViewportPosition, panoCompensate, panoCompensationPx])
+
+  // Switching device family (e.g. phone -> watch/vr) spans very different canvas
+  // sizes/aspect ratios; auto-fit so the new format isn't left tiny/oversized at
+  // the previous family's zoom. Switching *format within the same family* keeps
+  // continuity, but "keep the same zoom number" still looks like a jump because
+  // formats in a family still differ in absolute size — the canvas's apparent
+  // on-screen footprint would shrink/grow with it. Instead we rescale zoom by
+  // the ratio of canvas diagonals (so the design keeps roughly the same visual
+  // size on screen) and re-anchor pan so the same *relative* area stays centered.
+  useEffect(() => {
+    if (!containerSize.w || !containerSize.h || !group) return
+    const totalW = getPanoTotalWidth(group, panoCompensate ? panoCompensationPx : 0)
+    const totalH = group.slideHeight
+    const familyChanged = lastFamilyRef.current !== null && lastFamilyRef.current !== activeFamily
+    lastFamilyRef.current = activeFamily
+    const prevCanvas = prevCanvasRef.current
+
+    if (familyChanged) {
+      handleFit()
+    } else if (prevCanvas && prevCanvas.format !== activeCanvasFormat) {
+      const { zoom: currentZoom, viewportX: vpX, viewportY: vpY, setZoom: sz, setViewportPosition: svp } = useEditorStore.getState()
+      const oldCenterX = (containerSize.w / 2 - vpX) / currentZoom
+      const oldCenterY = (containerSize.h / 2 - vpY) / currentZoom
+      const fx = prevCanvas.totalW > 0 ? oldCenterX / prevCanvas.totalW : 0.5
+      const fy = prevCanvas.totalH > 0 ? oldCenterY / prevCanvas.totalH : 0.5
+      const prevDiag = Math.hypot(prevCanvas.totalW, prevCanvas.totalH)
+      const newDiag = Math.hypot(totalW, totalH)
+      const sizeRatio = prevDiag > 0 && newDiag > 0 ? prevDiag / newDiag : 1
+      const newZoom = Math.max(0.05, Math.min(4, currentZoom * sizeRatio))
+      sz(newZoom)
+      svp(
+        containerSize.w / 2 - fx * totalW * newZoom,
+        containerSize.h / 2 - fy * totalH * newZoom,
+      )
+    }
+
+    prevCanvasRef.current = { format: activeCanvasFormat, totalW, totalH }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFamily, activeCanvasFormat, containerSize.w, containerSize.h, group?.id])
 
   return {
     containerRef,

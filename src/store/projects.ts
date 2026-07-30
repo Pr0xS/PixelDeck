@@ -1,11 +1,4 @@
-/**
- * Project list store — manages multiple projects with localStorage persistence.
- *
- * Storage layout:
- *   pd:project-list      → JSON array of ProjectMeta (id, name, timestamps)
- *   pd:project:{id}      → full serialized Project JSON
- *   pd:active-project    → string — ID of last open project
- */
+/** Project library state and async persistence. */
 
 import { create } from 'zustand'
 import type { Project } from '@/types'
@@ -17,16 +10,21 @@ import {
 import { useEditorStore } from './index'
 import { newId, stripDataUrls } from './helpers'
 import { useAssetStore } from './assets'
+import { idbStorage } from './idb-storage'
+import { isCaptureLocked } from '@/utils/stageCapture'
+import { getProjectStorage } from './storage'
+import { ProjectConflictError, type ProjectMeta } from './storage/types'
 
-// ─── Keys ──────────────────────────────────────────────────────────────────────
+export type { ProjectMeta } from './storage/types'
 
-const LIST_KEY = 'pd:project-list'
-const ACTIVE_KEY = 'pd:active-project'
-const projectKey = (id: string) => `pd:project:${id}`
-
+const thumbnailKey = (id: string) => `pixeldeck-thumbs:${id}`
 let storageWarningShown = false
+const conflictedProjectIds = new Set<string>()
+let saveChain: Promise<void> = Promise.resolve()
+let bootstrapAbandoned = false
+let pagehideListenerRegistered = false
 
-function warnStorageFailure(err: unknown) {
+function warnStorageFailure(err: unknown): void {
   console.warn('[PixelDeck] Project library save failed', err)
   if (storageWarningShown || typeof window === 'undefined') return
   storageWarningShown = true
@@ -35,188 +33,242 @@ function warnStorageFailure(err: unknown) {
   }, 0)
 }
 
-/** Load a saved project without persisting the currently loaded editor project. */
-function loadProjectById(id: string): boolean {
-  const json = localStorage.getItem(projectKey(id))
+function handleProjectSaveConflict(id: string): void {
+  if (conflictedProjectIds.has(id)) return
+  conflictedProjectIds.add(id)
+  useProjectsStore.setState({ conflictNotice: { projectId: id } })
+}
+
+export function notifyProjectConflict(id: string): void {
+  handleProjectSaveConflict(id)
+}
+
+export function abandonBootstrap(): void {
+  bootstrapAbandoned = true
+}
+
+async function loadProjectById(id: string, opts?: { checkAbandonment?: boolean }): Promise<boolean> {
+  const json = await getProjectStorage().loadProject(id)
+  // Only bootstrap reads are disposable; later user-initiated project switches must load normally.
+  if (opts?.checkAbandonment && bootstrapAbandoned) return false
   if (!json) return false
-  localStorage.setItem(ACTIVE_KEY, id)
-  useEditorStore.getState().importProject(json)
+  try {
+    useEditorStore.getState().importProject(json)
+  } catch (err) {
+    console.warn('[PixelDeck] Failed to load project', err)
+    return false
+  }
+  await getProjectStorage().setActiveProjectId(id)
+  conflictedProjectIds.delete(id)
   return true
 }
 
-// ─── Types ─────────────────────────────────────────────────────────────────────
+function projectPersistencePayload(): { meta: ProjectMeta; json: string } {
+  registerPagehideFlush()
+  const { project } = useEditorStore.getState()
+  const meta: ProjectMeta = {
+    id: project.id,
+    name: project.name,
+    createdAt: project.createdAt,
+    updatedAt: project.updatedAt,
+  }
+  return { meta, json: JSON.stringify(stripDataUrls(project)) }
+}
 
-export interface ProjectMeta {
-  id: string
-  name: string
-  createdAt: string
-  updatedAt: string
+async function persistCurrentProject({ meta, json }: { meta: ProjectMeta; json: string }): Promise<void> {
+  try {
+    await getProjectStorage().saveProject(meta, json)
+    const { projects } = useProjectsStore.getState()
+    const exists = projects.some((item) => item.id === meta.id)
+    useProjectsStore.setState({
+      projects: exists
+        ? projects.map((item) => item.id === meta.id ? meta : item)
+        : [...projects, meta],
+    })
+  } catch (err) {
+    if (err instanceof ProjectConflictError) handleProjectSaveConflict(meta.id)
+    else warnStorageFailure(err)
+    throw err
+  }
+}
+
+async function enqueueCurrentProjectSave(): Promise<void> {
+  const payload = projectPersistencePayload()
+  const task = saveChain.then(() => persistCurrentProject(payload))
+  saveChain = task.catch(() => {})
+  return task
+}
+
+async function persistRename(id: string, name: string): Promise<void> {
+  try {
+    await getProjectStorage().renameProject(id, name)
+    const updated = await getProjectStorage().listProjects()
+    useProjectsStore.setState({ projects: updated })
+    if (useEditorStore.getState().project.id === id) useEditorStore.getState().setProjectName(name)
+  } catch (err) {
+    warnStorageFailure(err)
+    throw err
+  }
+}
+
+async function enqueueRename(id: string, name: string): Promise<void> {
+  const task = saveChain.then(() => persistRename(id, name))
+  saveChain = task.catch(() => {})
+  return task
 }
 
 interface ProjectsStore {
   projects: ProjectMeta[]
   initialized: boolean
-
-  /** Load project list and restore last active project from localStorage. */
-  initialize: () => void
-
-  /** Persist the current editor project to localStorage immediately. */
-  saveCurrentProject: () => void
-
-  /** Create a brand-new project, save current first, then switch. */
-  createProject: (name: string) => void
-
-  /** Load a saved project into the editor (saves current first). */
-  openProject: (id: string) => void
-
-  /** Permanently delete a project from localStorage. */
-  deleteProject: (id: string) => void
-
-  /** Rename a project (updates list + editor store if active). */
-  renameProject: (id: string, name: string) => void
-
-  /** Sync list metadata with whatever is currently in the editor store. */
-  syncMeta: () => void
-
-  /** Export a project and its referenced images as a self-contained bundle. */
+  conflictNotice: { projectId: string } | null
+  initialize: () => Promise<void>
+  saveCurrentProject: () => Promise<void>
+  createProject: (name: string) => Promise<void>
+  openProject: (id: string) => Promise<void>
+  deleteProject: (id: string) => Promise<void>
+  renameProject: (id: string, name: string) => Promise<void>
+  dismissConflictAndReload: () => void
+  saveConflictedProjectAsCopy: () => Promise<void>
   exportProjectBundle: (id: string) => Promise<string>
-
-  /** Import a bare project or self-contained project bundle as a new project. */
   importProjectFromJson: (json: string) => Promise<{ missing: string[] }>
 }
-
-// ─── Store ─────────────────────────────────────────────────────────────────────
 
 export const useProjectsStore = create<ProjectsStore>((set, get) => ({
   projects: [],
   initialized: false,
+  conflictNotice: null,
 
-  initialize() {
-    const listJson = localStorage.getItem(LIST_KEY)
-    const projects: ProjectMeta[] = listJson ? (JSON.parse(listJson) as ProjectMeta[]) : []
+  async initialize() {
+    try {
+      const projects = await getProjectStorage().listProjects()
+      const activeId = await getProjectStorage().getActiveProjectId()
+      let loaded = false
+      if (activeId && projects.some((project) => project.id === activeId)) {
+        loaded = await loadProjectById(activeId, { checkAbandonment: true })
+      }
+      if (!loaded && projects.length > 0) {
+        loaded = await loadProjectById(projects[0].id, { checkAbandonment: true })
+      }
 
-    const activeId = localStorage.getItem(ACTIVE_KEY)
-
-    if (activeId && projects.find((p) => p.id === activeId)) {
-      if (!loadProjectById(activeId) && projects.length > 0) loadProjectById(projects[0].id)
-    } else if (projects.length > 0) {
-      loadProjectById(projects[0].id)
+      set({ projects })
+      await useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
+      // With no stored projects, persisting the current default is still correct even after an abandoned read.
+      if (projects.length === 0) await get().saveCurrentProject()
+      // This also writes the pointer when no project was loaded (empty or unreadable library paths).
+      await getProjectStorage().setActiveProjectId(useEditorStore.getState().project.id)
+    } catch (err) {
+      console.warn('[PixelDeck] Project library initialization failed', err)
+    } finally {
+      set({ initialized: true })
     }
-
-    // Always persist whatever is now in the editor (covers first-ever run)
-    set({ projects, initialized: true })
-    void useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
-    get().saveCurrentProject()
   },
 
   saveCurrentProject() {
-    const { project } = useEditorStore.getState()
-
-    const meta: ProjectMeta = {
-      id: project.id,
-      name: project.name,
-      createdAt: project.createdAt,
-      updatedAt: project.updatedAt,
-    }
-
-    const { projects } = get()
-    const exists = projects.some((p) => p.id === project.id)
-    const updated = exists
-      ? projects.map((p) => (p.id === project.id ? meta : p))
-      : [...projects, meta]
-
-    try {
-      localStorage.setItem(projectKey(project.id), JSON.stringify(stripDataUrls(project)))
-      localStorage.setItem(ACTIVE_KEY, project.id)
-      localStorage.setItem(LIST_KEY, JSON.stringify(updated))
-    } catch (err) {
-      warnStorageFailure(err)
-    }
-    set({ projects: updated })
+    return enqueueCurrentProjectSave()
   },
 
-  createProject(name) {
+  async createProject(name) {
     const trimmed = name.trim()
     const { projects } = get()
-    const duplicate = projects.find((p) => p.name.toLowerCase() === trimmed.toLowerCase())
-    if (duplicate) {
-      throw new Error(`A project named "${trimmed}" already exists.`)
-    }
-    get().saveCurrentProject()
+    const duplicate = projects.find((project) => project.name.toLowerCase() === trimmed.toLowerCase())
+    if (duplicate) throw new Error(`A project named "${trimmed}" already exists.`)
+
+    await get().saveCurrentProject()
     useEditorStore.getState().resetProject()
     useEditorStore.getState().setProjectName(trimmed)
-    get().saveCurrentProject()
-    void useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
+    await getProjectStorage().setActiveProjectId(useEditorStore.getState().project.id)
+    await useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
+    await get().saveCurrentProject()
   },
 
-  openProject(id) {
-    const { projects } = get()
-    if (!projects.find((p) => p.id === id)) return
-    get().saveCurrentProject()
-    loadProjectById(id)
-    void useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
+  async openProject(id) {
+    if (!get().projects.some((project) => project.id === id)) return
+    await get().saveCurrentProject()
+    if (!await loadProjectById(id)) return
+    await useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
   },
 
-  deleteProject(id) {
-    localStorage.removeItem(projectKey(id))
-    void useAssetStore.getState().clearProject(id)
+  async deleteProject(id) {
+    await get().saveCurrentProject()
+    await getProjectStorage().deleteProject(id)
+    await useAssetStore.getState().clearProject(id)
+    await idbStorage.removeItem(thumbnailKey(id))
 
-    const { projects } = get()
-    const updated = projects.filter((p) => p.id !== id)
-    try {
-      localStorage.setItem(LIST_KEY, JSON.stringify(updated))
-    } catch (err) {
-      warnStorageFailure(err)
-    }
+    const updated = get().projects.filter((project) => project.id !== id)
     set({ projects: updated })
 
-    const activeProjectId = useEditorStore.getState().project.id
-    if (activeProjectId !== id) return
-
+    if (useEditorStore.getState().project.id !== id) return
     const replacement = updated[0]
-    if (!replacement || !loadProjectById(replacement.id)) {
+    if (!replacement || !await loadProjectById(replacement.id)) {
       useEditorStore.getState().resetProject()
-      get().saveCurrentProject()
+      await getProjectStorage().setActiveProjectId(useEditorStore.getState().project.id)
+      await get().saveCurrentProject()
     }
-    void useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
+    await useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
   },
 
   renameProject(id, name) {
-    // Update list
-    const { projects } = get()
-    const updated = projects.map((p) => (p.id === id ? { ...p, name } : p))
-    localStorage.setItem(LIST_KEY, JSON.stringify(updated))
-    set({ projects: updated })
-
-    // If renaming the active project, update the editor store too
-    const activeId = localStorage.getItem(ACTIVE_KEY)
-    if (activeId === id) {
-      useEditorStore.getState().setProjectName(name)
-    }
+    return enqueueRename(id, name)
   },
 
-  syncMeta() {
-    get().saveCurrentProject()
+  // Retained for a future explicit Reload button; conflict dismissal must not call this implicitly.
+  dismissConflictAndReload() {
+    if (typeof window !== 'undefined') window.location.reload()
+  },
+
+  async saveConflictedProjectAsCopy() {
+    const oldProjectId = useEditorStore.getState().project.id
+    if (oldProjectId !== get().conflictNotice?.projectId) {
+      set({ conflictNotice: null })
+      return
+    }
+    const project = useEditorStore.getState().project
+    const originalProjectJson = JSON.stringify(project)
+    const newProjectId = newId()
+    try {
+      const storedAssets = await useAssetStore.getState().loadProjectAssets(oldProjectId)
+      const copiedAssets = Object.fromEntries(
+        Object.entries(storedAssets).map(([key, asset]) => [key, asset.dataUrl]),
+      )
+      useEditorStore.getState().importProject(JSON.stringify({
+        ...project,
+        id: newProjectId,
+        name: `${project.name} (copy)`,
+      }))
+      await useAssetStore.getState().setActiveProject(newProjectId)
+      await useAssetStore.getState().hydrateProject(newProjectId, copiedAssets)
+      await get().saveCurrentProject()
+      await getProjectStorage().setActiveProjectId(newProjectId)
+      conflictedProjectIds.delete(oldProjectId)
+      set({ conflictNotice: null })
+    } catch (err) {
+      // Restore the conflicted working copy so the notice remains retryable after any copy failure.
+      useEditorStore.getState().importProject(originalProjectJson)
+      try {
+        await useAssetStore.getState().setActiveProject(oldProjectId)
+      } catch (restoreErr) {
+        console.error('[PixelDeck] Failed to restore conflicted project assets', restoreErr)
+      }
+      console.error('[PixelDeck] Failed to save conflicted project as a copy', err)
+      if (typeof window !== 'undefined') alert('Could not save a copy of this project. Please try again.')
+    }
   },
 
   async exportProjectBundle(id) {
     const editor = useEditorStore.getState()
     const assetStore = useAssetStore.getState()
-    const isActive = editor.project.id === id
     let project: Project
     let resolve: (key: string) => string | undefined
-
-    if (isActive) {
+    if (editor.project.id === id) {
       project = editor.project
       resolve = (key) => assetStore.getAsset(key)
     } else {
-      const json = localStorage.getItem(projectKey(id))
+      const json = await getProjectStorage().loadProject(id)
       if (!json) throw new Error('Project not found')
       project = JSON.parse(json) as Project
       const stored = await assetStore.loadProjectAssets(id)
       resolve = (key) => stored[key]?.dataUrl
     }
-
     const { bundle } = buildProjectExportBundle(project, resolve)
     return JSON.stringify(bundle, null, 2)
   },
@@ -227,34 +279,53 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
     const rawProject = bundle ? bundle.project : parsed
     const assets: Record<string, string> = bundle ? bundle.assets : {}
 
-    get().saveCurrentProject()
+    await get().saveCurrentProject()
     const withFreshId = { ...(rawProject as Project), id: newId() }
     useEditorStore.getState().importProject(JSON.stringify(withFreshId))
     const newProjectId = useEditorStore.getState().project.id
+    await getProjectStorage().setActiveProjectId(newProjectId)
     await useAssetStore.getState().setActiveProject(newProjectId)
     await useAssetStore.getState().hydrateProject(newProjectId, assets)
-    get().saveCurrentProject()
-
+    await get().saveCurrentProject()
     const referenced = collectAssetKeys(useEditorStore.getState().project)
     const missing = [...referenced].filter((key) => !(key in assets))
     return { missing }
   },
 }))
 
-// ─── Auto-init + auto-save ─────────────────────────────────────────────────────
+export async function bootstrapProjects(): Promise<void> {
+  await useProjectsStore.getState().initialize()
+}
 
-// Initialize on first import
-useProjectsStore.getState().initialize()
+let saveTimer: ReturnType<typeof setTimeout> | null = null
 
-// Debounced auto-save: 1.5s after last project change
-let _saveTimer: ReturnType<typeof setTimeout> | null = null
+function scheduleAutoSave(delayMs: number): void {
+  if (saveTimer) clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => {
+    if (isCaptureLocked()) {
+      scheduleAutoSave(250)
+      return
+    }
+    if (conflictedProjectIds.has(useEditorStore.getState().project.id)) return
+    void useProjectsStore.getState().saveCurrentProject().catch(() => {})
+  }, delayMs)
+}
 
-useEditorStore.subscribe((state, prev) => {
-  if (!useProjectsStore.getState().initialized) return
-  if (state.project === prev.project) return
-
-  if (_saveTimer) clearTimeout(_saveTimer)
-  _saveTimer = setTimeout(() => {
-    useProjectsStore.getState().saveCurrentProject()
-  }, 1500)
+useEditorStore.subscribe((state, previous) => {
+  if (!useProjectsStore.getState().initialized || state.project === previous.project) return
+  scheduleAutoSave(1500)
 })
+
+function registerPagehideFlush(): void {
+  if (pagehideListenerRegistered || typeof window === 'undefined') return
+  pagehideListenerRegistered = true
+  window.addEventListener('pagehide', () => {
+    if (!useProjectsStore.getState().initialized || isCaptureLocked()) return
+    const payload = projectPersistencePayload()
+    if (conflictedProjectIds.has(payload.meta.id)) return
+    // This is only reliable for the synchronous local adapter; a network adapter needs sendBeacon support.
+    void getProjectStorage().saveProject(payload.meta, payload.json).catch(() => {})
+  })
+}
+
+registerPagehideFlush()

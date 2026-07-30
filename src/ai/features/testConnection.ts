@@ -1,4 +1,4 @@
-import { chat } from '@/ai/client'
+import { transportChat } from '@/ai/transport'
 import type { AiAuth } from '@/ai/features/translateText'
 
 /**
@@ -8,7 +8,7 @@ import type { AiAuth } from '@/ai/features/translateText'
  * providers/models that list fine but fail (or are incompatible) at call time.
  */
 export async function testAiConnection(auth: AiAuth): Promise<string> {
-  const result = await chat({
+  const result = await transportChat({
     ...auth,
     // Generous budget: some models (e.g. reasoning/"thinking" models) consume
     // part of maxTokens on hidden chain-of-thought before emitting visible

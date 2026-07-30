@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useEditorStore } from './index'
 import type { CustomFormatId, GroupLayer, Layer } from '@/types'
+import { selectFamilyGroups, selectFormatViewGroups } from '@/utils/canvasFormats'
 
 function getActiveGroup() {
   const { project, activeSlideGroupId } = useEditorStore.getState()
@@ -35,37 +36,82 @@ describe('setActiveCanvasFormat', () => {
     expect(useEditorStore.getState().editingGroupId).toBeNull()
     expect(useEditorStore.getState().selectedAccentIndex).toBeNull()
   })
-})
 
-describe('toggleActiveFormat', () => {
-  it('adds an inactive format and removes it when toggled again', () => {
-    const formatId = 'ipad-13'
-    expect(useEditorStore.getState().project.settings.activeFormats).not.toContain(formatId)
+  it('keeps the active group when all groups are legacy unscoped groups', () => {
+    const activeGroupId = useEditorStore.getState().activeSlideGroupId
 
-    useEditorStore.getState().toggleActiveFormat(formatId)
-    expect(useEditorStore.getState().project.settings.activeFormats).toContain(formatId)
-
-    useEditorStore.getState().toggleActiveFormat(formatId)
-    expect(useEditorStore.getState().project.settings.activeFormats).not.toContain(formatId)
-  })
-
-  it('reverts to the base format when the current active format is removed', () => {
     useEditorStore.getState().setActiveCanvasFormat('android-phone')
 
-    useEditorStore.getState().toggleActiveFormat('android-phone')
-
-
-    expect(useEditorStore.getState().activeCanvasFormat).toBe('base')
-    expect(useEditorStore.getState().project.settings.activeFormats).not.toContain('android-phone')
+    expect(useEditorStore.getState().activeSlideGroupId).toBe(activeGroupId)
   })
 
-  it('does not toggle off the base format', () => {
-    const before = useEditorStore.getState().project.settings.activeFormats
+  it('does not change the active group when selecting a format', () => {
+    const activeGroup = getActiveGroup()
+    const androidGroupId = 'android-group'
+    useEditorStore.getState().updateProject({
+      slideGroups: [
+        { ...activeGroup, formats: ['ipad-13'] },
+        { ...activeGroup, id: androidGroupId, name: 'Android', formats: ['android-phone'] },
+      ],
+    })
+    useEditorStore.setState({ activeFamily: 'tablet', activeCanvasFormat: 'ipad-13', activeSlideGroupId: activeGroup.id })
+    useEditorStore.temporal.getState().clear()
 
-    useEditorStore.getState().toggleActiveFormat('base')
+    useEditorStore.getState().setActiveCanvasFormat('android-phone')
 
+    expect(useEditorStore.getState().activeSlideGroupId).toBe(activeGroup.id)
+  })
+})
 
-    expect(useEditorStore.getState().project.settings.activeFormats).toEqual(before)
+describe('setActiveFamily', () => {
+  it('restores each family’s last format and active group, and safely falls back when stale', () => {
+    const phone = getActiveGroup()
+    // A distinct key ensures this test reaches lastGroupByFamily fallback rather
+    // than resolving the phone group as a slideKey counterpart.
+    const tablet = { ...phone, id: 'tablet-group', name: 'Tablet', slideKey: 'tablet-distinct-key', formats: ['ipad-13' as const] }
+    useEditorStore.getState().updateProject({
+      settings: { ...useEditorStore.getState().project.settings, activeFormats: ['iphone-69', 'ipad-13'] },
+      slideGroups: [{ ...phone, formats: ['iphone-69' as const] }, tablet],
+    })
+
+    useEditorStore.getState().setActiveFamily('phone')
+    useEditorStore.getState().setActiveCanvasFormat('iphone-69')
+    useEditorStore.getState().setActiveSlideGroup(phone.id)
+    useEditorStore.getState().setActiveFamily('tablet')
+    useEditorStore.getState().setActiveCanvasFormat('ipad-13')
+    useEditorStore.getState().setActiveSlideGroup(tablet.id)
+    useEditorStore.getState().setActiveFamily('phone')
+
+    expect(useEditorStore.getState().activeCanvasFormat).toBe('iphone-69')
+    expect(useEditorStore.getState().activeSlideGroupId).toBe(phone.id)
+
+    useEditorStore.setState({
+      lastFormatByFamily: { phone: 'android-phone' },
+      lastGroupByFamily: { phone: 'missing-group' },
+    })
+    useEditorStore.getState().setActiveFamily('phone')
+
+    expect(useEditorStore.getState().activeCanvasFormat).toBe('base')
+    expect(useEditorStore.getState().activeSlideGroupId).toBe(phone.id)
+  })
+
+  it('prefers the slideKey counterpart over a different remembered target group', () => {
+    const phone = { ...getActiveGroup(), id: 'phone-linked', slideKey: 'linked', formats: ['iphone-69' as const] }
+    const tabletLinked = { ...phone, id: 'tablet-linked', slideKey: 'linked', formats: ['ipad-13' as const] }
+    const tabletRemembered = { ...phone, id: 'tablet-remembered', slideKey: 'other', formats: ['ipad-13' as const] }
+    useEditorStore.getState().updateProject({
+      settings: { ...useEditorStore.getState().project.settings, activeFormats: ['iphone-69', 'ipad-13'] },
+      slideGroups: [phone, tabletLinked, tabletRemembered],
+    })
+    useEditorStore.setState({
+      activeFamily: 'phone',
+      activeSlideGroupId: phone.id,
+      lastGroupByFamily: { tablet: tabletRemembered.id },
+    })
+
+    useEditorStore.getState().setActiveFamily('tablet')
+
+    expect(useEditorStore.getState().activeSlideGroupId).toBe(tabletLinked.id)
   })
 })
 
@@ -150,6 +196,18 @@ describe('format overrides', () => {
 })
 
 describe('custom formats', () => {
+  it('adopts a new custom format into the current family after a fork exists', () => {
+    useEditorStore.getState().createFormatLayout('ipad-13', { content: 'copy', sourceFormat: 'base' })
+    const family = useEditorStore.getState().activeFamily
+
+    useEditorStore.getState().addCustomFormat('My Size', 800, 600)
+
+    const state = useEditorStore.getState()
+    const id = state.activeCanvasFormat as CustomFormatId
+    expect(selectFamilyGroups(state.project, family).every((group) => group.formats?.includes(id))).toBe(true)
+    expect(selectFormatViewGroups(state.project, id, family)).not.toHaveLength(0)
+  })
+
   it('adds a custom format, activates it, and switches to it', () => {
     useEditorStore.getState().addCustomFormat('Banner', 1200, 500)
 
