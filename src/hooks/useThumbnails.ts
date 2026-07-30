@@ -1,4 +1,4 @@
-import { useRef, useState, useCallback, useEffect, useLayoutEffect, type RefObject } from 'react'
+import { useRef, useState, useCallback, useEffect, useLayoutEffect, useMemo, type RefObject } from 'react'
 import type Konva from 'konva'
 import { useEditorStore } from '@/store'
 import { usePreviewCache } from '@/store/previewCache'
@@ -9,12 +9,32 @@ import { getGroupPreviewKey } from '@/utils/previewKey'
 import { idbStorage } from '@/store/idb-storage'
 
 export type ThumbnailMap = Record<string, string[]>
+export type ThumbnailEntry = { key: string; thumbs: string[] }
 
 const DEBOUNCE_MS = 600
 const THUMBNAIL_FLUSH_MS = 300
 const MAX_BACKGROUND_PRECACHE_CANVAS_AREA = 8_000_000
 
-type PersistedThumbnailMap = Record<string, { key: string; thumbs: string[] }>
+export type PersistedThumbnailMap = Record<string, ThumbnailEntry>
+
+export function getFreshThumbs(entries: PersistedThumbnailMap, groupId: string, key: string): string[] | undefined {
+  const entry = entries[groupId]
+  return entry?.key === key ? entry.thumbs : undefined
+}
+
+export function needsThumbnailCapture(entries: PersistedThumbnailMap, groupId: string, key: string): boolean {
+  return getFreshThumbs(entries, groupId, key) === undefined
+}
+
+/** Scheduler identity: format/locale/pano swaps must request a fresh idle pass. */
+export function getPrecacheScheduleKey(
+  family: string,
+  format: string,
+  locale: string,
+  pano: { gapPx?: number; compensate?: boolean } | undefined,
+): string {
+  return `${family}\u0000${format}\u0000${locale}\u0000${pano?.gapPx ?? 0}\u0000${pano?.compensate ?? false}`
+}
 
 export function shouldRestoreCapturedSlideGroup(
   currentState: Pick<ReturnType<typeof useEditorStore.getState>, 'project' | 'activeFamily' | 'activeCanvasFormat' | 'activeSlideGroupId'>,
@@ -40,12 +60,24 @@ export function isBackgroundPrecacheEligible(group: { slideWidth: number; slideH
 
 const thumbnailStorageKey = (projectId: string) => `pixeldeck-thumbs:${projectId}`
 
+const thumbnailKeyMemo = new WeakMap<object, Map<string, string>>()
+
 function getThumbnailKey(...args: Parameters<typeof getGroupPreviewKey>): string {
   const [group, format, locale, pano] = args
+  const scopeKey = `${format}\u0000${locale}\u0000${pano?.gapPx}\u0000${pano?.compensate}`
+  let scopes = thumbnailKeyMemo.get(group)
+  if (!scopes) {
+    scopes = new Map()
+    thumbnailKeyMemo.set(group, scopes)
+  }
+  const cached = scopes.get(scopeKey)
+  if (cached) return cached
   const sanitizedGroup = JSON.parse(JSON.stringify(group, (key, value) => (
     key.endsWith('DataUrl') ? undefined : value
   ))) as typeof group
-  return getGroupPreviewKey(sanitizedGroup, format, locale, pano)
+  const hash = getGroupPreviewKey(sanitizedGroup, format, locale, pano)
+  scopes.set(scopeKey, hash)
+  return hash
 }
 
 /** Capture low-res nav thumbnails for a single group. */
@@ -90,7 +122,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
   const projectPano = useEditorStore((s) => s.project.settings.pano)
   const panoRenderOverride = useEditorStore((s) => s.panoRenderOverride)
 
-  const [thumbnails, setThumbnails] = useState<ThumbnailMap>({})
+  const [thumbnailEntries, setThumbnailEntries] = useState<PersistedThumbnailMap>({})
   const [previewThumbs, setPreviewThumbs] = useState<ThumbnailMap>({})
   const [isCapturingPreview, setIsCapturingPreview] = useState(false)
   const [isPrecachingThumbnails, setIsPrecachingThumbnails] = useState(false)
@@ -98,18 +130,14 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
   const [hasCompletedInitialPrecache, setHasCompletedInitialPrecache] = useState(false)
   const [thumbnailsHydrated, setThumbnailsHydrated] = useState(false)
 
-  const thumbnailsRef = useRef<ThumbnailMap>(thumbnails)
-  useEffect(() => { thumbnailsRef.current = thumbnails }, [thumbnails])
-  // Keys are captured with their rendered thumbnails so persistence never has
-  // to walk every group's layer tree during an ordinary edit-triggered flush.
-  const thumbnailKeysRef = useRef<Record<string, string>>({})
+  const thumbnailEntriesRef = useRef<PersistedThumbnailMap>(thumbnailEntries)
+  useEffect(() => { thumbnailEntriesRef.current = thumbnailEntries }, [thumbnailEntries])
 
   const debounceRef = useRef<number | null>(null)
   const previewAbortRef = useRef(false)
   const previewInFlightRef = useRef<Promise<void> | null>(null)
   const precacheAbortRef = useRef(false)
   const precacheInFlightRef = useRef<Promise<void> | null>(null)
-  const precacheRerunRequestedRef = useRef(false)
   const thumbnailFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   // ── Project-switch reset ────────────────────────────────────────────────────
@@ -118,8 +146,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     if (prevProjectIdRef.current === project.id) return
     prevProjectIdRef.current = project.id
     precacheAbortRef.current = true
-    thumbnailKeysRef.current = {}
-    setThumbnails({})
+    setThumbnailEntries({})
     setPreviewThumbs({})
     usePreviewCache.getState().clear()
   }, [project.id])
@@ -148,10 +175,10 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     const dims = getFormatCanvasDims(group, format, baseFormat, currentProject.settings.customFormats)
 
     const thumbs = await captureGroupThumbs(stage, group, dims, effectivePanoCompensationPx)
-    thumbnailKeysRef.current[group.id] = getThumbnailKey(group, format, locale, { gapPx, compensate })
-    setThumbnails((prev) => ({
+    const key = getThumbnailKey(group, format, locale, { gapPx, compensate })
+    setThumbnailEntries((prev) => ({
       ...prev,
-      [group.id]: thumbs,
+      [group.id]: { key, thumbs },
     }))
 
     // Invalidate preview cache for this group — it's now stale
@@ -172,7 +199,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     queueMicrotask(() => {
       if (cancelled) return
       setThumbnailsHydrated(false)
-      setThumbnails({})
+      setThumbnailEntries({})
     })
     void (async () => {
       const raw = typeof indexedDB === 'undefined' ? null : await idbStorage.getItem(thumbnailStorageKey(project.id))
@@ -180,26 +207,18 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
       if (raw) {
         try {
           const stored = JSON.parse(raw) as PersistedThumbnailMap
-          const {
-            project: currentProject,
-            activeCanvasFormat: currentCanvasFormat,
-            activeLocale: currentLocale,
-            panoRenderOverride: currentPanoOverride,
-          } = useEditorStore.getState()
+          const { project: currentProject } = useEditorStore.getState()
           if (currentProject.id !== project.id) return
-          const { gapPx, compensate } = getEffectivePano(currentProject.settings.pano, currentPanoOverride)
-          const hydrated: ThumbnailMap = {}
-          const hydratedKeys: Record<string, string> = {}
+          const hydrated: PersistedThumbnailMap = {}
           for (const group of currentProject.slideGroups) {
             const entry = stored[group.id]
-            const key = getThumbnailKey(group, currentCanvasFormat, currentLocale, { gapPx, compensate })
-            if (entry?.key === key && entry.thumbs.length >= group.numSlides) {
-              hydrated[group.id] = entry.thumbs
-              hydratedKeys[group.id] = entry.key
+            // Keep a valid previous image as a visual fallback. The derived stale
+            // state validates its key before it is considered fresh or eligible.
+            if (entry && entry.thumbs.length >= group.numSlides) {
+              hydrated[group.id] = entry
             }
           }
-          thumbnailKeysRef.current = hydratedKeys
-          setThumbnails(hydrated)
+          setThumbnailEntries(hydrated)
         } catch {
           // Corrupt or old thumbnail caches are disposable.
         }
@@ -214,42 +233,43 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     if (!thumbnailsHydrated) return
     if (thumbnailFlushRef.current) clearTimeout(thumbnailFlushRef.current)
     thumbnailFlushRef.current = setTimeout(() => {
-      const persisted: PersistedThumbnailMap = {}
-      for (const [groupId, thumbs] of Object.entries(thumbnailsRef.current)) {
-        const key = thumbnailKeysRef.current[groupId]
-        if (key) persisted[groupId] = { key, thumbs }
-      }
-      void idbStorage.setItem(thumbnailStorageKey(project.id), JSON.stringify(persisted))
+      void idbStorage.setItem(thumbnailStorageKey(project.id), JSON.stringify(thumbnailEntriesRef.current))
     }, THUMBNAIL_FLUSH_MS)
     return () => {
       if (thumbnailFlushRef.current) clearTimeout(thumbnailFlushRef.current)
     }
-  }, [thumbnails, thumbnailsHydrated, project.id])
+  }, [thumbnailEntries, thumbnailsHydrated, project.id])
 
   // ── Eager low-res capture for inactive groups ───────────────────────────────
   const precacheLowResThumbnails = useCallback(async () => {
-    if (precacheInFlightRef.current) {
-      precacheRerunRequestedRef.current = true
-      return
-    }
-    const { project: currentProject, activeSlideGroupId: currentGroupId, activeFamily: currentFamily } = useEditorStore.getState()
+    if (precacheInFlightRef.current) return
+    const {
+      project: currentProject,
+      activeSlideGroupId: currentGroupId,
+      activeFamily: currentFamily,
+      activeCanvasFormat: currentFormat,
+      activeLocale: currentLocale,
+      panoRenderOverride: currentOverride,
+    } = useEditorStore.getState()
+    const currentPano = getEffectivePano(currentProject.settings.pano, currentOverride)
     const hasGroupsToCapture = selectFamilyGroups(currentProject, currentFamily).some((group) => {
       if (group.id === currentGroupId) return false
-      const existing = thumbnailsRef.current[group.id]
+      const key = getThumbnailKey(group, currentFormat, currentLocale, currentPano)
+      const existing = getFreshThumbs(thumbnailEntriesRef.current, group.id, key)
       return isBackgroundPrecacheEligible(group)
-        && (!existing || existing.length < group.numSlides || !existing.slice(0, group.numSlides).every(Boolean))
+        && (needsThumbnailCapture(thumbnailEntriesRef.current, group.id, key)
+          || !existing || existing.length < group.numSlides || !existing.slice(0, group.numSlides).every(Boolean))
     })
     if (!hasGroupsToCapture) {
       setHasCompletedInitialPrecache(true)
       return
     }
 
-    let retryMode: 'idle' | 'backoff' | null = null
+    let retryAfterAbort = false
     const run = (async () => {
       setIsPrecachingThumbnails(true)
       useEditorStore.getState().setIsPrecachingThumbnails(true)
       precacheAbortRef.current = false
-      precacheRerunRequestedRef.current = false
       try {
         await runExclusiveCapture(async () => {
           const stage = await waitForStage(stageRef, 2000)
@@ -273,68 +293,54 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
             activeSlideGroupId: originalGroupId,
             activeCanvasFormat: startCanvasFormat,
             activeFamily: startFamily,
+            activeLocale: startLocale,
+            panoRenderOverride: startOverride,
           } = useEditorStore.getState()
           const startProjectId = startProject.id
+          const startPano = getEffectivePano(startProject.settings.pano, startOverride)
           const baseFormat = getProjectBaseFormat(startProject)
           const groupsToCapture = selectFamilyGroups(startProject, startFamily)
             .filter((group) => {
               if (group.id === originalGroupId) return false
-              const existing = thumbnailsRef.current[group.id]
+              const key = getThumbnailKey(group, startCanvasFormat, startLocale, startPano)
+              const existing = getFreshThumbs(thumbnailEntriesRef.current, group.id, key)
               return isBackgroundPrecacheEligible(group)
-                && (!existing || existing.length < group.numSlides || !existing.slice(0, group.numSlides).every(Boolean))
+                && (needsThumbnailCapture(thumbnailEntriesRef.current, group.id, key)
+                  || !existing || existing.length < group.numSlides || !existing.slice(0, group.numSlides).every(Boolean))
             })
           let lastCaptureGroupId = originalGroupId
+          let restoreHappened = false
+          const shouldAbort = () => {
+            const state = useEditorStore.getState()
+            const pano = getEffectivePano(state.project.settings.pano, state.panoRenderOverride)
+            return precacheAbortRef.current
+              || state.project.id !== startProjectId
+              || state.activeFamily !== startFamily
+              || state.activeCanvasFormat !== startCanvasFormat
+              || state.activeLocale !== startLocale
+              || pano.gapPx !== startPano.gapPx
+              || pano.compensate !== startPano.compensate
+          }
 
           try {
-            const group = groupsToCapture[0]
-            if (group) {
-              const currentBeforeCapture = useEditorStore.getState()
-              if (
-                precacheAbortRef.current
-                || currentBeforeCapture.project.id !== startProjectId
-                || currentBeforeCapture.activeFamily !== startFamily
-                || currentBeforeCapture.activeCanvasFormat !== startCanvasFormat
-              ) return
+            for (const group of groupsToCapture) {
+              if (shouldAbort()) break
               useEditorStore.getState().setCaptureSlideGroup(group.id)
               lastCaptureGroupId = group.id
               await nextFrame()
-              const currentAfterFirstFrame = useEditorStore.getState()
-              if (
-                precacheAbortRef.current
-                || currentAfterFirstFrame.project.id !== startProjectId
-                || currentAfterFirstFrame.activeFamily !== startFamily
-                || currentAfterFirstFrame.activeCanvasFormat !== startCanvasFormat
-              ) return
+              if (shouldAbort()) break
               await nextFrame()
-              const currentAfterSecondFrame = useEditorStore.getState()
-              if (
-                precacheAbortRef.current
-                || currentAfterSecondFrame.project.id !== startProjectId
-                || currentAfterSecondFrame.activeFamily !== startFamily
-                || currentAfterSecondFrame.activeCanvasFormat !== startCanvasFormat
-              ) return
+              if (shouldAbort()) break
               await waitForStageCaptureReady(stage, { quietFrames: 1, timeoutMs: 1200 })
+              if (shouldAbort()) break
               const currentState = useEditorStore.getState()
-              if (
-                precacheAbortRef.current
-                || currentState.project.id !== startProjectId
-                || currentState.activeFamily !== startFamily
-                || currentState.activeCanvasFormat !== startCanvasFormat
-              ) return
               const { gapPx, compensate } = getEffectivePano(currentState.project.settings.pano, currentState.panoRenderOverride)
               const dims = getFormatCanvasDims(group, startCanvasFormat, baseFormat, currentState.project.settings.customFormats)
               const captureLocale = currentState.activeLocale
               const groupThumbs = await captureGroupThumbs(stage, group, dims, compensate ? gapPx : 0)
-              const currentAfterCapture = useEditorStore.getState()
-              if (
-                precacheAbortRef.current
-                || currentAfterCapture.project.id !== startProjectId
-                || currentAfterCapture.activeFamily !== startFamily
-                || currentAfterCapture.activeCanvasFormat !== startCanvasFormat
-              ) return
-              thumbnailKeysRef.current[group.id] = getThumbnailKey(group, startCanvasFormat, captureLocale, { gapPx, compensate })
-              setThumbnails((prev) => ({ ...prev, [group.id]: groupThumbs }))
-              precacheRerunRequestedRef.current = true
+              if (shouldAbort()) break
+              const key = getThumbnailKey(group, startCanvasFormat, captureLocale, { gapPx, compensate })
+              setThumbnailEntries((prev) => ({ ...prev, [group.id]: { key, thumbs: groupThumbs } }))
             }
           } finally {
             const currentState = useEditorStore.getState()
@@ -345,10 +351,12 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
               canvasFormat: startCanvasFormat,
             }, lastCaptureGroupId)) {
               currentState.setCaptureSlideGroup(originalGroupId)
+              restoreHappened = true
               if (currentState.selection?.slideGroupId !== originalGroupId) {
                 useEditorStore.setState({ selection: null, editingGroupId: null, selectedAccentIndex: null })
               }
             }
+            if (restoreHappened) await waitForStageCaptureReady(stage, { quietFrames: 1, timeoutMs: 1200 })
           }
         })
       } finally {
@@ -356,19 +364,14 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
         useEditorStore.getState().setIsPrecachingThumbnails(false)
         setPrecacheFreezeFrame(null)
         setHasCompletedInitialPrecache(true)
-        if (precacheRerunRequestedRef.current || precacheAbortRef.current) {
-          retryMode = precacheAbortRef.current ? 'backoff' : 'idle'
-        }
+        retryAfterAbort = precacheAbortRef.current
       }
     })()
 
     precacheInFlightRef.current = run
     try { await run } finally {
       if (precacheInFlightRef.current === run) precacheInFlightRef.current = null
-      if (retryMode) {
-        const retry = () => { void precacheLowResThumbnails() }
-        globalThis.setTimeout(retry, retryMode === 'backoff' ? 3000 : 750)
-      }
+      if (retryAfterAbort) globalThis.setTimeout(() => { void precacheLowResThumbnails() }, 3000)
     }
   }, [stageRef])
 
@@ -386,6 +389,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
   }, [isPrecachingThumbnails])
 
   const slideGroupIds = project.slideGroups.map((group) => group.id).join(',')
+  const precacheScheduleKey = getPrecacheScheduleKey(activeFamily, activeCanvasFormat, activeLocale, getEffectivePano(projectPano, panoRenderOverride))
   useEffect(() => {
     if (!hasCompletedInitialLoad || !thumbnailsHydrated) return
     let timeoutId: ReturnType<typeof setTimeout> | null = null
@@ -404,7 +408,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
       if (idleCallbackId !== null) window.cancelIdleCallback(idleCallbackId)
       if (timeoutId !== null) globalThis.clearTimeout(timeoutId)
     }
-  }, [project.id, slideGroupIds, activeFamily, hasCompletedInitialLoad, thumbnailsHydrated, precacheLowResThumbnails])
+  }, [project.id, slideGroupIds, precacheScheduleKey, activeFamily, activeCanvasFormat, activeLocale, projectPano, panoRenderOverride, hasCompletedInitialLoad, thumbnailsHydrated, precacheLowResThumbnails])
 
   // ── Visibility recovery ──────────────────────────────────────────────────
   // Backgrounded/discarded tabs suspend rAF entirely, which can cause capture
@@ -418,8 +422,12 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
       const { project: currentProject, activeSlideGroupId: currentActiveGroupId } = useEditorStore.getState()
       const needsCapture = currentProject.slideGroups.some((group) => {
         if (group.id === currentActiveGroupId) return false
-        const existing = thumbnailsRef.current[group.id]
-        return !existing || existing.length < group.numSlides || !existing.slice(0, group.numSlides).every(Boolean)
+        const state = useEditorStore.getState()
+        const pano = getEffectivePano(state.project.settings.pano, state.panoRenderOverride)
+        const key = getThumbnailKey(group, state.activeCanvasFormat, state.activeLocale, pano)
+        const existing = getFreshThumbs(thumbnailEntriesRef.current, group.id, key)
+        return needsThumbnailCapture(thumbnailEntriesRef.current, group.id, key)
+          || !existing || existing.length < group.numSlides || !existing.slice(0, group.numSlides).every(Boolean)
       })
       if (!needsCapture) return
 
@@ -542,8 +550,8 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
             usePreviewCache.getState().set(group.id, thumbs.map((dataUrl) => ({ key, dataUrl })))
             // Update preview and nav thumbnail state
             setPreviewThumbs((prev) => ({ ...prev, [group.id]: thumbs }))
-            thumbnailKeysRef.current[group.id] = getThumbnailKey(group, activeCanvasFormat, captureLocale, effectivePano)
-            setThumbnails((prev) => ({ ...prev, [group.id]: lowResThumbs }))
+            const thumbnailKey = getThumbnailKey(group, activeCanvasFormat, captureLocale, effectivePano)
+            setThumbnailEntries((prev) => ({ ...prev, [group.id]: { key: thumbnailKey, thumbs: lowResThumbs } }))
           }
         } finally {
           const currentState = useEditorStore.getState()
@@ -574,8 +582,30 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
 
   const cancelPreviewCapture = useCallback(() => { previewAbortRef.current = true }, [])
 
+  const { thumbnails, staleGroupIds } = useMemo(() => {
+    const pano = getEffectivePano(project.settings.pano, panoRenderOverride)
+    const stale = new Set<string>()
+    const visibleThumbs: ThumbnailMap = {}
+    for (const group of project.slideGroups) {
+      const key = getThumbnailKey(group, activeCanvasFormat, activeLocale, pano)
+      const fresh = getFreshThumbs(thumbnailEntries, group.id, key)
+      const lastKnown = thumbnailEntries[group.id]?.thumbs
+      if (fresh ?? lastKnown) visibleThumbs[group.id] = fresh ?? lastKnown!
+      if (needsThumbnailCapture(thumbnailEntries, group.id, key)
+        || !fresh || fresh.length < group.numSlides || !fresh.slice(0, group.numSlides).every(Boolean)) {
+        stale.add(group.id)
+      }
+    }
+    return {
+      // Preserve stale images as a visual fallback while recapture runs.
+      thumbnails: visibleThumbs,
+      staleGroupIds: stale,
+    }
+  }, [thumbnailEntries, project, activeCanvasFormat, activeLocale, panoRenderOverride])
+
   return {
     thumbnails,
+    staleGroupIds,
     captureNow: captureGroup,
     previewThumbs,
     isCapturingPreview,

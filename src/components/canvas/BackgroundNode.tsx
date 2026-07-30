@@ -7,6 +7,7 @@ import { resolveBrandColor } from '@/utils/brandColors'
 import { toTransparentColor } from '@/utils/gradients'
 import { layerFillToKonvaProps } from '@/utils/konvaFill'
 import { useBrandColors } from '@/hooks/useBrandColors'
+import { useEditorStore } from '@/store'
 import {
   getBackgroundAccentOpacity,
   getBackgroundAccentRenderColor,
@@ -51,11 +52,12 @@ function AccentGlow({
   onTransformEnd: (rx: number, ry: number) => void
 }) {
   const ref = useRef<Konva.Ellipse>(null)
+  const isPrecachingThumbnails = useEditorStore((s) => s.isPrecachingThumbnails)
   const currentRadius = useRef({ rx: accent.rx, ry: accent.ry })
   useEffect(() => {
     currentRadius.current = { rx: accent.rx, ry: accent.ry }
   }, [accent.rx, accent.ry])
-  useKonvaBlur(ref, accent.blur, `${accent.rx}:${accent.ry}:${accent.color}`)
+  useKonvaBlur(ref, accent.blur, `${accent.rx}:${accent.ry}:${accent.color}`, isPrecachingThumbnails)
 
   const resolved = getBackgroundAccentRenderColor(
     accent,
@@ -158,6 +160,7 @@ export function BackgroundNode({
   onAccentTransformEnd,
 }: BackgroundNodeProps) {
   const brandColors = useBrandColors()
+  const isPrecachingThumbnails = useEditorStore((s) => s.isPrecachingThumbnails)
   const fillProps = layerFillToKonvaProps(layer.fill, brandColors, { width: canvasWidth, height: canvasHeight })
   const groupRef = useRef<Konva.Group>(null)
 
@@ -170,7 +173,7 @@ export function BackgroundNode({
     const node = bgImageRef.current
     if (!node || !bgImage) return
     const blur = layer.imageBlur ?? 0
-    if (blur > 0) {
+    if (blur > 0 && !isPrecachingThumbnails) {
       // See effects.ts useKonvaBlur for why the padding is 3× the blur radius.
       node.cache({ offset: Math.ceil(blur * 3) })
       // Native CSS blur avoids Konva.Filters.Blur's known white-halo artifact on
@@ -181,7 +184,7 @@ export function BackgroundNode({
       node.filters([])
     }
     node.getLayer()?.batchDraw()
-  }, [bgImage, layer.imageBlur])
+  }, [bgImage, layer.imageBlur, isPrecachingThumbnails])
 
   const noiseCanvas = getNoiseCanvas()
 

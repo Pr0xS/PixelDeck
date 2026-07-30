@@ -131,7 +131,7 @@ export function PreviewModal({
       open={open}
       onClose={onClose}
       maxWidth="max-w-[90vw]"
-      backdropClassName="fixed inset-0 z-[9999] flex items-center justify-center bg-[rgba(0,0,0,0.82)] p-6 backdrop-blur-sm"
+      backdropClassName="fixed inset-0 z-[9999] flex items-center justify-center bg-[#08080c] p-6"
       backdropStyle={undefined}
       panelClassName="flex max-h-[90vh] w-full flex-col overflow-hidden rounded-xl border bg-[#18181f] shadow-2xl"
       panelStyle={{ borderColor: 'rgba(255,255,255,0.08)' }}

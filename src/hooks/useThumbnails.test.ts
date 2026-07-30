@@ -1,7 +1,13 @@
 import { beforeEach, describe, expect, it } from 'vitest'
 import type { CanvasFormatId } from '@/types'
 import { useEditorStore } from '@/store'
-import { isBackgroundPrecacheEligible, shouldRestoreCapturedSlideGroup } from './useThumbnails'
+import {
+  getFreshThumbs,
+  getPrecacheScheduleKey,
+  isBackgroundPrecacheEligible,
+  needsThumbnailCapture,
+  shouldRestoreCapturedSlideGroup,
+} from './useThumbnails'
 
 function restoreContext() {
   const state = useEditorStore.getState()
@@ -108,5 +114,23 @@ describe('background thumbnail precache eligibility', () => {
   it('skips canvases larger than 8 megapixels', () => {
     expect(isBackgroundPrecacheEligible({ slideWidth: 3840, slideHeight: 2160, numSlides: 1 })).toBe(false)
     expect(isBackgroundPrecacheEligible({ slideWidth: 1320, slideHeight: 2868, numSlides: 2 })).toBe(true)
+  })
+})
+
+describe('thumbnail cache keys', () => {
+  it('treats key-mismatched thumbnails as stale while retaining matching entries', () => {
+    const entries = { group: { key: 'iphone', thumbs: ['data:image/jpeg;base64,thumb'] } }
+
+    expect(getFreshThumbs(entries, 'group', 'iphone')).toEqual(entries.group.thumbs)
+    expect(needsThumbnailCapture(entries, 'group', 'iphone')).toBe(false)
+    expect(getFreshThumbs(entries, 'group', 'wearos')).toBeUndefined()
+    expect(needsThumbnailCapture(entries, 'group', 'wearos')).toBe(true)
+  })
+
+  it('changes the precache scheduler identity for format-only swaps in one family', () => {
+    const iWatch = getPrecacheScheduleKey('watch', 'apple-watch-45', 'en', { gapPx: 24, compensate: false })
+    const wearOs = getPrecacheScheduleKey('watch', 'wearos-round', 'en', { gapPx: 24, compensate: false })
+
+    expect(wearOs).not.toBe(iWatch)
   })
 })

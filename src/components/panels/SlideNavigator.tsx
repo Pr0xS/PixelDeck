@@ -21,6 +21,7 @@ interface ContextMenu {
 
 interface SlideNavigatorProps {
   thumbnails: ThumbnailMap
+  staleGroupIds: Set<string>
   stageRef: React.RefObject<Konva.Stage | null>
   onCaptureThumbnail: (groupId: string) => void
   onOpenPreview: () => void
@@ -48,6 +49,7 @@ interface SortableGroupItemProps {
   renameValue: string
   renameInputRef: React.RefObject<HTMLInputElement | null>
   thumbnails: ThumbnailMap
+  staleGroupIds: Set<string>
   captureThumbnail: (groupId: string) => void
   THUMB_H: number
   handleContextMenu: (e: React.MouseEvent, groupId: string) => void
@@ -67,6 +69,7 @@ function SortableGroupItem({
   renameValue,
   renameInputRef,
   thumbnails,
+  staleGroupIds,
   captureThumbnail,
   THUMB_H,
   handleContextMenu,
@@ -172,7 +175,7 @@ function SortableGroupItem({
                     }}
                     onClick={() => {
                       setActiveSlideGroup(group.id)
-                      if (!thumb) captureThumbnail(group.id)
+                      if (!thumb || staleGroupIds.has(group.id)) captureThumbnail(group.id)
                     }}
                   >
                     {thumb ? (
@@ -210,7 +213,7 @@ function SortableGroupItem({
   )
 }
 
-export function SlideNavigator({ thumbnails, stageRef, onCaptureThumbnail, onOpenPreview }: SlideNavigatorProps) {
+export function SlideNavigator({ thumbnails, staleGroupIds, stageRef, onCaptureThumbnail, onOpenPreview }: SlideNavigatorProps) {
   const {
     project,
     activeSlideGroupId,
@@ -424,6 +427,7 @@ export function SlideNavigator({ thumbnails, stageRef, onCaptureThumbnail, onOpe
                   renameValue={renameValue}
                   renameInputRef={renameInputRef}
                   thumbnails={thumbnails}
+                  staleGroupIds={staleGroupIds}
                   captureThumbnail={onCaptureThumbnail}
                   THUMB_H={THUMB_H}
                   handleContextMenu={handleContextMenu}

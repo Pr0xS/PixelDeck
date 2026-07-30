@@ -56,6 +56,7 @@ export default function App() {
   const [hasMetMinimumSplashTime, setHasMetMinimumSplashTime] = useState(false)
   const {
     thumbnails,
+    staleGroupIds,
     previewThumbs,
     isCapturingPreview,
     isPrecachingThumbnails,
@@ -318,7 +319,7 @@ export default function App() {
           <PropertiesPanel />
         </div>
       </div>
-      <SlideNavigator thumbnails={thumbnails} stageRef={stageRef} onCaptureThumbnail={(groupId) => { void captureNow(groupId) }} onOpenPreview={() => setPreviewOpen(true)} />
+      <SlideNavigator thumbnails={thumbnails} staleGroupIds={staleGroupIds} stageRef={stageRef} onCaptureThumbnail={(groupId) => { void captureNow(groupId) }} onOpenPreview={() => setPreviewOpen(true)} />
 
       <PreviewModal
         open={previewOpen}

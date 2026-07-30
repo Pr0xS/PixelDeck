@@ -18,6 +18,7 @@ export function useKonvaBlur(
   nodeRef: RefObject<Konva.Node | null>,
   blur?: number,
   cacheKey?: string | number | boolean | null,
+  skipCache = false,
 ) {
   useEffect(() => {
     const node = nodeRef.current
@@ -26,7 +27,7 @@ export function useKonvaBlur(
     const blurRadius = blur ?? 0
     node.clearCache()
 
-    if (blurRadius > 0) {
+    if (blurRadius > 0 && !skipCache) {
       // CSS blur(Npx) has a Gaussian tail that extends well beyond N px
       // (sigma = N/2, visible spread ≈ 3×sigma ≈ 1.5×N). Pad generously so the
       // cache canvas doesn't hard-clip the tail at its own boundary.
@@ -39,5 +40,5 @@ export function useKonvaBlur(
     }
 
     node.getLayer()?.batchDraw()
-  }, [nodeRef, blur, cacheKey])
+  }, [nodeRef, blur, cacheKey, skipCache])
 }
