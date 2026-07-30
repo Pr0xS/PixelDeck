@@ -7,6 +7,27 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.0](https://github.com/Pr0xS/PixelDeck/compare/v0.7.1...v0.8.0) - 2026-07-30
+
+### Added
+
+- Format families: every slide group now belongs to a device category — Phone, Tablet, Watch, Desktop, TV, VR, or Game — each with its own authoring Base canvas and default device-surface rebasing (e.g. switching to Tablet auto-rebases Phone mockups onto iPad/Android Tablet; Watch onto Apple Watch/Wear OS).
+- A family switcher in the editing bar, family forking (spin up a new family from an existing Base/format layout, scaled to fit), and a stable `slideKey` identity that links "the same conceptual slide" across families even once their layouts diverge.
+- "Bring content from…" — pulls text and images from the matching slide in another family into the current slide, without touching layout; previews every change before confirming and skips layers with no counterpart or a mismatched type.
+- New device mockups: Apple Watch, Wear OS, Android Tablet, and additional iPad variants.
+- Offscreen thumbnail precache pipeline: an inert offscreen capture stage precaches thumbnails per family/format in the background, with bounded settle waits and imageless-stage settling, instead of only generating thumbnails on-demand when a slide group is visited.
+- Sliding-well redesign of the format/locale editing tab bar.
+- Open-core extensibility seam and an async project storage layer, laying groundwork for pluggable storage backends.
+- `docs/help/*.md` — the in-app Help modal's 14 chapters are now plain Markdown files in the repo, the single source of truth for user-facing documentation (readable directly on GitHub and rendered in-app), replacing the hand-written `HelpContent.tsx` and the stale, unreferenced `HELP.md`. Documents the new format-family model and "Bring content from…" for the first time.
+
+### Fixed
+
+- Phone status bar/model no longer leaks onto Watch family layouts; corrected Apple Watch screen symmetry and redesigned Wear OS side controls.
+- Preview modal: no longer reverts to the previous slide instead of following the one you clicked, and no longer leaves `activeFamily` stale after a cross-family format switch (which previously left Preview showing zero slides).
+- Several thumbnail-capture race conditions: stale cache-key validation on read, decoded-image caching to stop a black flash on slide switch, and real pending-image-load tracking so stage settling doesn't declare victory before images actually finish loading.
+- Switching formats within the same family now does a relative pan + zoom rescale instead of a hard reset.
+- Responsive format/locale bar and editor chrome at small screens.
+
 ## [0.7.1](https://github.com/Pr0xS/PixelDeck/compare/v0.7.0...v0.7.1) - 2026-07-26
 
 ### Fixed
