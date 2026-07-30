@@ -269,7 +269,7 @@ export default function App() {
         {/* Editor view — always mounted so the Konva stage + ResizeObserver are always alive.
             Hidden (pointer-events-none, invisible) when the localization view is on top. */}
         <div
-          className="flex flex-1 overflow-hidden"
+          className="flex min-w-0 flex-1 overflow-hidden"
           style={view === 'localization' ? { visibility: 'hidden', pointerEvents: 'none' } : undefined}
         >
           {/* Layers panel — always visible */}

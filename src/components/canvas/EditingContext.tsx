@@ -1,4 +1,5 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
+import { createPortal } from 'react-dom'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import type { BuiltInFormatId, CanvasFormatId, CustomFormatId } from '@/types'
@@ -9,6 +10,7 @@ import {
   FORMAT_FAMILY,
   FORMAT_FAMILY_LABELS,
   FORMAT_FAMILY_ORDER,
+  getCanvasFormat,
   getFormatLabel,
   getFormatFamilyKey,
   getGroupFamilyKey,
@@ -29,17 +31,18 @@ import { ConfirmDialog } from '@/components/common/ConfirmDialog'
 
 function useDismissOnOutsideClick(
   open: boolean,
-  ref: React.RefObject<HTMLDivElement | null>,
+  refs: React.RefObject<HTMLDivElement | null> | React.RefObject<HTMLDivElement | null>[],
   close: () => void,
 ) {
   useEffect(() => {
     if (!open) return
     const handlePointerDown = (event: MouseEvent) => {
-      if (ref.current && !ref.current.contains(event.target as Node)) close()
+      const targets = Array.isArray(refs) ? refs : [refs]
+      if (!targets.some((ref) => ref.current?.contains(event.target as Node))) close()
     }
     document.addEventListener('mousedown', handlePointerDown)
     return () => document.removeEventListener('mousedown', handlePointerDown)
-  }, [open, ref, close])
+  }, [open, refs, close])
 }
 
 /**
@@ -113,6 +116,56 @@ function SlidingUnderline({
   )
 }
 
+/** Keeps compact tab rows legible when their contents outgrow the editor chrome. */
+function HorizontalScrollAffordance({
+  children,
+  className = '',
+  containerClassName = '',
+}: {
+  children: React.ReactNode
+  className?: string
+  containerClassName?: string
+}) {
+  const scrollRef = useRef<HTMLDivElement>(null)
+  const [edges, setEdges] = useState({ start: false, end: false })
+
+  useLayoutEffect(() => {
+    const element = scrollRef.current
+    if (!element) return
+    const updateEdges = () => {
+      const overflow = element.scrollWidth > element.clientWidth + 1
+      setEdges({
+        start: overflow && element.scrollLeft > 1,
+        end: overflow && element.scrollLeft + element.clientWidth < element.scrollWidth - 1,
+      })
+    }
+    const frame = requestAnimationFrame(updateEdges)
+    const observer = new ResizeObserver(updateEdges)
+    observer.observe(element)
+    if (element.firstElementChild) observer.observe(element.firstElementChild)
+    element.addEventListener('scroll', updateEdges, { passive: true })
+    element.addEventListener('transitionend', updateEdges)
+    window.addEventListener('resize', updateEdges)
+    return () => {
+      cancelAnimationFrame(frame)
+      observer.disconnect()
+      element.removeEventListener('scroll', updateEdges)
+      element.removeEventListener('transitionend', updateEdges)
+      window.removeEventListener('resize', updateEdges)
+    }
+  }, [])
+
+  return (
+    <div className={`relative min-w-0 flex-1 ${containerClassName}`}>
+      <div ref={scrollRef} className={`h-full min-w-0 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden ${className}`}>
+        {children}
+      </div>
+      {edges.start && <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-0 z-10 w-7 bg-gradient-to-r from-[#18181f] via-[#18181f]/90 to-transparent" />}
+      {edges.end && <span aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 z-10 flex w-9 items-center justify-end bg-gradient-to-l from-[#18181f] via-[#18181f]/90 to-transparent pr-1 text-xs text-[#8d8997]">›</span>}
+    </div>
+  )
+}
+
 /** The two editing axes share one piece of persistent editor chrome. */
 export function EditingContextBar() {
   const {
@@ -169,9 +222,11 @@ export function EditingContextBar() {
   const [customLabel, setCustomLabel] = useState('')
   const [customW, setCustomW] = useState('')
   const [customH, setCustomH] = useState('')
+  const [formatMenuPosition, setFormatMenuPosition] = useState({ left: 0, top: 0 })
   const dropdownRef = useRef<HTMLDivElement>(null)
+  const formatMenuRef = useRef<HTMLDivElement>(null)
   const actionsRef = useRef<HTMLDivElement>(null)
-  useDismissOnOutsideClick(dropdownOpen, dropdownRef, () => setDropdownOpen(false))
+  useDismissOnOutsideClick(dropdownOpen || showCustomInput, [dropdownRef, formatMenuRef], () => { setDropdownOpen(false); setShowCustomInput(false) })
   useDismissOnOutsideClick(actionsOpen, actionsRef, () => setActionsOpen(false))
 
   const baseFormat = getProjectBaseFormat({ settings })
@@ -257,6 +312,11 @@ export function EditingContextBar() {
     setCustomW('')
     setCustomH('')
   }
+  const openFormatMenu = () => {
+    const rect = dropdownRef.current?.getBoundingClientRect()
+    if (rect) setFormatMenuPosition({ left: rect.left, top: rect.bottom + 4 })
+    setDropdownOpen((open) => !open)
+  }
   const runFormatAction = (action: (format: CanvasFormatId) => void) => {
     action(activeCanvasFormat)
     setActionsOpen(false)
@@ -309,6 +369,17 @@ export function EditingContextBar() {
       <button onClick={() => removeCustomFormat(formatId)} className="-ml-2 pr-1 text-xs text-[#6b6b7a] opacity-0 transition-opacity group-hover/tab:opacity-100 hover:text-[#f87171]" title="Remove format">×</button>
     </div>
   )
+  const renderFormatAddButton = () => (
+    <div className="relative ml-1 flex h-full shrink-0 items-center" ref={dropdownRef}>
+      <button
+        onClick={openFormatMenu}
+        className="flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-sm text-[#6b6b7a] transition-colors hover:border-[rgba(245,158,11,0.18)] hover:bg-[rgba(245,158,11,0.07)] hover:text-[#fbbf24]"
+        title="Add a canvas format"
+      >
+        +
+      </button>
+    </div>
+  )
   const renderFormatMenuFamilies = (
     formats: readonly BuiltInFormatId[],
     onSelect: (formatId: BuiltInFormatId) => void,
@@ -318,11 +389,15 @@ export function EditingContextBar() {
     return (
       <div key={family} className="pb-1.5 last:pb-0">
         <p className="px-3 pb-1 pt-2 text-[8px] font-semibold uppercase tracking-[0.2em] text-[#575461]">{FORMAT_FAMILY_LABELS[family]}</p>
-        {familyFormats.map((formatId) => (
-          <button key={formatId} onClick={() => onSelect(formatId)} className="w-full px-3 py-1.5 text-left text-xs font-medium text-[#c2c2cf] transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-white">
-            {getFormatLabel(formatId, settings.customFormats)}
-          </button>
-        ))}
+        {familyFormats.map((formatId) => {
+          const { width, height } = getCanvasFormat(formatId)
+          return (
+            <button key={formatId} onClick={() => onSelect(formatId)} className="flex w-full items-center justify-between gap-4 px-3 py-1.5 text-left text-xs font-medium text-[#c2c2cf] transition-colors hover:bg-[rgba(255,255,255,0.06)] hover:text-white">
+              <span>{getFormatLabel(formatId, settings.customFormats)}</span>
+              <span className="shrink-0 font-normal tabular-nums text-[#656574]">{width} × {height}</span>
+            </button>
+          )
+        })}
       </div>
     )
   })
@@ -330,18 +405,15 @@ export function EditingContextBar() {
   return (
     <div className={`relative ${actionsOpen ? 'z-40' : 'z-20'} h-11 shrink-0 border-b border-[rgba(255,255,255,0.07)] bg-[#18181f] px-3`}>
       <div className="flex h-full min-w-0 items-stretch">
-        <section className="flex min-w-0 flex-1 items-stretch" aria-label="Canvas format">
+        <section className="flex min-w-[12rem] flex-1 items-stretch" aria-label="Canvas format">
           <div className="mr-1.5 flex shrink-0 items-center gap-1.5">
             <span className="h-1.5 w-1.5 rounded-full bg-[#f59e0b] shadow-[0_0_7px_rgba(245,158,11,0.35)]" />
             <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#6b6254]">Format</span>
           </div>
           {hasMultipleFamilies ? (
-            <div
-              role="group"
-              aria-label="Format family"
-              className="flex h-full min-w-0 items-stretch gap-0.5 overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
-            >
-              {familyEntries.map(({ family, presetFormats, customFormats }) => {
+            <HorizontalScrollAffordance>
+              <div role="group" aria-label="Format family" className="flex h-full min-w-max items-stretch gap-0.5">
+                {familyEntries.map(({ family, presetFormats, customFormats }) => {
                 const expanded = activeFamily === family
                 const memberCount = presetFormats.length + customFormats.length
                 const panelId = `format-family-${family}`
@@ -415,27 +487,30 @@ export function EditingContextBar() {
                     </div>
                   </div>
                 )
-              })}
-            </div>
+                })}
+                {renderFormatAddButton()}
+              </div>
+            </HorizontalScrollAffordance>
           ) : (
-            <div className="relative flex h-full min-w-0 items-stretch overflow-x-auto [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-              {renderBaseTab()}
-              {activeFamilyPresetFormats.map(renderPresetTab)}
-              {activeFamilyCustomFormats.map(renderCustomTab)}
-              <SlidingUnderline accentClass="bg-[#f59e0b]" activeKey={activeCanvasFormat} />
-            </div>
+            <HorizontalScrollAffordance>
+              <div className="relative flex h-full min-w-max items-stretch">
+                {renderBaseTab()}
+                {activeFamilyPresetFormats.map(renderPresetTab)}
+                {activeFamilyCustomFormats.map(renderCustomTab)}
+                {renderFormatAddButton()}
+                <SlidingUnderline accentClass="bg-[#f59e0b]" activeKey={activeCanvasFormat} />
+              </div>
+            </HorizontalScrollAffordance>
           )}
 
-          <div className="relative ml-1 self-center" ref={dropdownRef}>
-            <button
-              onClick={() => setDropdownOpen((open) => !open)}
-              className="flex h-7 w-7 items-center justify-center rounded-md border border-transparent text-sm text-[#6b6b7a] transition-colors hover:border-[rgba(245,158,11,0.18)] hover:bg-[rgba(245,158,11,0.07)] hover:text-[#fbbf24]"
-              title="Add a custom canvas size"
+          {(dropdownOpen || showCustomInput) && createPortal(
+            <div
+              ref={formatMenuRef}
+              className="fixed z-50"
+              style={{ left: formatMenuPosition.left, top: formatMenuPosition.top }}
             >
-              +
-            </button>
             {dropdownOpen && (
-              <div className="absolute left-0 top-full z-50 mt-1 min-w-[220px] max-h-[min(30rem,calc(100vh-5rem))] overflow-y-auto rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1e1e2a] py-1 shadow-xl">
+              <div className="absolute left-0 top-full z-50 mt-1 min-w-[250px] max-h-[min(30rem,calc(100vh-5rem))] overflow-y-auto rounded-lg border border-[rgba(255,255,255,0.1)] bg-[#1e1e2a] py-1 shadow-xl">
                 {uncreatedFormats.length > 0 && <section aria-label="Create new layout">
                   <p className="px-3 pb-1 pt-1 text-[9px] font-semibold uppercase tracking-[0.15em] text-[#fbbf24]">Create new layout</p>
                   {renderFormatMenuFamilies(uncreatedFormats, (formatId) => {
@@ -506,17 +581,20 @@ export function EditingContextBar() {
                 </div>
               </div>
             )}
-          </div>
+            </div>,
+            document.body,
+          )}
         </section>
 
         {hasMultipleLocales && (
-          <section className="ml-3 flex min-w-0 flex-1 items-stretch border-l border-[rgba(255,255,255,0.08)] pl-3" aria-label="Editing locale">
+          <section className="ml-3 flex w-fit min-w-0 max-w-[38%] shrink items-stretch border-l border-[rgba(255,255,255,0.08)] pl-3" aria-label="Editing locale">
             <div className="mr-1.5 flex shrink-0 items-center gap-1.5">
               <span className="h-1.5 w-1.5 rounded-full bg-[#22d3c5] shadow-[0_0_7px_rgba(34,211,197,0.35)]" />
               <span className="text-[9px] font-semibold uppercase tracking-[0.16em] text-[#526d69]">Locale</span>
             </div>
-            <div className="relative flex h-full min-w-0 items-stretch">
-              <button
+            <HorizontalScrollAffordance containerClassName="w-fit max-w-full flex-none">
+              <div className="relative flex h-full min-w-max items-stretch">
+                <button
                 onClick={() => setActiveLocale(defaultLocale)}
                 data-tab-key={defaultLocale}
                 className={tabClass(activeLocale === defaultLocale)}
@@ -524,7 +602,7 @@ export function EditingContextBar() {
               >
                 Default
               </button>
-              {locales.filter((locale) => locale !== defaultLocale).map((locale) => {
+                {locales.filter((locale) => locale !== defaultLocale).map((locale) => {
                 const isActive = activeLocale === locale
                 // `activeCanvasFormat` doubles as the `localeAdjust` scope: at
                 // the Base tab it already equals BASE_CANVAS_FORMAT, so one
@@ -543,9 +621,10 @@ export function EditingContextBar() {
                     {count > 0 && <span className="text-[9px] font-bold text-[#22d3c5]">●{count}</span>}
                   </button>
                 )
-              })}
-              <SlidingUnderline accentClass="bg-[#22d3c5]" activeKey={activeLocale} />
-            </div>
+                })}
+                <SlidingUnderline accentClass="bg-[#22d3c5]" activeKey={activeLocale} />
+              </div>
+            </HorizontalScrollAffordance>
           </section>
         )}
         {hasActions && (

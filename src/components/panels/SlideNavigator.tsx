@@ -361,9 +361,8 @@ export function SlideNavigator({ thumbnails, staleGroupIds, stageRef, onCaptureT
       className="h-20 flex items-center gap-3 px-3 shrink-0 border-t"
       style={{ background: '#18181f', borderColor }}
     >
-      {/* Width matches LayersPanel (w-56 = 224px) minus this footer's own left px-3 (12px)
-          inset, so the divider lines up exactly under the sidebar's right edge. */}
-      <div className="flex flex-col gap-1.5 shrink-0 w-[212px] pr-3 border-r border-[rgba(255,255,255,0.06)]">
+      {/* Width follows the responsive LayersPanel width, less this footer's 12px inset. */}
+      <div className="flex w-[196px] shrink-0 flex-col gap-1.5 border-r border-[rgba(255,255,255,0.06)] pr-3 min-[1440px]:w-[212px]">
         <div className="text-[10px] font-semibold uppercase tracking-[0.2em] text-[#6b6b7a]">Slides</div>
         {activeGroup && (
           <div className="flex items-center gap-1.5">
