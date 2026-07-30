@@ -3,6 +3,28 @@ import type { RefObject } from 'react'
 
 const DEFAULT_SETTLE_QUIET_FRAMES = 10
 const DEFAULT_SETTLE_TIMEOUT_MS = 15000
+const IMAGELESS_GRACE_MS = 250
+
+type ImageNodeLike = { image(): unknown }
+
+export function classifyStageImages(nodes: ImageNodeLike[]): { pending: number; imageless: number } {
+  return nodes.reduce(
+    (counts, node) => {
+      const image = node.image()
+      if (!image) {
+        counts.imageless += 1
+      } else if (typeof image === 'object' && 'complete' in image && !image.complete) {
+        counts.pending += 1
+      }
+      return counts
+    },
+    { pending: 0, imageless: 0 },
+  )
+}
+
+export function isImagelessBlocking(imageless: number, imagelessSinceMs: number | null, nowMs: number): boolean {
+  return imageless > 0 && imagelessSinceMs !== null && nowMs - imagelessSinceMs < IMAGELESS_GRACE_MS
+}
 
 export const nextFrame = () => new Promise<number>((resolve) => requestAnimationFrame(resolve))
 
@@ -88,20 +110,25 @@ export async function waitForStageSettled(
   const timeoutMs = options.timeoutMs ?? DEFAULT_SETTLE_TIMEOUT_MS
   const start = performance.now()
   let stableFrames = 0
-  let lastCount = -1
+  let images = stage.find('Image')
+  let lastCount = images.length
   let polls = 0
-  let images: ReturnType<typeof stage.find> | null = null
+  let imagelessSince: number | null = null
+  let classification = classifyStageImages(images as unknown as ImageNodeLike[])
 
   while (polls < MIN_POLLS || performance.now() - start < timeoutMs) {
     await nextFrame()
     polls += 1
-    if (!images || polls % 3 === 1) images = stage.find('Image')
-    const allLoaded = images.every((node) => {
-      const img = (node as Konva.Image).image()
-      if (!img) return false
-      if (img instanceof HTMLImageElement) return img.complete
-      return true
-    })
+    if (polls % 3 === 1) images = stage.find('Image')
+    classification = classifyStageImages(images as unknown as ImageNodeLike[])
+    const now = performance.now()
+    if (classification.imageless > 0) {
+      imagelessSince ??= now
+    } else {
+      imagelessSince = null
+    }
+    const allLoaded = classification.pending === 0
+      && !isImagelessBlocking(classification.imageless, imagelessSince, now)
 
     if (allLoaded && images.length === lastCount) {
       stableFrames += 1
@@ -112,7 +139,22 @@ export async function waitForStageSettled(
     lastCount = images.length
   }
 
-  console.warn('[PixelDeck] stage did not settle before capture timeout — capturing anyway')
+  const unsettled = (images as unknown as Array<ImageNodeLike & Partial<Konva.Node>>)
+    .filter((node) => {
+      const image = node.image()
+      return !image || (typeof image === 'object' && 'complete' in image && !image.complete)
+    })
+    .slice(0, 5)
+    .map((node) => ({
+      id: node.id?.(),
+      name: node.name?.(),
+      className: node.getClassName?.(),
+    }))
+  console.warn('[PixelDeck] stage did not settle before capture timeout — capturing anyway', {
+    totalImages: images.length,
+    ...classification,
+    unsettled,
+  })
 }
 
 export async function waitForStageCaptureReady(

@@ -233,13 +233,15 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
       )}
 
       {/* Phone frame on top */}
-      <Image
-        image={frameImage}
-        x={0}
-        y={0}
-        width={fw}
-        height={fh}
-      />
+      {frameImage && (
+        <Image
+          image={frameImage}
+          x={0}
+          y={0}
+          width={fw}
+          height={fh}
+        />
+      )}
     </Group>
   )
 }

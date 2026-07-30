@@ -1,5 +1,12 @@
 import { describe, it, expect, vi } from 'vitest'
-import { acquireCaptureLock, isCaptureLocked, runExclusiveCapture, withIdentityTransform } from './stageCapture'
+import {
+  acquireCaptureLock,
+  classifyStageImages,
+  isCaptureLocked,
+  isImagelessBlocking,
+  runExclusiveCapture,
+  withIdentityTransform,
+} from './stageCapture'
 
 describe('stage capture mutex', () => {
   it('serializes concurrent captures in FIFO order', async () => {
@@ -56,5 +63,42 @@ describe('withIdentityTransform', () => {
 
     expect(() => withIdentityTransform(fakeStage, () => { throw new Error('x') })).toThrow('x')
     expect(state).toEqual({ x: 5, y: 6, scaleX: 2, scaleY: 3 })
+  })
+})
+
+describe('classifyStageImages', () => {
+  it('treats complete image elements as loaded', () => {
+    expect(classifyStageImages([{ image: () => ({ complete: true }) }])).toEqual({ pending: 0, imageless: 0 })
+  })
+
+  it('counts nodes without an image as imageless', () => {
+    expect(classifyStageImages([{ image: () => undefined }])).toEqual({ pending: 0, imageless: 1 })
+  })
+
+  it('counts incomplete image elements as pending', () => {
+    expect(classifyStageImages([{ image: () => ({ complete: false }) }])).toEqual({ pending: 1, imageless: 0 })
+  })
+
+  it('treats non-image objects as loaded', () => {
+    expect(classifyStageImages([{ image: () => ({ width: 100, height: 100 }) }])).toEqual({ pending: 0, imageless: 0 })
+  })
+
+  it('handles an empty node collection', () => {
+    expect(classifyStageImages([])).toEqual({ pending: 0, imageless: 0 })
+  })
+})
+
+describe('isImagelessBlocking', () => {
+  it('does not block when there are no imageless nodes', () => {
+    expect(isImagelessBlocking(0, null, 100)).toBe(false)
+    expect(isImagelessBlocking(0, 0, 100)).toBe(false)
+  })
+
+  it('blocks during the imageless grace period', () => {
+    expect(isImagelessBlocking(1, 100, 349)).toBe(true)
+  })
+
+  it('stops blocking after the imageless grace period', () => {
+    expect(isImagelessBlocking(1, 100, 350)).toBe(false)
   })
 })

@@ -97,15 +97,17 @@ export function EmojiNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
       }}
       onTransformEnd={handleTransformEnd}
     >
-      <KonvaImage
-        ref={imageRef}
-        image={emojiCanvas ?? undefined}
-        x={0}
-        y={0}
-        width={layer.fontSize}
-        height={layer.fontSize}
-        {...shadowProps}
-      />
+      {emojiCanvas && (
+        <KonvaImage
+          ref={imageRef}
+          image={emojiCanvas}
+          x={0}
+          y={0}
+          width={layer.fontSize}
+          height={layer.fontSize}
+          {...shadowProps}
+        />
+      )}
     </Group>
   )
 }
