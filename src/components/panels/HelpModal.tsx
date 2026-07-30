@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react'
 import { ModalShell } from '@/components/ui/ModalShell'
-import { HELP_SECTIONS, type HelpSectionId } from '@/components/panels/help/HelpContent'
+import { HELP_CHAPTERS, type HelpSectionId } from '@/components/panels/help/loadHelpChapters'
+import { HelpMarkdown } from '@/components/panels/help/HelpMarkdown'
 
 interface HelpModalProps {
   open: boolean
@@ -14,12 +15,12 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
   const [query, setQuery] = useState('')
   const contentRef = useRef<HTMLDivElement>(null)
 
-  const activeIndex = HELP_SECTIONS.findIndex((section) => section.id === activeId)
-  const activeSection = HELP_SECTIONS[activeIndex] ?? HELP_SECTIONS[0]
+  const activeIndex = HELP_CHAPTERS.findIndex((section) => section.id === activeId)
+  const activeSection = HELP_CHAPTERS[activeIndex] ?? HELP_CHAPTERS[0]
   const filteredSections = useMemo(() => {
     const normalized = query.trim().toLowerCase()
-    if (!normalized) return HELP_SECTIONS
-    return HELP_SECTIONS.filter((section) => section.title.toLowerCase().includes(normalized))
+    if (!normalized) return HELP_CHAPTERS
+    return HELP_CHAPTERS.filter((section) => section.title.toLowerCase().includes(normalized))
   }, [query])
 
   const selectSection = (id: HelpSectionId) => {
@@ -59,7 +60,7 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
               </p>
             </div>
             <span className="ml-auto hidden rounded-full border border-[rgba(255,255,255,0.07)] bg-[rgba(255,255,255,0.025)] px-2.5 py-1 text-[10px] font-medium tracking-wide text-[#6b6b7a] sm:block">
-              14 SECTIONS
+              {HELP_CHAPTERS.length} SECTIONS
             </span>
           </div>
         </header>
@@ -138,7 +139,7 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
                 className="min-w-0 flex-1 rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#0f0f13] px-3 py-2 text-[11px] text-[#d8d8e2] outline-none focus:border-[rgba(124,110,246,0.5)]"
                 aria-label="Choose help section"
               >
-                {HELP_SECTIONS.map((section) => (
+                {HELP_CHAPTERS.map((section) => (
                   <option key={section.id} value={section.id}>
                     {String(section.number).padStart(2, '0')} · {section.title}
                   </option>
@@ -164,23 +165,23 @@ export function HelpModal({ open, onClose }: HelpModalProps) {
               </div>
 
               <div key={activeSection.id} className="animate-[pixeldeck-loader-enter_240ms_cubic-bezier(0.22,1,0.36,1)_both]">
-                {activeSection.content}
+                <HelpMarkdown source={activeSection.body} />
               </div>
 
               <div className="mt-10 flex items-center justify-between gap-3 border-t border-[rgba(255,255,255,0.06)] pt-5">
                 <button
                   type="button"
                   disabled={activeIndex === 0}
-                  onClick={() => selectSection(HELP_SECTIONS[activeIndex - 1].id)}
+                  onClick={() => selectSection(HELP_CHAPTERS[activeIndex - 1].id)}
                   className="rounded-lg border border-[rgba(255,255,255,0.08)] px-3 py-2 text-[11px] text-[#858594] transition hover:border-[rgba(255,255,255,0.15)] hover:text-[#e0e0e9] disabled:pointer-events-none disabled:opacity-0"
                 >
                   ← Previous
                 </button>
-                <span className="font-mono text-[9px] text-[#484855]">{activeIndex + 1} / {HELP_SECTIONS.length}</span>
+                <span className="font-mono text-[9px] text-[#484855]">{activeIndex + 1} / {HELP_CHAPTERS.length}</span>
                 <button
                   type="button"
-                  disabled={activeIndex === HELP_SECTIONS.length - 1}
-                  onClick={() => selectSection(HELP_SECTIONS[activeIndex + 1].id)}
+                  disabled={activeIndex === HELP_CHAPTERS.length - 1}
+                  onClick={() => selectSection(HELP_CHAPTERS[activeIndex + 1].id)}
                   className="rounded-lg border border-[rgba(124,110,246,0.22)] bg-[rgba(124,110,246,0.07)] px-3 py-2 text-[11px] text-[#aaa1f5] transition hover:border-[rgba(124,110,246,0.42)] hover:bg-[rgba(124,110,246,0.12)] disabled:pointer-events-none disabled:opacity-0"
                 >
                   Next →
