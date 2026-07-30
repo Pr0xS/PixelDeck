@@ -14,7 +14,6 @@ export type ThumbnailEntry = { key: string; thumbs: string[] }
 
 const DEBOUNCE_MS = 600
 const THUMBNAIL_FLUSH_MS = 300
-const MAX_BACKGROUND_PRECACHE_CANVAS_AREA = 8_000_000
 
 export type PersistedThumbnailMap = Record<string, ThumbnailEntry>
 
@@ -54,10 +53,6 @@ export function shouldRestoreCapturedSlideGroup(
     && currentState.activeFamily === original.family
     && currentState.activeCanvasFormat === original.canvasFormat
     && currentState.activeSlideGroupId === lastCaptureGroupId
-}
-
-export function isBackgroundPrecacheEligible(group: { slideWidth: number; slideHeight: number; numSlides?: number }): boolean {
-  return group.slideWidth * (group.numSlides ?? 1) * group.slideHeight <= MAX_BACKGROUND_PRECACHE_CANVAS_AREA
 }
 
 const thumbnailStorageKey = (projectId: string) => `pixeldeck-thumbs:${projectId}`
@@ -255,7 +250,6 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     const pano = getEffectivePano(currentProject.settings.pano, currentOverride)
     const requests = selectFamilyGroups(currentProject, currentFamily)
       .filter((group) => group.id !== currentGroupId)
-      .filter(isBackgroundPrecacheEligible)
       .map((group) => ({
         groupId: group.id,
         format: currentFormat,

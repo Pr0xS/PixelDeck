@@ -4,7 +4,6 @@ import { useEditorStore } from '@/store'
 import {
   getFreshThumbs,
   getPrecacheScheduleKey,
-  isBackgroundPrecacheEligible,
   needsThumbnailCapture,
   shouldRestoreCapturedSlideGroup,
 } from './useThumbnails'
@@ -107,13 +106,6 @@ describe('thumbnail capture restoration', () => {
     expect(useEditorStore.getState().selection).toEqual(selection)
     expect(useEditorStore.getState().editingGroupId).toBe('editing-group')
     expect(useEditorStore.getState().selectedAccentIndex).toBe(2)
-  })
-})
-
-describe('background thumbnail precache eligibility', () => {
-  it('skips canvases larger than 8 megapixels', () => {
-    expect(isBackgroundPrecacheEligible({ slideWidth: 3840, slideHeight: 2160, numSlides: 1 })).toBe(false)
-    expect(isBackgroundPrecacheEligible({ slideWidth: 1320, slideHeight: 2868, numSlides: 2 })).toBe(true)
   })
 })
 

@@ -84,15 +84,21 @@ export function useOffscreenThumbnails(options: {
         if (!stage || cancelled || abortRef.current) return
         await nextFrame()
         await nextFrame()
-        await waitForStageCaptureReady(stage)
-        if (cancelled || abortRef.current || useEditorStore.getState().project.id !== startProjectIdRef.current) return
-        const compensationPx = currentRequest.pano.compensate ? currentRequest.pano.gapPx : 0
-        const geometry = getThumbnailStageGeometry(resolvedGroup, compensationPx)
-        const thumbs = geometry.sliceXs.map((x) => stage.toDataURL({
-          x, y: 0, width: geometry.sliceWidth, height: geometry.sliceHeight,
-          pixelRatio: 1, mimeType: 'image/jpeg', quality: 0.85,
-        }))
-        onCapturedRef.current(currentRequest.groupId, { key: currentRequest.key, thumbs })
+        const timingLabel = `[PixelDeck] offscreen thumbnail ${currentRequest.groupId}`
+        console.time(timingLabel)
+        try {
+          await waitForStageCaptureReady(stage)
+          if (cancelled || abortRef.current || useEditorStore.getState().project.id !== startProjectIdRef.current) return
+          const compensationPx = currentRequest.pano.compensate ? currentRequest.pano.gapPx : 0
+          const geometry = getThumbnailStageGeometry(resolvedGroup, compensationPx)
+          const thumbs = geometry.sliceXs.map((x) => stage.toDataURL({
+            x, y: 0, width: geometry.sliceWidth, height: geometry.sliceHeight,
+            pixelRatio: 1, mimeType: 'image/jpeg', quality: 0.85,
+          }))
+          onCapturedRef.current(currentRequest.groupId, { key: currentRequest.key, thumbs })
+        } finally {
+          console.timeEnd(timingLabel)
+        }
       } finally {
         inFlightRef.current = false
         setIsCapturing(false)
