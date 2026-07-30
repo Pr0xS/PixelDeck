@@ -15,6 +15,7 @@ export type ThumbnailEntry = { key: string; thumbs: string[] }
 const DEBOUNCE_MS = 600
 const THUMBNAIL_FLUSH_MS = 300
 const MAX_BACKGROUND_PRECACHE_CANVAS_AREA = 8_000_000
+const USE_OFFSCREEN_PRECACHE = true
 
 export type PersistedThumbnailMap = Record<string, ThumbnailEntry>
 
@@ -141,7 +142,10 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
   const precacheAbortRef = useRef(false)
   const precacheInFlightRef = useRef<Promise<void> | null>(null)
   const thumbnailFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null)
-  const offscreenThumbnails = useOffscreenThumbnails({
+  const {
+    request: requestOffscreenThumbnails,
+    element: offscreenThumbnailElement,
+  } = useOffscreenThumbnails({
     onCaptured: (groupId, entry) => setThumbnailEntries((prev) => ({ ...prev, [groupId]: entry })),
   })
 
@@ -246,7 +250,39 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
   }, [thumbnailEntries, thumbnailsHydrated, project.id])
 
   // ── Eager low-res capture for inactive groups ───────────────────────────────
-  const precacheLowResThumbnails = useCallback(async () => {
+  const precacheLowResThumbnails = useCallback(() => {
+    if (USE_OFFSCREEN_PRECACHE) {
+      const {
+        project: currentProject,
+        activeSlideGroupId: currentGroupId,
+        activeFamily: currentFamily,
+        activeCanvasFormat: currentFormat,
+        activeLocale: currentLocale,
+        panoRenderOverride: currentOverride,
+      } = useEditorStore.getState()
+      const pano = getEffectivePano(currentProject.settings.pano, currentOverride)
+      const requests = selectFamilyGroups(currentProject, currentFamily)
+        .filter((group) => group.id !== currentGroupId)
+        .filter(isBackgroundPrecacheEligible)
+        .map((group) => ({
+          groupId: group.id,
+          format: currentFormat,
+          locale: currentLocale,
+          pano,
+          key: getThumbnailKey(group, currentFormat, currentLocale, pano),
+          numSlides: group.numSlides,
+        }))
+        .filter((request) => needsThumbnailCapture(
+          thumbnailEntriesRef.current,
+          request.groupId,
+          request.key,
+          request.numSlides,
+        ))
+      requestOffscreenThumbnails(requests)
+      return
+    }
+
+    if (!USE_OFFSCREEN_PRECACHE) return (async () => {
     if (precacheInFlightRef.current) return
     const {
       project: currentProject,
@@ -374,7 +410,8 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
       if (precacheInFlightRef.current === run) precacheInFlightRef.current = null
       if (retryAfterAbort) globalThis.setTimeout(() => { void precacheLowResThumbnails() }, 3000)
     }
-  }, [stageRef])
+    })()
+  }, [stageRef, requestOffscreenThumbnails])
 
   useEffect(() => {
     if (!isPrecachingThumbnails) return
@@ -396,7 +433,8 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     let timeoutId: ReturnType<typeof setTimeout> | null = null
     let idleCallbackId: number | null = null
     const start = () => {
-      precacheLowResThumbnails().catch((err) => console.error('[PixelDeck] precache failed', err))
+      const precache = precacheLowResThumbnails()
+      precache?.catch((err) => console.error('[PixelDeck] precache failed', err))
     }
 
     if ('requestIdleCallback' in window) {
@@ -430,7 +468,8 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
       })
       if (!needsCapture) return
 
-      precacheLowResThumbnails().catch((err) => console.error('[PixelDeck] precache failed', err))
+      const precache = precacheLowResThumbnails()
+      precache?.catch((err) => console.error('[PixelDeck] precache failed', err))
       if (currentActiveGroupId) void captureGroup(currentActiveGroupId)
     }
 
@@ -613,7 +652,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     isCapturingThumbnails: isPrecachingThumbnails,
     captureAllHighRes,
     cancelPreviewCapture,
-    offscreenThumbnailElement: offscreenThumbnails.element,
-    requestOffscreenThumbnails: offscreenThumbnails.request,
+    offscreenThumbnailElement,
+    requestOffscreenThumbnails,
   }
 }
