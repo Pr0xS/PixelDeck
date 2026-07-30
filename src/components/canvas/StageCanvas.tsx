@@ -87,7 +87,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   const {
     containerRef, containerSize, spaceRef, spaceDown, isPanning,
     handleContainerMouseDown, handleFit,
-  } = useStageViewport({ group, panoCompensate, panoCompensationPx, setZoom, setViewportPosition, activeFamily })
+  } = useStageViewport({ group, panoCompensate, panoCompensationPx, setZoom, setViewportPosition, activeFamily, activeCanvasFormat })
   const {
     effectiveCompensationPx, visualGapPx, totalWidth, totalHeight, displayWidth, displayHeight,
   } = useStageGeometry(group, panoCompensate, panoCompensationPx, zoom)
