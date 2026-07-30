@@ -14,6 +14,8 @@ import {
   LOCALE_LAYOUT_FORK_KEYS,
   getFormatFamilyKey,
   normalizeProjectFormats,
+  selectFamilyGroups,
+  selectProjectFamilies,
 } from '@/utils/canvasFormats'
 import type { EditorSet, EditorGet } from './types'
 
@@ -28,6 +30,8 @@ export const LOCALE_SYMMETRIC_SCHEMA_VERSION = 1
  * them INTO `localeAdjust`, the sole locale-layout storage since P4.
  */
 export const LOCALE_ADJUST_SCHEMA_VERSION = 2
+
+export const SLIDE_KEY_SCHEMA_VERSION = 3
 
 export { findLayerInTree, mapLayerTree, updateLayerInTree } from '@/utils/layerTree'
 
@@ -378,6 +382,32 @@ export function migrateProjectToLocaleAdjust(project: Project): { project: Proje
 }
 
 /**
+ * Assign missing `slideKey`s. For legacy projects with multiple families and
+ * no linkage, this is a one-time best-effort guess by position within each
+ * family's group list — the same heuristic the app would otherwise redo on
+ * every family switch. Once assigned it's frozen data and never recomputed.
+ */
+export function migrateProjectSlideKeys(project: Project): Project {
+  if (project.slideGroups.every((g) => g.slideKey)) return project
+  const families = selectProjectFamilies(project)
+  const byFamily = new Map(families.map((f) => [f, selectFamilyGroups(project, f)] as const))
+  const maxLen = Math.max(0, ...Array.from(byFamily.values()).map((groups) => groups.length))
+  const indexKeys = Array.from({ length: maxLen }, () => newId())
+  const keyByGroupId = new Map<string, string>()
+  for (const groups of byFamily.values()) {
+    groups.forEach((group, i) => {
+      if (!group.slideKey) keyByGroupId.set(group.id, indexKeys[i])
+    })
+  }
+  return {
+    ...project,
+    slideGroups: project.slideGroups.map((group) => (
+      group.slideKey ? group : { ...group, slideKey: keyByGroupId.get(group.id) ?? newId() }
+    )),
+  }
+}
+
+/**
  * Derive a `LayoutDelta` from one legacy absolute `localeLayoutOverrides`
  * patch cell, given `R` (the resolved value excluding that cell). Additive
  * for x/y/rotation (`d = V - R`), multiplicative for width/height/fontSize/
@@ -432,6 +462,7 @@ export function newSlideGroup(overrides?: Partial<SlideGroup>): SlideGroup {
     slideWidth: 1290,
     slideHeight: 2796,
     slideNames: ['slide-01'],
+    slideKey: newId(),
     ...otherOverrides,
     layers,
   }
@@ -538,6 +569,10 @@ export function migrateProject(raw: Project): Project {
     const { project: migrated } = migrateProjectToLocaleAdjust(project)
     project.slideGroups = migrated.slideGroups
     project.settings = { ...project.settings, schemaVersion: LOCALE_ADJUST_SCHEMA_VERSION }
+  }
+  if ((project.settings.schemaVersion ?? 0) < SLIDE_KEY_SCHEMA_VERSION) {
+    project.slideGroups = migrateProjectSlideKeys(project).slideGroups
+    project.settings = { ...project.settings, schemaVersion: SLIDE_KEY_SCHEMA_VERSION }
   }
   return project
 }

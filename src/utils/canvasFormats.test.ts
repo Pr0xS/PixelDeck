@@ -34,6 +34,7 @@ import {
   resolveProjectView,
   selectFormatViewGroups,
   selectProjectFamilies,
+  resolveCounterpartGroup,
 } from './canvasFormats'
 import type { CustomCanvasFormat, Layer, PhoneLayer, Project, SlideGroup, TextLayer, ShapeLayer } from '@/types'
 import { getPhoneSpec } from '@/assets/mockups/specs'
@@ -214,6 +215,26 @@ describe('derived format families', () => {
     const project = makeProject()
     project.slideGroups.push(makeGroup([], { id: 'watch', formats: ['apple-watch'] }))
     expect(selectProjectFamilies(project)).toEqual(['phone', 'watch'])
+  })
+
+  it('resolves linked counterparts by slideKey before positional fallback', () => {
+    const project = makeProject()
+    const phoneA = makeGroup([], { id: 'phone-a', slideKey: 'a', formats: ['iphone-69'] })
+    const phoneB = makeGroup([], { id: 'phone-b', slideKey: 'b', formats: ['iphone-69'] })
+    // The tablet A counterpart was deleted, so index 0 would be wrong for B.
+    const tabletB = makeGroup([], { id: 'tablet-b', slideKey: 'b', formats: ['ipad-13'] })
+    project.slideGroups = [phoneA, phoneB, tabletB]
+
+    expect(resolveCounterpartGroup(project, phoneB, 'tablet')?.id).toBe('tablet-b')
+  })
+
+  it('does not use a positional match when fully keyed families disagree', () => {
+    const project = makeProject()
+    const phone = makeGroup([], { id: 'phone', slideKey: 'phone-key', formats: ['iphone-69'] })
+    const tablet = makeGroup([], { id: 'tablet', slideKey: 'tablet-key', formats: ['ipad-13'] })
+    project.slideGroups = [phone, tablet]
+
+    expect(resolveCounterpartGroup(project, phone, 'tablet')).toBeUndefined()
   })
 
   it('uses anchors that never upscale another family member', () => {

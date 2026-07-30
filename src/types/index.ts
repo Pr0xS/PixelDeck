@@ -481,6 +481,13 @@ export interface SlideGroup {
    * each listed format is a similarity transform of it.
    */
   formats?: CanvasFormatId[];
+  /**
+   * Conceptual screen identity, shared by this slide's counterparts in other
+   * format families (e.g. the "watch" fork of this slide has the same slideKey).
+   * Unique within a family, shared across a slide's family forks. Undefined on
+   * legacy/unmigrated projects — see migrateProjectSlideKeys in store/helpers.ts.
+   */
+  slideKey?: string;
   /** Number of adjacent output slides sharing this canvas. 1 = single, 2 = pano */
   numSlides: number;
   slideWidth: number;

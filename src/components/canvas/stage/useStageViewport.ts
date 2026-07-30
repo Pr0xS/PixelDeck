@@ -9,6 +9,8 @@ interface UseStageViewportOptions {
   panoCompensationPx: number
   setZoom: (zoom: number) => void
   setViewportPosition: (x: number, y: number) => void
+  /** Format family key (e.g. 'phone', 'watch', 'vr') — switching families triggers a full fit-to-view. */
+  activeFamily: string
 }
 
 export function useStageViewport({
@@ -17,6 +19,7 @@ export function useStageViewport({
   panoCompensationPx,
   setZoom,
   setViewportPosition,
+  activeFamily,
 }: UseStageViewportOptions) {
   const containerRef = useRef<HTMLDivElement>(null)
   const [containerSize, setContainerSize] = useState({ w: 0, h: 0 })
@@ -26,6 +29,7 @@ export function useStageViewport({
   const panStartRef = useRef<{ clientX: number; clientY: number; vpX: number; vpY: number } | null>(null)
   const lastCenteredGroupId = useRef<string | null>(null)
   const lastContainerW = useRef(0)
+  const lastFamilyRef = useRef<string | null>(null)
 
   useEffect(() => {
     const el = containerRef.current
@@ -143,6 +147,18 @@ export function useStageViewport({
       (containerSize.h - totalH * fitScale) / 2,
     )
   }, [group, containerSize.w, containerSize.h, setZoom, setViewportPosition, panoCompensate, panoCompensationPx])
+
+  // Switching device family (e.g. phone -> watch/vr) spans very different canvas
+  // sizes/aspect ratios; auto-fit so the new format isn't left tiny/oversized at
+  // the previous family's zoom. Switching *format within the same family* keeps
+  // the current zoom/position (sizes are close enough that continuity is preferred).
+  useEffect(() => {
+    if (!containerSize.w || !containerSize.h || !group) return
+    const familyChanged = lastFamilyRef.current !== null && lastFamilyRef.current !== activeFamily
+    lastFamilyRef.current = activeFamily
+    if (familyChanged) handleFit()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [activeFamily, containerSize.w, containerSize.h, group?.id])
 
   return {
     containerRef,

@@ -3,7 +3,9 @@ import type { BackgroundLayer, GroupLayer, ImageLayer, Layer, PhoneLayer, Projec
 import {
   assertProjectShape,
   LOCALE_ADJUST_SCHEMA_VERSION,
+  SLIDE_KEY_SCHEMA_VERSION,
   migrateProject,
+  migrateProjectSlideKeys,
   patchLayerForLocale,
   stripDataUrls,
 } from './helpers'
@@ -100,6 +102,27 @@ function makeSlideGroup(overrides: Partial<SlideGroup> = {}): SlideGroup {
     ...overrides,
   }
 }
+
+describe('migrateProjectSlideKeys', () => {
+  it('assigns matching positional keys across legacy families once and is idempotent', () => {
+    const project = makeProject({
+      slideGroups: [
+        makeSlideGroup({ id: 'phone-1', formats: ['iphone-69'] }),
+        makeSlideGroup({ id: 'phone-2', formats: ['iphone-69'] }),
+        makeSlideGroup({ id: 'tablet-1', formats: ['ipad-13'] }),
+        makeSlideGroup({ id: 'tablet-2', formats: ['ipad-13'] }),
+      ],
+    })
+
+    const migrated = migrateProjectSlideKeys(project)
+    const keys = new Map(migrated.slideGroups.map((group) => [group.id, group.slideKey]))
+
+    expect(keys.get('phone-1')).toBe(keys.get('tablet-1'))
+    expect(keys.get('phone-2')).toBe(keys.get('tablet-2'))
+    expect(keys.get('phone-1')).not.toBe(keys.get('phone-2'))
+    expect(migrateProjectSlideKeys(migrated)).toBe(migrated)
+  })
+})
 
 function makeProject(overrides: Partial<Project> = {}): Project {
   return {
@@ -331,8 +354,8 @@ describe('foldLayerToSymmetric / localeContent migration', () => {
 
     const current = migrateProject(currentProject)
 
-    expect(legacy.settings.schemaVersion).toBe(LOCALE_ADJUST_SCHEMA_VERSION)
-    expect(current.settings.schemaVersion).toBe(LOCALE_ADJUST_SCHEMA_VERSION)
+    expect(legacy.settings.schemaVersion).toBe(SLIDE_KEY_SCHEMA_VERSION)
+    expect(current.settings.schemaVersion).toBe(SLIDE_KEY_SCHEMA_VERSION)
   })
 
   it('migrates legacy locale override spans to marks before folding content', () => {

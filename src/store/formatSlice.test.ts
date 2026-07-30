@@ -66,7 +66,9 @@ describe('setActiveCanvasFormat', () => {
 describe('setActiveFamily', () => {
   it('restores each family’s last format and active group, and safely falls back when stale', () => {
     const phone = getActiveGroup()
-    const tablet = { ...phone, id: 'tablet-group', name: 'Tablet', formats: ['ipad-13' as const] }
+    // A distinct key ensures this test reaches lastGroupByFamily fallback rather
+    // than resolving the phone group as a slideKey counterpart.
+    const tablet = { ...phone, id: 'tablet-group', name: 'Tablet', slideKey: 'tablet-distinct-key', formats: ['ipad-13' as const] }
     useEditorStore.getState().updateProject({
       settings: { ...useEditorStore.getState().project.settings, activeFormats: ['iphone-69', 'ipad-13'] },
       slideGroups: [{ ...phone, formats: ['iphone-69' as const] }, tablet],
@@ -91,6 +93,25 @@ describe('setActiveFamily', () => {
 
     expect(useEditorStore.getState().activeCanvasFormat).toBe('base')
     expect(useEditorStore.getState().activeSlideGroupId).toBe(phone.id)
+  })
+
+  it('prefers the slideKey counterpart over a different remembered target group', () => {
+    const phone = { ...getActiveGroup(), id: 'phone-linked', slideKey: 'linked', formats: ['iphone-69' as const] }
+    const tabletLinked = { ...phone, id: 'tablet-linked', slideKey: 'linked', formats: ['ipad-13' as const] }
+    const tabletRemembered = { ...phone, id: 'tablet-remembered', slideKey: 'other', formats: ['ipad-13' as const] }
+    useEditorStore.getState().updateProject({
+      settings: { ...useEditorStore.getState().project.settings, activeFormats: ['iphone-69', 'ipad-13'] },
+      slideGroups: [phone, tabletLinked, tabletRemembered],
+    })
+    useEditorStore.setState({
+      activeFamily: 'phone',
+      activeSlideGroupId: phone.id,
+      lastGroupByFamily: { tablet: tabletRemembered.id },
+    })
+
+    useEditorStore.getState().setActiveFamily('tablet')
+
+    expect(useEditorStore.getState().activeSlideGroupId).toBe(tabletLinked.id)
   })
 })
 

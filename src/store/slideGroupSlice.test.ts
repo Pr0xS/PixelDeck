@@ -146,6 +146,30 @@ describe('forkSlideGroupForFormat', () => {
     expect(forkChild.localeAdjust?.es?.['apple-watch']).toEqual({ dx: 13, dy: 9 })
   })
 
+  it('shares and backfills a slideKey across forks while dropping source-family locale scopes', () => {
+    const source = getActiveGroup()
+    const layer: ShapeLayer = {
+      id: 'shape', name: 'Shape', type: 'shape', x: 10, y: 20, rotation: 0, opacity: 1, visible: true, locked: false,
+      shapeType: 'rect', width: 30, height: 40, fill: '#000', cornerRadius: 0,
+      localeAdjust: { es: { base: { dx: 50 }, 'iphone-69': { dx: 13 } } },
+    }
+    useEditorStore.getState().updateProject({ slideGroups: [{ ...source, slideKey: undefined, layers: [layer] }] })
+
+    const tabletId = useEditorStore.getState().forkSlideGroupForFormat(source.id, 'ipad-13')
+    const watchId = useEditorStore.getState().forkSlideGroupForFormat(source.id, 'apple-watch')
+    const groups = useEditorStore.getState().project.slideGroups
+    const backfilled = groups.find((group) => group.id === source.id)!
+    const tablet = groups.find((group) => group.id === tabletId)!
+    const watchLayer = groups.find((group) => group.id === watchId)!.layers[0] as ShapeLayer
+    const factor = getFormatScaleFactor(backfilled, 'apple-watch', BASE_CANVAS_FORMAT)
+
+    expect(backfilled.slideKey).toBeTruthy()
+    expect(tablet.slideKey).toBe(backfilled.slideKey)
+    expect(groups.find((group) => group.id === watchId)?.slideKey).toBe(backfilled.slideKey)
+    expect(watchLayer.localeAdjust?.es?.base?.dx).toBeCloseTo(50 * factor)
+    expect(watchLayer.localeAdjust?.es?.['iphone-69']).toBeUndefined()
+  })
+
   it('deep-copies and bakes the resolver fit-centre scale into the new base coordinates', () => {
     const source = getActiveGroup()
     const layer: ShapeLayer = {
@@ -177,30 +201,7 @@ describe('forkSlideGroupForFormat', () => {
   })
 })
 
-describe('pinSlideGroupsToFormats', () => {
-  it('pins only listed groups and undoes every pin in one step', () => {
-    const first = getActiveGroup()
-    const second = { ...first, id: 'second-group', name: 'Second' }
-    const untouched = { ...first, id: 'untouched-group', name: 'Untouched', formats: ['ipad-13' as CanvasFormatId] }
-    useEditorStore.getState().updateProject({ slideGroups: [first, second, untouched] })
-    useEditorStore.temporal.getState().clear()
-
-    useEditorStore.getState().pinSlideGroupsToFormats([first.id, second.id], ['android-phone'])
-
-    const pinned = useEditorStore.getState().project.slideGroups
-    expect(pinned.find((group) => group.id === first.id)?.formats).toEqual(['android-phone'])
-    expect(pinned.find((group) => group.id === second.id)?.formats).toEqual(['android-phone'])
-    expect(pinned.find((group) => group.id === untouched.id)?.formats).toEqual(['ipad-13'])
-    expect(useEditorStore.temporal.getState().pastStates).toHaveLength(1)
-
-    useEditorStore.temporal.getState().undo()
-
-    const reverted = useEditorStore.getState().project.slideGroups
-    expect(reverted.find((group) => group.id === first.id)?.formats).toBeUndefined()
-    expect(reverted.find((group) => group.id === second.id)?.formats).toBeUndefined()
-    expect(reverted.find((group) => group.id === untouched.id)?.formats).toEqual(['ipad-13'])
-  })
-
+describe('createFormatLayout', () => {
   it('creates a complete target family from five unscoped source groups', () => {
     const first = getActiveGroup()
     const sources = Array.from({ length: 5 }, (_, index) => ({
@@ -688,9 +689,9 @@ describe('pullContentFromFamily', () => {
 
   it('is a project-reference-preserving no-op without an ordinal source or for the same family', () => {
     const initial = getActiveGroup()
-    const phone = { ...initial, id: 'phone-only', formats: ['iphone-69' as CanvasFormatId] }
-    const tabletOne = { ...initial, id: 'tablet-1', formats: ['ipad-13' as CanvasFormatId] }
-    const tabletTwo = { ...initial, id: 'tablet-2', formats: ['ipad-13' as CanvasFormatId] }
+    const phone = { ...initial, id: 'phone-only', slideKey: undefined, formats: ['iphone-69' as CanvasFormatId] }
+    const tabletOne = { ...initial, id: 'tablet-1', slideKey: undefined, formats: ['ipad-13' as CanvasFormatId] }
+    const tabletTwo = { ...initial, id: 'tablet-2', slideKey: undefined, formats: ['ipad-13' as CanvasFormatId] }
     useEditorStore.getState().updateProject({ slideGroups: [phone, tabletOne, tabletTwo] })
     useEditorStore.setState({ activeFamily: 'tablet', activeSlideGroupId: tabletTwo.id })
     useEditorStore.temporal.getState().clear()
@@ -706,10 +707,10 @@ describe('pullContentFromFamily', () => {
   it('uses the matching group ordinal rather than the first or third source group', () => {
     const initial = getActiveGroup()
     const phoneGroups = ['First', 'Second', 'Third'].map((value, index) => ({
-      ...initial, id: `phone-${index}`, name: `Phone ${index}`, formats: ['iphone-69' as CanvasFormatId], layers: [textLayer(`phone-text-${index}`, value)],
+      ...initial, id: `phone-${index}`, name: `Phone ${index}`, slideKey: undefined, formats: ['iphone-69' as CanvasFormatId], layers: [textLayer(`phone-text-${index}`, value)],
     }))
     const tabletGroups = ['One', 'Two', 'Three'].map((value, index) => ({
-      ...initial, id: `tablet-${index}`, name: `Tablet ${index}`, formats: ['ipad-13' as CanvasFormatId], layers: [textLayer(`tablet-text-${index}`, value)],
+      ...initial, id: `tablet-${index}`, name: `Tablet ${index}`, slideKey: undefined, formats: ['ipad-13' as CanvasFormatId], layers: [textLayer(`tablet-text-${index}`, value)],
     }))
     useEditorStore.getState().updateProject({ slideGroups: [...phoneGroups, ...tabletGroups] })
     useEditorStore.setState({ activeFamily: 'tablet', activeSlideGroupId: 'tablet-1' })
@@ -717,5 +718,27 @@ describe('pullContentFromFamily', () => {
     useEditorStore.getState().pullContentFromFamily('phone')
 
     expect((useEditorStore.getState().project.slideGroups.find((group) => group.id === 'tablet-1')?.layers[0] as import('@/types').TextLayer).text).toBe('Second')
+  })
+
+  it('uses slideKey over the wrong positional counterpart after a family deletion', () => {
+    const initial = getActiveGroup()
+    const phoneA = { ...initial, id: 'phone-a', slideKey: 'a', formats: ['iphone-69' as CanvasFormatId], layers: [textLayer('a', 'Wrong positional source')] }
+    const phoneB = { ...initial, id: 'phone-b', slideKey: 'b', formats: ['iphone-69' as CanvasFormatId], layers: [textLayer('b', 'Linked source')] }
+    const tabletB = { ...initial, id: 'tablet-b', slideKey: 'b', formats: ['ipad-13' as CanvasFormatId], layers: [textLayer('target', 'Target')] }
+    useEditorStore.getState().updateProject({ slideGroups: [phoneA, phoneB, tabletB] })
+    useEditorStore.setState({ activeFamily: 'tablet', activeSlideGroupId: tabletB.id })
+
+    useEditorStore.getState().pullContentFromFamily('phone')
+
+    expect((useEditorStore.getState().project.slideGroups.find((group) => group.id === tabletB.id)?.layers[0] as TextLayer).text).toBe('Linked source')
+  })
+})
+
+describe('duplicateSlideGroup', () => {
+  it('creates a new conceptual slideKey', () => {
+    const source = getActiveGroup()
+    useEditorStore.getState().duplicateSlideGroup(source.id)
+
+    expect(getActiveGroup().slideKey).not.toBe(source.slideKey)
   })
 })

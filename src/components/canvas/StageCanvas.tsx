@@ -43,7 +43,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     selection, selectedAccentIndex, select, deselect, updateLayer, addImageAt,
     editingGroupId, exitGroupEdit, setZoom, setViewportPosition, clearMultiSelection,
     selectedLayerIds, setMultiSelection, activeLocale, activeCanvasFormat, projectPano,
-    panoRenderOverride, editingTextId,
+    panoRenderOverride, editingTextId, activeFamily,
   } = useEditorStore(useShallow((s) => ({
     project: s.project, activeSlideGroupId: s.activeSlideGroupId, zoom: s.zoom,
     viewportX: s.viewportX, viewportY: s.viewportY, showGrid: s.showGrid,
@@ -55,6 +55,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
     setMultiSelection: s.setMultiSelection, activeLocale: s.activeLocale,
     activeCanvasFormat: s.activeCanvasFormat, projectPano: s.project.settings.pano,
     panoRenderOverride: s.panoRenderOverride, editingTextId: s.editingTextId,
+    activeFamily: s.activeFamily,
   })))
   const ctrlRef = useCtrlKey()
   const assets = useAssetStore((s) => s.assets)
@@ -86,7 +87,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   const {
     containerRef, containerSize, spaceRef, spaceDown, isPanning,
     handleContainerMouseDown, handleFit,
-  } = useStageViewport({ group, panoCompensate, panoCompensationPx, setZoom, setViewportPosition })
+  } = useStageViewport({ group, panoCompensate, panoCompensationPx, setZoom, setViewportPosition, activeFamily })
   const {
     effectiveCompensationPx, visualGapPx, totalWidth, totalHeight, displayWidth, displayHeight,
   } = useStageGeometry(group, panoCompensate, panoCompensationPx, zoom)

@@ -15,6 +15,7 @@ import {
   promoteFormatOverridesToSharedInLayerTree,
   resetFormatOverridesInLayerTree,
   resetFormatVisibilityInLayerTree,
+  resolveCounterpartGroup,
 } from '@/utils/canvasFormats'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
 import {
@@ -87,7 +88,7 @@ export const createFormatSlice = (
   }),
 
   setActiveFamily: (family) => {
-    const { project, lastFormatByFamily, lastGroupByFamily } = get()
+    const { project, lastFormatByFamily, lastGroupByFamily, activeSlideGroupId } = get()
     const families = selectProjectFamilies(project)
     const activeFamily = families.includes(family) ? family : (families[0] ?? 'phone')
     const validFormats = selectFamilyFormats(project, activeFamily)
@@ -97,17 +98,20 @@ export const createFormatSlice = (
       ? rememberedFormat
       : BASE_CANVAS_FORMAT
     const familyGroups = selectFamilyGroups(project, activeFamily)
+    const currentGroup = project.slideGroups.find((group) => group.id === activeSlideGroupId)
+    const counterpart = currentGroup ? resolveCounterpartGroup(project, currentGroup, activeFamily) : undefined
     const rememberedGroup = lastGroupByFamily[activeFamily]
-    const activeSlideGroupId = rememberedGroup && familyGroups.some((group) => (
-      group.id === rememberedGroup && getGroupFamilyKey(group) === activeFamily
-    ))
-      ? rememberedGroup
-      : (familyGroups[0]?.id ?? '')
+    const nextActiveSlideGroupId = counterpart?.id
+      ?? (rememberedGroup && familyGroups.some((group) => (
+        group.id === rememberedGroup && getGroupFamilyKey(group) === activeFamily
+      ))
+        ? rememberedGroup
+        : (familyGroups[0]?.id ?? ''))
 
     set({
       activeFamily,
       activeCanvasFormat,
-      activeSlideGroupId,
+      activeSlideGroupId: nextActiveSlideGroupId,
       selection: null,
       editingGroupId: null,
       selectedLayerIds: [],

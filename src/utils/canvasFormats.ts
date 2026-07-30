@@ -256,6 +256,32 @@ export function selectFamilyGroups(project: Project, family: FormatFamilyKey): S
   return project.slideGroups.filter((group) => getGroupFamilyKey(group) === family)
 }
 
+/**
+ * Resolve a group's counterpart in another family — the "same conceptual
+ * slide". Prefers an explicit slideKey match; falls back to positional index
+ * within each family's group list for legacy/unlinked data (best-effort only).
+ */
+export function resolveCounterpartGroup(
+  project: Project,
+  group: SlideGroup,
+  targetFamily: FormatFamilyKey,
+): SlideGroup | undefined {
+  const targetGroups = selectFamilyGroups(project, targetFamily)
+  if (group.slideKey) {
+    const bySlideKey = targetGroups.find((candidate) => candidate.slideKey === group.slideKey)
+    if (bySlideKey) return bySlideKey
+    // Both sides fully keyed and disagreeing → there is genuinely no counterpart.
+    // Positional fallback below is a legacy bridge only, for target families
+    // that still contain unmigrated/unkeyed groups.
+    if (targetGroups.every((candidate) => candidate.slideKey)) return undefined
+  }
+  const sourceFamily = getGroupFamilyKey(group)
+  if (sourceFamily === null) return undefined
+  const sourceGroups = selectFamilyGroups(project, sourceFamily)
+  const index = sourceGroups.findIndex((candidate) => candidate.id === group.id)
+  return index < 0 ? undefined : targetGroups[index]
+}
+
 /** Whether a format has an editor layout behind it, independent of export selection. */
 export function hasFormatLayout(project: Project, formatId: CanvasFormatId): boolean {
   const family = getFormatFamilyKey(formatId)

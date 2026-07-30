@@ -126,7 +126,6 @@ export interface EditorStore {
   updateSlideGroup: (id: string, patch: Partial<SlideGroup>) => void
   duplicateSlideGroup: (id: string) => void
   forkSlideGroupForFormat: (sourceGroupId: string, targetFormatId: CanvasFormatId, options?: { blank?: boolean }) => string
-  pinSlideGroupsToFormats: (groupIds: string[], formats: CanvasFormatId[]) => void
   addFormatToFamily: (formatId: CanvasFormatId) => void
   pullContentFromFamily: (sourceFamily: import('@/utils/canvasFormats').FormatFamilyKey) => ContentSyncPlan
   /** Atomically fork every uncovered source group into a target format layout. */
