@@ -42,8 +42,8 @@ export function useOffscreenThumbnails(options: {
     if (inFlightRef.current || queueRef.current.length === 0) return
     const request = queueRef.current[0]!
     const state = useEditorStore.getState()
-    // Invariant: inline text editing is limited to the live active group, and
-    // offscreen captures defer that group so TextNode never hides edited text.
+    // Active groups may be captured offscreen; defer while inline text editing
+    // so TextNode never hides the text currently being edited on the live stage.
     if (isCaptureLocked() || (state.editingTextId !== null && request.groupId === state.activeSlideGroupId)) {
       globalThis.setTimeout(() => kickRef.current(), 250)
       return

@@ -8,6 +8,9 @@ import { nextFrame, runExclusiveCapture, waitForStage, waitForStageCaptureReady,
 import { getGroupPreviewKey } from '@/utils/previewKey'
 import { idbStorage } from '@/store/idb-storage'
 import { useOffscreenThumbnails } from '@/hooks/useOffscreenThumbnails'
+import type { CanvasFormatId, Project } from '@/types'
+import type { FormatFamilyKey } from '@/utils/canvasFormats'
+import type { ThumbnailRequest } from '@/hooks/useOffscreenThumbnails'
 
 export type ThumbnailMap = Record<string, string[]>
 export type ThumbnailEntry = { key: string; thumbs: string[] }
@@ -77,6 +80,24 @@ function getThumbnailKey(...args: Parameters<typeof getGroupPreviewKey>): string
   return hash
 }
 
+export function buildThumbnailRequests(
+  project: Project,
+  family: FormatFamilyKey,
+  active: { groupId: string; format: CanvasFormatId; locale: string; pano: { gapPx: number; compensate: boolean } },
+  entries: PersistedThumbnailMap,
+): ThumbnailRequest[] {
+  return selectFamilyGroups(project, family)
+    .map((group) => ({
+      groupId: group.id,
+      format: active.format,
+      locale: active.locale,
+      pano: active.pano,
+      key: getThumbnailKey(group, active.format, active.locale, active.pano),
+      numSlides: group.numSlides,
+    }))
+    .filter((request) => needsThumbnailCapture(entries, request.groupId, request.key, request.numSlides))
+}
+
 /** Capture low-res nav thumbnails for a single group. */
 async function captureGroupThumbs(
   stage: Konva.Stage,
@@ -137,6 +158,8 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
   } = useOffscreenThumbnails({
     onCaptured: (groupId, entry) => setThumbnailEntries((prev) => ({ ...prev, [groupId]: entry })),
   })
+  const requestOffscreenThumbnailsRef = useRef(requestOffscreenThumbnails)
+  useEffect(() => { requestOffscreenThumbnailsRef.current = requestOffscreenThumbnails }, [requestOffscreenThumbnails])
 
   // ── Project-switch reset ────────────────────────────────────────────────────
   const prevProjectIdRef = useRef(project.id)
@@ -154,38 +177,58 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     const targetGroupId = groupId ?? activeSlideGroupId
     const currentState = useEditorStore.getState()
     const group = currentState.project.slideGroups.find((g) => g.id === targetGroupId)
-    if (!stage || !group || targetGroupId !== currentState.activeSlideGroupId) return
+    if (!stage || !group || targetGroupId !== currentState.activeSlideGroupId) return false
 
-    await nextFrame()
-    const captureState = useEditorStore.getState()
-    if (targetGroupId !== captureState.activeSlideGroupId) return
+    try {
+      await nextFrame()
+      await nextFrame()
+      await waitForStageCaptureReady(stage, { quietFrames: 1, timeoutMs: 1200 })
+      const captureState = useEditorStore.getState()
+      if (targetGroupId !== captureState.activeSlideGroupId) return false
 
-    const {
-      activeCanvasFormat: format,
-      activeLocale: locale,
-      project: currentProject,
-      panoRenderOverride: currentOverride,
-    } = captureState
-    const { gapPx, compensate } = getEffectivePano(currentProject.settings.pano, currentOverride)
-    const effectivePanoCompensationPx = compensate ? gapPx : 0
-    const baseFormat = getProjectBaseFormat(currentProject)
-    const dims = getFormatCanvasDims(group, format, baseFormat, currentProject.settings.customFormats)
+      const {
+        activeCanvasFormat: format,
+        activeLocale: locale,
+        project: currentProject,
+        panoRenderOverride: currentOverride,
+      } = captureState
+      const { gapPx, compensate } = getEffectivePano(currentProject.settings.pano, currentOverride)
+      const effectivePanoCompensationPx = compensate ? gapPx : 0
+      const baseFormat = getProjectBaseFormat(currentProject)
+      const dims = getFormatCanvasDims(group, format, baseFormat, currentProject.settings.customFormats)
 
-    const thumbs = await captureGroupThumbs(stage, group, dims, effectivePanoCompensationPx)
-    const key = getThumbnailKey(group, format, locale, { gapPx, compensate })
-    setThumbnailEntries((prev) => ({
-      ...prev,
-      [group.id]: { key, thumbs },
-    }))
+      const thumbs = await captureGroupThumbs(stage, group, dims, effectivePanoCompensationPx)
+      const key = getThumbnailKey(group, format, locale, { gapPx, compensate })
+      setThumbnailEntries((prev) => ({
+        ...prev,
+        [group.id]: { key, thumbs },
+      }))
 
-    // Invalidate preview cache for this group — it's now stale
-    usePreviewCache.getState().invalidate(group.id)
+      // Invalidate preview cache for this group — it's now stale
+      usePreviewCache.getState().invalidate(group.id)
+      return true
+    } catch (err) {
+      console.error('[PixelDeck] active-group thumbnail capture failed', err)
+      return false
+    }
   }, [activeSlideGroupId, stageRef])
 
   useEffect(() => {
     if (!activeSlideGroupId || !thumbnailsHydrated) return
     if (debounceRef.current) window.clearTimeout(debounceRef.current)
-    debounceRef.current = window.setTimeout(() => { void captureGroup(activeSlideGroupId) }, DEBOUNCE_MS)
+    debounceRef.current = window.setTimeout(() => {
+      void captureGroup(activeSlideGroupId).then((captured) => {
+        if (captured) return
+        const state = useEditorStore.getState()
+        const pano = getEffectivePano(state.project.settings.pano, state.panoRenderOverride)
+        requestOffscreenThumbnailsRef.current(buildThumbnailRequests(state.project, state.activeFamily, {
+          groupId: activeSlideGroupId,
+          format: state.activeCanvasFormat,
+          locale: state.activeLocale,
+          pano,
+        }, thumbnailEntriesRef.current).filter((request) => request.groupId === activeSlideGroupId))
+      })
+    }, DEBOUNCE_MS)
     return () => {
       if (debounceRef.current) { window.clearTimeout(debounceRef.current); debounceRef.current = null }
     }
@@ -239,31 +282,14 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
 
   // ── Eager low-res capture for inactive groups ───────────────────────────────
   const precacheLowResThumbnails = useCallback(() => {
-    const {
-      project: currentProject,
-      activeSlideGroupId: currentGroupId,
-      activeFamily: currentFamily,
-      activeCanvasFormat: currentFormat,
-      activeLocale: currentLocale,
-      panoRenderOverride: currentOverride,
-    } = useEditorStore.getState()
-    const pano = getEffectivePano(currentProject.settings.pano, currentOverride)
-    const requests = selectFamilyGroups(currentProject, currentFamily)
-      .filter((group) => group.id !== currentGroupId)
-      .map((group) => ({
-        groupId: group.id,
-        format: currentFormat,
-        locale: currentLocale,
-        pano,
-        key: getThumbnailKey(group, currentFormat, currentLocale, pano),
-        numSlides: group.numSlides,
-      }))
-      .filter((request) => needsThumbnailCapture(
-        thumbnailEntriesRef.current,
-        request.groupId,
-        request.key,
-        request.numSlides,
-      ))
+    const state = useEditorStore.getState()
+    const pano = getEffectivePano(state.project.settings.pano, state.panoRenderOverride)
+    const requests = buildThumbnailRequests(state.project, state.activeFamily, {
+      groupId: state.activeSlideGroupId,
+      format: state.activeCanvasFormat,
+      locale: state.activeLocale,
+      pano,
+    }, thumbnailEntriesRef.current)
     requestOffscreenThumbnails(requests)
   }, [requestOffscreenThumbnails])
 
@@ -300,7 +326,6 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
 
       const { project: currentProject, activeSlideGroupId: currentActiveGroupId } = useEditorStore.getState()
       const needsCapture = currentProject.slideGroups.some((group) => {
-        if (group.id === currentActiveGroupId) return false
         const state = useEditorStore.getState()
         const pano = getEffectivePano(state.project.settings.pano, state.panoRenderOverride)
         const key = getThumbnailKey(group, state.activeCanvasFormat, state.activeLocale, pano)
@@ -309,7 +334,19 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
       if (!needsCapture) return
 
       precacheLowResThumbnails()
-      if (currentActiveGroupId) void captureGroup(currentActiveGroupId)
+      if (currentActiveGroupId) {
+        void captureGroup(currentActiveGroupId).then((captured) => {
+          if (captured) return
+          const state = useEditorStore.getState()
+          const pano = getEffectivePano(state.project.settings.pano, state.panoRenderOverride)
+          requestOffscreenThumbnailsRef.current(buildThumbnailRequests(state.project, state.activeFamily, {
+            groupId: currentActiveGroupId,
+            format: state.activeCanvasFormat,
+            locale: state.activeLocale,
+            pano,
+          }, thumbnailEntriesRef.current).filter((request) => request.groupId === currentActiveGroupId))
+        })
+      }
     }
 
     document.addEventListener('visibilitychange', handleVisibilityChange)

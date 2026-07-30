@@ -2,6 +2,7 @@ import { beforeEach, describe, expect, it } from 'vitest'
 import type { CanvasFormatId } from '@/types'
 import { useEditorStore } from '@/store'
 import {
+  buildThumbnailRequests,
   getFreshThumbs,
   getPrecacheScheduleKey,
   needsThumbnailCapture,
@@ -130,5 +131,34 @@ describe('thumbnail cache keys', () => {
     const wearOs = getPrecacheScheduleKey('watch', 'wearos-round', 'en', { gapPx: 24, compensate: false })
 
     expect(wearOs).not.toBe(iWatch)
+  })
+})
+
+describe('thumbnail request building', () => {
+  it('includes the active group when it is the only group in its family', () => {
+    const source = useEditorStore.getState().project.slideGroups[0]!
+    const activeGroup = { ...source, id: 'vision', formats: ['visionpro' as CanvasFormatId] }
+    const project = { ...useEditorStore.getState().project, slideGroups: [activeGroup] }
+
+    const requests = buildThumbnailRequests(project, 'vr', {
+      groupId: activeGroup.id, format: 'visionpro', locale: 'en', pano: { gapPx: 24, compensate: false },
+    }, {})
+
+    expect(requests).toHaveLength(1)
+    expect(requests[0]?.groupId).toBe(activeGroup.id)
+  })
+
+  it('includes both active and inactive stale groups in one family', () => {
+    const source = useEditorStore.getState().project.slideGroups[0]!
+    const activeGroup = { ...source, id: 'vision-one', formats: ['visionpro' as CanvasFormatId] }
+    const inactiveGroup = { ...source, id: 'vision-two', formats: ['visionpro' as CanvasFormatId] }
+    const project = { ...useEditorStore.getState().project, slideGroups: [activeGroup, inactiveGroup] }
+
+    const requests = buildThumbnailRequests(project, 'vr', {
+      groupId: activeGroup.id, format: 'visionpro', locale: 'en', pano: { gapPx: 24, compensate: false },
+    }, {})
+
+    expect(requests).toHaveLength(2)
+    expect(requests.map((request) => request.groupId)).toEqual([activeGroup.id, inactiveGroup.id])
   })
 })
