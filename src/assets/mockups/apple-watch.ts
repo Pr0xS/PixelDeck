@@ -20,7 +20,7 @@ export const APPLE_WATCH_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox=
     <!-- MASK: white = show case, black = transparent screen hole -->
     <mask id="aw-mask">
       <rect x="8" y="8" width="398" height="498" rx="108" fill="white"/>
-      <rect x="25" y="25" width="372" height="464" rx="83" fill="black"/>
+      <rect x="25" y="25" width="364" height="464" rx="91" fill="black"/>
     </mask>
   </defs>
 
@@ -31,9 +31,9 @@ export const APPLE_WATCH_SVG = `<svg xmlns="http://www.w3.org/2000/svg" viewBox=
     fill="none" stroke="url(#aw-edge)" stroke-width="2" mask="url(#aw-mask)"/>
 
   <!-- Screen edge gives the thin bezel a little depth without filling the display -->
-  <rect x="25" y="25" width="372" height="464" rx="83"
+  <rect x="25" y="25" width="364" height="464" rx="91"
     fill="none" stroke="rgba(0,0,0,0.68)" stroke-width="5"/>
-  <rect x="25" y="25" width="372" height="464" rx="83"
+  <rect x="25" y="25" width="364" height="464" rx="91"
     fill="none" stroke="rgba(255,255,255,0.10)" stroke-width="1.25"/>
 
   <!-- Digital Crown and side button -->

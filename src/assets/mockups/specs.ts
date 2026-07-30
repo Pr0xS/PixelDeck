@@ -90,7 +90,7 @@ export const PIXEL_9_PLAIN: PhoneModelSpec = {
 
 export const APPLE_WATCH: PhoneModelSpec = {
   id: 'apple-watch', label: 'Apple Watch', frameWidth: 422, frameHeight: 514,
-  screen: { x: 25, y: 25, width: 372, height: 464, cornerRadius: 83 },
+  screen: { x: 25, y: 25, width: 364, height: 464, cornerRadius: 91 },
   statusBar: { height: 0, platform: 'ios', contentY: 0 },
 }
 
