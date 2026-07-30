@@ -7,6 +7,7 @@ import { getPanoSlideX, normalizePanoCompensationPx, getEffectivePano } from '@/
 import { nextFrame, runExclusiveCapture, waitForStage, waitForStageCaptureReady, withIdentityTransform } from '@/utils/stageCapture'
 import { getGroupPreviewKey } from '@/utils/previewKey'
 import { idbStorage } from '@/store/idb-storage'
+import { useOffscreenThumbnails } from '@/hooks/useOffscreenThumbnails'
 
 export type ThumbnailMap = Record<string, string[]>
 export type ThumbnailEntry = { key: string; thumbs: string[] }
@@ -140,6 +141,9 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
   const precacheAbortRef = useRef(false)
   const precacheInFlightRef = useRef<Promise<void> | null>(null)
   const thumbnailFlushRef = useRef<ReturnType<typeof setTimeout> | null>(null)
+  const offscreenThumbnails = useOffscreenThumbnails({
+    onCaptured: (groupId, entry) => setThumbnailEntries((prev) => ({ ...prev, [groupId]: entry })),
+  })
 
   // ── Project-switch reset ────────────────────────────────────────────────────
   const prevProjectIdRef = useRef(project.id)
@@ -609,5 +613,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     isCapturingThumbnails: isPrecachingThumbnails,
     captureAllHighRes,
     cancelPreviewCapture,
+    offscreenThumbnailElement: offscreenThumbnails.element,
+    requestOffscreenThumbnails: offscreenThumbnails.request,
   }
 }

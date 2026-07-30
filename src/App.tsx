@@ -64,6 +64,7 @@ export default function App() {
     captureNow,
     captureAllHighRes,
     cancelPreviewCapture,
+    offscreenThumbnailElement,
   } = useThumbnails(stageRef, hasCompletedInitialLoad)
   useImageCacheWarmer(hasCompletedInitialLoad)
 
@@ -332,6 +333,7 @@ export default function App() {
         initialLocale={previewLocale}
       />
       <AppLoadingScreen visible={!hasCompletedInitialLoad} />
+      {offscreenThumbnailElement}
     </div>
   )
 }
