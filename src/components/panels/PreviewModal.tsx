@@ -2,7 +2,7 @@ import { Fragment, useEffect, useRef } from 'react'
 import { useEditorStore } from '@/store'
 import { fillToCss } from '@/utils/gradients'
 import { getLanguageName } from '@/utils/locale'
-import { getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat, selectFormatViewGroups } from '@/utils/canvasFormats'
+import { getExportTargets, getFormatCanvasDims, getFormatFamilyKey, getFormatLabel, getProjectBaseFormat, selectFormatViewGroups } from '@/utils/canvasFormats'
 import type { BackgroundLayer, CanvasFormatId } from '@/types'
 import type { ThumbnailMap } from '@/hooks/useThumbnails'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
@@ -55,6 +55,8 @@ export function PreviewModal({
   const restoreRef = useRef<{
     locale: string
     format: CanvasFormatId
+    family: ReturnType<typeof useEditorStore.getState>['activeFamily']
+    slideGroupId: ReturnType<typeof useEditorStore.getState>['activeSlideGroupId']
   } | null>(null)
   const hasPanoGroups = slideGroups.some((g) => g.numSlides > 1)
 
@@ -68,11 +70,15 @@ export function PreviewModal({
       restoreRef.current = {
         locale: s.activeLocale,
         format: s.activeCanvasFormat,
+        family: s.activeFamily,
+        slideGroupId: s.activeSlideGroupId,
       }
       if (initialLocale) s.setActiveLocale(initialLocale)
       // Ensure a platform (export) format is active — the editor may be on Base.
       const formats = getExportTargets(s.project)
       if (!formats.includes(s.activeCanvasFormat) && formats.length > 0) {
+        const targetFamily = getFormatFamilyKey(formats[0])
+        if (targetFamily && targetFamily !== s.activeFamily) s.setActiveFamily(targetFamily)
         s.setActiveCanvasFormat(formats[0])
       }
       captureAllHighRes({ panoCompensationPx: panoSettings.gapPx, panoCompensate: panoSettings.compensate })
@@ -82,7 +88,9 @@ export function PreviewModal({
       if (restoreRef.current) {
         const s = useEditorStore.getState()
         s.setActiveLocale(restoreRef.current.locale)
+        if (s.activeFamily !== restoreRef.current.family) s.setActiveFamily(restoreRef.current.family)
         s.setActiveCanvasFormat(restoreRef.current.format)
+        s.setCaptureSlideGroup(restoreRef.current.slideGroupId)
         restoreRef.current = null
       }
     }
@@ -96,7 +104,10 @@ export function PreviewModal({
 
   const selectFormat = (format: CanvasFormatId) => {
     if (format === activeCanvasFormat) return
-    useEditorStore.getState().setActiveCanvasFormat(format)
+    const s = useEditorStore.getState()
+    const targetFamily = getFormatFamilyKey(format)
+    if (targetFamily && targetFamily !== s.activeFamily) s.setActiveFamily(targetFamily)
+    s.setActiveCanvasFormat(format)
     recapturePreview()
   }
 
