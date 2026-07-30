@@ -87,7 +87,7 @@ export function useOffscreenThumbnails(options: {
         const timingLabel = `[PixelDeck] offscreen thumbnail ${currentRequest.groupId}`
         console.time(timingLabel)
         try {
-          await waitForStageCaptureReady(stage)
+          await waitForStageCaptureReady(stage, { quietFrames: 1, timeoutMs: 1200 })
           if (cancelled || abortRef.current || useEditorStore.getState().project.id !== startProjectIdRef.current) return
           const compensationPx = currentRequest.pano.compensate ? currentRequest.pano.gapPx : 0
           const geometry = getThumbnailStageGeometry(resolvedGroup, compensationPx)
