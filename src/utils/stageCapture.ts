@@ -1,5 +1,6 @@
 import type Konva from 'konva'
 import type { RefObject } from 'react'
+import { getPendingImageLoadCount } from '@/hooks/useCachedImage'
 
 const DEFAULT_SETTLE_QUIET_FRAMES = 10
 const DEFAULT_SETTLE_TIMEOUT_MS = 15000
@@ -105,7 +106,7 @@ export async function waitForStage(
 export async function waitForStageSettled(
   stage: Konva.Stage,
   options: { quietFrames?: number; timeoutMs?: number } = {},
-): Promise<void> {
+): Promise<boolean> {
   const quietFrames = options.quietFrames ?? DEFAULT_SETTLE_QUIET_FRAMES
   const timeoutMs = options.timeoutMs ?? DEFAULT_SETTLE_TIMEOUT_MS
   const start = performance.now()
@@ -128,11 +129,12 @@ export async function waitForStageSettled(
       imagelessSince = null
     }
     const allLoaded = classification.pending === 0
+      && getPendingImageLoadCount() === 0
       && !isImagelessBlocking(classification.imageless, imagelessSince, now)
 
     if (allLoaded && images.length === lastCount) {
       stableFrames += 1
-      if (stableFrames >= quietFrames) return
+      if (stableFrames >= quietFrames) return true
     } else {
       stableFrames = 0
     }
@@ -155,13 +157,15 @@ export async function waitForStageSettled(
     ...classification,
     unsettled,
   })
+  return false
 }
 
 export async function waitForStageCaptureReady(
   stage: Konva.Stage,
   options: { quietFrames?: number; timeoutMs?: number } = {},
-): Promise<void> {
-  await waitForStageSettled(stage, options)
+): Promise<boolean> {
+  const settled = await waitForStageSettled(stage, options)
   await nextFrame()
   await nextFrame()
+  return settled
 }

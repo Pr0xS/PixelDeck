@@ -3,7 +3,12 @@ import { useEffect, useState } from 'react'
 export type CachedImageStatus = 'loading' | 'loaded' | 'failed'
 
 const imageCache = new Map<string, HTMLImageElement>()
+const inflight = new Set<object>()
 const MAX_CACHE_SIZE = 120
+
+export function getPendingImageLoadCount(): number {
+  return inflight.size
+}
 
 function cacheGet(src: string): HTMLImageElement | undefined {
   const img = imageCache.get(src)
@@ -77,6 +82,15 @@ export function useCachedImage(src: string): [HTMLImageElement | undefined, Cach
   useEffect(() => {
     if (!src || current.image) return
     let cancelled = false
+    let settled = false
+    const token = {}
+    let settleTimeout: ReturnType<typeof setTimeout> | null = null
+    const settle = () => {
+      if (settled) return
+      settled = true
+      inflight.delete(token)
+      if (settleTimeout !== null) clearTimeout(settleTimeout)
+    }
     const img = new Image()
     img.onload = () => {
       img
@@ -84,6 +98,7 @@ export function useCachedImage(src: string): [HTMLImageElement | undefined, Cach
         .catch(() => {})
         .finally(() => {
           if (cancelled) return
+          settle()
           cacheSet(src, img)
           setState((previous) => previous.src === src
             ? { src, image: img, status: 'loaded' }
@@ -92,12 +107,18 @@ export function useCachedImage(src: string): [HTMLImageElement | undefined, Cach
     }
     img.onerror = () => {
       if (cancelled) return
+      settle()
       setState((previous) => previous.src === src
         ? { src, image: undefined, status: 'failed' }
         : previous)
     }
+    inflight.add(token)
+    settleTimeout = setTimeout(settle, 5000)
     img.src = src
-    return () => { cancelled = true }
+    return () => {
+      cancelled = true
+      settle()
+    }
   }, [src, current.image])
 
   return [current.image, current.status]

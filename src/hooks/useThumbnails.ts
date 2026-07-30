@@ -442,8 +442,9 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
             if (shouldAbortCapture()) break
             await nextFrame()
             if (shouldAbortCapture()) break
-            await waitForStageCaptureReady(stage)
+            const settled = await waitForStageCaptureReady(stage)
             if (shouldAbortCapture()) break
+            if (!settled) continue
 
             const groupDims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat, project.settings.customFormats)
             const captureLocale = useEditorStore.getState().activeLocale

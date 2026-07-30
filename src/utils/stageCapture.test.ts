@@ -1,10 +1,18 @@
 import { describe, it, expect, vi } from 'vitest'
+
+const { getPendingImageLoadCount } = vi.hoisted(() => ({
+  getPendingImageLoadCount: vi.fn(() => 0),
+}))
+
+vi.mock('@/hooks/useCachedImage', () => ({ getPendingImageLoadCount }))
+
 import {
   acquireCaptureLock,
   classifyStageImages,
   isCaptureLocked,
   isImagelessBlocking,
   runExclusiveCapture,
+  waitForStageSettled,
   withIdentityTransform,
 } from './stageCapture'
 
@@ -100,5 +108,23 @@ describe('isImagelessBlocking', () => {
 
   it('stops blocking after the imageless grace period', () => {
     expect(isImagelessBlocking(1, 100, 350)).toBe(false)
+  })
+})
+
+describe('waitForStageSettled', () => {
+  it('waits for hook-tracked pending image loads to finish', async () => {
+    let pendingLoads = 1
+    getPendingImageLoadCount.mockImplementation(() => pendingLoads)
+    vi.stubGlobal('requestAnimationFrame', (callback: FrameRequestCallback) => setTimeout(() => callback(performance.now()), 0))
+    const stage = { find: vi.fn(() => []) } as unknown as Parameters<typeof waitForStageSettled>[0]
+    let resolved = false
+    const settled = waitForStageSettled(stage, { quietFrames: 1, timeoutMs: 100 })
+      .then((result) => { resolved = true; return result })
+
+    await new Promise((resolve) => setTimeout(resolve, 10))
+    expect(resolved).toBe(false)
+    pendingLoads = 0
+    await expect(settled).resolves.toBe(true)
+    vi.unstubAllGlobals()
   })
 })
