@@ -7,6 +7,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.3](https://github.com/Pr0xS/PixelDeck/compare/v0.8.2...v0.8.3) - 2026-08-14
+
+### Fixed
+
+- Export button no longer stays permanently disabled after a fresh page load. Stage readiness was only re-checked when the active slide group's memoized reference happened to change (e.g. after opening Preview first); it's now re-checked whenever the Export modal opens and polls for the Konva stage to mount instead of giving up after a single synchronous check.
+- Export format checkboxes now respond correctly when clicking directly on the checkbox, not just its label text. A redundant click handler on the wrapping `<label>` (with `preventDefault()`) was firing alongside the checkbox's own `onChange`, double-toggling the selection back to its original state when clicking the tick itself.
+- Export formats and locales can now be freely checked/unchecked, including down to zero of either. Previously the last checked item silently refused to uncheck with no visible reason. The Export button now disables itself (with a clear "Select at least one format/locale to export" hint) instead of blocking the interaction.
+
 ## [0.8.2](https://github.com/Pr0xS/PixelDeck/compare/v0.8.1...v0.8.2) - 2026-08-14
 
 ### Security

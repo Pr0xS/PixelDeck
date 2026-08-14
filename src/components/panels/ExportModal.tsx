@@ -7,6 +7,7 @@ import { ExportCancelledError, exportProjectImages, type ProjectExportScope, typ
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
 import { downloadDataUrl } from '@/utils/export'
 import { buildExportZipBlob, zipFileNameFor } from '@/utils/exportZip'
+import { waitForStage } from '@/utils/stageCapture'
 import type { CanvasFormatId } from '@/types'
 import { ModalShell } from '@/components/ui/ModalShell'
 import { NumberInput } from '@/components/ui/NumberInput'
@@ -84,29 +85,40 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
     setWasOpen(false)
   }
 
-  // Track stage readiness (stageRef.current must not be read during render)
+  // Track stage readiness (stageRef.current must not be read during render).
+  // Re-checks whenever the modal opens (not just when activeGroup's memo
+  // reference happens to change) and polls if the Konva stage hasn't
+  // mounted yet — right after a fresh page load the stage can still be null
+  // on the modal's first render, and nothing else would ever re-trigger
+  // this check until something incidentally changed activeGroup (e.g.
+  // opening Preview first).
   useEffect(() => {
+    if (!open) return
+    let cancelled = false
     setStageReady(Boolean(stageRef.current))
-  }, [stageRef, activeGroup])
+    if (!stageRef.current) {
+      void waitForStage(stageRef, 5000).then((stage) => {
+        if (!cancelled) setStageReady(Boolean(stage))
+      })
+    }
+    return () => { cancelled = true }
+  }, [stageRef, open])
 
+  // Freely allow checking/unchecking every format or locale, including down
+  // to zero — the Export button (canRunExport) is the single source of truth
+  // for "you can't export like this", via disabled state. Blocking the last
+  // uncheck here instead was more confusing: it silently no-ops on click
+  // with no visible reason, whereas a disabled button communicates it directly.
   const toggleExportFormat = (formatId: CanvasFormatId) => {
-    setSelectedExportFormats((prev) => {
-      if (prev.includes(formatId)) {
-        if (prev.length <= 1) return prev
-        return prev.filter((f) => f !== formatId)
-      }
-      return [...prev, formatId]
-    })
+    setSelectedExportFormats((prev) => (prev.includes(formatId)
+      ? prev.filter((f) => f !== formatId)
+      : [...prev, formatId]))
   }
 
   const toggleExportLocale = (locale: string) => {
-    setSelectedExportLocales((prev) => {
-      if (prev.includes(locale)) {
-        if (prev.length <= 1) return prev
-        return prev.filter((l) => l !== locale)
-      }
-      return [...prev, locale]
-    })
+    setSelectedExportLocales((prev) => (prev.includes(locale)
+      ? prev.filter((l) => l !== locale)
+      : [...prev, locale]))
   }
 
   const writeDirectoryFile = async (
@@ -280,7 +292,15 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
             {isCancelling ? 'Cancelling…' : 'Cancel'}
           </button>
         </div> : <button disabled={!canRunExport} onClick={handleRunExport} className="w-full rounded-lg bg-[#7c6ef6] px-3 py-2.5 text-sm font-medium text-white hover:bg-[#6c5ed6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Export PNGs</button>}
-        {exportError ? <p className="mt-2 rounded border border-[rgba(248,113,113,0.35)] bg-[rgba(248,113,113,0.08)] px-2 py-1.5 text-[10px] leading-snug text-[#fca5a5]">{exportError}</p> : <p className="text-[10px] leading-snug text-[#6b6b7a] mt-2">ZIP and Folder preserve the <span className="text-[#8f90a3]">format/locale/file.png</span> structure.</p>}
+        {exportError ? (
+          <p className="mt-2 rounded border border-[rgba(248,113,113,0.35)] bg-[rgba(248,113,113,0.08)] px-2 py-1.5 text-[10px] leading-snug text-[#fca5a5]">{exportError}</p>
+        ) : !isExporting && selectedExportFormats.length === 0 ? (
+          <p className="mt-2 text-[10px] leading-snug text-[#f59e0b]">Select at least one format to export.</p>
+        ) : !isExporting && selectedExportLocales.length === 0 ? (
+          <p className="mt-2 text-[10px] leading-snug text-[#f59e0b]">Select at least one locale to export.</p>
+        ) : (
+          <p className="text-[10px] leading-snug text-[#6b6b7a] mt-2">ZIP and Folder preserve the <span className="text-[#8f90a3]">format/locale/file.png</span> structure.</p>
+        )}
       </>}
     >
         {/* Scrollable content */}
@@ -333,10 +353,6 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
                     <label
                       key={formatId}
                       className="flex items-center gap-2 px-1 py-0.5 rounded cursor-pointer transition-colors hover:bg-[rgba(255,255,255,0.04)]"
-                      onClick={(e) => {
-                        e.preventDefault()
-                        toggleExportFormat(formatId)
-                      }}
                     >
                       <input
                         type="checkbox"
