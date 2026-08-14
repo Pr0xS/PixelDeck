@@ -5,7 +5,7 @@ vi.mock('./stageCapture', async (importOriginal) => {
   const mod = await importOriginal<typeof import('./stageCapture')>()
   return { ...mod, waitForStageCaptureReady: vi.fn().mockResolvedValue(undefined) }
 })
-import { exportProjectImages } from './multiFormatExport'
+import { ExportCancelledError, exportProjectImages } from './multiFormatExport'
 import { exportGroupImages } from './export'
 import { useEditorStore } from '@/store'
 
@@ -158,6 +158,79 @@ describe('exportProjectImages', () => {
       panoCompensate: true,
       panoCompensationPx: 24,
     })
+
+    const restored = useEditorStore.getState()
+    expect(restored.activeLocale).toBe('es')
+    expect(restored.activeCanvasFormat).toBe('android-phone')
+    expect(restored.activeSlideGroupId).toBe(originalGroupId)
+    expect(restored.panoRenderOverride).toBeNull()
+  })
+
+  it('reports image-level progress with batch metadata and restores state', async () => {
+    const store = useEditorStore.getState()
+    store.setActiveLocale('es')
+    store.setActiveCanvasFormat('android-phone')
+    const originalGroupId = store.activeSlideGroupId
+    store.updateSlideGroup(originalGroupId, { name: 'Hero', numSlides: 2, slideNames: ['one', 'two'] })
+    vi.mocked(exportGroupImages).mockImplementation(async (_stage, group, _mode, _gap, onImageCaptured) => {
+      onImageCaptured?.(1, group.numSlides)
+      onImageCaptured?.(2, group.numSlides)
+      return [{ name: 'one', dataUrl: 'd1' }, { name: 'two', dataUrl: 'd2' }]
+    })
+    const onProgress = vi.fn()
+
+    await exportProjectImages(stage, {
+      formatIds: ['base'],
+      locales: ['en', 'fr'],
+      scope: 'current-group',
+      onProgress,
+    })
+
+    expect(onProgress).toHaveBeenNthCalledWith(1, expect.objectContaining({
+      completed: 1, total: 4, formatId: 'base', formatLabel: 'Base', locale: 'en', groupName: 'Hero', phase: 'rendering',
+    }))
+    expect(onProgress).toHaveBeenNthCalledWith(2, expect.objectContaining({
+      completed: 2, total: 4, formatLabel: 'Base', locale: 'en', groupName: 'Hero', phase: 'rendering',
+    }))
+    expect(onProgress).toHaveBeenNthCalledWith(3, expect.objectContaining({
+      completed: 3, total: 4, formatLabel: 'Base', locale: 'fr', groupName: 'Hero', phase: 'rendering',
+    }))
+    expect(onProgress).toHaveBeenNthCalledWith(4, expect.objectContaining({
+      completed: 4, total: 4, formatLabel: 'Base', locale: 'fr', groupName: 'Hero', phase: 'rendering',
+    }))
+    expect(onProgress).toHaveBeenLastCalledWith(expect.objectContaining({
+      completed: 4, total: 4, formatLabel: 'Base', locale: 'fr', groupName: 'Hero', phase: 'restoring',
+    }))
+    const restored = useEditorStore.getState()
+    expect(restored.activeLocale).toBe('es')
+    expect(restored.activeCanvasFormat).toBe('android-phone')
+    expect(restored.activeSlideGroupId).toBe(originalGroupId)
+  })
+
+  it('exports unchanged when onProgress is omitted', async () => {
+    mockSingleImage()
+
+    await expect(exportProjectImages(stage, {
+      formatIds: ['base'],
+      locales: ['en'],
+      scope: 'current-group',
+    })).resolves.toHaveLength(1)
+  })
+
+  it('rejects cancelled exports and restores global export state', async () => {
+    const store = useEditorStore.getState()
+    store.setActiveLocale('es')
+    store.setActiveCanvasFormat('android-phone')
+    const originalGroupId = store.activeSlideGroupId
+    const controller = new AbortController()
+    controller.abort()
+
+    await expect(exportProjectImages(stage, {
+      formatIds: ['base'],
+      locales: ['en'],
+      scope: 'current-group',
+      signal: controller.signal,
+    })).rejects.toThrow(ExportCancelledError)
 
     const restored = useEditorStore.getState()
     expect(restored.activeLocale).toBe('es')

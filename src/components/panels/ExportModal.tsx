@@ -1,9 +1,9 @@
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import type Konva from 'konva'
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import { countFormatAdjustments, getCanvasFormat, getExportTargets, getFormatCanvasDims, getFormatLabel, getProjectBaseFormat, groupTargetsFormat } from '@/utils/canvasFormats'
-import { exportProjectImages, type ProjectExportScope, type ProjectImageExportResult } from '@/utils/multiFormatExport'
+import { ExportCancelledError, exportProjectImages, type ProjectExportScope, type ProjectImageExportResult } from '@/utils/multiFormatExport'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
 import { downloadDataUrl } from '@/utils/export'
 import { buildExportZipBlob, zipFileNameFor } from '@/utils/exportZip'
@@ -41,6 +41,16 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
   const [panoCompensationInput, setPanoCompensationInput] = useState(String(DEFAULT_PANO_COMPENSATION_PX))
   const [exportOutput, setExportOutput] = useState<ExportOutput>('zip')
   const [isExporting, setIsExporting] = useState(false)
+  const [isCancelling, setIsCancelling] = useState(false)
+  const abortControllerRef = useRef<AbortController | null>(null)
+  const [exportProgress, setExportProgress] = useState<{
+    completed: number
+    total: number
+    formatLabel: string
+    locale: string
+    groupName: string
+    phase: 'rendering' | 'restoring' | 'zipping' | 'writing' | 'downloading'
+  } | null>(null)
   const [exportError, setExportError] = useState<string | null>(null)
   const [stageReady, setStageReady] = useState(false)
 
@@ -78,13 +88,6 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
   useEffect(() => {
     setStageReady(Boolean(stageRef.current))
   }, [stageRef, activeGroup])
-
-  // Auto-dismiss export errors
-  useEffect(() => {
-    if (!exportError) return
-    const timeout = window.setTimeout(() => setExportError(null), 4000)
-    return () => window.clearTimeout(timeout)
-  }, [exportError])
 
   const toggleExportFormat = (formatId: CanvasFormatId) => {
     setSelectedExportFormats((prev) => {
@@ -149,8 +152,11 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
       return
     }
 
+    const controller = new AbortController()
+    abortControllerRef.current = controller
     try {
       setIsExporting(true)
+      setExportProgress(null)
       if (exportOutput === 'folder' && !folderSupported) {
         setExportError('Folder export requires Chrome or Edge. Choose ZIP or Files instead.')
         return
@@ -166,6 +172,8 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
         panoCompensationPx: panoMode === 'split' && compensatePanoExport
           ? normalizePanoCompensationPx(parseInt(panoCompensationInput, 10) || 0)
           : 0,
+        signal: controller.signal,
+        onProgress: (progress) => setExportProgress({ ...progress, phase: progress.phase }),
       })
 
       if (results.length === 0) {
@@ -174,38 +182,106 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
       }
 
       if (exportOutput === 'zip') {
+        setExportProgress((prev) => prev && { ...prev, phase: 'zipping' })
         await downloadZip(results)
       } else if (exportOutput === 'folder' && window.showDirectoryPicker) {
         try {
           const dirHandle = await window.showDirectoryPicker({ mode: 'readwrite' })
-          for (const item of results) await writeDirectoryFile(dirHandle, item)
+          let written = 0
+          for (const item of results) {
+            await writeDirectoryFile(dirHandle, item)
+            written += 1
+            setExportProgress((prev) => prev && {
+              ...prev,
+              phase: 'writing',
+              completed: written,
+              total: results.length,
+            })
+          }
         } catch (err: unknown) {
           if (err instanceof DOMException && err.name === 'AbortError') return
           throw err
         }
       } else {
+        setExportProgress((prev) => prev && { ...prev, phase: 'downloading' })
         await downloadResults(results)
       }
 
       onClose()
-    } catch {
-      setExportError('Export failed. Try again.')
+    } catch (err) {
+      if (err instanceof ExportCancelledError) {
+        setExportError(null)
+      } else {
+        setExportError('Export failed. Try again.')
+      }
     } finally {
       setIsExporting(false)
+      setExportProgress(null)
+      setIsCancelling(false)
+      abortControllerRef.current = null
     }
+  }
+
+  const handleCancelExport = () => {
+    setIsCancelling(true)
+    abortControllerRef.current?.abort()
   }
 
   return (
     <ModalShell
       open={open}
       onClose={onClose}
+      closeOnEscape={!isExporting}
+      closeOnBackdrop={!isExporting}
+      showCloseButton={!isExporting}
       closeLabel="Close export"
       maxWidth="max-w-5xl"
       backdropClassName="fixed inset-0 z-[9999] flex items-center justify-center backdrop-blur-sm"
       panelClassName="relative rounded-2xl border shadow-2xl w-full mx-4 h-[85vh] flex flex-col overflow-hidden"
       header={<div className="px-5 py-4 border-b border-[rgba(255,255,255,0.06)] shrink-0"><h2 className="text-base font-semibold text-[#e8e8f0]">Export Images</h2><p className="text-xs text-[#6b6b7a] mt-0.5">{exportSummary}</p></div>}
       footerClassName="px-6 py-4 border-t border-[rgba(255,255,255,0.06)] shrink-0"
-      footer={<><button disabled={!canRunExport} onClick={handleRunExport} className="w-full rounded-lg bg-[#7c6ef6] px-3 py-2.5 text-sm font-medium text-white hover:bg-[#6c5ed6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">{isExporting ? 'Exporting…' : 'Export PNGs'}</button>{exportError ? <p className="mt-2 rounded border border-[rgba(248,113,113,0.35)] bg-[rgba(248,113,113,0.08)] px-2 py-1.5 text-[10px] leading-snug text-[#fca5a5]">{exportError}</p> : <p className="text-[10px] leading-snug text-[#6b6b7a] mt-2">ZIP and Folder preserve the <span className="text-[#8f90a3]">format/locale/file.png</span> structure.</p>}</>}
+      footer={<>
+        {isExporting && exportProgress && (() => {
+          const isIndeterminate = exportProgress.phase === 'zipping' || exportProgress.phase === 'downloading'
+          const context = exportScope === 'project'
+            ? `${exportProgress.formatLabel} · ${exportProgress.locale} — ${exportProgress.groupName}`
+            : `${exportProgress.formatLabel} · ${exportProgress.locale}`
+          return <div className="mb-3">
+            <p className="mb-1.5 text-[10px] text-[#8f90a3]">{context}</p>
+            <div
+              role="progressbar"
+              aria-valuemin={0}
+              aria-valuemax={exportProgress.total}
+              aria-valuenow={exportProgress.completed}
+              aria-valuetext={`Exporting ${exportProgress.completed} of ${exportProgress.total}: ${exportProgress.formatLabel}, ${exportProgress.locale}`}
+              className="h-1 overflow-hidden rounded bg-[rgba(255,255,255,0.08)]"
+            >
+              <div
+                className={`h-full bg-[#7c6ef6] transition-[width] duration-300 ease-out motion-reduce:transition-none ${isIndeterminate ? 'w-full animate-pulse' : ''}`}
+                style={isIndeterminate ? undefined : { width: `${(exportProgress.completed / Math.max(exportProgress.total, 1)) * 100}%` }}
+              />
+            </div>
+          </div>
+        })()}
+        {isExporting ? <div className="flex gap-2">
+          <button disabled className="flex-1 rounded-lg bg-[#7c6ef6] px-3 py-2.5 text-sm font-medium text-white disabled:opacity-40 disabled:cursor-not-allowed">
+            {exportProgress?.phase === 'rendering'
+              ? `Exporting ${exportProgress.completed} of ${exportProgress.total} (${Math.round((exportProgress.completed / Math.max(exportProgress.total, 1)) * 100)}%)…`
+              : exportProgress?.phase === 'zipping' ? 'Preparing ZIP…'
+                : exportProgress?.phase === 'writing' ? `Saving files… ${exportProgress.completed}/${exportProgress.total} (${Math.round((exportProgress.completed / Math.max(exportProgress.total, 1)) * 100)}%)`
+                  : exportProgress?.phase === 'downloading' ? 'Starting downloads…'
+                    : 'Restoring state…'}
+          </button>
+          <button
+            onClick={handleCancelExport}
+            disabled={isCancelling}
+            className="rounded-lg border border-[rgba(255,255,255,0.15)] px-3 py-2.5 text-sm font-medium text-[#e8e8f0] hover:bg-[rgba(255,255,255,0.06)] disabled:cursor-not-allowed disabled:opacity-40 transition-colors"
+          >
+            {isCancelling ? 'Cancelling…' : 'Cancel'}
+          </button>
+        </div> : <button disabled={!canRunExport} onClick={handleRunExport} className="w-full rounded-lg bg-[#7c6ef6] px-3 py-2.5 text-sm font-medium text-white hover:bg-[#6c5ed6] disabled:opacity-40 disabled:cursor-not-allowed transition-colors">Export PNGs</button>}
+        {exportError ? <p className="mt-2 rounded border border-[rgba(248,113,113,0.35)] bg-[rgba(248,113,113,0.08)] px-2 py-1.5 text-[10px] leading-snug text-[#fca5a5]">{exportError}</p> : <p className="text-[10px] leading-snug text-[#6b6b7a] mt-2">ZIP and Folder preserve the <span className="text-[#8f90a3]">format/locale/file.png</span> structure.</p>}
+      </>}
     >
         {/* Scrollable content */}
         <div className="flex-1 overflow-y-auto p-6 space-y-6">
