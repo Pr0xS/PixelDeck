@@ -15,6 +15,14 @@ import type { ThumbnailRequest } from '@/hooks/useOffscreenThumbnails'
 export type ThumbnailMap = Record<string, string[]>
 export type ThumbnailEntry = { key: string; thumbs: string[] }
 
+export interface PreviewProgress {
+  status: 'idle' | 'preparing' | 'capturing' | 'done' | 'error' | 'cancelled'
+  totalSlides: number
+  completedSlides: number
+  currentGroupName: string | null
+  source: 'cache' | 'capture'
+}
+
 const DEBOUNCE_MS = 600
 const THUMBNAIL_FLUSH_MS = 300
 
@@ -143,6 +151,9 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
   const [thumbnailEntries, setThumbnailEntries] = useState<PersistedThumbnailMap>({})
   const [previewThumbs, setPreviewThumbs] = useState<ThumbnailMap>({})
   const [isCapturingPreview, setIsCapturingPreview] = useState(false)
+  const [previewProgress, setPreviewProgress] = useState<PreviewProgress>({
+    status: 'idle', totalSlides: 0, completedSlides: 0, currentGroupName: null, source: 'cache',
+  })
   const [thumbnailsHydrated, setThumbnailsHydrated] = useState(false)
 
   const thumbnailEntriesRef = useRef<PersistedThumbnailMap>(thumbnailEntries)
@@ -391,6 +402,8 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
         }
         return false
       })
+      const totalSlides = previewGroups.reduce((total, group) => total + group.numSlides, 0)
+      const cachedSlides = totalSlides - groupsToCapture.reduce((total, group) => total + group.numSlides, 0)
 
       // If all groups are cached, populate previewThumbs from cache immediately
       if (groupsToCapture.length === 0) {
@@ -402,6 +415,9 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
           )
         }
         setPreviewThumbs(cached)
+        setPreviewProgress({
+          status: 'done', totalSlides, completedSlides: totalSlides, currentGroupName: null, source: 'cache',
+        })
         return
       }
 
@@ -418,9 +434,14 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
 
       // Only show spinner if we have groups to capture
       setIsCapturingPreview(true)
+      setPreviewProgress({
+        status: 'preparing', totalSlides, completedSlides: cachedSlides, currentGroupName: null, source: 'capture',
+      })
 
       await runExclusiveCapture(async () => {
         let lastCaptureGroupId = originalGroupId
+        let completedSlides = cachedSlides
+        let aborted = false
         try {
           for (const group of groupsToCapture) {
             const shouldAbortCapture = () => {
@@ -430,7 +451,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
                 || currentState.activeFamily !== activeFamily
                 || currentState.activeCanvasFormat !== activeCanvasFormat
             }
-            if (shouldAbortCapture()) break
+            if (shouldAbortCapture()) { aborted = true; break }
 
             useEditorStore.getState().setCaptureSlideGroup(group.id)
             lastCaptureGroupId = group.id
@@ -439,27 +460,36 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
               compensate: group.numSlides > 1 && panoCompensate,
             })
             await nextFrame()
-            if (shouldAbortCapture()) break
+            if (shouldAbortCapture()) { aborted = true; break }
             await nextFrame()
-            if (shouldAbortCapture()) break
+            if (shouldAbortCapture()) { aborted = true; break }
             const settled = await waitForStageCaptureReady(stage)
-            if (shouldAbortCapture()) break
+            if (shouldAbortCapture()) { aborted = true; break }
             if (!settled) continue
 
             const groupDims = getFormatCanvasDims(group, activeCanvasFormat, baseFormat, project.settings.customFormats)
             const captureLocale = useEditorStore.getState().activeLocale
             const key = getGroupPreviewKey(group, activeCanvasFormat, captureLocale, effectivePano)
-            const thumbs = withIdentityTransform(stage, () =>
-              Array.from({ length: group.numSlides }, (_, i) =>
+            const thumbs: string[] = []
+            for (let i = 0; i < group.numSlides; i++) {
+              if (shouldAbortCapture()) { aborted = true; break }
+              const thumb = withIdentityTransform(stage, () =>
                 stage.toDataURL({
                   x: getPanoSlideX({ ...group, slideWidth: groupDims.width }, i, panoCompensationPx), y: 0,
                   width: groupDims.width, height: groupDims.height,
                   pixelRatio: Math.min(1, 1600 / groupDims.width), mimeType: 'image/jpeg', quality: 0.92,
                 }),
-              ),
-            )
+              )
+              thumbs.push(thumb)
+              completedSlides++
+              setPreviewProgress({
+                status: 'capturing', totalSlides, completedSlides, currentGroupName: group.name, source: 'capture',
+              })
+              await nextFrame()
+            }
+            if (aborted || shouldAbortCapture()) { aborted = true; break }
             const lowResThumbs = await captureGroupThumbs(stage, group, groupDims, panoCompensationPx)
-            if (shouldAbortCapture()) break
+            if (shouldAbortCapture()) { aborted = true; break }
 
             // Store in cache
             usePreviewCache.getState().set(group.id, thumbs.map((dataUrl) => ({ key, dataUrl })))
@@ -468,6 +498,16 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
             const thumbnailKey = getThumbnailKey(group, activeCanvasFormat, captureLocale, effectivePano)
             setThumbnailEntries((prev) => ({ ...prev, [group.id]: { key: thumbnailKey, thumbs: lowResThumbs } }))
           }
+          setPreviewProgress({
+            status: aborted || previewAbortRef.current ? 'cancelled' : 'done',
+            totalSlides,
+            completedSlides,
+            currentGroupName: null,
+            source: 'capture',
+          })
+        } catch (err) {
+          setPreviewProgress((progress) => ({ ...progress, status: 'error', currentGroupName: null }))
+          console.error('[PixelDeck] preview capture failed', err)
         } finally {
           const currentState = useEditorStore.getState()
           if (shouldRestoreCapturedSlideGroup(currentState, {
@@ -523,6 +563,7 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     captureNow: captureGroup,
     previewThumbs,
     isCapturingPreview,
+    previewProgress,
     captureAllHighRes,
     cancelPreviewCapture,
     offscreenThumbnailElement,

@@ -59,6 +59,7 @@ export default function App() {
     staleGroupIds,
     previewThumbs,
     isCapturingPreview,
+    previewProgress,
     captureNow,
     captureAllHighRes,
     cancelPreviewCapture,
@@ -318,6 +319,7 @@ export default function App() {
         thumbnails={thumbnails}
         previewThumbs={previewThumbs}
         isCapturingPreview={isCapturingPreview}
+        previewProgress={previewProgress}
         captureAllHighRes={captureAllHighRes}
         cancelCapture={cancelPreviewCapture}
         initialLocale={previewLocale}

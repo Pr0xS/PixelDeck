@@ -4,7 +4,7 @@ import { fillToCss } from '@/utils/gradients'
 import { getLanguageName } from '@/utils/locale'
 import { getExportTargets, getFormatCanvasDims, getFormatFamilyKey, getFormatLabel, getProjectBaseFormat, selectFormatViewGroups } from '@/utils/canvasFormats'
 import type { BackgroundLayer, CanvasFormatId } from '@/types'
-import type { ThumbnailMap } from '@/hooks/useThumbnails'
+import type { PreviewProgress, ThumbnailMap } from '@/hooks/useThumbnails'
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
 import { ModalShell } from '@/components/ui/ModalShell'
 import { NumberInput } from '@/components/ui/NumberInput'
@@ -17,6 +17,7 @@ interface PreviewModalProps {
   thumbnails: ThumbnailMap
   previewThumbs: ThumbnailMap
   isCapturingPreview: boolean
+  previewProgress: PreviewProgress
   captureAllHighRes: (options?: { panoCompensationPx?: number; panoCompensate?: boolean }) => void
   cancelCapture: () => void
   /** Locale to preview when the modal opens (defaults to the current editor locale). */
@@ -28,7 +29,7 @@ export function PreviewModal({
   onClose,
   thumbnails,
   previewThumbs,
-  isCapturingPreview,
+  previewProgress,
   captureAllHighRes,
   cancelCapture,
   initialLocale,
@@ -150,13 +151,26 @@ export function PreviewModal({
       header={<div className="flex flex-wrap items-center justify-between gap-3 border-b border-[rgba(255,255,255,0.08)] px-6 py-4">
           <div>
             <h2 className="text-sm font-semibold text-[#f3f0ff]">Preview</h2>
-            {isCapturingPreview ? (
-              <div className="mt-1.5 flex items-center gap-2">
-                <div className="h-1 w-32 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]">
-                  <div className="h-full animate-pulse bg-[#7c6ef6]" style={{ width: '40%' }} />
+            {previewProgress.status === 'capturing' || previewProgress.status === 'preparing' ? (
+              <div className="mt-1.5 w-48">
+                <div className="mb-1 flex items-center justify-between text-[10px] text-[#7d7a90]">
+                  <span>{previewProgress.completedSlides > 0 ? 'Updating previews' : 'Generating previews'}</span>
+                  <span>{previewProgress.completedSlides} / {previewProgress.totalSlides}</span>
                 </div>
-                <span className="text-xs text-[#7c6ef6]">Rendering…</span>
+                <div
+                  className="h-1 overflow-hidden rounded-full bg-[rgba(255,255,255,0.08)]"
+                  role="progressbar"
+                  aria-valuemin={0}
+                  aria-valuemax={previewProgress.totalSlides}
+                  aria-valuenow={previewProgress.completedSlides}
+                  aria-valuetext={`Generating preview ${previewProgress.completedSlides} of ${previewProgress.totalSlides}`}
+                >
+                  <div className="h-full bg-[#7c6ef6] transition-[width] duration-300 ease-out motion-reduce:transition-none" style={{ width: `${previewProgress.totalSlides ? (previewProgress.completedSlides / previewProgress.totalSlides) * 100 : 0}%` }} />
+                </div>
+                <p className="mt-1 text-[10px] text-[#7d7a90]">Slide {previewProgress.completedSlides} of {previewProgress.totalSlides}{previewProgress.currentGroupName ? ` · ${previewProgress.currentGroupName}` : ''}</p>
               </div>
+            ) : previewProgress.status === 'error' ? (
+              <p className="mt-1 rounded border border-[rgba(248,113,113,0.35)] bg-[rgba(248,113,113,0.08)] px-2 py-1 text-xs text-[#fca5a5]">Preview generation failed</p>
             ) : (
               <p className="mt-1 text-xs text-[#7d7a90]">
                 {totalSlides} slide{totalSlides !== 1 ? 's' : ''} · {slideGroups.length} group{slideGroups.length !== 1 ? 's' : ''}
@@ -329,7 +343,7 @@ export function PreviewModal({
                               src={navThumb}
                               alt={`Slide ${slideNum}`}
                               className="h-full w-full object-cover"
-                              style={{ filter: isCapturingPreview ? 'blur(0.5px)' : 'none' }}
+                              style={{ filter: previewProgress.currentGroupName === group.name ? 'blur(0.5px)' : 'none' }}
                             />
                           ) : (
                             <div className="h-full w-full animate-pulse bg-[rgba(124,110,246,0.07)]" />

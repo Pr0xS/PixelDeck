@@ -14,6 +14,13 @@ export interface FormatExportResult {
 
 export type ProjectExportScope = 'current-group' | 'project'
 
+export class ExportCancelledError extends Error {
+  constructor() {
+    super('Export cancelled')
+    this.name = 'ExportCancelledError'
+  }
+}
+
 export interface ProjectImageExportOptions {
   formatIds: CanvasFormatId[]
   locales: string[]
@@ -22,7 +29,16 @@ export interface ProjectImageExportOptions {
   panoMode?: PanoExportMode
   panoCompensate?: boolean
   panoCompensationPx?: number
-  onProgress?: (status: { formatId: CanvasFormatId; locale: string; groupName: string }) => void
+  signal?: AbortSignal
+  onProgress?: (progress: {
+    completed: number
+    total: number
+    formatId: CanvasFormatId
+    formatLabel: string
+    locale: string
+    groupName: string
+    phase: 'rendering' | 'restoring'
+  }) => void
 }
 
 export interface ProjectImageExportResult {
@@ -44,6 +60,9 @@ export async function exportProjectImages(
   let originalFormat: CanvasFormatId | undefined
   let originalGroupId: string | undefined
   let originalLocale: string | undefined
+  let completed = 0
+  let total = 0
+  let lastBatch: ReturnType<typeof buildExportPlan>['batches'][number] | undefined
 
   try {
     const store = useEditorStore.getState()
@@ -71,11 +90,13 @@ export async function exportProjectImages(
     })
     const results: ProjectImageExportResult[] = []
     const usedRelativePaths = new Set<string>()
+    total = plan.entries.length
 
     for (const batch of plan.batches) {
+      if (options.signal?.aborted) break
+      lastBatch = batch
       useEditorStore.getState().setActiveLocale(batch.locale)
       useEditorStore.getState().setActiveCanvasFormat(batch.formatId)
-      options.onProgress?.({ formatId: batch.formatId, locale: batch.locale, groupName: batch.group.name })
       useEditorStore.getState().setActiveSlideGroup(batch.group.id)
       useEditorStore.getState().setPanoRenderOverride({
         gapPx: options.panoCompensationPx ?? projectPano.gapPx,
@@ -83,7 +104,18 @@ export async function exportProjectImages(
       })
       await waitForStageCaptureReady(stage)
 
-      const images = await exportGroupImages(stage, batch.group, panoMode, panoCompensationPx)
+      const images = await exportGroupImages(stage, batch.group, panoMode, panoCompensationPx, () => {
+        completed += 1
+        options.onProgress?.({
+          completed,
+          total,
+          formatId: batch.formatId,
+          formatLabel: batch.formatLabel,
+          locale: batch.locale,
+          groupName: batch.group.name,
+          phase: 'rendering',
+        })
+      }, options.signal)
       for (const image of images) {
         const target = buildExportFileTarget({
           formatId: batch.formatId,
@@ -107,6 +139,7 @@ export async function exportProjectImages(
         })
       }
     }
+    if (options.signal?.aborted) throw new ExportCancelledError()
     return results
   } finally {
     if (originalLocale !== undefined) useEditorStore.getState().setActiveLocale(originalLocale)
@@ -116,6 +149,17 @@ export async function exportProjectImages(
       useEditorStore.getState().setActiveSlideGroup(originalGroupId)
     }
     await waitForStageCaptureReady(stage)
+    if (lastBatch) {
+      options.onProgress?.({
+        completed,
+        total,
+        formatId: lastBatch.formatId,
+        formatLabel: lastBatch.formatLabel,
+        locale: lastBatch.locale,
+        groupName: lastBatch.group.name,
+        phase: 'restoring',
+      })
+    }
     release()
   }
 }

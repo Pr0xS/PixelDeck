@@ -7,6 +7,13 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.1](https://github.com/Pr0xS/PixelDeck/compare/v0.8.0...v0.8.1) - 2026-08-14
+
+### Fixed
+
+- Preview modal loading bar now reflects real per-slide capture progress (e.g. "3 of 7") instead of a static animated placeholder, and only blurs the slide group currently regenerating instead of every thumbnail.
+- Export now shows real progress across format × locale combinations (e.g. "iPad · Italian") with a live percentage, and can be cancelled mid-export via a new Cancel button without corrupting editor or stage state.
+
 ## [0.8.0](https://github.com/Pr0xS/PixelDeck/compare/v0.7.1...v0.8.0) - 2026-07-30
 
 ### Added

@@ -60,6 +60,28 @@ describe('exportAllSlides', () => {
     expect(result[0].name).toBe('slide-1')
     expect(result[1].name).toBe('slide-2')
   })
+
+  it('reports each captured image when a callback is provided', async () => {
+    const onImageCaptured = vi.fn()
+
+    await exportAllSlides(makeFakeStage(), makeGroup(), 0, onImageCaptured)
+
+    expect(onImageCaptured).toHaveBeenNthCalledWith(1, 1, 2)
+    expect(onImageCaptured).toHaveBeenNthCalledWith(2, 2, 2)
+  })
+
+  it('does not report captures without a callback', async () => {
+    await expect(exportAllSlides(makeFakeStage(), makeGroup())).resolves.toHaveLength(2)
+  })
+
+  it('returns no slides when cancelled before capture begins', async () => {
+    const controller = new AbortController()
+    controller.abort()
+
+    const result = await exportAllSlides(makeFakeStage(), makeGroup(), 0, undefined, controller.signal)
+
+    expect(result).toHaveLength(0)
+  })
 })
 
 describe('exportGroupImages', () => {
@@ -95,5 +117,14 @@ describe('exportGroupImages', () => {
     expect(stage.toDataURL).toHaveBeenCalledTimes(2)
     expect(stage.toDataURL).toHaveBeenNthCalledWith(1, expect.objectContaining({ x: 0 }))
     expect(stage.toDataURL).toHaveBeenNthCalledWith(2, expect.objectContaining({ x: 1024 }))
+  })
+
+  it('reports one completed image for whole-pano exports', async () => {
+    const onImageCaptured = vi.fn()
+
+    await exportGroupImages(makeFakeStage(), makeGroup(), 'whole', 24, onImageCaptured)
+
+    expect(onImageCaptured).toHaveBeenCalledOnce()
+    expect(onImageCaptured).toHaveBeenCalledWith(1, 1)
   })
 })

@@ -60,12 +60,16 @@ export async function exportAllSlides(
   stage: Konva.Stage,
   group: SlideGroup,
   panoCompensationPx = 0,
+  onImageCaptured?: (index: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<ExportedImage[]> {
   const results: ExportedImage[] = []
   for (let i = 0; i < group.numSlides; i++) {
+    if (signal?.aborted) break
     const name = group.slideNames[i] ?? `slide-${i + 1}`
     const dataUrl = await exportSlide(stage, i, group, panoCompensationPx)
     results.push({ name, dataUrl })
+    onImageCaptured?.(i + 1, group.numSlides)
   }
   return results
 }
@@ -92,11 +96,16 @@ export async function exportGroupImages(
   group: SlideGroup,
   panoMode: PanoExportMode = 'split',
   panoCompensationPx = 0,
+  onImageCaptured?: (index: number, total: number) => void,
+  signal?: AbortSignal,
 ): Promise<ExportedImage[]> {
   if (panoMode === 'whole' && group.numSlides > 1) {
-    return [{ name: group.name || 'pano', dataUrl: await exportWholeGroup(stage, group, panoCompensationPx) }]
+    if (signal?.aborted) return []
+    const dataUrl = await exportWholeGroup(stage, group, panoCompensationPx)
+    onImageCaptured?.(1, 1)
+    return [{ name: group.name || 'pano', dataUrl }]
   }
-  return exportAllSlides(stage, group, panoMode === 'split' ? panoCompensationPx : 0)
+  return exportAllSlides(stage, group, panoMode === 'split' ? panoCompensationPx : 0, onImageCaptured, signal)
 }
 
 /**
