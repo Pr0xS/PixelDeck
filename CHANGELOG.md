@@ -7,6 +7,15 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.2](https://github.com/Pr0xS/PixelDeck/compare/v0.8.1...v0.8.2) - 2026-08-14
+
+### Security
+
+- `js-yaml` bumped from 4.3.0 to 4.3.1, fixing a high-severity quadratic-CPU-consumption DoS in `!!omap` resolution ([GHSA-5p4m-2wfm-xmqj](https://github.com/advisories/GHSA-5p4m-2wfm-xmqj)).
+- Transitive `nanoid` (pulled in by `postcss`/vite's toolchain) pinned to `^3.3.18` via `overrides`, fixing an infinite-loop DoS when a custom generator's `size` is zero ([GHSA-2v37-7h3g-55p8](https://github.com/advisories/GHSA-2v37-7h3g-55p8)). PixelDeck's own runtime `nanoid` (v5, used for layer IDs) is unaffected and untouched.
+- Transitive `brace-expansion` (pulled in by `eslint`'s `minimatch`) pinned to `^5.0.9` via `overrides`, fixing three high-severity DoS advisories ([GHSA-3jxr-9vmj-r5cp](https://github.com/advisories/GHSA-3jxr-9vmj-r5cp), [GHSA-mh99-v99m-4gvg](https://github.com/advisories/GHSA-mh99-v99m-4gvg), [GHSA-rgw5-rvv9-x895](https://github.com/advisories/GHSA-rgw5-rvv9-x895)).
+- `npm audit` now reports 0 vulnerabilities (was 3 high).
+
 ## [0.8.1](https://github.com/Pr0xS/PixelDeck/compare/v0.8.0...v0.8.1) - 2026-08-14
 
 ### Fixed

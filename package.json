@@ -1,6 +1,6 @@
 {
   "name": "pixeldeck",
-  "version": "0.8.1",
+  "version": "0.8.2",
   "private": true,
   "description": "Visual editor for designing polished App Store & Play Store screenshots. Drag-and-drop device mockups, text, shapes, and gradients, then export PNGs from the browser or batch-export via CLI.",
   "keywords": [
@@ -47,7 +47,7 @@
     "@dnd-kit/sortable": "^10.0.0",
     "@dnd-kit/utilities": "^3.2.2",
     "@playwright/test": "^1.61.1",
-    "js-yaml": "^4.3.0",
+    "js-yaml": "^4.3.1",
     "jszip": "^3.10.1",
     "konva": "^10.3.0",
     "nanoid": "^5.1.16",
@@ -79,5 +79,13 @@
     "typescript-eslint": "^8.66.0",
     "vite": "^8.2.1",
     "vitest": "^4.1.10"
+  },
+  "overrides": {
+    "postcss": {
+      "nanoid": "^3.3.18"
+    },
+    "minimatch": {
+      "brace-expansion": "^5.0.9"
+    }
   }
 }
