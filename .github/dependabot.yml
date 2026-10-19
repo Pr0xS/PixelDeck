@@ -8,6 +8,13 @@ updates:
     labels:
       - dependencies
     groups:
+      # One PR with every security fix (direct + transitive), independent of
+      # the version-update groups below so a CVE patch is never blocked
+      # behind unrelated minor bumps.
+      security-updates:
+        applies-to: security-updates
+        patterns:
+          - "*"
       dev-dependencies:
         dependency-type: development
         update-types:
