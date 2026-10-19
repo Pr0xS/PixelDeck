@@ -7,6 +7,33 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.8.4](https://github.com/Pr0xS/PixelDeck/compare/v0.8.3...v0.8.4) - 2026-10-19
+
+### Changed
+
+- **Images are now stored once and referenced by a content-hash key** (`img_<24 hex of SHA-256>.<ext>`) instead of being embedded as `data:` URLs. This applies to phone screenshots, image layers, background images, the brand logo, and per-locale overrides. Projects (in memory, autosave and exports) no longer contain base64 image data, and identical images are deduplicated. Display names live in the new `Project.assetManifest`. Fixes [#87](https://github.com/Pr0xS/PixelDeck/issues/87), where a phone screenshot could appear up to three times in an exported project JSON.
+- Project export now defaults to a **ZIP** (`project.json` + `assets/<key>`); a single-file JSON bundle (v2) remains available from the Projects modal. Import accepts ZIP, JSON bundle v1/v2, raw project JSON, and legacy projects with inline images (migrated automatically on load).
+- The headless CLI accepts the same project formats as the GUI export (ZIP, bundles, raw JSON). Files in `--screenshots` override embedded images by display name. The CLI now exits non-zero listing missing images unless `--allow-missing` is passed.
+- New dependency: `@noble/hashes` (synchronous SHA-256 for asset keys).
+
+### Added
+
+- "Add from URL" for images (assets panel and the phone, background and brand pickers). The image is downloaded once and stored in the project; remote URLs are never stored. Sites that block cross-origin downloads show a clear message.
+- "Remove unused…" in the assets panel. Respects the undo/redo history and clipboard. Removing a single asset that is still in use now asks for confirmation.
+- Missing images render a visible placeholder in the editor, and the GUI export asks for confirmation when images are missing.
+
+### Fixed
+
+- Background images no longer disappear after a page reload or project switch.
+- Brand logos are no longer kept inline forever in the stored project.
+- Switching projects while an image was being saved could overwrite the previous project's stored images with the new project's. Writes are now bound to their own project scope.
+- Importing a project bundle no longer discards its bundled images.
+- Images are loaded before their project becomes active, so they no longer flash blank after switching projects.
+- Image saves that fail in browser storage now show an accurate warning (images are no longer embedded as a fallback) and are no longer silent. Persistent storage is requested once.
+- "Save as copy" after a storage conflict no longer loses recent uploads; a failed import restores the previous project's asset scope; closing the tab no longer saves a project that references images not yet written.
+- The CLI no longer rejects project files exported from the GUI.
+- Two different files with the same name no longer overwrite each other in the asset store.
+
 ## [0.8.3](https://github.com/Pr0xS/PixelDeck/compare/v0.8.2...v0.8.3) - 2026-08-14
 
 ### Fixed

@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
-import type { PhoneLayer, Project } from '@/types'
-import type { ProjectExportBundle } from '@/utils/projectAssets'
+import type { Layer, PhoneLayer, Project } from '@/types'
+import type { ProjectExportBundle, ProjectExportBundleV1 } from '@/utils/projectAssets'
+import { assetKeyFromDataUrl } from '@/utils/assetKey'
 import { idbStorage } from './idb-storage'
 import { ProjectConflictError, type ProjectStorageAdapter } from './storage/types'
 
@@ -25,7 +26,7 @@ function makeLocalStorageMock() {
 globalThis.localStorage = makeLocalStorageMock()
 vi.stubGlobal('alert', vi.fn())
 
-const { abandonBootstrap, notifyProjectConflict, useProjectsStore } = await import('./projects')
+const { abandonBootstrap, flushOnPagehide, notifyProjectConflict, useProjectsStore } = await import('./projects')
 const { useEditorStore } = await import('./index')
 const { useAssetStore } = await import('./assets')
 
@@ -45,10 +46,11 @@ describe('saveCurrentProject', () => {
     const state = useEditorStore.getState()
     const group = state.project.slideGroups[0]
     const phone = group.layers.find((layer) => layer.type === 'phone') as PhoneLayer
+    const inline = `data:image/png;base64,${'eA=='.repeat(25_000)}`
     useEditorStore.getState().updateLayer(phone.id, {
-      screenshotDataUrl: `data:image/png;base64,${'x'.repeat(100_000)}`,
+      screenshotDataUrl: inline,
       screenshotPath: 'screenshots/phone.png',
-    })
+    } as Partial<Layer>)
 
     await useProjectsStore.getState().saveCurrentProject()
 
@@ -56,8 +58,10 @@ describe('saveCurrentProject', () => {
     const storedPhone = stored.slideGroups[0].layers.find(
       (layer: PhoneLayer) => layer.type === 'phone',
     ) as PhoneLayer
-    expect(storedPhone.screenshotDataUrl).toBeUndefined()
-    expect(storedPhone.screenshotPath).toBe('screenshots/phone.png')
+    expect((storedPhone as unknown as Record<string, unknown>).screenshotDataUrl).toBeUndefined()
+    // Inline bytes are converted to a hashed asset ref, never persisted inline.
+    expect(storedPhone.screenshotPath).toMatch(/^img_[0-9a-f]{24}\.png$/)
+    expect(JSON.stringify(stored)).not.toContain('data:image')
   })
 })
 
@@ -212,11 +216,20 @@ describe('project asset lifecycle and bundles', () => {
     const exported = JSON.parse(
       await useProjectsStore.getState().exportProjectBundle(firstId),
     ) as ProjectExportBundle
-    expect(exported.assets['shot.png']).toBe('data:image/png;base64,first')
+    expect(exported.schemaVersion).toBe(2)
+    const firstKey = assetKeyFromDataUrl('data:image/png;base64,first')
+    expect(exported.assets[firstKey]).toEqual({
+      name: 'shot.png', mime: 'image/png', dataUrl: 'data:image/png;base64,first',
+    })
+    expect(JSON.stringify(exported.project)).not.toContain('data:')
 
     await useProjectsStore.getState().openProject(firstId)
     await waitForAssetScope(firstId)
-    expect(useAssetStore.getState().getAsset('shot.png')).toBe('data:image/png;base64,first')
+    expect(useAssetStore.getState().resolveAsset(firstKey)).toBe('data:image/png;base64,first')
+    const reopened = useEditorStore.getState().project.slideGroups[0].layers.find(
+      (layer) => layer.type === 'phone',
+    ) as PhoneLayer
+    expect(reopened.screenshotPath).toBe(firstKey)
   })
 
   it('hydrates base and locale images from an imported project bundle', async () => {
@@ -236,9 +249,16 @@ describe('project asset lifecycle and bundles', () => {
     const result = await useProjectsStore.getState().importProjectFromJson(JSON.stringify(bundle))
 
     expect(result.missing).toEqual([])
-    expect(useAssetStore.getState().getAsset('base.png')).toBe('data:image/png;base64,base')
-    expect(useAssetStore.getState().getAsset('locale::es::phone.png'))
+    const imported = useEditorStore.getState().project.slideGroups[0].layers.find(
+      (layer) => layer.type === 'phone',
+    ) as PhoneLayer
+    expect(useAssetStore.getState().resolveAsset(imported.screenshotPath!)).toBe('data:image/png;base64,base')
+    expect(useAssetStore.getState().resolveAsset(imported.localeContent!.es.screenshotPath!))
       .toBe('data:image/png;base64,locale')
+    // The images live in the NEW project's persisted scope.
+    const newId = useEditorStore.getState().project.id
+    const persisted = await useAssetStore.getState().loadProjectAssets(newId)
+    expect(persisted[imported.screenshotPath!]?.dataUrl).toBe('data:image/png;base64,base')
   })
 
   it('assigns a fresh id when importing instead of clobbering an existing project', async () => {
@@ -347,6 +367,28 @@ describe('async project save chain', () => {
     )
   })
 
+  it('pagehide keeps the last consistent snapshot when it would reference unwritten images', async () => {
+    const saveProject = vi.fn(async () => {})
+    useAdapter({
+      listProjects: async () => [], loadProject: async () => null, saveProject,
+      deleteProject: async () => {}, renameProject: async () => {}, getActiveProjectId: async () => null, setActiveProjectId: async () => {},
+    })
+    await useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
+    await useProjectsStore.getState().saveCurrentProject()
+    useEditorStore.getState().addPhone()
+    const phone = useEditorStore.getState().project.slideGroups[0].layers.find((l) => l.type === 'phone')!
+    const key = useAssetStore.getState().putAsset('data:image/png;base64,cG5n', 'new.png') // pending write
+    useEditorStore.getState().updateLayer(phone.id, { screenshotPath: key } as Partial<Layer>)
+    saveProject.mockClear()
+
+    flushOnPagehide()
+    expect(saveProject).not.toHaveBeenCalled() // would reference an image that is not durable yet
+
+    await useAssetStore.getState().flushAssets() // the pagehide handler also started this write
+    flushOnPagehide()
+    expect(saveProject).toHaveBeenCalledTimes(1)
+  })
+
   it('shows a conflict notice and can persist the active project as a copy', async () => {
     const oldId = useEditorStore.getState().project.id
     await useAssetStore.getState().setActiveProject(oldId)
@@ -370,6 +412,25 @@ describe('async project save chain', () => {
     expect(useAssetStore.getState().getAsset('shot.png')).toBe('data:image/png;base64,copy-me')
     expect((await useAssetStore.getState().loadProjectAssets(copyId))['shot.png']?.dataUrl)
       .toBe('data:image/png;base64,copy-me')
+  })
+
+  it('save-as-copy includes not-yet-flushed images and keeps their display names', async () => {
+    const oldId = useEditorStore.getState().project.id
+    await useAssetStore.getState().setActiveProject(oldId)
+    const key = useAssetStore.getState().putAsset('data:image/png;base64,cG5n', 'pending.png') // not flushed
+    useAdapter({
+      listProjects: async () => [], loadProject: async () => null,
+      saveProject: vi.fn(async (meta: { id: string }) => {
+        if (meta.id === oldId) throw new ProjectConflictError(oldId)
+      }),
+      deleteProject: async () => {}, renameProject: async () => {}, getActiveProjectId: async () => null, setActiveProjectId: async () => {},
+    })
+    await expect(useProjectsStore.getState().saveCurrentProject()).rejects.toBeInstanceOf(ProjectConflictError)
+    await useProjectsStore.getState().saveConflictedProjectAsCopy()
+    const copyId = useEditorStore.getState().project.id
+    expect(copyId).not.toBe(oldId)
+    const copied = (await useAssetStore.getState().loadProjectAssets(copyId))[key]
+    expect(copied?.name).toBe('pending.png')
   })
 
   it('reloads the page when dismissing a conflict notice', () => {
@@ -531,6 +592,159 @@ describe('async project save chain', () => {
   })
 })
 
-function makeBundle(project: Project, assets: Record<string, string>): ProjectExportBundle {
+function makeBundle(project: Project, assets: Record<string, string>): ProjectExportBundleV1 {
   return { kind: 'project-export', schemaVersion: 1, project, assets }
 }
+
+describe('asset persistence, zip and v2 import', () => {
+  const PNG = 'data:image/png;base64,cG5n'
+  const JPG = 'data:image/jpeg;base64,anBlZw=='
+
+  beforeEach(async () => {
+    localStorage.clear()
+    await useAssetStore.getState().setActiveProject(null)
+    useAssetStore.setState({ activeProjectId: null, assets: {} })
+    useEditorStore.getState().resetProject()
+    useProjectsStore.setState({ projects: [], initialized: true })
+    await useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
+  })
+
+  function setupImages() {
+    const bgKey = useAssetStore.getState().putAsset(PNG, 'bg.png')
+    const logoKey = useAssetStore.getState().putAsset(JPG, 'logo.jpg')
+    const editor = useEditorStore.getState()
+    const bg = editor.project.slideGroups[0].layers.find((l) => l.type === 'background')!
+    editor.updateLayer(bg.id, { imageRef: bgKey } as Partial<Layer>)
+    editor.addBrand?.()
+    const brand = useEditorStore.getState().project.slideGroups[0].layers.find((l) => l.type === 'brand')
+    if (brand) useEditorStore.getState().updateLayer(brand.id, { logoRef: logoKey } as Partial<Layer>)
+    return { bgKey, logoKey, brandId: brand?.id }
+  }
+
+  it('background and logo images survive save -> reload (data-loss regression)', async () => {
+    const { bgKey, logoKey } = setupImages()
+    await useProjectsStore.getState().saveCurrentProject()
+    const id = useEditorStore.getState().project.id
+
+    // Simulate a page reload: empty memory, project reloaded from storage.
+    useAssetStore.setState({ activeProjectId: null, assets: {}, hydrated: false })
+    useEditorStore.getState().resetProject()
+    useProjectsStore.setState({ projects: [{ id, name: 'x', createdAt: '', updatedAt: '' }] })
+    await useProjectsStore.getState().openProject(id)
+
+    expect(useEditorStore.getState().project.id).toBe(id)
+    expect(useAssetStore.getState().hydrated).toBe(true)
+    expect(useAssetStore.getState().resolveAsset(bgKey)).toBe(PNG)
+    expect(useAssetStore.getState().resolveAsset(logoKey)).toBe(JPG)
+    const stored = localStorage.getItem(`pd:project:${id}`)!
+    expect(stored).not.toContain('data:')
+  })
+
+  it('persisted project JSON size does not grow with the number of locales', async () => {
+    const big = `data:image/png;base64,${'QUJD'.repeat(50_000)}`
+    const key = useAssetStore.getState().putAsset(big, 'big.png')
+    useEditorStore.getState().addPhone()
+    const phone = useEditorStore.getState().project.slideGroups[0].layers.find((l) => l.type === 'phone')!
+    const sizeFor = async (locales: string[]) => {
+      useEditorStore.getState().updateLayer(phone.id, {
+        screenshotPath: key,
+        localeContent: Object.fromEntries(locales.map((l) => [l, { screenshotPath: key }])),
+      } as Partial<Layer>)
+      await useProjectsStore.getState().saveCurrentProject()
+      return localStorage.getItem(`pd:project:${useEditorStore.getState().project.id}`)!.length
+    }
+    const two = await sizeFor(['en', 'es'])
+    const eight = await sizeFor(['en', 'es', 'fr', 'de', 'it', 'pt', 'ja', 'ko'])
+    expect(eight).toBeLessThan(two + 1000)
+    expect(eight).toBeLessThan(20_000)
+  })
+
+  it('imports a v2 bundle, storing its assets in the new project scope', async () => {
+    const { bgKey, logoKey } = setupImages()
+    const id = useEditorStore.getState().project.id
+    const json = await useProjectsStore.getState().exportProjectBundle(id)
+    expect(JSON.stringify(JSON.parse(json).project)).not.toContain('data:')
+
+    const result = await useProjectsStore.getState().importProjectFromJson(json)
+    expect(result.missing).toEqual([])
+    const newId = useEditorStore.getState().project.id
+    expect(newId).not.toBe(id)
+    const persisted = await useAssetStore.getState().loadProjectAssets(newId)
+    expect(persisted[bgKey]?.dataUrl).toBe(PNG)
+    expect(persisted[logoKey]?.dataUrl).toBe(JPG)
+  })
+
+  it('imports a legacy project with inline data URLs', async () => {
+    const legacy = JSON.parse(JSON.stringify(useEditorStore.getState().project))
+    legacy.slideGroups[0].layers[0].imageDataUrl = PNG
+    legacy.settings.brandLogoDataUrl = JPG
+    const result = await useProjectsStore.getState().importProjectFromJson(JSON.stringify(legacy))
+    expect(result.missing).toEqual([])
+    const project = useEditorStore.getState().project
+    const bg = project.slideGroups[0].layers[0] as unknown as { imageRef: string }
+    expect(bg.imageRef).toBe(assetKeyFromDataUrl(PNG))
+    expect(project.settings.brandLogoRef).toBe(assetKeyFromDataUrl(JPG))
+    expect(useAssetStore.getState().resolveAsset(bg.imageRef)).toBe(PNG)
+    expect(JSON.stringify(project)).not.toContain('data:')
+  })
+
+  it('round-trips a project through a zip', async () => {
+    const { bgKey, logoKey } = setupImages()
+    const id = useEditorStore.getState().project.id
+    const blob = await useProjectsStore.getState().exportProjectZip(id)
+    const result = await useProjectsStore.getState().importProjectFromFile(blob)
+    expect(result.missing).toEqual([])
+    const newId = useEditorStore.getState().project.id
+    expect(newId).not.toBe(id)
+    expect(useAssetStore.getState().resolveAsset(bgKey)).toBe(PNG)
+    expect(useAssetStore.getState().resolveAsset(logoKey)).toBe(JPG)
+    expect((await useAssetStore.getState().loadProjectAssets(newId))[bgKey]?.dataUrl).toBe(PNG)
+  })
+})
+
+describe('export names and failed imports', () => {
+  const PNG = 'data:image/png;base64,cG5n'
+
+  beforeEach(async () => {
+    localStorage.clear()
+    await useAssetStore.getState().setActiveProject(null)
+    useAssetStore.setState({ activeProjectId: null, assets: {} })
+    useEditorStore.getState().resetProject()
+    useProjectsStore.setState({ projects: [], initialized: true })
+    await useAssetStore.getState().setActiveProject(useEditorStore.getState().project.id)
+  })
+
+  it('keeps the original upload filename in the manifest, the zip and the bundle', async () => {
+    const key = useAssetStore.getState().putAsset(PNG, 'home-screen.png')
+    useEditorStore.getState().addPhone()
+    const phone = useEditorStore.getState().project.slideGroups[0].layers.find((l) => l.type === 'phone')!
+    useEditorStore.getState().updateLayer(phone.id, { screenshotPath: key } as Partial<Layer>)
+    const id = useEditorStore.getState().project.id
+
+    const bundle = JSON.parse(await useProjectsStore.getState().exportProjectBundle(id)) as ProjectExportBundle
+    expect(bundle.assets[key].name).toBe('home-screen.png')
+    expect(bundle.project.assetManifest?.[key]?.name).toBe('home-screen.png')
+
+    const blob = await useProjectsStore.getState().exportProjectZip(id)
+    const { default: JSZip } = await import('jszip')
+    const zip = await JSZip.loadAsync(await blob.arrayBuffer())
+    const meta = JSON.parse(await zip.file('project.json')!.async('string')) as { project: Project }
+    expect(meta.project.assetManifest?.[key]?.name).toBe('home-screen.png')
+    expect(zip.file(`assets/${key}`)).not.toBeNull()
+  })
+
+  it('restores the previous asset scope when an import fails', async () => {
+    const previous = useEditorStore.getState().project.id
+    const original = useEditorStore.getState().importProject
+    useEditorStore.setState({ importProject: () => { throw new Error('boom') } })
+    try {
+      await expect(
+        useProjectsStore.getState().importProjectFromJson(JSON.stringify(useEditorStore.getState().project)),
+      ).rejects.toThrow('boom')
+    } finally {
+      useEditorStore.setState({ importProject: original })
+    }
+    expect(useAssetStore.getState().activeProjectId).toBe(previous)
+    expect(useEditorStore.getState().project.id).toBe(previous)
+  })
+})

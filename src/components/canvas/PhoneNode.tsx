@@ -12,7 +12,8 @@ import { APPLE_WATCH_SVG } from '@/assets/mockups/apple-watch'
 import { WEAR_OS_SVG } from '@/assets/mockups/wear-os'
 import { IPAD_SVG } from '@/assets/mockups/ipad'
 import { ANDROID_TABLET_SVG } from '@/assets/mockups/android-tablet'
-import { useAssetStore } from '@/store/assets'
+import { useAssetImage } from '@/hooks/useAssetImage'
+import { MissingImagePlaceholder } from './MissingImagePlaceholder'
 import { resolveBrandColor } from '@/utils/brandColors'
 import { useBrandColors } from '@/hooks/useBrandColors'
 import { useLayerEffects } from '@/hooks/useLayerEffects'
@@ -94,13 +95,9 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
   )
   const [frameImage] = useCachedImage(svgDataUrl)
 
-  // Resolve screenshot source: prefer path-based (from asset store), fallback to inline
-  // Subscribe to `assets` (the data object) — not `getAsset` (stable function ref).
-  // Without this, components won't re-render when IDB finishes hydrating on refresh.
-  const assets = useAssetStore((s) => s.assets)
-  const screenshotSrc = layer.screenshotPath
-    ? (assets[layer.screenshotPath]?.dataUrl ?? layer.screenshotDataUrl ?? '')
-    : (layer.screenshotDataUrl ?? '')
+  // Resolve screenshot source reactively from the asset store (hash key; data: passthrough).
+  const asset = useAssetImage(layer.screenshotPath)
+  const screenshotSrc = asset.src ?? ''
 
   // Load screenshot
   const [screenshotImage] = useCachedImage(screenshotSrc)
@@ -127,7 +124,7 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
     )
   }, [screenshotImage, sw, shotClipH, layer.screenshotFit, layer.screenshotOffsetX, layer.screenshotOffsetY])
 
-  const shadowProps = useLayerEffects(groupRef, layer, `${layer.model}:${scale}:${screenshotSrc}:${layer.screenshotFit}:${layer.screenshotOffsetX}:${layer.screenshotOffsetY}:${layer.border?.width ?? 0}:${layer.showStatusBar}`)
+  const shadowProps = useLayerEffects(groupRef, layer, `${layer.model}:${scale}:${screenshotSrc}:${asset.status}:${layer.screenshotFit}:${layer.screenshotOffsetX}:${layer.screenshotOffsetY}:${layer.border?.width ?? 0}:${layer.showStatusBar}`)
   const interactionProps = useLayerInteraction({
     nodeRef: groupRef,
     locked: layer.locked,
@@ -198,6 +195,20 @@ export function PhoneNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
             width={imgLayout.width}
             height={imgLayout.height}
           />
+        </Group>
+      )}
+
+      {/* Missing screenshot: placeholder inside the same clip region as the screenshot */}
+      {asset.status === 'missing' && (
+        <Group
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          clipFunc={(ctx: any) =>
+            isSolidSb
+              ? drawRoundedRectClip(ctx as CanvasRenderingContext2D, sx, shotClipY, sw, shotClipH, 0, 0, sr, sr)
+              : drawRoundedRectClip(ctx as CanvasRenderingContext2D, sx, sy, sw, sh, sr)
+          }
+        >
+          <MissingImagePlaceholder x={sx} y={shotClipY} width={sw} height={shotClipH} name={asset.name} />
         </Group>
       )}
 

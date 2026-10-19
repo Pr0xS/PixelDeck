@@ -64,9 +64,13 @@ Commands:
   locale-import   Import a locale manifest JSON into a project
 
 Options for export:
-  --project=<path>      Path to project JSON file
-  --screenshots=<dir>   Directory containing screenshot PNG files
+  --project=<path>      Project file: raw project JSON, project-export JSON bundle
+                        (v1/v2), or a .zip project export
+  --screenshots=<dir>   Directory of screenshot images. Files are matched by original
+                        file name and OVERRIDE images embedded in a bundle/zip
   --output=<dir>        Output directory for composed PNGs
+  --allow-missing       Continue (with placeholders) if referenced images are missing;
+                        by default the export fails and lists the missing images
   --locale=<code>       Export only this locale (e.g. --locale=es)
   --all-locales         Export all locales defined in the project
   --config=<path>       Batch config YAML (alternative to single project)

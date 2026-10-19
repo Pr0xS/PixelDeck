@@ -15,6 +15,11 @@ PixelDeck is a React + TypeScript visual editor for designing App Store screensh
 | Domain types | `src/types/index.ts` (read this first) |
 | State + actions | `src/store/index.ts` (assembly), `src/store/slices/*.ts` (domain actions), `src/store/helpers.ts` |
 | Asset store | `src/store/assets.ts` |
+| Asset keys / hashing | `src/utils/assetKey.ts` (content-hash keys; `cli/projectInput.mjs` must stay equivalent) |
+| Inline-image migration | `src/utils/assetMigration.ts` (idempotent; called from `migrateProject`; legacy `*DataUrl` fields live in `LegacyInlineImageFields`, do not delete) |
+| Project export/import | `src/utils/projectAssets.ts` (bundle v1/v2), `src/utils/projectZip.ts` (ZIP default), `src/store/projects.ts` |
+| Upload / URL / cleanup | `src/utils/ingestImage.ts`, `src/utils/assetFromUrl.ts`, `src/utils/assetUsage.ts` |
+| Missing-image handling | `src/hooks/useAssetImage.ts`, `src/utils/missingAssets.ts`, `src/utils/renderMode.ts` |
 | App entry / mode routing | `src/main.tsx` |
 | Editor shell | `src/App.tsx` |
 | Konva canvas | `src/components/canvas/StageCanvas.tsx` (composition) + `src/components/canvas/stage/*` (viewport/selection/drop/transformer hooks, overlays) |
@@ -152,12 +157,15 @@ setPanoRenderOverride(override: { gapPx: number; compensate: boolean } | null): 
 
 Asset store (`src/store/assets.ts`) — persisted to IndexedDB, NOT undoable:
 ```ts
-addAsset(filename: string, dataUrl: string): void
-getAsset(filename: string): string | undefined
-removeAsset(filename: string): void
+putAsset(dataUrl: string, name: string): AssetRef   // hashes bytes -> `img_<24hex>.<ext>`, dedupes; use this for ALL new images
+resolveAsset(ref: string): string | undefined       // ref -> data URL (legacy filename keys still resolve)
+putAssetEntries(entries): void                       // bulk by key, keys preserved (imports)
+removeAsset(key: string): void
 clearAssets(): void
-listAssets(): AssetEntry[]
+listAssets(): AssetEntry[]                           // { key, name, mime, dataUrl, sizeBytes }
+addAsset / getAsset                                  // legacy filename-based API, avoid in new code
 ```
+The in-memory map belongs to ONE project scope (`activeProjectId`); always `await setActiveProject(id)` before putting assets for a different project.
 
 ---
 
@@ -170,7 +178,7 @@ listAssets(): AssetEntry[]
 | Layer IDs | `nanoid()` |
 | Store actions | camelCase verbs (`addLayer`, `updateLayer`) |
 | FillValue guard | Always `typeof fill === 'string'` before gradient branch |
-| Asset references | Use `screenshotPath` (store key) over inline `screenshotDataUrl` |
+| Asset references | Images are referenced ONLY by asset key (`screenshotPath`, `ImageLayer.src`, `BackgroundLayer.imageRef`, `BrandLayer.logoRef`, `settings.brandLogoRef`, same fields in `localeContent`/`formatOverrides`). Never store `data:` URLs in a Project; ingest with `ingestImageFile` (`src/utils/ingestImage.ts`) |
 | ESM | `package.json` `"type": "module"`; CLI files use `.mjs` |
 | No CSS modules | Global Tailwind + `src/index.css` theme vars only |
 

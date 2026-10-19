@@ -1,9 +1,10 @@
 import { useEffect, useRef } from 'react'
-import { Image } from 'react-konva'
+import { Group, Image } from 'react-konva'
 import { useCachedImage } from '@/hooks/useCachedImage'
 import type Konva from 'konva'
 import type { ImageLayer } from '@/types'
-import { useAssetStore } from '@/store/assets'
+import { useAssetImage } from '@/hooks/useAssetImage'
+import { MissingImagePlaceholder } from './MissingImagePlaceholder'
 import { useLayerEffects } from '@/hooks/useLayerEffects'
 import { useLayerInteraction } from '@/hooks/useLayerInteraction'
 import { useLayerTransform } from '@/hooks/useLayerTransform'
@@ -22,8 +23,8 @@ interface ImageNodeProps {
 // ─── Component ───────────────────────────────────────────────────────────────
 
 export function ImageNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: ImageNodeProps) {
-  const assets = useAssetStore((s) => s.assets)
-  const imageSrc = assets[layer.src]?.dataUrl ?? layer.src
+  const asset = useAssetImage(layer.src)
+  const imageSrc = asset.src ?? ''
   const [image] = useCachedImage(imageSrc)
   const nodeRef = useRef<Konva.Image>(null)
   const currentSize = useRef({ w: layer.width, h: layer.height })
@@ -53,6 +54,29 @@ export function ImageNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
       height: currentSize.current.h,
     }),
   })
+
+  if (asset.status === 'missing') {
+    return (
+      <Group
+        ref={nodeRef as unknown as React.RefObject<Konva.Group>}
+        id={`layer-${layer.id}`}
+        x={cx}
+        y={cy}
+        offsetX={layer.width / 2}
+        offsetY={layer.height / 2}
+        width={layer.width}
+        height={layer.height}
+        rotation={layer.rotation}
+        opacity={layer.opacity}
+        visible={layer.visible}
+        draggable={!forceNotDraggable && !layer.locked}
+        {...interactionProps}
+        onTransformEnd={handleTransformEnd}
+      >
+        <MissingImagePlaceholder width={layer.width} height={layer.height} cornerRadius={layer.cornerRadius} name={asset.name} />
+      </Group>
+    )
+  }
 
   return (
     image && (

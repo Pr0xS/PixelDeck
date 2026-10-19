@@ -1,8 +1,10 @@
+import { useAssetStore } from '@/store/assets'
 import { useRef } from 'react'
 import { useEditorStore } from '@/store'
 import { useBrandColors } from '@/hooks/useBrandColors'
 import type { BackgroundAccent, BackgroundLayer, Layer } from '@/types'
-import { fileToDataUrl } from '@/utils/files'
+import { ingestImageFile } from '@/utils/ingestImage'
+import { ImageUrlInput } from '@/components/ui/ImageUrlInput'
 import { resolveBrandColor } from '@/utils/brandColors'
 import {
   getBackgroundAccentOpacity,
@@ -39,7 +41,9 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
   const upd = (patch: Partial<BackgroundLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
   const bgImageInputRef = useRef<HTMLInputElement>(null)
 
-  const hasImage = !!layer.imageDataUrl
+  const assets = useAssetStore((s) => s.assets)
+  const hasImage = !!layer.imageRef
+  const imageSrc = layer.imageRef ? assets[layer.imageRef]?.dataUrl : undefined
 
   const updateAccent = (i: number, patch: Partial<BackgroundAccent>) =>
     upd({ accents: updateBackgroundAccentAt(layer.accents, i, patch) })
@@ -67,8 +71,8 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
   }
 
   const handleImageFile = async (file: File) => {
-    const dataUrl = await fileToDataUrl(file)
-    upd({ imageDataUrl: dataUrl })
+    const { key } = await ingestImageFile(file)
+    upd({ imageRef: key })
   }
 
   return (
@@ -81,11 +85,12 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
           options={[{ value: 'gradient', label: '🎨 Gradient' }, { value: 'image', label: '🖼 Image' }]}
           onChange={(mode) => {
                 if (mode === 'image') bgImageInputRef.current?.click()
-                else upd({ imageDataUrl: undefined })
+                else upd({ imageRef: undefined })
           }}
           className="grid grid-cols-2 gap-2"
           optionClassName="rounded-lg border px-3 py-2 text-xs transition-colors"
         />
+        <ImageUrlInput collapsible className="mt-2" onAdded={(key) => upd({ imageRef: key })} />
       </div>
 
       {/* Gradient fill — shown when no image */}
@@ -110,7 +115,7 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
             onClick={() => bgImageInputRef.current?.click()}
           >
             <img
-              src={layer.imageDataUrl}
+              src={imageSrc}
               alt="Background"
               className="w-full h-full object-cover"
             />
@@ -120,7 +125,7 @@ export function BackgroundProperties({ layer }: { layer: BackgroundLayer }) {
           </div>
           <button
             type="button"
-            onClick={() => upd({ imageDataUrl: undefined })}
+            onClick={() => upd({ imageRef: undefined })}
             className="text-xs text-[#f87171] hover:text-[#fca5a5] transition-colors"
           >
             Remove image ×

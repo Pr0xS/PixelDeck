@@ -1,8 +1,10 @@
+import { useAssetStore } from '@/store/assets'
 import { useEditorStore } from '@/store'
 import type { BrandLayer, Layer } from '@/types'
-import { fileToDataUrl } from '@/utils/files'
+import { ingestImageFile } from '@/utils/ingestImage'
 import { ColorField, SliderField } from '@/components/properties/PropertyControls'
 import { FileUploadButton } from '@/components/ui/FileUploadButton'
+import { ImageUrlInput } from '@/components/ui/ImageUrlInput'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import {
   inputCls,
@@ -16,6 +18,8 @@ import {
 
 export function BrandProperties({ layer }: { layer: BrandLayer }) {
   const updateLayer = useEditorStore((s) => s.updateLayer)
+  const assets = useAssetStore((s) => s.assets)
+  const logoSrc = layer.logoRef ? assets[layer.logoRef]?.dataUrl : undefined
   const upd = (patch: Partial<BrandLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
 
   return (
@@ -28,20 +32,21 @@ export function BrandProperties({ layer }: { layer: BrandLayer }) {
       <div className={panelSectionCls}>
         <label className={labelCls}>Logo</label>
         <div className="flex items-center gap-3">
-          {layer.logoDataUrl && <img src={layer.logoDataUrl} alt="Logo" className="h-10 w-10 rounded-lg object-contain bg-[#0f0f13]" />}
+          {logoSrc && <img src={logoSrc} alt="Logo" className="h-10 w-10 rounded-lg object-contain bg-[#0f0f13]" />}
           <FileUploadButton
             accept="image/*"
             className={subtleButtonCls}
             onFiles={async (files) => {
               const file = files[0]
               if (!file) return
-              const dataUrl = await fileToDataUrl(file)
-              upd({ logoDataUrl: dataUrl })
+              const { key } = await ingestImageFile(file)
+              upd({ logoRef: key })
             }}
           >
-            {layer.logoDataUrl ? 'Change Logo' : 'Upload Logo'}
+            {layer.logoRef ? 'Change Logo' : 'Upload Logo'}
           </FileUploadButton>
         </div>
+        <ImageUrlInput collapsible className="mt-2" onAdded={(key) => upd({ logoRef: key })} />
       </div>
 
       <div className={panelSectionCls}>

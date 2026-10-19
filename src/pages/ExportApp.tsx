@@ -20,6 +20,8 @@ import { buildExportPlan, type ExportPlanBatch } from '@/utils/exportPlan'
 import { acquireCaptureLock, waitForStage, waitForStageCaptureReady } from '@/utils/stageCapture'
 import { loadGoogleFonts, registerCustomFonts } from '@/utils/fonts'
 import { LayerNode } from '@/components/canvas/LayerNode'
+import { injectExportAssets } from './exportAssets'
+import { isAssetRef } from '@/utils/projectAssets'
 import type { Layer as AppLayer, Project, SlideGroup } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
@@ -30,6 +32,8 @@ export interface ExportConfig {
   fonts?: Record<string, string>   // filename → dataUrl (custom fonts)
   /** Locale to export. Defaults to project.settings.defaultLocale if omitted. */
   locale?: string
+  /** Continue with placeholders when referenced images are missing. */
+  allowMissing?: boolean
 }
 
 export interface ExportResult {
@@ -44,6 +48,33 @@ declare global {
     __EXPORT_DONE__?: boolean
     __EXPORT_ERROR__?: string
   }
+}
+
+// ─── Missing image detection ─────────────────────────────────────────────────
+
+// Intentionally NOT utils/missingAssets.findMissingAssets: that checks every
+// locale and format, whereas a headless run renders ONE locale — scanning other
+// locales would fail exports for images that are never drawn.
+const REF_FIELDS = ['screenshotPath', 'src', 'imageRef', 'logoRef'] as const
+
+function findMissingRefs(project: Project, locale: string): string[] {
+  const { resolveAsset } = useAssetStore.getState()
+  const missing = new Set<string>()
+  const check = (rec: unknown) => {
+    if (!rec || typeof rec !== 'object') return
+    for (const f of REF_FIELDS) {
+      const v = (rec as Record<string, unknown>)[f]
+      if (isAssetRef(v) && !resolveAsset(v)) missing.add(v)
+    }
+  }
+  const visit = (layer: AppLayer) => {
+    check(layer)
+    check(layer.localeContent?.[locale])
+    if (layer.type === 'group') layer.children.forEach(visit)
+  }
+  for (const g of project.slideGroups) g.layers.forEach(visit)
+  check({ imageRef: project.settings?.brandLogoRef })
+  return [...missing].sort()
 }
 
 // ─── Single-group headless canvas ────────────────────────────────────────────
@@ -90,7 +121,6 @@ export function ExportApp() {
   const project = useEditorStore((s) => s.project)
   const setActiveSlideGroup = useEditorStore((s) => s.setActiveSlideGroup)
   const activeLocale = useEditorStore((s) => s.activeLocale)
-  const addAsset = useAssetStore((s) => s.addAsset)
   const addFont = useFontStore((s) => s.addFont)
   const getFont = useFontStore((s) => s.getFont)
   // The CLI explicitly targets base (single-format headless export); browser
@@ -151,48 +181,56 @@ export function ExportApp() {
       return
     }
 
-    // Load project — surface malformed project files to the CLI instead of hanging
-    try {
-      importProject(JSON.stringify(config.project))
-    } catch (err) {
-      window.__EXPORT_ERROR__ = err instanceof Error ? err.message : String(err)
-      window.__EXPORT_DONE__ = true
-      return
-    }
-
-    // Apply locale if specified
-    const locale = config.locale ?? config.project.settings?.defaultLocale ?? 'en'
-    useEditorStore.getState().setActiveLocale(locale)
-
-    // Start with first group
-    const firstId = config.project.slideGroups?.[0]?.id
-    if (firstId) setActiveSlideGroup(firstId)
-
     // Populate font store with custom fonts from config
     for (const [filename, dataUrl] of Object.entries(config.fonts ?? {})) {
       addFont(filename, dataUrl)
     }
 
-    // Pre-decode all asset images so use-image resolves from cache during render.
     const preload = async () => {
-      // Headless mode still uses an explicit project scope. Wait for hydration
-      // before adding CLI-provided assets so an async scope load cannot replace them.
-      await useAssetStore.getState().setActiveProject(config.project.id)
-      for (const [filename, dataUrl] of Object.entries(config.assets ?? {})) {
-        addAsset(filename, dataUrl)
+      // Scope the asset store, inject assets by key (never re-hashed) and mark
+      // it hydrated (stageCapture waits on `hydrated`; see exportAssets.ts).
+      await injectExportAssets(config.project.id, config.assets ?? {})
+
+      // Load the project AFTER assets are in place. importProject runs the shared
+      // migration (migrateProject → migrateProjectWithAssets), which extracts
+      // legacy inline data URLs into content-hash assets in the asset store.
+      // Malformed projects are surfaced to the CLI instead of hanging.
+      try {
+        importProject(JSON.stringify(config.project))
+      } catch (err) {
+        window.__EXPORT_ERROR__ = err instanceof Error ? err.message : String(err)
+        window.__EXPORT_DONE__ = true
+        return
       }
 
+      // Apply locale if specified
+      const locale = config.locale ?? config.project.settings?.defaultLocale ?? 'en'
+      useEditorStore.getState().setActiveLocale(locale)
+      const firstId = useEditorStore.getState().project.slideGroups[0]?.id
+      if (firstId) setActiveSlideGroup(firstId)
+
+      // Pre-decode all asset images so use-image resolves from cache during render.
       await Promise.all(
-        Object.values(config.assets ?? {}).map(
-          (dataUrl) =>
+        Object.values(useAssetStore.getState().assets).map(
+          (entry) =>
             new Promise<void>((resolve) => {
               const img = new Image()
               img.onload = () => resolve()
               img.onerror = () => resolve()
-              img.src = dataUrl
+              img.src = entry.dataUrl
             }),
         ),
       )
+
+      // Fail loudly (instead of silently exporting blanks) on unresolved images.
+      if (!config.allowMissing) {
+        const missing = findMissingRefs(useEditorStore.getState().project, locale)
+        if (missing.length > 0) {
+          window.__EXPORT_ERROR__ = `Missing images: ${missing.join(', ')}`
+          window.__EXPORT_DONE__ = true
+          return
+        }
+      }
 
       // Load Google Fonts stylesheet
       loadGoogleFonts()

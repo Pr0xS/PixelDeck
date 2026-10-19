@@ -1,3 +1,4 @@
+import { assetKeyFromDataUrl } from '@/utils/assetKey'
 import { describe, it, expect } from 'vitest'
 import {
   looksLikeTemplate,
@@ -177,29 +178,29 @@ describe('projectToTemplate', () => {
     const background = project.slideGroups[0].layers[0]
     const phone = project.slideGroups[0].layers[1] as PhoneLayer
     if (background.type === 'background') {
-      background.imageDataUrl = 'data:image/png;base64,background'
+      background.imageRef = 'img_000000000000000000000000.png'
     }
-    phone.screenshotDataUrl = 'data:image/png;base64,phone'
+    phone.screenshotPath = 'phone.png'
     phone.localeContent = {
-      es: { screenshotPath: 'es.png', screenshotDataUrl: 'data:image/png;base64,es' },
+      es: { screenshotPath: 'es.png' },
     }
     phone.formatOverrides = {
-      'iphone-69': { screenshotPath: 'format.png', screenshotDataUrl: 'data:image/png;base64,format' },
+      'iphone-69': { screenshotPath: 'format.png' },
     } as unknown as PhoneLayer['formatOverrides']
 
     const image: ImageLayer = {
       id: 'image1', name: 'Photo', type: 'image', x: 10, y: 20, rotation: 0,
-      opacity: 1, visible: true, locked: false, src: 'data:image/png;base64,image',
+      opacity: 1, visible: true, locked: false, src: 'image.png',
       width: 300, height: 200, cornerRadius: 12,
-      localeContent: { es: { src: 'data:image/png;base64,image-es' } },
+      localeContent: { es: { src: 'image-es.png' } },
       formatOverrides: {
-        'iphone-69': { src: 'data:image/png;base64,image-format' },
+        'iphone-69': { src: 'image-format.png' },
       } as unknown as ImageLayer['formatOverrides'],
     }
     const brand: BrandLayer = {
       id: 'brand1', name: 'Brand', type: 'brand', x: 0, y: 0, rotation: 0,
       opacity: 1, visible: true, locked: false, appName: 'TestApp',
-      logoDataUrl: 'data:image/png;base64,logo', logoSize: 64, nameColor: '#fff',
+      logoRef: 'logo.png', logoSize: 64, nameColor: '#fff',
       nameFontSize: 32, nameFontFamily: 'Inter', nameFontWeight: 700,
       direction: 'row', gap: 8,
     }
@@ -215,24 +216,23 @@ describe('projectToTemplate', () => {
     const exportedGroup = tpl.slideGroups[0].layers.find((layer) => layer.type === 'group') as GroupLayer
     const exportedBrand = exportedGroup.children[0] as BrandLayer
 
-    expect((tpl.slideGroups[0].layers[0] as BackgroundLayer).imageDataUrl).toBeUndefined()
+    expect((tpl.slideGroups[0].layers[0] as BackgroundLayer).imageRef).toBeUndefined()
     expect(exportedPhone.screenshotPath).toBeUndefined()
-    expect(exportedPhone.screenshotDataUrl).toBeUndefined()
     expect(exportedPhone.localeContent?.es).toEqual({})
     expect(exportedPhone.formatOverrides?.['iphone-69']).toEqual({})
     expect(exportedImage.src).toBe('')
     expect(exportedImage.localeContent?.es).toEqual({})
     expect(exportedImage.formatOverrides?.['iphone-69']).toEqual({})
-    expect(exportedBrand.logoDataUrl).toBeUndefined()
+    expect(exportedBrand.logoRef).toBeUndefined()
     expect(JSON.stringify(tpl)).not.toContain('data:image')
   })
 
-  it('does not include outputPath or brandLogoDataUrl in settings', () => {
+  it('does not include outputPath or brandLogoRef in settings', () => {
     const project = makeProject()
-    project.settings.brandLogoDataUrl = 'data:image/png;base64,abc'
+    project.settings.brandLogoRef = 'img_000000000000000000000000.png'
     const tpl = projectToTemplate(project, { name: 'Settings Test' })
     expect(tpl.settings?.outputPath).toBeUndefined()
-    expect(tpl.settings?.brandLogoDataUrl).toBeUndefined()
+    expect(tpl.settings?.brandLogoRef).toBeUndefined()
   })
 
   it('includes brandColors in settings so {brand:id} tokens keep resolving', () => {
@@ -335,25 +335,28 @@ describe('extractInlineScreenshots', () => {
     locked: false,
     model: 'iphone-16-pro',
     scale: 1,
-    screenshotDataUrl,
+    ...(screenshotDataUrl ? { screenshotDataUrl } : {}),
     screenshotFit: 'cover',
     screenshotOffsetX: 0,
     screenshotOffsetY: 0,
-  })
+  } as PhoneLayer)
 
-  it('replaces a base screenshotDataUrl with a screenshotPath asset reference', () => {
+  const legacy = (layer: Layer): Record<string, unknown> => layer as unknown as Record<string, unknown>
+
+  it('replaces a base screenshotDataUrl with a hashed screenshotPath asset reference', () => {
     const result = extractInlineScreenshots('Nutrition Coach', groupsWith(makePhone('p1', dataUrl)))
     const phone = result.slideGroups[0].layers[0] as PhoneLayer
 
-    expect(phone.screenshotDataUrl).toBeUndefined()
-    expect(phone.screenshotPath).toBe('template-nutrition-coach-1.png')
+    expect(legacy(phone).screenshotDataUrl).toBeUndefined()
+    expect(phone.screenshotPath).toBe(assetKeyFromDataUrl(dataUrl))
     expect(result.assets).toEqual([{ filename: phone.screenshotPath, dataUrl }])
+    expect(result.manifest[phone.screenshotPath!]).toEqual({ name: 'template-nutrition-coach-1.png', mime: 'image/png' })
   })
 
   it('deduplicates identical screenshots across base layers and locale overrides', () => {
     const first = makePhone('p1', dataUrl)
     const second = makePhone('p2')
-    second.localeContent = { es: { screenshotDataUrl: dataUrl } }
+    second.localeContent = { es: { screenshotDataUrl: dataUrl } as never }
 
     const result = extractInlineScreenshots('Dedupe', groupsWith(first, second))
     const phones = result.slideGroups[0].layers as PhoneLayer[]
@@ -364,13 +367,14 @@ describe('extractInlineScreenshots', () => {
   it('extracts locale override screenshots and detects jpeg extensions', () => {
     const phone = makePhone('p1')
     const jpeg = 'data:image/jpeg;base64,anBlZw=='
-    phone.localeContent = { fr: { screenshotDataUrl: jpeg } }
+    phone.localeContent = { fr: { screenshotDataUrl: jpeg } as never }
 
     const result = extractInlineScreenshots('Photo Set', groupsWith(phone))
     const patch = (result.slideGroups[0].layers[0] as PhoneLayer).localeContent?.fr
-    expect(patch?.screenshotDataUrl).toBeUndefined()
-    expect(patch?.screenshotPath).toBe('template-photo-set-1.jpg')
-    expect(result.assets[0]).toEqual({ filename: 'template-photo-set-1.jpg', dataUrl: jpeg })
+    expect((patch as Record<string, unknown>).screenshotDataUrl).toBeUndefined()
+    expect(patch?.screenshotPath).toBe(assetKeyFromDataUrl(jpeg))
+    expect(patch?.screenshotPath?.endsWith('.jpg')).toBe(true)
+    expect(result.assets[0]).toEqual({ filename: patch?.screenshotPath, dataUrl: jpeg })
   })
 
   it('leaves layers without inline screenshots untouched', () => {
@@ -390,15 +394,15 @@ describe('extractInlineScreenshots', () => {
     const result = extractInlineScreenshots('Nested', groupsWith(group))
     const nested = (result.slideGroups[0].layers[0] as GroupLayer).children[0] as PhoneLayer
 
-    expect(nested.screenshotPath).toBe('template-nested-1.png')
-    expect(nested.screenshotDataUrl).toBeUndefined()
+    expect(nested.screenshotPath).toBe(assetKeyFromDataUrl(dataUrl))
+    expect(legacy(nested).screenshotDataUrl).toBeUndefined()
   })
 
   it('does not mutate the input groups', () => {
     const input = groupsWith(makePhone('p1', dataUrl))
     extractInlineScreenshots('Clone', input)
 
-    expect((input[0].layers[0] as PhoneLayer).screenshotDataUrl).toBe(dataUrl)
+    expect(legacy(input[0].layers[0]).screenshotDataUrl).toBe(dataUrl)
     expect((input[0].layers[0] as PhoneLayer).screenshotPath).toBeUndefined()
   })
 })

@@ -116,7 +116,6 @@ export interface LocaleLayerPatch {
   spans?: TextSpan[];
   // PhoneLayer
   screenshotPath?: string;
-  screenshotDataUrl?: string;
   // ImageLayer
   src?: string;
 }
@@ -153,7 +152,6 @@ export interface LocaleContent {
   marks?: TextMark[];
   // PhoneLayer
   screenshotPath?: string;
-  screenshotDataUrl?: string;
   // ImageLayer
   src?: string;
 }
@@ -197,14 +195,13 @@ export interface BaseLayer {
   /**
    * v0.6.0 symmetric locale model: per-locale content, INCLUDING the default
    * locale's own content. Key = locale code. This is the SOLE storage for
-   * localizable content (text/marks for TextLayer; screenshotPath/
-   * screenshotDataUrl for PhoneLayer; src for ImageLayer) — there is no
+   * localizable content (text/marks for TextLayer; screenshotPath for PhoneLayer; src for ImageLayer) — there is no
    * separate "override" map; every locale, including the default, is stored
    * identically here. Populated on layer creation, kept in sync by every
    * edit path (updateLayer/updateChildLayer/setLocaleContent/
    * promoteLocaleToDefault), and read during resolution for every non-default
    * locale. (The TextLayer.text/marks, ImageLayer.src, PhoneLayer.
-   * screenshotPath/screenshotDataUrl flat fields remain the storage for the
+   * screenshotPath flat fields remain the storage for the
    * DEFAULT locale specifically — default-locale resolution reads those
    * directly; localeContent[defaultLocale] is kept
    * as a synced mirror of the same data for uniform access.)
@@ -262,6 +259,33 @@ export interface LegacyLocaleLayoutFields {
   localeBaseDelta?: Partial<Record<string, LayoutDelta>>;
 }
 
+/**
+ * Migration-only: pre-asset-ref projects stored raster images inline as
+ * `data:` URLs. These fields were removed from the public types; read them
+ * ONLY via `getLegacyInlineImageFields()` (store/helpers.ts) from raw,
+ * pre-migration data. Do not reintroduce them on the layer types.
+ */
+export interface LegacyInlineImageFields {
+  /** @deprecated PhoneLayer / LocaleContent / LocaleLayerPatch inline screenshot. */
+  screenshotDataUrl?: string;
+  /** @deprecated BackgroundLayer inline image. */
+  imageDataUrl?: string;
+  /** @deprecated BrandLayer inline logo. */
+  logoDataUrl?: string;
+  /** @deprecated ProjectSettings inline brand logo. */
+  brandLogoDataUrl?: string;
+}
+
+/** Reference to an image in the asset store (content-hash key or legacy filename). */
+export type AssetRef = string;
+
+export interface AssetManifestEntry {
+  name: string;
+  mime: string;
+  width?: number;
+  height?: number;
+}
+
 export type LayerType = 'background' | 'phone' | 'text' | 'image' | 'shape' | 'emoji' | 'brand' | 'group';
 
 // ─── Background ──────────────────────────────────────────────────────────────
@@ -280,8 +304,8 @@ export interface BackgroundLayer extends BaseLayer {
   type: 'background';
   fill: FillValue;
   accents: BackgroundAccent[];
-  /** Inline data URL for image background mode */
-  imageDataUrl?: string;
+  /** Asset reference (content-hash key) for image background mode */
+  imageRef?: AssetRef;
   /** How to fit the image within the canvas */
   imageFit?: 'cover' | 'contain' | 'fill';
   /** Blur radius in px applied to the background image */
@@ -306,10 +330,8 @@ export interface PhoneLayer extends BaseLayer {
   type: 'phone';
   model: PhoneModel;
   scale: number;
-  /** Filename key in AssetStore (preferred over screenshotDataUrl) */
-  screenshotPath?: string;
-  /** Fallback: inline base64 data URL (backwards compat, used when screenshotPath not in store) */
-  screenshotDataUrl?: string;
+  /** Asset reference (content-hash key, or legacy filename key) in the asset store */
+  screenshotPath?: AssetRef;
   screenshotFit: 'cover' | 'contain' | 'fill';
   screenshotOffsetX: number;   // pan within screen (0 = top-aligned)
   screenshotOffsetY: number;
@@ -434,7 +456,8 @@ export interface EmojiLayer extends BaseLayer {
 export interface BrandLayer extends BaseLayer {
   type: 'brand';
   appName: string;
-  logoDataUrl?: string;
+  /** Asset reference for the logo image */
+  logoRef?: AssetRef;
   logoSize: number;
   nameColor: string;
   nameFontSize: number;
@@ -521,7 +544,8 @@ export interface ProjectSettings {
    */
   schemaVersion?: number;
   brandName: string;
-  brandLogoDataUrl?: string;
+  /** Asset reference for the project-wide brand logo (used when creating Brand layers). */
+  brandLogoRef?: AssetRef;
   brandColors?: BrandColor[];
   outputPath?: string;  // last used output dir (File System Access API handle)
   /** Non-exported authoring canvas sentinel. Defaults to base. */
@@ -543,6 +567,8 @@ export interface Project {
   customFonts?: CustomFontRef[];
   /** User-saved gradient presets for this project. */
   savedGradients?: FillValue[];
+  /** Display metadata for referenced assets, keyed by AssetRef. */
+  assetManifest?: Record<AssetRef, AssetManifestEntry>;
 }
 
 // ─── Selection ────────────────────────────────────────────────────────────────

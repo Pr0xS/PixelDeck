@@ -1,3 +1,5 @@
+import { useAssetImage } from '@/hooks/useAssetImage'
+import { MissingImagePlaceholder } from './MissingImagePlaceholder'
 import { useRef, useEffect } from 'react'
 import { Rect, Ellipse, Group, Image as KonvaImage } from 'react-konva'
 import Konva from 'konva'
@@ -162,7 +164,8 @@ export function BackgroundNode({
   const groupRef = useRef<Konva.Group>(null)
 
   // Background image
-  const [bgImage] = useCachedImage(layer.imageDataUrl ?? '')
+  const bgAsset = useAssetImage(layer.imageRef)
+  const [bgImage] = useCachedImage(bgAsset.src ?? '')
   const bgImageRef = useRef<Konva.Image>(null)
 
   // Apply blur filter via Konva.Filters whenever image or blur value changes
@@ -247,6 +250,10 @@ export function BackgroundNode({
             listening={false}
           />
         </Group>
+      )}
+
+      {bgAsset.status === 'missing' && (
+        <MissingImagePlaceholder width={canvasWidth} height={canvasHeight} name={bgAsset.name} />
       )}
 
       {/* 3. Tint overlay above image */}

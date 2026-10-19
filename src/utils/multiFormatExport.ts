@@ -4,6 +4,7 @@ import { exportGroupImages, type PanoExportMode } from './export'
 import { acquireCaptureLock, waitForStageCaptureReady } from './stageCapture'
 import { useEditorStore } from '@/store'
 import { normalizePanoCompensationPx } from './panoGeometry'
+import { useExportCaptureStore } from './renderMode'
 import { buildExportFileTarget, buildExportPlan } from './exportPlan'
 
 export interface FormatExportResult {
@@ -57,6 +58,8 @@ export async function exportProjectImages(
   options: ProjectImageExportOptions,
 ): Promise<ProjectImageExportResult[]> {
   const release = await acquireCaptureLock()
+  // Flat (text-free) missing-image placeholders while capturing; see renderMode.ts.
+  useExportCaptureStore.getState().setActive(true)
   let originalFormat: CanvasFormatId | undefined
   let originalGroupId: string | undefined
   let originalLocale: string | undefined
@@ -160,6 +163,7 @@ export async function exportProjectImages(
         phase: 'restoring',
       })
     }
+    useExportCaptureStore.getState().setActive(false)
     release()
   }
 }

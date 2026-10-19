@@ -5,7 +5,7 @@ import type { Layer, LayerType } from '@/types'
  * model, and fill so an independently authored family retains its visuals.
  */
 export const CONTENT_SYNC_KEYS = [
-  'text', 'marks', 'screenshotPath', 'screenshotDataUrl', 'src',
+  'text', 'marks', 'screenshotPath', 'src',
   'localeContent', 'localizationMode', 'emoji',
 ] as const
 
@@ -55,7 +55,7 @@ function previewFor(source: LayerRecord, changedKeys: string[]): string | undefi
   const parts = changedKeys.flatMap((key) => {
     const value = source[key]
     if (key === 'text' && typeof value === 'string') return [truncate(value)]
-    if ((key === 'screenshotPath' || key === 'screenshotDataUrl' || key === 'src') && typeof value === 'string') return [truncate(value)]
+    if ((key === 'screenshotPath' || key === 'src') && typeof value === 'string') return [truncate(value)]
     if (key === 'localeContent' && value && typeof value === 'object') {
       const localizedText = Object.values(value as Record<string, { text?: unknown }>)
         .find((content) => typeof content?.text === 'string')?.text

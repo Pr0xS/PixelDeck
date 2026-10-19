@@ -749,19 +749,19 @@ describe('addTemplateSlideGroups', () => {
       opacity: 1, visible: true, locked: false, model: 'iphone-16-pro', scale: 1,
       screenshotDataUrl: 'data:image/png;base64,dGVtcGxhdGU=', screenshotFit: 'cover',
       screenshotOffsetX: 0, screenshotOffsetY: 0,
-    })
+    } as PhoneLayer)
 
     useEditorStore.getState().addTemplateSlideGroups(tpl)
     const phone = getActiveGroup().layers.find((layer) => layer.type === 'phone') as PhoneLayer
-    expect(phone.screenshotPath).toBeDefined()
-    expect(phone.screenshotDataUrl).toBeUndefined()
+    expect(phone.screenshotPath).toMatch(/^img_[0-9a-f]{24}\.png$/)
+    expect((phone as unknown as Record<string, unknown>).screenshotDataUrl).toBeUndefined()
     expect(useAssetStore.getState().assets[phone.screenshotPath!]?.dataUrl)
       .toBe('data:image/png;base64,dGVtcGxhdGU=')
   })
 })
 
 describe('importTemplateAsNewProject', () => {
-  it('moves inline phone screenshots into the asset store', () => {
+  it('moves inline phone screenshots into the NEW project asset scope', async () => {
     const dataUrl = 'data:image/jpeg;base64,dGVtcGxhdGU='
     const tpl: Template = {
       id: 'tpl-import', kind: 'template', schemaVersion: 1, name: 'Import Template',
@@ -774,14 +774,15 @@ describe('importTemplateAsNewProject', () => {
           opacity: 1, visible: true, locked: false, model: 'iphone-16-pro', scale: 1,
           screenshotDataUrl: dataUrl, screenshotFit: 'cover', screenshotOffsetX: 0,
           screenshotOffsetY: 0,
-        }],
+        } as PhoneLayer],
       }],
     }
 
     useEditorStore.getState().importTemplateAsNewProject(tpl)
     const phone = getActiveGroup().layers[0] as PhoneLayer
-    expect(phone.screenshotPath).toBe('template-import-template-1.jpg')
-    expect(phone.screenshotDataUrl).toBeUndefined()
-    expect(useAssetStore.getState().assets[phone.screenshotPath!]?.dataUrl).toBe(dataUrl)
+    expect(phone.screenshotPath).toMatch(/^img_[0-9a-f]{24}\.jpg$/)
+    expect((phone as unknown as Record<string, unknown>).screenshotDataUrl).toBeUndefined()
+    await expect.poll(() => useAssetStore.getState().activeProjectId).toBe(useEditorStore.getState().project.id)
+    await expect.poll(() => useAssetStore.getState().assets[phone.screenshotPath!]?.dataUrl).toBe(dataUrl)
   })
 })

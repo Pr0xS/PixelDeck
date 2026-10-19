@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest'
 import type { FormatLayerPatch, GroupLayer, ImageLayer, PhoneLayer, Project } from '@/types'
 import { newProject } from '@/store/helpers'
+import { assetKeyFromDataUrl } from './assetKey'
 import {
+  bundleAssetRecords,
+  rekeyLegacyAssets,
   buildProjectExportBundle,
   collectAssetKeys,
   isProjectExportBundle,
@@ -108,8 +111,16 @@ describe('project asset bundles', () => {
       (key) => key === 'base-phone.png' ? 'data:image/png;base64,resolved' : undefined,
     )
 
-    expect(bundle.assets).toEqual({ 'base-phone.png': 'data:image/png;base64,resolved' })
+    const key = assetKeyFromDataUrl('data:image/png;base64,resolved')
+    expect(bundle.schemaVersion).toBe(2)
+    expect(bundle.assets).toEqual({
+      [key]: { name: 'base-phone.png', mime: 'image/png', dataUrl: 'data:image/png;base64,resolved' },
+    })
     expect(missing).toEqual(['missing.png'])
+    // A phone referencing the filename now references the hash key.
+    expect(collectAssetKeys(bundle.project).has(key)).toBe(true)
+    expect(bundle.project.assetManifest?.[key]).toEqual({ name: 'base-phone.png', mime: 'image/png' })
+    expect(bundle.project.assetManifest?.['missing.png']).toEqual({ name: 'missing.png', mime: 'image/png' })
   })
 
   it('recognizes bundles but rejects bare projects and templates', () => {
@@ -121,15 +132,80 @@ describe('project asset bundles', () => {
     expect(isProjectExportBundle({ kind: 'template' })).toBe(false)
   })
 
-  it('preserves asset keys and data URLs through a JSON round trip', () => {
+  it('v2 bundle has no data URLs in the project and stores each image once', () => {
     const project = projectWithAssets()
-    const { bundle } = buildProjectExportBundle(project, (key) => dataFor(key))
+    // Same bytes under two different filenames => one asset.
+    const phones = project.slideGroups[0].layers.filter((l) => l.type === 'phone') as PhoneLayer[]
+    phones[0].localeContent = { es: { screenshotPath: 'copy-of-base.png' } }
+    const { bundle, missing } = buildProjectExportBundle(project, (key) =>
+      key === 'copy-of-base.png' ? dataFor('base-phone.png') : dataFor(key))
     const parsed: unknown = JSON.parse(JSON.stringify(bundle))
 
+    expect(missing).toEqual([])
     expect(isProjectExportBundle(parsed)).toBe(true)
-    if (!isProjectExportBundle(parsed)) return
-    expect(parsed.assets['nested-phone.png']).toBe(dataFor('nested-phone.png'))
-    expect([...collectAssetKeys(parsed.project)]).toEqual([...collectAssetKeys(project)])
+    if (!isProjectExportBundle(parsed) || parsed.schemaVersion !== 2) return
+    expect(JSON.stringify(parsed.project)).not.toContain('data:')
+    const dataUrls = Object.values(parsed.assets).map((a) => a.dataUrl)
+    expect(new Set(dataUrls).size).toBe(dataUrls.length)
+    expect(parsed.assets[assetKeyFromDataUrl(dataFor('nested-phone.png'))].name).toBe('nested-phone.png')
+    for (const key of collectAssetKeys(parsed.project)) expect(parsed.assets[key]).toBeDefined()
+  })
+
+  it('accepts v1 bundles and flattens their assets', () => {
+    const v1 = { kind: 'project-export', schemaVersion: 1, project: newProject(), assets: { 'a.png': dataFor('a') } }
+    expect(isProjectExportBundle(v1)).toBe(true)
+    if (!isProjectExportBundle(v1)) return
+    expect(bundleAssetRecords(v1)).toEqual([
+      { key: 'a.png', name: 'a.png', mime: 'image/png', dataUrl: dataFor('a') },
+    ])
+  })
+
+  it('collects background, brand and settings refs', () => {
+    const project = newProject()
+    project.slideGroups[0].layers.push({
+      ...baseLayer, id: 'br', name: 'Brand', type: 'brand', appName: 'x', logoRef: 'logo.png', logoSize: 1,
+      nameColor: '#fff', nameFontSize: 1, nameFontFamily: 'Inter', nameFontWeight: 400, direction: 'row', gap: 1,
+    })
+    const bg = project.slideGroups[0].layers.find((l) => l.type === 'background')
+    if (bg?.type === 'background') bg.imageRef = 'bg.png'
+    project.settings.brandLogoRef = 'settings-logo.png'
+    expect([...collectAssetKeys(project)].sort()).toEqual(['bg.png', 'logo.png', 'settings-logo.png'])
+  })
+})
+
+describe('rekeyLegacyAssets', () => {
+  const projectWith = (...paths: string[]) => {
+    const project = newProject()
+    paths.forEach((src, i) => project.slideGroups[0].layers.push({
+      ...baseLayer, id: `i${i}`, name: 'i', type: 'image', src, width: 1, height: 1, cornerRadius: 0,
+    } as ImageLayer))
+    return project
+  }
+
+  it('is idempotent and uses the old filename as the display name', () => {
+    const resolve = (k: string) => dataFor(k)
+    const first = rekeyLegacyAssets(projectWith('a.png'), resolve)
+    const key = assetKeyFromDataUrl(dataFor('a.png'))
+    expect(first.assets).toEqual([{ key, name: 'a.png', mime: 'image/png', dataUrl: dataFor('a.png') }])
+    expect(first.project.assetManifest?.[key]?.name).toBe('a.png')
+    const second = rekeyLegacyAssets(first.project, resolve)
+    expect(second.assets).toEqual([])
+    expect(second.project).toEqual(first.project)
+  })
+
+  it('keeps refs with missing bytes and names the manifest entry after the ref (idempotent)', () => {
+    const first = rekeyLegacyAssets(projectWith('gone.png'), () => undefined)
+    expect(first.missing).toEqual(['gone.png'])
+    expect(collectAssetKeys(first.project)).toEqual(new Set(['gone.png']))
+    expect(first.project.assetManifest?.['gone.png']?.name).toBe('gone.png')
+    const second = rekeyLegacyAssets(first.project, () => undefined)
+    expect(second.project).toEqual(first.project)
+  })
+
+  it('gives duplicate filenames with different bytes distinct keys', () => {
+    const a = rekeyLegacyAssets(projectWith('shot.png'), () => dataFor('one'))
+    const b = rekeyLegacyAssets(projectWith('shot.png'), () => dataFor('two'))
+    expect([...collectAssetKeys(a.project)][0]).not.toBe([...collectAssetKeys(b.project)][0])
   })
 })
 

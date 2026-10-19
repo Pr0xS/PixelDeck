@@ -7,6 +7,15 @@ import { createServer } from 'http'
 import { readFile } from 'fs/promises'
 import { extname } from 'path'
 import yaml from 'js-yaml'
+import {
+  parseProjectInput,
+  collectProjectRefs,
+  resolveAssetAliases,
+  resolveJobAssets,
+  describeMissing,
+} from './projectInput.mjs'
+
+export { resolveAssetAliases }
 
 const __dirname = dirname(fileURLToPath(import.meta.url))
 const distPath = resolve(__dirname, '../dist')
@@ -41,7 +50,7 @@ function validateBuild() {
   }
 }
 
-function validateJob(job, context = 'Export job') {
+async function validateJob(job, context = 'Export job') {
   if (!job || typeof job !== 'object' || Array.isArray(job)) {
     throw new Error(`${context} must be an object.`)
   }
@@ -55,16 +64,12 @@ function validateJob(job, context = 'Export job') {
     throw new Error(`${context}: project file not found: ${projectPath}`)
   }
 
-  let projectJson
-  try {
-    projectJson = JSON.parse(readFileSync(projectPath, 'utf8'))
-  } catch (error) {
-    throw new Error(`${context}: project file is not valid JSON: ${projectPath} (${error instanceof Error ? error.message : error})`)
-  }
-  if (!projectJson || typeof projectJson !== 'object' || !Array.isArray(projectJson.slideGroups)) {
-    throw new Error(`${context}: project JSON must be an object with a "slideGroups" array: ${projectPath}`)
-  }
-  return { projectPath, projectJson }
+  // Accepts raw project JSON, project-export bundles (v1/v2) and .zip exports.
+  const { project: projectJson, embedded } = await parseProjectInput(
+    readFileSync(projectPath),
+    `${context}: ${projectPath}`,
+  )
+  return { projectPath, projectJson, embedded }
 }
 
 // ─── Static file server ──────────────────────────────────────────────────────
@@ -123,81 +128,56 @@ async function startServer(port = DEFAULTS.port) {
 // ─── Load screenshots folder ─────────────────────────────────────────────────
 
 export function collectAssetRefsFromProject(project) {
-  const refs = new Set()
-  const visitLayer = (layer) => {
-    if (!layer) return
-    if (layer.type === 'phone') {
-      if (layer.screenshotPath && !String(layer.screenshotPath).startsWith('data:')) refs.add(layer.screenshotPath)
-    }
-    if (layer.type === 'image') {
-      if (layer.src && !String(layer.src).startsWith('data:')) refs.add(layer.src)
-    }
-    for (const patch of Object.values(layer.localeContent ?? {})) {
-      if (patch?.screenshotPath && !String(patch.screenshotPath).startsWith('data:')) refs.add(patch.screenshotPath)
-      if (patch?.src && !String(patch.src).startsWith('data:')) refs.add(patch.src)
-    }
-    for (const patch of Object.values(layer.localeOverrides ?? {})) {
-      if (patch?.screenshotPath && !String(patch.screenshotPath).startsWith('data:')) refs.add(patch.screenshotPath)
-      if (patch?.src && !String(patch.src).startsWith('data:')) refs.add(patch.src)
-    }
-    if (layer.type === 'group') {
-      for (const child of layer.children ?? []) visitLayer(child)
-    }
-  }
-  for (const group of project.slideGroups ?? []) {
-    for (const layer of group.layers ?? []) visitLayer(layer)
-  }
-  return refs
+  return collectProjectRefs(project)
 }
 
-export function resolveAssetAliases(refs, files) {
-  const aliases = {}
-  for (const ref of refs) {
-    const file = files.find((candidate) =>
-      ref === candidate || ref.endsWith(`-${candidate}`) || ref.endsWith(`/${candidate}`))
-    if (file) aliases[ref] = file
-  }
-  return aliases
-}
-
-async function loadScreenshots(screenshotsDir, projectJson) {
-  if (!screenshotsDir) return {}
-  
+/** Read image files (name + bytes) from the screenshots folder. */
+function readScreenshotFolder(screenshotsDir) {
+  if (!screenshotsDir) return []
   const absDir = resolve(screenshotsDir)
   if (!existsSync(absDir)) {
     console.warn(`[CLI] Screenshots dir not found: ${absDir}`)
-    return {}
+    return []
   }
+  const names = readdirSync(absDir).filter((f) => /\.(png|jpg|jpeg|webp)$/i.test(f))
+  console.log(`[CLI] Loaded ${names.length} screenshots from ${absDir}`)
+  return names.map((name) => ({ name, bytes: readFileSync(join(absDir, name)) }))
+}
 
-  const files = readdirSync(absDir).filter(f => /\.(png|jpg|jpeg|webp)$/i.test(f))
-  const assets = {}
+/** Locales that will actually be rendered for this job. */
+function localesForJob(projectJson, locale) {
+  return [locale ?? projectJson.settings?.defaultLocale ?? 'en']
+}
 
-  for (const file of files) {
-    const data = readFileSync(join(absDir, file))
-    const ext = extname(file).slice(1).toLowerCase()
-    const mimeType = ext === 'jpg' || ext === 'jpeg' ? 'image/jpeg' : `image/${ext}`
-    assets[file] = `data:${mimeType};base64,${data.toString('base64')}`
-  }
-
-  // Locale uploads created in the GUI are stored with stable synthetic keys like
-  // "locale-es-<group>-<layer>-screenshot.png". The screenshots folder usually
-  // contains the original basename, so create aliases expected by the project.
-  for (const [ref, file] of Object.entries(resolveAssetAliases(collectAssetRefsFromProject(projectJson), files))) {
-    if (!assets[ref]) assets[ref] = assets[file]
-  }
-
-  console.log(`[CLI] Loaded ${files.length} screenshots from ${absDir}`)
-  return assets
+function isTruthyFlag(v) {
+  return v === true || (v !== undefined && v !== null && v !== false && String(v).toLowerCase() !== 'false')
 }
 
 // ─── Single export run ────────────────────────────────────────────────────────
 
-async function runSingle({ project, screenshotsDir, outputDir, locale, port = DEFAULTS.port, timeout = DEFAULTS.timeoutMs }) {
+async function runSingle({ project, screenshotsDir, outputDir, locale, port = DEFAULTS.port, timeout = DEFAULTS.timeoutMs, allowMissing = false }) {
   validateBuild()
-  const { projectJson } = validateJob({ project, screenshotsDir, outputDir, locale })
-  
-  // Load screenshot assets
-  const assets = await loadScreenshots(screenshotsDir, projectJson)
+  const { projectJson: rawProject, embedded } = await validateJob({ project, screenshotsDir, outputDir, locale })
+
+  // Resolve every referenced image: folder > embedded (bundle/zip) > legacy aliases
+  const { project: projectJson, assets, missing, warnings } = resolveJobAssets({
+    project: rawProject,
+    embedded,
+    folderFiles: readScreenshotFolder(screenshotsDir),
+    locales: localesForJob(rawProject, locale),
+  })
+  for (const w of warnings) console.warn(`[CLI] Warning: ${w}`)
+  if (missing.length > 0) {
+    const list = describeMissing(projectJson, missing).map((m) => `  - ${m}`).join('\n')
+    if (!allowMissing) {
+      throw new Error(
+        `${missing.length} referenced image(s) could not be found:\n${list}\n` +
+        'Add them to the --screenshots folder (matched by original file name), use a project bundle/zip that embeds them, ' +
+        'or pass --allow-missing to export with placeholders.',
+      )
+    }
+    console.warn(`[CLI] Warning: ${missing.length} image(s) missing, continuing (--allow-missing):\n${list}`)
+  }
 
   // Ensure output dir exists
   const absOutput = resolve(outputDir)
@@ -219,7 +199,7 @@ async function runSingle({ project, screenshotsDir, outputDir, locale, port = DE
     await page.addInitScript((config) => {
       // @ts-ignore
       window.__EXPORT_CONFIG__ = config
-    }, { project: projectJson, assets, locale: locale ?? null })
+    }, { project: projectJson, assets, locale: locale ?? null, allowMissing })
 
     // Navigate to the app
     await page.goto(`http://localhost:${port}/`, { waitUntil: 'networkidle' })
@@ -271,6 +251,7 @@ export async function runExport(opts) {
   }
   const port = parsePositiveInteger(opts.port, 'port', DEFAULTS.port)
   const timeout = parsePositiveInteger(opts.timeout, 'timeout', DEFAULTS.timeoutMs)
+  const allowMissing = isTruthyFlag(opts['allow-missing'])
 
   // Batch mode: --config=batch.yaml
   if (opts.config) {
@@ -302,9 +283,9 @@ export async function runExport(opts) {
         outputDir: job.output,
         locale: job.locale ?? null,
       }
-      validateJob(normalized, `Batch job ${i + 1}`)
       return normalized
     })
+    for (const [i, job] of jobs.entries()) await validateJob(job, `Batch job ${i + 1}`)
 
     let totalSaved = 0
     for (const [i, job] of jobs.entries()) {
@@ -316,6 +297,7 @@ export async function runExport(opts) {
         locale: job.locale,
         port: opts.port ? port : DEFAULTS.port + i,  // different port per job to avoid conflict
         timeout,
+        allowMissing,
       })
       totalSaved += result.saved
     }
@@ -332,7 +314,7 @@ export async function runExport(opts) {
     throw new Error('--output directory is required')
   }
   validateBuild()
-  validateJob({
+  const { projectJson: singleProject } = await validateJob({
     project: opts.project,
     screenshotsDir: opts.screenshots,
     outputDir: opts.output,
@@ -342,7 +324,7 @@ export async function runExport(opts) {
   // Single mode — with optional locale
   if (opts['all-locales']) {
     // Export all locales defined in the project
-    const projectJson = JSON.parse(readFileSync(resolve(opts.project), 'utf8'))
+    const projectJson = singleProject
     const locales = projectJson.settings?.locales ?? [projectJson.settings?.defaultLocale ?? 'en']
     let totalSaved = 0
     for (const locale of locales) {
@@ -354,6 +336,7 @@ export async function runExport(opts) {
         locale,
         port,
         timeout,
+        allowMissing,
       })
       totalSaved += result.saved
     }
@@ -368,5 +351,6 @@ export async function runExport(opts) {
     locale: opts.locale ?? null,
     port,
     timeout,
+    allowMissing,
   })
 }

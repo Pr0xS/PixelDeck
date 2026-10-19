@@ -3,7 +3,9 @@ import { createPortal } from 'react-dom'
 import type { RefObject } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useAssetStore } from '@/store/assets'
-import { fileToDataUrl } from '@/utils/files'
+import { getImageSize, ingestImageFile } from '@/utils/ingestImage'
+import { computeAssetKeyUsage, computeUnusedAssets, removalWarning } from '@/utils/assetUsage'
+import { ImageUrlInput } from '@/components/ui/ImageUrlInput'
 import type { AssetEntry } from '@/store/assets'
 import type { Layer } from '@/types'
 
@@ -30,7 +32,7 @@ function groupAssets(entries: AssetEntry[]): AssetGroup[] {
   const folderMap = new Map<string, AssetEntry[]>()
 
   for (const asset of entries) {
-    const segments = asset.filename.split('/')
+    const segments = asset.name.split('/')
     if (segments.length === 1) {
       rootAssets.push(asset)
     } else {
@@ -83,9 +85,8 @@ function Chevron({ open }: { open: boolean }) {
 // ─── Main component ──────────────────────────────────────────────────────────
 
 export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLayer }: AssetsSectionProps) {
-  const { addAsset, removeAsset, loadFolder, loadFiles, assets } = useAssetStore(
+  const { removeAsset, loadFolder, loadFiles, assets } = useAssetStore(
     useShallow((s) => ({
-      addAsset: s.addAsset,
       removeAsset: s.removeAsset,
       loadFolder: s.loadFolder,
       loadFiles: s.loadFiles,
@@ -112,19 +113,19 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
     })
   }, [])
 
-  const assetEntries = Object.values(assets).sort((a, b) => a.filename.localeCompare(b.filename))
+  const assetEntries = Object.values(assets).sort((a, b) => a.name.localeCompare(b.name))
   const assetCount = assetEntries.length
   const groups = groupAssets(assetEntries)
 
   const handleImageFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0]
     if (!file) return
-    const dataUrl = await fileToDataUrl(file)
-    addAsset(file.name, dataUrl)
-    const img = new Image()
-    img.onload = () => addImage(file.name, img.width, img.height)
-    img.src = dataUrl
     e.target.value = ''
+    const { key } = await ingestImageFile(file, { measure: true })
+    const dataUrl = useAssetStore.getState().resolveAsset(key)
+    if (!dataUrl) return
+    const { width, height } = await getImageSize(dataUrl)
+    addImage(key, width, height)
   }
 
   const handleScreenshotFiles = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -154,13 +155,25 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
     }
   }
 
-  const getImageSize = (dataUrl: string) =>
-    new Promise<{ width: number; height: number }>((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => resolve({ width: img.width, height: img.height })
-      img.onerror = () => reject(new Error('Could not load asset image'))
-      img.src = dataUrl
-    })
+  const handleUrlAdded = async (key: string) => {
+    const dataUrl = useAssetStore.getState().resolveAsset(key)
+    if (dataUrl) await handleUseAssetForSelection(key, dataUrl)
+  }
+
+  const handleRemoveAsset = (key: string) => {
+    const warning = removalWarning(computeAssetKeyUsage(key))
+    if (warning && !window.confirm(warning)) return
+    removeAsset(key)
+  }
+
+  const handleRemoveUnused = () => {
+    const unused = computeUnusedAssets()
+    if (unused.length === 0) return
+    const bytes = unused.reduce((n, a) => n + a.sizeBytes, 0)
+    const size = bytes >= 1024 * 1024 ? `${(bytes / 1024 / 1024).toFixed(1)} MB` : `${Math.max(1, Math.round(bytes / 1024))} KB`
+    if (!window.confirm(`Remove ${unused.length} unused asset(s) (${size})? Assets used by the project, its undo history, or the clipboard are kept.`)) return
+    for (const a of unused) removeAsset(a.key)
+  }
 
   const addAssetToCanvas = async (filename: string, dataUrl: string) => {
     const { width, height } = await getImageSize(dataUrl)
@@ -174,7 +187,7 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
     }
 
     if (selectedLayer.type === 'phone') {
-      updateLayer(selectedLayer.id, { screenshotPath: filename, screenshotDataUrl: undefined } as Partial<Layer>)
+      updateLayer(selectedLayer.id, { screenshotPath: filename } as Partial<Layer>)
       return
     }
 
@@ -203,28 +216,28 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
 
   const renderAssetCard = (asset: AssetEntry, large = false) => {
     const primaryAction = getAssetPrimaryAction()
-    const displayName = basename(asset.filename)
+    const displayName = basename(asset.name)
     return (
       <div
-        key={asset.filename}
+        key={asset.key}
         draggable
-        onDragStart={(event) => handleAssetDragStart(event, asset.filename)}
+        onDragStart={(event) => handleAssetDragStart(event, asset.key)}
         className="group overflow-hidden rounded-lg border border-[rgba(255,255,255,0.08)] bg-[#111118] transition-colors hover:border-[rgba(124,110,246,0.45)]"
-        title={`${asset.filename} — drag to canvas or click to use`}
+        title={`${asset.name} — drag to canvas or click to use`}
       >
         <button
           type="button"
           draggable
-          aria-label={`${primaryAction}: ${asset.filename}`}
-          onDragStart={(event) => handleAssetDragStart(event, asset.filename)}
-          onClick={() => { void handleUseAssetForSelection(asset.filename, asset.dataUrl) }}
+          aria-label={`${primaryAction}: ${asset.name}`}
+          onDragStart={(event) => handleAssetDragStart(event, asset.key)}
+          onClick={() => { void handleUseAssetForSelection(asset.key, asset.dataUrl) }}
           className="block w-full"
           title={primaryAction}
         >
           <div className={`relative bg-black/25 ${large ? 'aspect-[9/16]' : 'aspect-[4/3]'}`}>
             <img
               src={asset.dataUrl}
-              alt={asset.filename}
+              alt={asset.name}
               draggable={false}
               className="h-full w-full object-cover"
               loading="lazy"
@@ -238,8 +251,8 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
           <span className={`min-w-0 flex-1 truncate text-[#9b9bad] ${large ? 'text-xs' : 'text-[9px]'}`}>{displayName}</span>
           <button
             type="button"
-            aria-label={`Add ${asset.filename} to canvas`}
-            onClick={() => { void addAssetToCanvas(asset.filename, asset.dataUrl) }}
+            aria-label={`Add ${asset.name} to canvas`}
+            onClick={() => { void addAssetToCanvas(asset.key, asset.dataUrl) }}
             className="rounded px-1 text-[10px] text-[#a89cf6] hover:bg-[rgba(124,110,246,0.16)] hover:text-white"
             title="Add image to canvas"
           >
@@ -247,8 +260,8 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
           </button>
           <button
             type="button"
-            aria-label={`Remove ${asset.filename}`}
-            onClick={() => removeAsset(asset.filename)}
+            aria-label={`Remove ${asset.name}`}
+            onClick={() => handleRemoveAsset(asset.key)}
             className="rounded px-1 text-[10px] text-[#7f8094] hover:bg-[rgba(248,113,113,0.16)] hover:text-[#f87171]"
             title="Remove asset"
           >
@@ -373,6 +386,21 @@ export function AssetsSection({ imageInputRef, selectedLayer, addImage, updateLa
                 Import Folder
               </button>
             </div>
+            <ImageUrlInput
+              className="mt-2"
+              onAdded={(key) => { void handleUrlAdded(key) }}
+            />
+            {assetCount > 0 && (
+              <button
+                type="button"
+                aria-label="Remove unused assets"
+                onClick={handleRemoveUnused}
+                className="mt-2 w-full rounded-lg border border-[rgba(255,255,255,0.08)] px-2 py-1.5 text-[10px] text-[#b0b0c4] transition-colors hover:border-[rgba(248,113,113,0.35)] hover:bg-[rgba(248,113,113,0.1)] hover:text-[#f87171]"
+                title="Remove assets not used by the project, undo history, or clipboard"
+              >
+                Remove unused…
+              </button>
+            )}
             <input ref={screenshotsInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleScreenshotFiles} />
             {/* Fallback folder picker for browsers without File System Access API */}
             <input ref={folderInputRef} type="file" accept="image/*" multiple className="hidden" onChange={handleFolderFiles} {...{ webkitdirectory: '' }} />

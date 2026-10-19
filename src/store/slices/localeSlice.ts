@@ -41,7 +41,6 @@ function promoteLayerToLocale(layer: Layer, targetLocale: string, oldDefault: st
       : layer.type === 'phone'
         ? {
             ...(layer.screenshotPath !== undefined ? { screenshotPath: layer.screenshotPath } : {}),
-            ...(layer.screenshotDataUrl !== undefined ? { screenshotDataUrl: layer.screenshotDataUrl } : {}),
           }
         : { src: layer.src }
 

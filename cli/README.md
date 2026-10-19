@@ -27,8 +27,9 @@ node cli/index.mjs export \
 
 | Flag | Description |
 |---|---|
-| `--project` | Path to the `.json` project file saved from the GUI |
-| `--screenshots` | Directory containing raw PNG screenshots (filenames must match `screenshotPath` values in the project) |
+| `--project` | Project file from the GUI: raw project `.json`, a project-export JSON bundle, or a `.zip` project export |
+| `--screenshots` | Optional directory of images. Files are matched by their original file name (see *Screenshots folder*) and override images embedded in a bundle/zip |
+| `--allow-missing` | Continue with placeholders when referenced images are missing (default: the export fails and lists them) |
 | `--output` | Directory where exported slide PNGs are written |
 
 ### Batch export via YAML config
@@ -114,6 +115,12 @@ node cli/index.mjs locale-import \
 
 ## Screenshots folder
 
-The `--screenshots` folder should contain PNG files whose filenames match the `screenshotPath` values in the project layers (e.g. `01-dashboard.png`, `02-settings.png`). Filenames are matched case-sensitively.
+Images are referenced by content-hash keys (`img_<hash>.<ext>`); the project's `assetManifest` records each image's original file name. Image sources are resolved in this order:
+
+1. Files in `--screenshots` whose **file name equals the original name** recorded in the project (case-sensitive). These override embedded images.
+2. Images embedded in a project-export JSON bundle or `.zip`.
+3. Legacy projects that reference images by file name: the file name (or a `<prefix>-<name>` / `<dir>/<name>` suffix match) in the folder.
+
+If any image used by the exported locale is still missing, the CLI exits non-zero and lists the missing images (pass `--allow-missing` to export anyway).
 
 Locale-specific screenshots can be named with a locale prefix (e.g. `es-01-dashboard.png`) and are auto-detected when exporting with `--locale`.
