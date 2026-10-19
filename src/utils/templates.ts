@@ -2,10 +2,10 @@ import { nanoid } from 'nanoid'
 import type {
   Layer, SlideGroup, GroupLayer,
   Template, Project, ProjectSettings,
-  CanvasBackground, BackgroundLayer,
+  CanvasBackground, BackgroundLayer, AssetManifestEntry,
 } from '@/types'
 import { migrateLayerSpans } from '@/store/helpers'
-import { mapLayerTree } from '@/utils/layerTree'
+import { extractInlineAssetsFromGroups } from '@/utils/assetMigration'
 
 // ─── ID helpers ──────────────────────────────────────────────────────────────
 
@@ -40,8 +40,11 @@ export function deterministicIds(layers: Layer[]): Layer[] {
 
 const IMAGE_SOURCE_FIELDS = [
   'screenshotPath',
-  'screenshotDataUrl',
   'src',
+  'imageRef',
+  'logoRef',
+  // Legacy inline fields: never let a pre-migration layer leak images.
+  'screenshotDataUrl',
   'imageDataUrl',
   'logoDataUrl',
 ] as const
@@ -91,74 +94,34 @@ export function stripLayerImages(layers: Layer[]): Layer[] {
 
 export interface ExtractedScreenshotsResult {
   slideGroups: SlideGroup[]
+  /** `filename` is the content-hash asset key (see utils/assetKey.ts). */
   assets: Array<{ filename: string; dataUrl: string }>
+  /** Display metadata for the extracted keys, to merge into Project.assetManifest. */
+  manifest: Record<string, AssetManifestEntry>
 }
 
 /**
- * Walk cloned template groups (including group children and locale overrides),
- * replacing inline phone screenshots with deduplicated asset-store keys.
- * BackgroundLayer.imageDataUrl and ImageLayer.src are intentionally untouched.
- * Pure: callers must register every returned asset with the asset store.
+ * Convert every inline image in cloned template groups (phone screenshots,
+ * background images, brand logos, image-layer sources, locale/format patches,
+ * group children) into content-hash asset refs. Pure: callers must register
+ * every returned asset with the asset store.
  */
 export function extractInlineScreenshots(
   templateName: string,
   slideGroups: SlideGroup[],
 ): ExtractedScreenshotsResult {
-  const cloned = JSON.parse(JSON.stringify(slideGroups)) as SlideGroup[]
   const slug = templateName
     .toLowerCase()
     .replace(/\s+/g, '-')
     .replace(/[^a-z0-9-]/g, '')
-  const filenamesByDataUrl = new Map<string, string>()
-  const assets: Array<{ filename: string; dataUrl: string }> = []
-
-  const filenameFor = (dataUrl: string): string => {
-    const existing = filenamesByDataUrl.get(dataUrl)
-    if (existing) return existing
-
-    const mime = dataUrl.match(/^data:image\/([^;,]+)/i)?.[1]?.toLowerCase()
-    const ext = mime === 'jpeg' || mime === 'jpg'
-      ? 'jpg'
-      : mime === 'webp'
-        ? 'webp'
-        : 'png'
-    const filename = `template-${slug}-${assets.length + 1}.${ext}`
-    filenamesByDataUrl.set(dataUrl, filename)
-    assets.push({ filename, dataUrl })
-    return filename
+  const result = extractInlineAssetsFromGroups(slideGroups, {
+    nameFor: (_kind, ext, index) => `template-${slug}-${index}.${ext}`,
+  })
+  return {
+    slideGroups: result.slideGroups,
+    assets: result.assets.map((a) => ({ filename: a.key, dataUrl: a.dataUrl })),
+    manifest: result.manifest,
   }
-
-  const extractFromLayer = (layer: Layer): Layer => {
-    if (layer.type === 'phone' && layer.screenshotDataUrl) {
-      if (layer.screenshotPath) {
-        if (!filenamesByDataUrl.has(layer.screenshotDataUrl)) {
-          filenamesByDataUrl.set(layer.screenshotDataUrl, layer.screenshotPath)
-        }
-      } else {
-        layer.screenshotPath = filenameFor(layer.screenshotDataUrl)
-      }
-      delete layer.screenshotDataUrl
-    }
-
-    if (layer.localeContent) {
-      for (const patch of Object.values(layer.localeContent)) {
-        if (!patch.screenshotDataUrl) continue
-        if (patch.screenshotPath) {
-          if (!filenamesByDataUrl.has(patch.screenshotDataUrl)) {
-            filenamesByDataUrl.set(patch.screenshotDataUrl, patch.screenshotPath)
-          }
-        } else {
-          patch.screenshotPath = filenameFor(patch.screenshotDataUrl)
-        }
-        delete patch.screenshotDataUrl
-      }
-    }
-
-    return layer
-  }
-
-  for (const group of cloned) group.layers = mapLayerTree(group.layers, extractFromLayer)
-  return { slideGroups: cloned, assets }
 }
 
 // ─── Export: Project → Template ──────────────────────────────────────────────
@@ -183,7 +146,7 @@ export function projectToTemplate(project: Project, opts: ExportTemplateOpts): T
     return { ...rest, layers }
   })
 
-  // Sanitize settings: never include outputPath or brandLogoDataUrl in templates.
+  // Sanitize settings: never include outputPath or brandLogoRef in templates.
   // brandColors ARE included — layers may reference them via {brand:id} tokens,
   // and without the palette those tokens would dangle after import.
   const settings: Partial<ProjectSettings> = {

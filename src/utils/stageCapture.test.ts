@@ -1,4 +1,4 @@
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, afterEach } from 'vitest'
 
 const { getPendingImageLoadCount } = vi.hoisted(() => ({
   getPendingImageLoadCount: vi.fn(() => 0),
@@ -12,9 +12,11 @@ import {
   isCaptureLocked,
   isImagelessBlocking,
   runExclusiveCapture,
+  waitForAssetsHydrated,
   waitForStageSettled,
   withIdentityTransform,
 } from './stageCapture'
+import { useAssetStore } from '@/store/assets'
 
 describe('stage capture mutex', () => {
   it('serializes concurrent captures in FIFO order', async () => {
@@ -126,5 +128,36 @@ describe('waitForStageSettled', () => {
     pendingLoads = 0
     await expect(settled).resolves.toBe(true)
     vi.unstubAllGlobals()
+  })
+})
+
+describe('waitForAssetsHydrated', () => {
+  afterEach(() => {
+    vi.useRealTimers()
+    useAssetStore.setState({ hydrated: false })
+  })
+
+  it('resolves immediately when already hydrated', async () => {
+    useAssetStore.setState({ hydrated: true })
+    await expect(waitForAssetsHydrated(50)).resolves.toBe(true)
+  })
+
+  it('waits for hydrated to flip from false to true', async () => {
+    useAssetStore.setState({ hydrated: false })
+    let done: boolean | null = null
+    const p = waitForAssetsHydrated(1000).then((v) => { done = v })
+    await Promise.resolve()
+    expect(done).toBeNull()
+    useAssetStore.setState({ hydrated: true })
+    await p
+    expect(done).toBe(true)
+  })
+
+  it('times out with false instead of hanging', async () => {
+    vi.useFakeTimers()
+    useAssetStore.setState({ hydrated: false })
+    const p = waitForAssetsHydrated(5000)
+    await vi.advanceTimersByTimeAsync(5000)
+    await expect(p).resolves.toBe(false)
   })
 })

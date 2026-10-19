@@ -393,7 +393,7 @@ export const createLayerSlice = (
       visible: true,
       locked: false,
       appName: settings.brandName,
-      logoDataUrl: settings.brandLogoDataUrl,
+      logoRef: settings.brandLogoRef,
       logoSize: 66 * factor,
       nameColor: '#E05243',
       nameFontSize: 40 * factor,

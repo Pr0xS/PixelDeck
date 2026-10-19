@@ -1,5 +1,6 @@
 import { effectiveLocalizationMode } from '@/utils/locale'
 import type { LocalizableRow } from './types'
+import { useAssetStore } from '@/store/assets'
 import { getFileLabel } from './helpers'
 
 export interface ImageOverrideCellProps {
@@ -21,21 +22,23 @@ export function ImageOverrideCell({
   onUpload,
   onClear,
 }: ImageOverrideCellProps) {
+  const manifest = useAssetStore((s) => s.assets)
+  const labelFor = (ref?: string) => (ref ? (manifest[ref]?.name ?? getFileLabel(ref)) : getFileLabel(ref))
   const override = row.layer.localeContent?.[locale]
   const isDefaultLocale = locale === defaultLocale
   const isActiveColumn = locale === activeLocale
   const mode = effectiveLocalizationMode(row.layer)
   const isSkipped = mode === 'skip'
   const basePreviewSrc = row.defaultImageRef
-    ? (getAsset(row.defaultImageRef) ?? row.defaultImageRef)
-    : row.defaultImageRef
+    ? getAsset(row.defaultImageRef)
+    : undefined
 
   const previewSrc =
     isDefaultLocale
       ? basePreviewSrc
       : row.layerType === 'phone'
-      ? (override?.screenshotPath ? getAsset(override.screenshotPath) : undefined) ?? override?.screenshotDataUrl
-      : (override?.src ? getAsset(override.src) : undefined) ?? override?.src
+      ? (override?.screenshotPath ? getAsset(override.screenshotPath) : undefined)
+      : (override?.src ? getAsset(override.src) : undefined)
 
   if (isDefaultLocale) {
     return (
@@ -50,7 +53,7 @@ export function ImageOverrideCell({
           <div className="flex items-center gap-3">
             <img src={previewSrc} alt="base" className="h-12 w-9 rounded-lg border border-white/10 object-cover shrink-0" />
             <div className="min-w-0 flex-1">
-              <div className="truncate text-xs text-[#ecebfa]">{getFileLabel(row.defaultImageRef)}</div>
+              <div className="truncate text-xs text-[#ecebfa]">{labelFor(row.defaultImageRef)}</div>
               <div className="mt-1.5 flex items-center justify-between gap-2">
                 <button type="button" onClick={onUpload} className="text-[10px] text-[#9d90f8] hover:text-white transition">
                   Change
@@ -105,8 +108,8 @@ export function ImageOverrideCell({
           <div className="min-w-0 flex-1">
             <div className="truncate text-xs text-[#ecebfa]">
               {row.layerType === 'phone'
-                ? getFileLabel(override?.screenshotPath ?? override?.screenshotDataUrl)
-                : getFileLabel(override?.src)}
+                ? labelFor(override?.screenshotPath)
+                : labelFor(override?.src)}
             </div>
             <div className="flex gap-2 mt-1.5">
               <button type="button" onClick={onUpload} className="text-[10px] text-[#9d90f8] hover:text-white transition">

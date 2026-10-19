@@ -117,18 +117,26 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
     }
   }
 
-  const handleExportProject = async (id: string, name: string) => {
+  const downloadBlob = (blob: Blob, filename: string) => {
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a')
+    a.href = url
+    a.download = filename
+    a.click()
+    a.remove()
+    URL.revokeObjectURL(url)
+  }
+
+  /** Default: ZIP (project.json + assets/). Secondary: single-file JSON bundle. */
+  const handleExportProject = async (id: string, name: string, format: 'zip' | 'json' = 'zip') => {
     try {
-      const json = await useProjectsStore.getState().exportProjectBundle(id)
-      const blob = new Blob([json], { type: 'application/json' })
-      const url = URL.createObjectURL(blob)
       const slug = name.replace(/[^a-z0-9_-]/gi, '-').toLowerCase() || 'project'
-      const a = document.createElement('a')
-      a.href = url
-      a.download = `${slug}.json`
-      a.click()
-      a.remove()
-      URL.revokeObjectURL(url)
+      if (format === 'zip') {
+        downloadBlob(await useProjectsStore.getState().exportProjectZip(id), `${slug}.pixeldeck.zip`)
+      } else {
+        const json = await useProjectsStore.getState().exportProjectBundle(id)
+        downloadBlob(new Blob([json], { type: 'application/json' }), `${slug}.json`)
+      }
     } catch (err) {
       console.error('[PixelDeck] Failed to export project', err)
       alert('Failed to export this project. Please try again.')
@@ -137,23 +145,19 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
 
   const handleImport = () => importInputRef.current?.click()
 
-  const handleImportFile = (files: File[]) => {
+  const handleImportFile = async (files: File[]) => {
     const file = files[0]
     if (!file) return
-    const reader = new FileReader()
-    reader.onload = async () => {
-      try {
-        const { missing } = await useProjectsStore.getState()
-          .importProjectFromJson(reader.result as string)
-        onClose()
-        if (missing.length > 0) {
-          alert(`Project imported. ${missing.length} referenced image(s) were missing from the file and will appear blank.`)
-        }
-      } catch {
-        alert('Failed to open project file.')
+    try {
+      // .zip or .json — sniffed by magic bytes, not extension.
+      const { missing } = await useProjectsStore.getState().importProjectFromFile(file)
+      onClose()
+      if (missing.length > 0) {
+        alert(`Project imported. ${missing.length} referenced image(s) were missing from the file and will appear blank.`)
       }
+    } catch {
+      alert('Failed to open project file.')
     }
-    reader.readAsText(file)
   }
 
   // Sort: active first, then by most recently updated
@@ -241,7 +245,7 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
               </button>
               <FileUploadButton
                 ref={importInputRef}
-                accept=".json"
+                accept=".zip,.json,application/zip,application/json"
                 onFiles={handleImportFile}
                 className="hidden"
               >Import file</FileUploadButton>
@@ -463,8 +467,8 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                     onClick={(e) => e.stopPropagation()}
                   >
                     <button
-                      title="Export project as JSON"
-                      onClick={(e) => { e.stopPropagation(); void handleExportProject(p.id, p.name) }}
+                      title="Export project as ZIP (project + images)"
+                      onClick={(e) => { e.stopPropagation(); void handleExportProject(p.id, p.name, 'zip') }}
                       style={{
                         background: 'none',
                         border: 'none',
@@ -482,6 +486,27 @@ export function ProjectsModal({ open, onClose }: ProjectsModalProps) {
                       }
                     >
                       Export
+                    </button>
+                    <button
+                      title="Export project as a single JSON file"
+                      onClick={(e) => { e.stopPropagation(); void handleExportProject(p.id, p.name, 'json') }}
+                      style={{
+                        background: 'none',
+                        border: 'none',
+                        color: '#6b6b7a',
+                        cursor: 'pointer',
+                        fontSize: 11,
+                        padding: '4px',
+                        borderRadius: 4,
+                      }}
+                      onMouseEnter={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.color = '#e8e8f0')
+                      }
+                      onMouseLeave={(e) =>
+                        ((e.currentTarget as HTMLButtonElement).style.color = '#6b6b7a')
+                      }
+                    >
+                      JSON
                     </button>
                     <button
                       title="Rename (double-click name)"

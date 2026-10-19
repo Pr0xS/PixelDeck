@@ -7,6 +7,7 @@ import { ExportCancelledError, exportProjectImages, type ProjectExportScope, typ
 import { DEFAULT_PANO_COMPENSATION_PX, MAX_PANO_COMPENSATION_PX, normalizePanoCompensationPx } from '@/utils/panoGeometry'
 import { downloadDataUrl } from '@/utils/export'
 import { buildExportZipBlob, zipFileNameFor } from '@/utils/exportZip'
+import { findMissingAssets } from '@/utils/missingAssets'
 import { waitForStage } from '@/utils/stageCapture'
 import type { CanvasFormatId } from '@/types'
 import { ModalShell } from '@/components/ui/ModalShell'
@@ -162,6 +163,16 @@ export function ExportModal({ open, onClose, stageRef }: ExportModalProps) {
     if (!stageRef.current || !activeGroup) {
       setExportError('Export unavailable. Try again.')
       return
+    }
+
+    const missing = findMissingAssets(project)
+    if (missing.length > 0) {
+      const lines = missing.slice(0, 10).map((m) => `• ${m.name} — ${m.where}`).join('\n')
+      const more = missing.length > 10 ? `\n…and ${missing.length - 10} more` : ''
+      const ok = window.confirm(
+        `${missing.length} image${missing.length === 1 ? ' is' : 's are'} missing and will export as placeholders.\n\n${lines}${more}\n\nContinue?`,
+      )
+      if (!ok) return
     }
 
     const controller = new AbortController()

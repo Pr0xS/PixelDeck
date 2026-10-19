@@ -1,14 +1,12 @@
 import type { BrandColor, Template } from '@/types'
 import { normalizeProjectFormats, BASE_CANVAS_FORMAT, getGroupFamilyKey } from '@/utils/canvasFormats'
 import { projectToTemplate, applyTemplate, extractInlineScreenshots } from '@/utils/templates'
-import { isProjectExportBundle } from '@/utils/projectAssets'
+import { finalizeProjectImport, parseProjectJson } from '@/utils/projectZip'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
 import { useAssetStore } from '../assets'
 import {
   newId,
   newProject,
-  assertProjectShape,
-  migrateProject,
   touchProject,
   touchSettings,
 } from '../helpers'
@@ -76,10 +74,14 @@ export const createProjectSlice = (
   },
 
   importProject: (json) => {
-    const parsed: unknown = JSON.parse(json)
-    const rawProject = isProjectExportBundle(parsed) ? parsed.project : parsed
-    assertProjectShape(rawProject)
-    const project = migrateProject(rawProject)
+    // Accepts a raw Project JSON or a v1/v2 export bundle. Bundle assets (and
+    // any inline/legacy-keyed images) are stored in the CURRENT asset scope,
+    // so callers that switch projects must activate the target scope first.
+    const incoming = parseProjectJson(json)
+    const store = useAssetStore.getState()
+    const finalized = finalizeProjectImport(incoming, (ref) => store.resolveAsset(ref))
+    store.putAssetEntries(finalized.assets)
+    const project = finalized.project
     set({
       project,
       activeSlideGroupId: project.slideGroups[0]?.id ?? '',
@@ -123,7 +125,6 @@ export const createProjectSlice = (
   importTemplateAsNewProject: (tpl: Template) => {
     const { slideGroups, settings } = applyTemplate(tpl)
     const extracted = extractInlineScreenshots(tpl.name, slideGroups)
-    extracted.assets.forEach((asset) => useAssetStore.getState().addAsset(asset.filename, asset.dataUrl))
     const now = new Date().toISOString()
     const base = newProject()
     const project = normalizeProjectFormats({
@@ -133,6 +134,7 @@ export const createProjectSlice = (
       updatedAt: now,
       settings: { ...base.settings, ...settings },
       slideGroups: extracted.slideGroups,
+      ...(Object.keys(extracted.manifest).length ? { assetManifest: extracted.manifest } : {}),
     })
     set({
       project,
@@ -147,6 +149,20 @@ export const createProjectSlice = (
       lastFormatByFamily: {},
       lastGroupByFamily: {},
     })
+    // The new project has its own asset scope: switch to it first, THEN store the
+    // template images there (writing them into the previous project's scope would
+    // leak them into the wrong project and lose them on the first scope switch).
+    const newScope = project.id
+    const entries = extracted.assets.map((a) => ({
+      key: a.filename,
+      name: extracted.manifest[a.filename]?.name ?? a.filename,
+      dataUrl: a.dataUrl,
+    }))
+    void (async () => {
+      const assets = useAssetStore.getState()
+      await assets.setActiveProject(newScope)
+      useAssetStore.getState().putAssetEntries(entries)
+    })()
     // Clear undo history — new project starts fresh
     clearHistory()
   },
@@ -168,6 +184,9 @@ export const createProjectSlice = (
             ? { ...s.project.settings, brandColors: [...existing, ...incoming] }
             : s.project.settings,
           slideGroups: [...s.project.slideGroups, ...extracted.slideGroups],
+          ...(Object.keys(extracted.manifest).length
+            ? { assetManifest: { ...(s.project.assetManifest ?? {}), ...extracted.manifest } }
+            : {}),
         }),
         activeSlideGroupId: extracted.slideGroups[0]?.id ?? s.activeSlideGroupId,
       }

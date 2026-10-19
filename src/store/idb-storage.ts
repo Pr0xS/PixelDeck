@@ -9,11 +9,41 @@ const STORE_NAME = 'kv'
 
 // Singleton DB promise — opened once, reused for every read/write.
 let _db: Promise<IDBDatabase> | null = null
-let storageWarningShown = false
+const warned = new Set<string>()
+let persistRequested = false
+
+/**
+ * Ask the browser not to evict our storage under pressure. Once, guarded,
+ * best-effort.
+ */
+export function requestPersistentStorage(): void {
+  if (persistRequested) return
+  persistRequested = true
+  try {
+    if (typeof navigator !== 'undefined') void navigator.storage?.persist?.()?.catch?.(() => {})
+  } catch {
+    // best-effort
+  }
+}
+
+/**
+ * Single, de-duplicated user-facing warning path for storage failures.
+ * `kind` dedupes separately for the project JSON and for images.
+ */
+export function warnStorageFailure(kind: 'project' | 'assets', err: unknown): void {
+  console.warn(`[PixelDeck] ${kind} save failed`, err)
+  if (warned.has(kind) || typeof window === 'undefined') return
+  warned.add(kind)
+  const message = kind === 'project'
+    ? 'Project library save failed. Export Project now to avoid losing recent changes.'
+    : 'Your images could NOT be saved to browser storage, so they will be lost when you close this tab. Export your project now (Projects \u2192 Export) to keep them.'
+  window.setTimeout(() => { alert(message) }, 0)
+}
 
 function getDB(): Promise<IDBDatabase> {
   if (_db) return _db
   _db = new Promise((resolve, reject) => {
+    requestPersistentStorage()
     const req = indexedDB.open(DB_NAME, 1)
     req.onupgradeneeded = () => {
       if (!req.result.objectStoreNames.contains(STORE_NAME)) {
@@ -56,13 +86,8 @@ export const idbStorage = {
         tx.onerror = () => reject(tx.error)
       })
     } catch (e) {
-      console.warn('[idbStorage] setItem failed:', e)
-      if (!storageWarningShown && typeof window !== 'undefined') {
-        storageWarningShown = true
-        window.setTimeout(() => {
-          alert('Image autosave failed. Screenshots are embedded as fallback, but export your project to avoid losing assets.')
-        }, 0)
-      }
+      if (key.startsWith('pixeldeck-assets')) warnStorageFailure('assets', e)
+      else console.warn('[idbStorage] setItem failed:', e)
     }
   },
 

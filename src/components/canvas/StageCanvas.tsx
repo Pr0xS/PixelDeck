@@ -59,7 +59,6 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   })))
   const ctrlRef = useCtrlKey()
   const assets = useAssetStore((s) => s.assets)
-  const addAsset = useAssetStore((s) => s.addAsset)
   const rawActiveGroup = project.slideGroups.find((candidate) => candidate.id === activeSlideGroupId)
   const group = useMemo(
     () => rawActiveGroup && resolveGroupView(rawActiveGroup, project.settings, activeLocale, activeCanvasFormat),
@@ -98,7 +97,7 @@ export function StageCanvas({ stageRef }: StageCanvasProps) {
   const { rbRect, suppressStageClickRef, handleStageMouseDown, handleStageMouseMove, handleStageMouseUp } =
     useRubberBandSelection({ stageRef, group, spaceRef, clearMultiSelection, deselect, select, setMultiSelection })
   const { assetDropHighlight, setAssetDropHighlight, handleAssetDrop, handleAssetDragOver } =
-    useAssetDropTarget({ stageRef, group, selection, assets, addAsset, updateLayer, addImageAt, viewportX, viewportY, zoom })
+    useAssetDropTarget({ stageRef, group, selection, assets, updateLayer, addImageAt, viewportX, viewportY, zoom })
 
   const handleStageClick = useCallback(
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

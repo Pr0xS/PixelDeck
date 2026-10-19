@@ -3,12 +3,13 @@ import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
 import type { PhoneLayer, Layer } from '@/types'
-import { fileToDataUrl } from '@/utils/files'
+import { ingestImageFile } from '@/utils/ingestImage'
 import { ColorField, SliderField } from '@/components/properties/PropertyControls'
 import { OverrideDot } from '@/components/properties/OverrideDot'
 import { ToggleSwitch } from '@/components/ui/ToggleSwitch'
 import { SegmentedControl } from '@/components/ui/SegmentedControl'
 import { FileUploadButton } from '@/components/ui/FileUploadButton'
+import { ImageUrlInput } from '@/components/ui/ImageUrlInput'
 import { computePhoneFitScale, PHONE_MODELS, getPhoneSpec } from '@/assets/mockups/specs'
 import {
   inputCls,
@@ -92,20 +93,15 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
   )
   const upd = (patch: Partial<PhoneLayer>) => updateLayer(layer.id, patch as Partial<Layer>)
   const screenshotInputRef = useRef<HTMLInputElement>(null)
-  const addAsset = useAssetStore((s) => s.addAsset)
   const assets = useAssetStore((s) => s.assets)  // reactive to IDB hydration
 
   const handleScreenshotFile = async (file: File) => {
-    const dataUrl = await fileToDataUrl(file)
-    addAsset(file.name, dataUrl)
-    // Keep the inline data URL as a last-resort fallback. The asset store lives
-    // in IndexedDB and can fail/hydrate late; without this, phone screenshots
-    // can render blank in the editor, previews, or exports.
-    upd({ screenshotPath: file.name, screenshotDataUrl: dataUrl })
+    const { key } = await ingestImageFile(file)
+    upd({ screenshotPath: key })
   }
 
-  const previewSrc = layer.screenshotPath ? assets[layer.screenshotPath]?.dataUrl ?? layer.screenshotDataUrl : layer.screenshotDataUrl
-  const screenshotLabel = layer.screenshotPath ? layer.screenshotPath : layer.screenshotDataUrl ? 'Inline (legacy)' : null
+  const previewSrc = layer.screenshotPath ? assets[layer.screenshotPath]?.dataUrl : undefined
+  const screenshotLabel = layer.screenshotPath ? (assets[layer.screenshotPath]?.name ?? layer.screenshotPath) : null
 
   // Only phone-shaped devices have a status bar. Watches (round/squircle screens) and
   // frameless screens have `statusBar.height === 0` in their spec — the properties UI
@@ -264,6 +260,7 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
         >
           {previewSrc ? <img src={previewSrc} alt="Screenshot" className="mx-auto max-h-24 rounded-lg object-contain" /> : <span className="text-xs text-[#6b6b7a]">Click or drag to upload screenshot</span>}
         </FileUploadButton>
+        <ImageUrlInput collapsible className="mt-2" onAdded={(key) => upd({ screenshotPath: key })} />
         {screenshotLabel && <p className="mt-2 truncate text-[10px] text-[#6b6b7a]">{screenshotLabel}</p>}
       </div>
 
@@ -324,16 +321,15 @@ export function PhoneProperties({ layer }: { layer: PhoneLayer }) {
               {nonDefaultLocales.map((locale) => {
                 const override = layer.localeContent?.[locale]
                 const path = override?.screenshotPath
-                const previewSrc = path ? assets[path]?.dataUrl ?? override?.screenshotDataUrl : override?.screenshotDataUrl
+                const previewSrc = path ? assets[path]?.dataUrl : undefined
                 return (
                   <LocaleScreenshotRow
                     key={locale}
                     locale={locale}
                     previewSrc={previewSrc}
                     onUpload={async (file) => {
-                      const dataUrl = await fileToDataUrl(file)
-                      addAsset(file.name, dataUrl)
-                      setLocaleContent(activeSlideGroupId, layer.id, locale, { screenshotPath: file.name, screenshotDataUrl: dataUrl })
+                      const { key } = await ingestImageFile(file)
+                      setLocaleContent(activeSlideGroupId, layer.id, locale, { screenshotPath: key })
                     }}
                     onClear={() => clearLocaleContent(activeSlideGroupId, layer.id, locale)}
                   />

@@ -1,10 +1,12 @@
 import type Konva from 'konva'
 import type { RefObject } from 'react'
 import { getPendingImageLoadCount } from '@/hooks/useCachedImage'
+import { useAssetStore } from '@/store/assets'
 
 const DEFAULT_SETTLE_QUIET_FRAMES = 10
 const DEFAULT_SETTLE_TIMEOUT_MS = 15000
 const IMAGELESS_GRACE_MS = 250
+const ASSET_HYDRATION_TIMEOUT_MS = 5000
 
 type ImageNodeLike = { image(): unknown }
 
@@ -160,10 +162,28 @@ export async function waitForStageSettled(
   return false
 }
 
+/** Resolve true once the asset store has hydrated, or false after `timeoutMs` (never hangs). */
+export function waitForAssetsHydrated(timeoutMs = ASSET_HYDRATION_TIMEOUT_MS): Promise<boolean> {
+  if (useAssetStore.getState().hydrated) return Promise.resolve(true)
+  return new Promise((resolve) => {
+    const finish = (value: boolean) => {
+      clearTimeout(timer)
+      unsubscribe()
+      resolve(value)
+    }
+    const unsubscribe = useAssetStore.subscribe((state) => {
+      if (state.hydrated) finish(true)
+    })
+    const timer = setTimeout(() => finish(false), timeoutMs)
+  })
+}
+
 export async function waitForStageCaptureReady(
   stage: Konva.Stage,
   options: { quietFrames?: number; timeoutMs?: number } = {},
 ): Promise<boolean> {
+  const hydrated = await waitForAssetsHydrated()
+  if (!hydrated) console.warn('[PixelDeck] asset store did not hydrate before capture timeout — capturing anyway')
   const settled = await waitForStageSettled(stage, options)
   await nextFrame()
   await nextFrame()

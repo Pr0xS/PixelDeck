@@ -1,6 +1,7 @@
 import { useCallback, useState } from 'react'
 import type Konva from 'konva'
-import { fileToDataUrl } from '@/utils/files'
+import { useAssetStore } from '@/store/assets'
+import { getImageSize, ingestImageFile } from '@/utils/ingestImage'
 import type { Layer, Selection, SlideGroup } from '@/types'
 
 export interface AssetDropHighlight {
@@ -17,7 +18,6 @@ interface UseAssetDropTargetOptions {
   group: SlideGroup | undefined
   selection: Selection | null
   assets: Record<string, { dataUrl: string }>
-  addAsset: (filename: string, dataUrl: string) => void
   updateLayer: (layerId: string, patch: Partial<Layer>) => void
   addImageAt: (src: string, width: number, height: number, x: number, y: number) => void
   viewportX: number
@@ -30,7 +30,6 @@ export function useAssetDropTarget({
   group,
   selection,
   assets,
-  addAsset,
   updateLayer,
   addImageAt,
   viewportX,
@@ -60,14 +59,6 @@ export function useAssetDropTarget({
     return null
   }
 
-  const getImageSize = (dataUrl: string) =>
-    new Promise<{ width: number; height: number }>((resolve, reject) => {
-      const img = new Image()
-      img.onload = () => resolve({ width: img.width, height: img.height })
-      img.onerror = () => reject(new Error('Could not load dragged asset image'))
-      img.src = dataUrl
-    })
-
   const resolveDropTarget = (e: React.DragEvent<HTMLDivElement>) => {
     const stage = stageRef.current
     if (!stage || !group) return null
@@ -85,24 +76,24 @@ export function useAssetDropTarget({
   }
 
   const applyAssetToTarget = async (
-    filename: string,
+    key: string,
     dataUrl: string,
     targetLayer: Layer | null,
     pointer: { x: number; y: number },
     cascade = 0,
   ) => {
     if (targetLayer?.type === 'phone') {
-      updateLayer(targetLayer.id, { screenshotPath: filename, screenshotDataUrl: dataUrl } as Partial<Layer>)
+      updateLayer(targetLayer.id, { screenshotPath: key } as Partial<Layer>)
       return
     }
     const { width, height } = await getImageSize(dataUrl)
     if (targetLayer?.type === 'image') {
-      updateLayer(targetLayer.id, { src: filename, width, height } as Partial<Layer>)
+      updateLayer(targetLayer.id, { src: key, width, height } as Partial<Layer>)
       return
     }
     const x = (pointer.x - viewportX) / zoom - width / 2 + cascade
     const y = (pointer.y - viewportY) / zoom - height / 2 + cascade
-    addImageAt(filename, width, height, x, y)
+    addImageAt(key, width, height, x, y)
   }
 
   const handleAssetDrop = async (e: React.DragEvent<HTMLDivElement>) => {
@@ -126,9 +117,9 @@ export function useAssetDropTarget({
     e.stopPropagation()
     setAssetDropHighlight(null)
     for (const [i, file] of files.entries()) {
-      const dataUrl = await fileToDataUrl(file)
-      addAsset(file.name, dataUrl)
-      await applyAssetToTarget(file.name, dataUrl, i === 0 ? target.targetLayer : null, target.pointer, i * 48)
+      const { key } = await ingestImageFile(file)
+      const dataUrl = useAssetStore.getState().resolveAsset(key) ?? ''
+      await applyAssetToTarget(key, dataUrl, i === 0 ? target.targetLayer : null, target.pointer, i * 48)
     }
   }
 

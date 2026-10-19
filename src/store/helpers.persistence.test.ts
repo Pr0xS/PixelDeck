@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import type { BackgroundLayer, GroupLayer, ImageLayer, Layer, PhoneLayer, Project, SlideGroup, TextLayer } from '@/types'
+import { assetKeyFromDataUrl } from '@/utils/assetKey'
+import { useAssetStore } from './assets'
 import {
   assertProjectShape,
   LOCALE_ADJUST_SCHEMA_VERSION,
-  SLIDE_KEY_SCHEMA_VERSION,
+  ASSET_REF_SCHEMA_VERSION,
   migrateProject,
   migrateProjectSlideKeys,
   patchLayerForLocale,
@@ -354,8 +356,8 @@ describe('foldLayerToSymmetric / localeContent migration', () => {
 
     const current = migrateProject(currentProject)
 
-    expect(legacy.settings.schemaVersion).toBe(SLIDE_KEY_SCHEMA_VERSION)
-    expect(current.settings.schemaVersion).toBe(SLIDE_KEY_SCHEMA_VERSION)
+    expect(legacy.settings.schemaVersion).toBe(ASSET_REF_SCHEMA_VERSION)
+    expect(current.settings.schemaVersion).toBe(ASSET_REF_SCHEMA_VERSION)
   })
 
   it('migrates legacy locale override spans to marks before folding content', () => {
@@ -394,65 +396,72 @@ describe('patchLayerForLocale', () => {
   })
 })
 
-describe('stripDataUrls', () => {
-  it('strips background imageDataUrl while preserving other fields', () => {
+describe('stripDataUrls (persistence safety net)', () => {
+  const PNG = 'data:image/png;base64,cG5n'
+  const withLegacy = <T extends Layer>(layer: T, legacy: Record<string, unknown>): T => ({ ...layer, ...legacy }) as T
+
+  it('converts a stray background imageDataUrl to an imageRef instead of dropping it', () => {
     const project = makeProject({
-      slideGroups: [makeSlideGroup({ layers: [makeBackgroundLayer({ fill: '#101010', imageDataUrl: 'data:image/png;base64,bg' })] })],
+      slideGroups: [makeSlideGroup({ layers: [withLegacy(makeBackgroundLayer({ fill: '#101010' }), { imageDataUrl: PNG })] })],
     })
 
     const stripped = stripDataUrls(project)
     const layer = stripped.slideGroups[0].layers[0] as BackgroundLayer
 
-    expect(layer.imageDataUrl).toBeUndefined()
+    expect(layer.imageRef).toBe(assetKeyFromDataUrl(PNG))
+    expect('imageDataUrl' in layer).toBe(false)
     expect(layer.fill).toBe('#101010')
+    expect(useAssetStore.getState().resolveAsset(layer.imageRef!)).toBe(PNG)
   })
 
-  it('strips phone screenshotDataUrl while preserving screenshotPath', () => {
+  it('converts phone screenshotDataUrl to a screenshotPath ref (inline bytes win)', () => {
     const project = makeProject({
-      slideGroups: [makeSlideGroup({ layers: [makePhoneLayer({ screenshotDataUrl: 'data:image/png;base64,phone', screenshotPath: 'kept.png' })] })],
+      slideGroups: [makeSlideGroup({ layers: [withLegacy(makePhoneLayer({ screenshotPath: 'kept.png' }), { screenshotDataUrl: PNG })] })],
     })
 
-    const stripped = stripDataUrls(project)
-    const layer = stripped.slideGroups[0].layers[0] as PhoneLayer
+    const layer = stripDataUrls(project).slideGroups[0].layers[0] as PhoneLayer
 
-    expect(layer.screenshotDataUrl).toBeUndefined()
-    expect(layer.screenshotPath).toBe('kept.png')
+    expect(layer.screenshotPath).toBe(assetKeyFromDataUrl(PNG))
+    expect('screenshotDataUrl' in layer).toBe(false)
   })
 
-  it('strips screenshotDataUrl from locale content while preserving screenshotPath', () => {
+  it('converts locale content inline screenshots while leaving plain refs alone', () => {
     const project = makeProject({
       slideGroups: [makeSlideGroup({ layers: [makePhoneLayer({
-        localeContent: { es: { screenshotDataUrl: 'data:image/png;base64,es', screenshotPath: 'kept.png' } },
+        localeContent: {
+          es: { screenshotDataUrl: PNG, screenshotPath: 'kept.png' } as never,
+          fr: { screenshotPath: 'plain.png' },
+        },
       })] })],
     })
 
-    const stripped = stripDataUrls(project)
-    const layer = stripped.slideGroups[0].layers[0]
+    const layer = stripDataUrls(project).slideGroups[0].layers[0]
 
-    expect(layer.localeContent?.es.screenshotDataUrl).toBeUndefined()
-    expect(layer.localeContent?.es.screenshotPath).toBe('kept.png')
+    expect(layer.localeContent?.es.screenshotPath).toBe(assetKeyFromDataUrl(PNG))
+    expect('screenshotDataUrl' in (layer.localeContent?.es ?? {})).toBe(false)
+    expect(layer.localeContent?.fr.screenshotPath).toBe('plain.png')
   })
 
   it('does not mutate the original project object', () => {
-    const background = makeBackgroundLayer({ imageDataUrl: 'data:image/png;base64,bg' })
-    const phone = makePhoneLayer({ screenshotDataUrl: 'data:image/png;base64,phone' })
+    const background = withLegacy(makeBackgroundLayer(), { imageDataUrl: PNG })
+    const phone = withLegacy(makePhoneLayer(), { screenshotDataUrl: PNG })
     const project = makeProject({ slideGroups: [makeSlideGroup({ layers: [background, phone] })] })
 
     stripDataUrls(project)
 
-    expect((project.slideGroups[0].layers[0] as BackgroundLayer).imageDataUrl).toBe('data:image/png;base64,bg')
-    expect((project.slideGroups[0].layers[1] as PhoneLayer).screenshotDataUrl).toBe('data:image/png;base64,phone')
+    expect((project.slideGroups[0].layers[0] as unknown as Record<string, unknown>).imageDataUrl).toBe(PNG)
+    expect((project.slideGroups[0].layers[1] as unknown as Record<string, unknown>).screenshotDataUrl).toBe(PNG)
   })
 
-  it('recursively strips screenshotDataUrl from group children', () => {
+  it('recursively converts inline screenshots in group children', () => {
     const group = makeGroupLayer({
-      children: [makePhoneLayer({ screenshotDataUrl: 'data:image/png;base64,child' })],
+      children: [withLegacy(makePhoneLayer(), { screenshotDataUrl: PNG })],
     })
     const project = makeProject({ slideGroups: [makeSlideGroup({ layers: [group] })] })
 
     const stripped = stripDataUrls(project)
     const strippedGroup = stripped.slideGroups[0].layers[0] as Extract<Layer, { type: 'group' }>
 
-    expect((strippedGroup.children[0] as PhoneLayer).screenshotDataUrl).toBeUndefined()
+    expect((strippedGroup.children[0] as PhoneLayer).screenshotPath).toBe(assetKeyFromDataUrl(PNG))
   })
 })

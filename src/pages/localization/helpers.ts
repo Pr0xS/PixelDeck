@@ -1,3 +1,4 @@
+import { resolveImageRef } from '@/hooks/useAssetImage'
 import type { CSSProperties } from 'react'
 import type { BackgroundLayer, BrandColor, GroupLayer, Layer, SlideGroup, TextLayer, PhoneLayer, ImageLayer } from '@/types'
 import { effectiveLocalizationMode, isLocaleContentComplete } from '@/utils/locale'
@@ -24,6 +25,7 @@ export interface SlideBackgroundPreview {
 export function getSlideBackgroundPreview(
   slideGroup: SlideGroup,
   brandColors: BrandColor[],
+  assets: Record<string, { dataUrl: string }> = {},
 ): SlideBackgroundPreview {
   const bgLayer = slideGroup.layers.find((l): l is BackgroundLayer => l.type === 'background')
   if (!bgLayer) return { style: { backgroundColor: '#1a1a2e' } }
@@ -32,12 +34,13 @@ export function getSlideBackgroundPreview(
   const fillCss = fillToCss(resolvedFill)
   const isSolidFill = typeof resolvedFill === 'string'
 
-  if (bgLayer.imageDataUrl) {
+  const bgImageUrl = resolveImageRef(bgLayer.imageRef, assets)
+  if (bgImageUrl) {
     const fit = bgLayer.imageFit ?? 'cover'
     return {
       style: {
         backgroundColor: isSolidFill ? fillCss : undefined,
-        backgroundImage: `url(${bgLayer.imageDataUrl})`,
+        backgroundImage: `url(${bgImageUrl})`,
         backgroundSize: fit === 'fill' ? '100% 100%' : fit,
         backgroundPosition: 'center',
         backgroundRepeat: 'no-repeat',
@@ -93,7 +96,7 @@ export function collectLocalizableRows(
       defaultText: layer.type === 'text' ? (layer as TextLayer).text : undefined,
       defaultImageRef:
         layer.type === 'phone'
-          ? (layer as PhoneLayer).screenshotPath ?? (layer as PhoneLayer).screenshotDataUrl
+          ? (layer as PhoneLayer).screenshotPath
           : layer.type === 'image'
             ? (layer as ImageLayer).src
             : undefined,
@@ -112,27 +115,6 @@ export function isOverrideComplete(row: LocalizableRow, locale: string, defaultL
   if (locale === defaultLocale) return true
   if (effectiveLocalizationMode(row.layer) === 'skip') return true // skipped = not counted
   return isLocaleContentComplete(row.layer, row.layer.localeContent?.[locale])
-}
-
-export function readFileAsDataUrl(file: File): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader()
-    reader.onload = () => {
-      if (typeof reader.result === 'string') resolve(reader.result)
-      else reject(new Error('Failed to read file'))
-    }
-    reader.onerror = () => reject(reader.error ?? new Error('Failed to read file'))
-    reader.readAsDataURL(file)
-  })
-}
-
-/**
- * Build a locale-namespaced asset key.
- * Format: `locale::{locale}::{slideGroupId}::{layerId}::{fileName}`
- * Uses `::` as separator so it never collides with nanoid chars or file names.
- */
-export function buildLocaleAssetKey(locale: string, slideGroupId: string, layerId: string, fileName: string): string {
-  return `locale::${locale}::${slideGroupId}::${layerId}::${fileName}`
 }
 
 export function truncate(value: string, length = 120): string {

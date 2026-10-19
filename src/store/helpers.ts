@@ -7,6 +7,8 @@ import type {
 } from '@/types'
 import { spansToMarks } from '@/utils/textRendering'
 import { mapLayerTree } from '@/utils/layerTree'
+import { extractInlineAssets, getLegacyInlineImageFields, type ExtractAssetsOptions, type ExtractedAsset } from '@/utils/assetMigration'
+import { useAssetStore } from './assets'
 import { LOCALE_DELTA_FIELDS, resolveLayerLocaleAdjustBaseOnly } from '@/utils/canvasFormats'
 import {
   BASE_CANVAS_FORMAT,
@@ -32,6 +34,15 @@ export const LOCALE_SYMMETRIC_SCHEMA_VERSION = 1
 export const LOCALE_ADJUST_SCHEMA_VERSION = 2
 
 export const SLIDE_KEY_SCHEMA_VERSION = 3
+
+/**
+ * Documentation-only marker: inline `data:` images were replaced by asset
+ * refs. extractInlineAssets runs on EVERY migrateProject call (idempotent),
+ * not gated on this version.
+ */
+export const ASSET_REF_SCHEMA_VERSION = 4
+
+export { getLegacyInlineImageFields }
 
 export { findLayerInTree, mapLayerTree, updateLayerInTree } from '@/utils/layerTree'
 
@@ -132,7 +143,7 @@ export function cloneWithNewIds(layer: Layer): Layer {
 }
 
 export const STYLE_KEYS: Partial<Record<LayerType, string[]>> = {
-  background: ['fill', 'accents', 'imageDataUrl', 'imageFit', 'imageBlur', 'imageOverlayColor', 'imageOverlayOpacity', 'noise', 'blur', 'shadow', 'opacity'],
+  background: ['fill', 'accents', 'imageRef', 'imageFit', 'imageBlur', 'imageOverlayColor', 'imageOverlayOpacity', 'noise', 'blur', 'shadow', 'opacity'],
   text: ['fill', 'fontFamily', 'fontSize', 'fontWeight', 'italic', 'underline', 'strikethrough', 'letterSpacing', 'lineHeight', 'align', 'width', 'height', 'verticalAlign', 'blur', 'shadow', 'opacity'],
   shape: ['fill', 'stroke', 'strokeWidth', 'cornerRadius', 'shapeType', 'width', 'height', 'blur', 'shadow', 'opacity'],
   emoji: ['emoji', 'fontSize', 'blur', 'shadow', 'opacity'],
@@ -224,14 +235,17 @@ export function foldLayerToSymmetric(layer: Layer, defaultLocale: string): Layer
   if (layer.localeContent) return layerWithoutLegacy as Layer // already migrated
   if (layer.type !== 'text' && layer.type !== 'phone' && layer.type !== 'image') return layerWithoutLegacy as Layer
 
+  const legacyInline = getLegacyInlineImageFields(layer)
   const defaultContent: LocaleContent =
     layer.type === 'text'
       ? { text: layer.text, ...(layer.marks?.length ? { marks: layer.marks } : {}) }
       : layer.type === 'phone'
         ? {
             ...(layer.screenshotPath !== undefined ? { screenshotPath: layer.screenshotPath } : {}),
-            ...(layer.screenshotDataUrl !== undefined ? { screenshotDataUrl: layer.screenshotDataUrl } : {}),
-          }
+            // Raw pre-migration inline data is carried through so
+            // extractInlineAssets (end of migrateProject) can convert it.
+            ...(legacyInline.screenshotDataUrl !== undefined ? { screenshotDataUrl: legacyInline.screenshotDataUrl } : {}),
+          } as LocaleContent
         : { src: layer.src }
 
   const localeContent: Record<string, LocaleContent> = { [defaultLocale]: defaultContent }
@@ -263,7 +277,6 @@ export function seedLocaleContent(layer: Layer, defaultLocale: string): Layer {
       : layer.type === 'phone'
         ? {
             ...(layer.screenshotPath !== undefined ? { screenshotPath: layer.screenshotPath } : {}),
-            ...(layer.screenshotDataUrl !== undefined ? { screenshotDataUrl: layer.screenshotDataUrl } : {}),
           }
         : { src: layer.src }
   return { ...layer, localeContent: { [defaultLocale]: content } } as Layer
@@ -546,8 +559,32 @@ export function normalizeGroupFamilies<T extends Project>(project: T): T {
  * Normalize + migrate a parsed project: canvas formats, legacy CanvasBackground
  * → BackgroundLayer, and legacy TextLayer.spans → marks. Shared by import and
  * localStorage hydration so both paths produce the same shape.
+ *
+ * SIDE EFFECT: extracted inline images are written (`putAsset`) into the
+ * ACTIVE asset-store scope, and refs that already resolve in that scope are
+ * kept over stale inline data. The caller MUST activate the target project's
+ * asset scope (`useAssetStore.setActiveProject(id)`) BEFORE calling this.
+ * Never throws on malformed `data:` values (they are left untouched + warned).
  */
 export function migrateProject(raw: Project): Project {
+  const { project, assets } = migrateProjectWithAssets(raw, {
+    resolve: (ref) => useAssetStore.getState().resolveAsset(ref),
+  })
+  // Keep existing callers lossless: extracted inline images land in the asset
+  // store. Importers that need the bytes explicitly (bundle writers, etc.)
+  // should call migrateProjectWithAssets instead.
+  for (const a of assets) useAssetStore.getState().putAsset(a.dataUrl, a.name)
+  return project
+}
+
+/**
+ * Same as migrateProject, but returns the inline assets extracted from the
+ * project instead of writing them to the asset store.
+ */
+export function migrateProjectWithAssets(
+  raw: Project,
+  opts: ExtractAssetsOptions = {},
+): { project: Project; assets: ExtractedAsset[] } {
   const project = normalizeGroupFamilies(normalizeProjectFormats(raw))
   for (const sg of project.slideGroups) {
     if (!sg.layers.some((l) => l.type === 'background')) {
@@ -574,7 +611,14 @@ export function migrateProject(raw: Project): Project {
     project.slideGroups = migrateProjectSlideKeys(project).slideGroups
     project.settings = { ...project.settings, schemaVersion: SLIDE_KEY_SCHEMA_VERSION }
   }
-  return project
+  const extracted = extractInlineAssets(project, opts)
+  if ((extracted.project.settings.schemaVersion ?? 0) < ASSET_REF_SCHEMA_VERSION) {
+    extracted.project = {
+      ...extracted.project,
+      settings: { ...extracted.project.settings, schemaVersion: ASSET_REF_SCHEMA_VERSION },
+    }
+  }
+  return extracted
 }
 
 /**
@@ -619,11 +663,10 @@ export const splitLocaleFormatLayoutPatch = (patch: Partial<Layer>): { layout: F
 }
 
 /** Keys whose values are per-locale content (v0.6.0 symmetric locale model). */
-export const LOCALE_CONTENT_KEYS = ['text', 'marks', 'screenshotPath', 'screenshotDataUrl', 'src'] as const
+export const LOCALE_CONTENT_KEYS = ['text', 'marks', 'screenshotPath', 'src'] as const
 
 /**
- * Split a layer patch into locale-content keys (text/marks/screenshotPath/
- * screenshotDataUrl/src) and everything else. Mirrors splitFormatPatch for
+ * Split a layer patch into locale-content keys (text/marks/screenshotPath/src) and everything else. Mirrors splitFormatPatch for
  * the orthogonal locale axis.
  */
 export const splitLocalePatch = (patch: Partial<Layer>): { locale: LocaleContent; rest: Partial<Layer> } => {
@@ -838,40 +881,26 @@ export const patchLayerForFormat = (
 }
 
 /**
- * Strip inline base64 data URL fields from every layer in a project before
- * persisting to localStorage. Assets are stored separately in IndexedDB via
- * the asset store; stripping avoids QuotaExceededError on large projects.
+ * Persistence safety net: after migration no inline `data:` image data should
+ * exist on a project (images are asset refs, stored in the asset store). This
+ * runs extractInlineAssets so any stray inline value is converted to a ref
+ * (never dropped); the extracted bytes are returned via the asset store so the
+ * image is not lost. Returns a new project — the in-memory store is NOT mutated.
  *
- * Returns a new deep-cloned project — the in-memory store is NOT mutated.
+ * SAFETY NET ONLY: after migrateProject nothing should be left to extract.
+ * SIDE EFFECT: writes into the ACTIVE asset scope — callers must make sure the
+ * active scope is the project being persisted (not e.g. the previously open
+ * project during loadProjectById). Logs via console.debug when it extracts.
  */
 export function stripDataUrls(project: Project): Project {
-  const cloned: Project = JSON.parse(JSON.stringify(project))
-  for (const sg of cloned.slideGroups) {
-    sg.layers = sg.layers.map(stripLayerDataUrls)
+  const { project: refs, assets } = extractInlineAssets(project, {
+    resolve: (ref) => useAssetStore.getState().resolveAsset(ref),
+  })
+  if (assets.length > 0) {
+    console.debug(`[stripDataUrls] extracted ${assets.length} stray inline image(s) into scope ${useAssetStore.getState().activeProjectId ?? '(none)'}`)
   }
-  return cloned
-}
-
-function stripLayerDataUrls(layer: Layer): Layer {
-  // Strip per-type inline data URL fields
-  if (layer.type === 'background') {
-    delete (layer as { imageDataUrl?: string }).imageDataUrl
-  }
-  if (layer.type === 'phone') {
-    delete (layer as { screenshotDataUrl?: string }).screenshotDataUrl
-  }
-  // Strip per-locale inline data URLs
-  if (layer.localeContent) {
-    for (const patch of Object.values(layer.localeContent)) {
-      delete patch.screenshotDataUrl
-    }
-  }
-  // Recurse into group children
-  if (layer.type === 'group') {
-    const grp = layer as GroupLayer
-    grp.children = grp.children.map(stripLayerDataUrls)
-  }
-  return layer
+  for (const a of assets) useAssetStore.getState().putAsset(a.dataUrl, a.name)
+  return refs
 }
 
 export const getActiveGroup = (get: EditorGet) => {

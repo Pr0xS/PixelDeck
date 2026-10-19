@@ -2,13 +2,14 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useRef, useState } fro
 import { useShallow } from 'zustand/react/shallow'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
+import { ingestImageFile } from '@/utils/ingestImage'
 import { useApiKeysStore } from '@/store/apiKeys'
 import type { Layer, LocaleLayerPatch, LocalizationMode, SlideGroup, TextLayer } from '@/types'
 import { effectiveLocalizationMode, getLanguageName } from '@/utils/locale'
 import { translateLayerText, translateGroupTexts } from '@/ai/features/translateText'
 import type { AiAuth } from '@/ai/features/translateText'
 // import { generateLocalizedImage } from '@/ai/features/localizeImage' // TODO: re-enable when AI image generation is ready
-import { collectLocalizableRows, isOverrideComplete, readFileAsDataUrl, buildLocaleAssetKey, findLayerById } from './localization/helpers'
+import { collectLocalizableRows, isOverrideComplete, findLayerById } from './localization/helpers'
 import { cellKey, type CellKey, type CellStatus, type LocalizableRow, type UploadTarget } from './localization/types'
 import { LocaleBar } from './localization/LocaleBar'
 import { BulkTranslateBar } from './localization/BulkTranslateBar'
@@ -60,7 +61,7 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
     setLocaleContentBatch: s.setLocaleContentBatch,
     updateLayerInSlideGroup: s.updateLayerInSlideGroup,
   })))
-  const { addAsset, getAsset } = useAssetStore(useShallow((s) => ({ addAsset: s.addAsset, getAsset: s.getAsset })))
+  const { getAsset } = useAssetStore(useShallow((s) => ({ getAsset: s.getAsset })))
   const { provider, getActiveKey, getActiveModel, getActiveBaseUrl } = useApiKeysStore()
 
   const defaultLocale = project.settings.defaultLocale
@@ -191,18 +192,15 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
   const handleUpload = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0]
     if (!file || !uploadTarget) return
-    const dataUrl = await readFileAsDataUrl(file)
+    const { key: assetKey } = await ingestImageFile(file)
     const group = project.slideGroups.find((item) => item.id === uploadTarget.slideGroupId)
     const found = group ? findLayerById(group.layers, uploadTarget.layerId) : null
     const layer = found?.layer
     const existingOverride = layer?.localeContent?.[uploadTarget.locale] ?? {}
-    const assetKey = buildLocaleAssetKey(uploadTarget.locale, uploadTarget.slideGroupId, uploadTarget.layerId, file.name)
-    addAsset(assetKey, dataUrl)
     if (uploadTarget.locale === project.settings.defaultLocale) {
       if (uploadTarget.layerType === 'phone') {
         updateLayerInSlideGroup(uploadTarget.slideGroupId, uploadTarget.layerId, {
           screenshotPath: assetKey,
-          screenshotDataUrl: undefined,
         } as Partial<Layer>)
       } else {
         updateLayerInSlideGroup(uploadTarget.slideGroupId, uploadTarget.layerId, { src: assetKey } as Partial<Layer>)
@@ -215,7 +213,6 @@ export function LocalizationView({ onBack, embedded = false, onPreview }: Locali
       setLocaleContent(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {
         ...existingOverride,
         screenshotPath: assetKey,
-        screenshotDataUrl: undefined,
       })
     } else {
       setLocaleContent(uploadTarget.slideGroupId, uploadTarget.layerId, uploadTarget.locale, {

@@ -4,6 +4,7 @@ import { effectiveLocalizationMode, getLanguageName } from '@/utils/locale'
 import { ModeSelector } from './ModeSelector'
 import { TextOverrideCell } from './TextOverrideCell'
 import { ImageOverrideCell } from './ImageOverrideCell'
+import { useAssetStore } from '@/store/assets'
 import { isOverrideComplete, getPlatformBadge, getSlideBackgroundPreview } from './helpers'
 import type { CellKey, CellStatus, LocalizableRow } from './types'
 import { cellKey } from './types'
@@ -65,9 +66,10 @@ export function SlideGroupSection({
 }: SlideGroupSectionProps) {
   const activeProgress = rows.filter((row) => isOverrideComplete(row, activeLocale, defaultLocale)).length
   const eligibleRows = rows.filter((r) => effectiveLocalizationMode(r.layer) !== 'skip')
+  const assets = useAssetStore((s) => s.assets)
   const backgroundPreview = useMemo(
-    () => getSlideBackgroundPreview(slideGroup, brandColors),
-    [slideGroup, brandColors],
+    () => getSlideBackgroundPreview(slideGroup, brandColors, assets),
+    [slideGroup, brandColors, assets],
   )
 
   return (

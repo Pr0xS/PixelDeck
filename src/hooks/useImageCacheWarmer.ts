@@ -3,27 +3,22 @@ import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
 import { forEachLayerTree } from '@/utils/layerTree'
 import type { Layer } from '@/types'
+import { resolveImageRef } from './useAssetImage'
 import { warmImageCache } from './useCachedImage'
 
-function collectLayerImageSrcs(layer: Layer, assets: Record<string, { dataUrl: string }>): string[] {
-  switch (layer.type) {
-    case 'phone': {
-      const src = layer.screenshotPath
-        ? (assets[layer.screenshotPath]?.dataUrl ?? layer.screenshotDataUrl ?? '')
-        : (layer.screenshotDataUrl ?? '')
-      return src ? [src] : []
+function layerRefs(layer: Layer): string[] {
+  const refs: Array<string | undefined> = []
+  const fromBag = (bag: Record<string, unknown> | undefined) => {
+    if (!bag) return
+    for (const key of ['screenshotPath', 'src', 'imageRef', 'logoRef']) {
+      const v = bag[key]
+      if (typeof v === 'string') refs.push(v)
     }
-    case 'image': {
-      const src = assets[layer.src]?.dataUrl ?? layer.src
-      return src ? [src] : []
-    }
-    case 'background':
-      return layer.imageDataUrl ? [layer.imageDataUrl] : []
-    case 'brand':
-      return layer.logoDataUrl ? [layer.logoDataUrl] : []
-    default:
-      return []
   }
+  fromBag(layer as unknown as Record<string, unknown>)
+  for (const patch of Object.values(layer.formatOverrides ?? {})) fromBag(patch as Record<string, unknown>)
+  for (const content of Object.values(layer.localeContent ?? {})) fromBag(content as Record<string, unknown>)
+  return refs.filter((r): r is string => Boolean(r))
 }
 
 /**
@@ -35,18 +30,25 @@ function collectLayerImageSrcs(layer: Layer, assets: Record<string, { dataUrl: s
 export function useImageCacheWarmer(hasCompletedInitialLoad: boolean): void {
   const project = useEditorStore((s) => s.project)
   const assets = useAssetStore((s) => s.assets)
+  const hydrated = useAssetStore((s) => s.hydrated)
+  const manifest = project.assetManifest
   const cancelledRef = useRef(false)
 
   useEffect(() => {
-    if (!hasCompletedInitialLoad) return
+    if (!hasCompletedInitialLoad || !hydrated) return
     cancelledRef.current = false
 
     const srcs = new Set<string>()
     for (const group of project.slideGroups) {
       forEachLayerTree(group.layers, (layer) => {
-        for (const src of collectLayerImageSrcs(layer, assets)) srcs.add(src)
+        for (const ref of layerRefs(layer)) {
+          const src = resolveImageRef(ref, assets)
+          if (src) srcs.add(src)
+        }
       })
     }
+    const logoSrc = resolveImageRef(project.settings.brandLogoRef, assets)
+    if (logoSrc) srcs.add(logoSrc)
 
     const queue = Array.from(srcs)
     let index = 0
@@ -75,5 +77,5 @@ export function useImageCacheWarmer(hasCompletedInitialLoad: boolean): void {
       if (idleId !== null && 'cancelIdleCallback' in window) window.cancelIdleCallback(idleId)
       if (timeoutId !== null) clearTimeout(timeoutId)
     }
-  }, [project, assets, hasCompletedInitialLoad])
+  }, [project, assets, hydrated, manifest, hasCompletedInitialLoad])
 }

@@ -1,3 +1,5 @@
+import { useAssetImage } from '@/hooks/useAssetImage'
+import { MissingImagePlaceholder } from './MissingImagePlaceholder'
 import { useRef } from 'react'
 import { Group, Image, Text } from 'react-konva'
 import { useCachedImage } from '@/hooks/useCachedImage'
@@ -25,9 +27,11 @@ interface BrandNodeProps {
 export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: BrandNodeProps) {
   const groupRef = useRef<Konva.Group>(null)
   const brandColors = useBrandColors()
-  const [logoImage] = useCachedImage(layer.logoDataUrl ?? '')
+  const logoAsset = useAssetImage(layer.logoRef)
+  const [logoImage] = useCachedImage(logoAsset.src ?? '')
+  const logoMissing = logoAsset.status === 'missing'
 
-  const hasLogo = Boolean(layer.logoDataUrl && logoImage)
+  const hasLogo = Boolean(layer.logoRef && (logoImage || logoMissing))
 
   // Determine positions based on direction
   const [logoX, logoY, textX, textY] = layer.direction === 'row'
@@ -40,7 +44,7 @@ export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
   const height = layer.direction === 'row'
     ? Math.max(hasLogo ? layer.logoSize : 0, layer.nameFontSize)
     : (hasLogo ? layer.logoSize + layer.gap : 0) + layer.nameFontSize
-  const shadowProps = useLayerEffects(groupRef, layer, `${layer.logoDataUrl}:${layer.logoSize}:${layer.appName}:${layer.nameFontSize}:${layer.nameFontFamily}:${layer.nameFontWeight}:${layer.nameColor}:${layer.direction}:${layer.gap}`)
+  const shadowProps = useLayerEffects(groupRef, layer, `${layer.logoRef}:${layer.logoSize}:${layer.appName}:${layer.nameFontSize}:${layer.nameFontFamily}:${layer.nameFontWeight}:${layer.nameColor}:${layer.direction}:${layer.gap}`)
   const interactionProps = useLayerInteraction({
     nodeRef: groupRef,
     locked: layer.locked,
@@ -73,7 +77,12 @@ export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
       {...interactionProps}
       onTransformEnd={handleTransformEnd}
     >
-      {hasLogo && (
+      {logoMissing && (
+        <Group x={logoX} y={logoY}>
+          <MissingImagePlaceholder width={layer.logoSize} height={layer.logoSize} name={logoAsset.name} />
+        </Group>
+      )}
+      {hasLogo && !logoMissing && (
         <Image
           image={logoImage}
           x={logoX}
