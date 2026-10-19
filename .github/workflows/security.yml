@@ -8,6 +8,8 @@ on:
   schedule:
     # Weekly scan every Monday at 03:00 UTC — catches newly published CVEs
     - cron: '0 3 * * 1'
+  # Manual re-run (e.g. to verify a fix without waiting for the cron)
+  workflow_dispatch:
 
 jobs:
   # Gitleaks (secrets) + Trivy (dependency CVEs)
