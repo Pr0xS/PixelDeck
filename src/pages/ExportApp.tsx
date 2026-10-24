@@ -15,14 +15,14 @@ import type Konva from 'konva'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
 import { useFontStore } from '@/store/fontStore'
-import { getProjectBaseFormat } from '@/utils/canvasFormats'
+import { resolveExportFormatIds } from './exportConfig'
 import { buildExportPlan, type ExportPlanBatch } from '@/utils/exportPlan'
 import { acquireCaptureLock, waitForStage, waitForStageCaptureReady } from '@/utils/stageCapture'
 import { loadGoogleFonts, registerCustomFonts } from '@/utils/fonts'
 import { LayerNode } from '@/components/canvas/LayerNode'
 import { injectExportAssets } from './exportAssets'
 import { isAssetRef } from '@/utils/projectAssets'
-import type { Layer as AppLayer, Project, SlideGroup } from '@/types'
+import type { CanvasFormatId, Layer as AppLayer, Project, SlideGroup } from '@/types'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -30,6 +30,8 @@ export interface ExportConfig {
   project: Project
   assets: Record<string, string>   // filename → dataUrl (images)
   fonts?: Record<string, string>   // filename → dataUrl (custom fonts)
+  /** Explicit formats selected by the CLI. Defaults to the project's active export formats. */
+  formatIds?: CanvasFormatId[]
   /** Locale to export. Defaults to project.settings.defaultLocale if omitted. */
   locale?: string
   /** Continue with placeholders when referenced images are missing. */
@@ -38,6 +40,7 @@ export interface ExportConfig {
 
 export interface ExportResult {
   name: string      // slide filename (without .png)
+  formatId: CanvasFormatId
   dataUrl: string   // PNG data URL
 }
 
@@ -123,22 +126,22 @@ export function ExportApp() {
   const activeLocale = useEditorStore((s) => s.activeLocale)
   const addFont = useFontStore((s) => s.addFont)
   const getFont = useFontStore((s) => s.getFont)
-  // The CLI explicitly targets base (single-format headless export); browser
-  // exports use the same planner with the configured active formats.
+  const config = window.__EXPORT_CONFIG__ as ExportConfig | undefined
+  const requestedFormatIds = config?.formatIds
+  // The CLI defaults to the project's active formats, matching browser export.
+  // Its --format option may narrow that set to an explicit selection.
   // NOTE (v0.4.x): CLI output filenames use the shared planner naming —
   // `<group>__<slide>.png`, sanitized and collision-safe. This intentionally
   // replaced the old raw `<slide>.png` naming, which let two groups with the
   // same slide names overwrite each other's files. See cli/README.md.
   const exportPlan = useMemo(
     () => buildExportPlan(project, {
-      formatIds: [getProjectBaseFormat(project)],
+      formatIds: resolveExportFormatIds(project, requestedFormatIds),
       locales: [activeLocale],
       scope: 'project',
     }),
-    [project, activeLocale],
+    [project, activeLocale, requestedFormatIds],
   )
-
-  const config = window.__EXPORT_CONFIG__ as ExportConfig | undefined
 
   const captureBatch = (batch: ExportPlanBatch) => {
     const stage = stageRef.current
@@ -158,7 +161,7 @@ export function ExportApp() {
           pixelRatio: 1,
           mimeType: 'image/png',
         })
-        resultsRef.current.push({ name: entry.name, dataUrl })
+        resultsRef.current.push({ name: entry.name, formatId: batch.formatId, dataUrl })
         console.log(`[ExportApp] captured ${entry.name}`)
       } catch (err) {
         console.error(`[ExportApp] failed to capture ${entry.name}:`, err)

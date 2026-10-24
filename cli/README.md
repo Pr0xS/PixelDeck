@@ -31,6 +31,7 @@ node cli/index.mjs export \
 | `--screenshots` | Optional directory of images. Files are matched by their original file name (see *Screenshots folder*) and override images embedded in a bundle/zip |
 | `--allow-missing` | Continue with placeholders when referenced images are missing (default: the export fails and lists them) |
 | `--output` | Directory where exported slide PNGs are written |
+| `--format` | Format id to export. Repeat the flag or pass comma-separated ids; defaults to the project's active export formats |
 
 ### Batch export via YAML config
 
@@ -61,6 +62,17 @@ Save your project from the GUI using the **Save** button (or the Projects panel)
 ## Output filenames
 
 Exported PNGs are written as `<output>/<locale>/<group>__<slide>.png` (when the slide name differs from the group name; otherwise just `<slide>.png`). Names are sanitized — characters outside `a-z A-Z 0-9 . _ -` become `-` — and collisions get a numeric suffix (`-2`, `-3`, …).
+
+When one format is exported, the existing output layout is preserved. When multiple formats are exported, each format is written to its own subdirectory to prevent same-named slides from overwriting each other, for example `<output>/<locale>/iphone-69/Hero.png`.
+
+Select formats with repeatable flags or a comma-separated list:
+
+```bash
+node cli/index.mjs export --project=./projects/my-app.json --output=./output \
+  --format=iphone-69 --format=ipad-13
+```
+
+If `--format` is omitted, the CLI exports the formats active in the project. In YAML batch mode, a command-line `--format` selection applies to each job.
 
 > Changed in v0.4.x: filenames were previously the raw slide name (`slide-1.png`). The group prefix was added because two groups with identical slide names silently overwrote each other's files. Update any automation that matches on exact filenames.
 
