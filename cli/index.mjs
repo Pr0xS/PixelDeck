@@ -1,4 +1,6 @@
 #!/usr/bin/env node
+import { parseArgs } from './args.mjs'
+
 /**
  * PixelDeck CLI
  * 
@@ -7,16 +9,6 @@
  *   pixeldeck export --config=<batch.yaml>
  *   pixeldeck serve  # serve dist/ for development
  */
-function parseArgs(rawArgs) {
-  const opts = {}
-  for (const arg of rawArgs) {
-    if (!arg.startsWith('--')) continue
-    const [key, value = 'true'] = arg.slice(2).split('=')
-    opts[key] = value
-  }
-  return opts
-}
-
 async function main() {
   const args = process.argv.slice(2)
   const command = args[0]
@@ -69,6 +61,8 @@ Options for export:
   --screenshots=<dir>   Directory of screenshot images. Files are matched by original
                         file name and OVERRIDE images embedded in a bundle/zip
   --output=<dir>        Output directory for composed PNGs
+  --format=<id>         Export a format id; repeat or use comma-separated ids.
+                        Defaults to the project's active export formats.
   --allow-missing       Continue (with placeholders) if referenced images are missing;
                         by default the export fails and lists the missing images
   --locale=<code>       Export only this locale (e.g. --locale=es)
@@ -90,6 +84,7 @@ Examples:
   node cli/index.mjs export --project=./project.json --output=./output
   node cli/index.mjs export --project=./project.json --output=./output --locale=es
   node cli/index.mjs export --project=./project.json --output=./output --all-locales
+  node cli/index.mjs export --project=./project.json --output=./output --format=iphone-69 --format=ipad-13
   node cli/index.mjs locale-manifest --project=./project.json --output=./locales.json
   node cli/index.mjs locale-import --project=./project.json --manifest=./locales.json
 `)
