@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest'
 import { useEditorStore } from './index'
 import { BASE_CANVAS_FORMAT, FORMAT_FAMILY_ANCHOR, getFormatScaleFactor, getGroupFamilyKey, groupTargetsFormat, resolveForkSourceFormat, selectFamilyFormats, selectFamilyGroups, selectFormatViewGroups, selectForkSourceCandidates, selectForkSourceGroups, selectProjectFamilies } from '@/utils/canvasFormats'
+import { buildExportPlan } from '@/utils/exportPlan'
 import type { BackgroundLayer, CanvasFormatId, ShapeLayer, TextLayer } from '@/types'
 
 function getActiveGroup() {
@@ -218,10 +219,17 @@ describe('createFormatLayout', () => {
     })
 
     const groups = useEditorStore.getState().project.slideGroups
+    const project = useEditorStore.getState().project
+    const exportPlan = buildExportPlan(project, {
+      formatIds: [BASE_CANVAS_FORMAT, 'iphone-69', 'android-phone', 'ipad-13'],
+      locales: ['en'],
+    })
     expect(createdGroupIds).toHaveLength(5)
     expect(groups.filter((group) => groupTargetsFormat(group, 'ipad-13'))).toHaveLength(5)
     expect(groups.filter((group) => groupTargetsFormat(group, 'iphone-69'))).toHaveLength(5)
     expect(groups.filter((group) => groupTargetsFormat(group, 'android-phone'))).toHaveLength(5)
+    expect(exportPlan.batches).toHaveLength(15)
+    expect(exportPlan.batches.some((batch) => batch.formatId === BASE_CANVAS_FORMAT)).toBe(false)
     expect(useEditorStore.getState().project.settings.activeFormats).toContain('ipad-13')
     expect(useEditorStore.temporal.getState().pastStates).toHaveLength(1)
 
