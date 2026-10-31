@@ -226,7 +226,9 @@ async function runSingle({ project, screenshotsDir, outputDir, locale, formatIds
 
     // Save PNGs
     let saved = 0
-    const useFormatDirectories = new Set(results.map((result) => result.formatId)).size > 1
+    // Decide the layout from the requested formats when given, so it does not change
+    // depending on which formats happened to contain groups.
+    const useFormatDirectories = (formatIds ?? [...new Set(results.map((result) => result.formatId))]).length > 1
     for (const result of results) {
       const { name, dataUrl } = result
       const targetPath = getExportFilePath(localeOutput, result, useFormatDirectories)

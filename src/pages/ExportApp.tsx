@@ -15,8 +15,8 @@ import type Konva from 'konva'
 import { useEditorStore } from '@/store'
 import { useAssetStore } from '@/store/assets'
 import { useFontStore } from '@/store/fontStore'
-import { resolveExportFormatIds } from './exportConfig'
-import { buildExportPlan, type ExportPlanBatch } from '@/utils/exportPlan'
+import { findUnknownFormatIds, resolveExportFormatIds } from './exportConfig'
+import { buildExportPlan, type ExportPlan, type ExportPlanBatch } from '@/utils/exportPlan'
 import { acquireCaptureLock, waitForStage, waitForStageCaptureReady } from '@/utils/stageCapture'
 import { loadGoogleFonts, registerCustomFonts } from '@/utils/fonts'
 import { LayerNode } from '@/components/canvas/LayerNode'
@@ -112,6 +112,8 @@ function HeadlessCanvas({ group, stageRef }: HeadlessCanvasProps) {
   )
 }
 
+const EMPTY_EXPORT_PLAN: ExportPlan = { batches: [], entries: [] }
+
 // ─── Main ExportApp ───────────────────────────────────────────────────────────
 
 export function ExportApp() {
@@ -134,13 +136,18 @@ export function ExportApp() {
   // `<group>__<slide>.png`, sanitized and collision-safe. This intentionally
   // replaced the old raw `<slide>.png` naming, which let two groups with the
   // same slide names overwrite each other's files. See cli/README.md.
-  const exportPlan = useMemo(
-    () => buildExportPlan(project, {
-      formatIds: resolveExportFormatIds(project, requestedFormatIds),
-      locales: [activeLocale],
-      scope: 'project',
-    }),
-    [project, activeLocale, requestedFormatIds],
+  // The plan is only built once the real project is loaded and the requested
+  // formats are validated: before that the store still holds the default project,
+  // and an unknown/custom format id would throw during render and hang the CLI.
+  const exportPlan = useMemo<ExportPlan>(
+    () => phase === 'loading'
+      ? EMPTY_EXPORT_PLAN
+      : buildExportPlan(project, {
+        formatIds: resolveExportFormatIds(project, requestedFormatIds),
+        locales: [activeLocale],
+        scope: 'project',
+      }),
+    [phase, project, activeLocale, requestedFormatIds],
   )
 
   const captureBatch = (batch: ExportPlanBatch) => {
@@ -202,6 +209,18 @@ export function ExportApp() {
         importProject(JSON.stringify(config.project))
       } catch (err) {
         window.__EXPORT_ERROR__ = err instanceof Error ? err.message : String(err)
+        window.__EXPORT_DONE__ = true
+        return
+      }
+
+      // Reject unknown --format ids up front (a custom id is only valid when the
+      // project declares it) instead of failing later during render.
+      const unknownFormats = findUnknownFormatIds(
+        config.formatIds ?? [],
+        useEditorStore.getState().project.settings.customFormats,
+      )
+      if (unknownFormats.length > 0) {
+        window.__EXPORT_ERROR__ = `Unknown export format(s): ${unknownFormats.join(', ')}`
         window.__EXPORT_DONE__ = true
         return
       }

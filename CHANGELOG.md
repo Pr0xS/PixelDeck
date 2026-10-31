@@ -7,6 +7,14 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+### Changed
+
+- **CLI export now targets the project's active formats by default** (previously only the base format, which skipped format-scoped slide groups). Projects without `activeFormats` now export both `iphone-69` and `android-phone` into per-format subfolders at the preset sizes. Pass `--format=base` to get the previous output.
+
+### Added
+
+- `--format` option for the headless CLI export (repeatable or comma-separated). Unknown format ids fail fast with an error.
+
 ## [0.8.4](https://github.com/Pr0xS/PixelDeck/compare/v0.8.3...v0.8.4) - 2026-10-19
 
 ### Changed

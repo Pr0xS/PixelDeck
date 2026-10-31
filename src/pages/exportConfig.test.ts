@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import type { Project, SlideGroup } from '@/types'
 import { buildExportPlan } from '@/utils/exportPlan'
-import { resolveExportFormatIds } from './exportConfig'
+import { findUnknownFormatIds, resolveExportFormatIds } from './exportConfig'
 
 const group = (id: string, format: 'iphone-69' | 'ipad-13'): SlideGroup => ({
   id,
@@ -41,5 +41,16 @@ describe('resolveExportFormatIds', () => {
 
   it('uses an explicit CLI format selection instead of project defaults', () => {
     expect(resolveExportFormatIds(project, ['ipad-13'])).toEqual(['ipad-13'])
+  })
+})
+
+describe('findUnknownFormatIds', () => {
+  it('accepts base, built-in presets and declared custom formats', () => {
+    const custom = [{ id: 'custom:wide', label: 'Wide', width: 2000, height: 1000 }] as never
+    expect(findUnknownFormatIds(['base', 'iphone-69', 'ipad-13', 'custom:wide'], custom)).toEqual([])
+  })
+
+  it('reports unknown ids and custom ids the project does not declare', () => {
+    expect(findUnknownFormatIds(['iphone-69', 'iphone69', 'custom:missing'] as never[])).toEqual(['iphone69', 'custom:missing'])
   })
 })
