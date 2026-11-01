@@ -1,8 +1,7 @@
 import { chromium } from '@playwright/test'
 import { readFileSync, readdirSync, mkdirSync, writeFileSync, existsSync, statSync } from 'fs'
-import { join, resolve, basename } from 'path'
+import { join, resolve, basename, dirname, relative } from 'path'
 import { fileURLToPath } from 'url'
-import { dirname } from 'path'
 import { createServer } from 'http'
 import { readFile } from 'fs/promises'
 import { extname } from 'path'
@@ -14,6 +13,7 @@ import {
   resolveJobAssets,
   describeMissing,
 } from './projectInput.mjs'
+import { normalizeFormatIds, getExportFilePath } from './formatOptions.mjs'
 
 export { resolveAssetAliases }
 
@@ -155,7 +155,7 @@ function isTruthyFlag(v) {
 
 // ─── Single export run ────────────────────────────────────────────────────────
 
-async function runSingle({ project, screenshotsDir, outputDir, locale, port = DEFAULTS.port, timeout = DEFAULTS.timeoutMs, allowMissing = false }) {
+async function runSingle({ project, screenshotsDir, outputDir, locale, formatIds, port = DEFAULTS.port, timeout = DEFAULTS.timeoutMs, allowMissing = false }) {
   validateBuild()
   const { projectJson: rawProject, embedded } = await validateJob({ project, screenshotsDir, outputDir, locale })
 
@@ -199,7 +199,7 @@ async function runSingle({ project, screenshotsDir, outputDir, locale, port = DE
     await page.addInitScript((config) => {
       // @ts-ignore
       window.__EXPORT_CONFIG__ = config
-    }, { project: projectJson, assets, locale: locale ?? null, allowMissing })
+    }, { project: projectJson, assets, locale: locale ?? null, formatIds, allowMissing })
 
     // Navigate to the app
     await page.goto(`http://localhost:${port}/`, { waitUntil: 'networkidle' })
@@ -226,11 +226,16 @@ async function runSingle({ project, screenshotsDir, outputDir, locale, port = DE
 
     // Save PNGs
     let saved = 0
-    for (const { name, dataUrl } of results) {
-      const filename = name.endsWith('.png') ? name : `${name}.png`
+    // Decide the layout from the requested formats when given, so it does not change
+    // depending on which formats happened to contain groups.
+    const useFormatDirectories = (formatIds ?? [...new Set(results.map((result) => result.formatId))]).length > 1
+    for (const result of results) {
+      const { name, dataUrl } = result
+      const targetPath = getExportFilePath(localeOutput, result, useFormatDirectories)
+      mkdirSync(dirname(targetPath), { recursive: true })
       const base64 = dataUrl.replace(/^data:image\/\w+;base64,/, '')
-      writeFileSync(join(localeOutput, filename), Buffer.from(base64, 'base64'))
-      console.log(`  ✓ ${filename}`)
+      writeFileSync(targetPath, Buffer.from(base64, 'base64'))
+      console.log(`  ✓ ${relative(localeOutput, targetPath)}`)
       saved++
     }
 
@@ -252,6 +257,7 @@ export async function runExport(opts) {
   const port = parsePositiveInteger(opts.port, 'port', DEFAULTS.port)
   const timeout = parsePositiveInteger(opts.timeout, 'timeout', DEFAULTS.timeoutMs)
   const allowMissing = isTruthyFlag(opts['allow-missing'])
+  const formatIds = normalizeFormatIds(opts.format)
 
   // Batch mode: --config=batch.yaml
   if (opts.config) {
@@ -295,6 +301,7 @@ export async function runExport(opts) {
         screenshotsDir: job.screenshotsDir,
         outputDir: job.outputDir,
         locale: job.locale,
+        formatIds,
         port: opts.port ? port : DEFAULTS.port + i,  // different port per job to avoid conflict
         timeout,
         allowMissing,
@@ -334,6 +341,7 @@ export async function runExport(opts) {
         screenshotsDir: opts.screenshots,
         outputDir: opts.output,
         locale,
+        formatIds,
         port,
         timeout,
         allowMissing,
@@ -349,6 +357,7 @@ export async function runExport(opts) {
     screenshotsDir: opts.screenshots,
     outputDir: opts.output,
     locale: opts.locale ?? null,
+    formatIds,
     port,
     timeout,
     allowMissing,

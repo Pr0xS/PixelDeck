@@ -47,9 +47,9 @@ PixelDeck is a React + TypeScript visual editor for designing App Store screensh
 | Browser PNG export | `src/utils/export.ts` |
 | Gradient conversion | `src/utils/gradients.ts` |
 | File/image utilities | `src/utils/files.ts` |
-| Headless CLI entry | `cli/index.mjs` |
+| Headless CLI entry | `cli/index.mjs` (arg parsing: `cli/args.mjs`; `--format` handling and output paths: `cli/formatOptions.mjs`) |
 | Playwright export runner | `cli/export.mjs` |
-| Headless render page | `src/pages/ExportApp.tsx` |
+| Headless render page | `src/pages/ExportApp.tsx` (format resolution/validation: `src/pages/exportConfig.ts`) |
 | Device specs | `src/assets/mockups/specs.ts` |
 | Device SVGs | `src/assets/mockups/iphone-16-pro.ts`, `pixel-9.ts` |
 

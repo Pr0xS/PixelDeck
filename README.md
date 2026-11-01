@@ -139,7 +139,7 @@ node cli/index.mjs export \
   --output=./output/store
 ```
 
-Output directories are created automatically. See [`cli/README.md`](cli/README.md) for full CLI docs, locale export, and YAML batch configuration.
+The CLI exports the project's active formats by default. Use repeatable `--format=iphone-69 --format=ipad-13` flags to select formats. Output directories are created automatically. See [`cli/README.md`](cli/README.md) for full CLI docs, locale export, and YAML batch configuration.
 
 ---
 
