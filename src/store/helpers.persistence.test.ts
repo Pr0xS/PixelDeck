@@ -465,3 +465,20 @@ describe('stripDataUrls (persistence safety net)', () => {
     expect((strippedGroup.children[0] as PhoneLayer).screenshotPath).toBe(assetKeyFromDataUrl(PNG))
   })
 })
+
+
+describe('text direction persistence', () => {
+  it.each(['auto', 'rtl', 'ltr'] as const)('preserves %s independently of alignment on import', (direction) => {
+    const project = makeProject({ slideGroups: [makeSlideGroup({ layers: [makeTextLayer({ direction, align: 'center' })] })] })
+    const restored = migrateProject(JSON.parse(JSON.stringify(project)))
+    const text = restored.slideGroups[0].layers.find((layer) => layer.type === 'text') as TextLayer
+    expect(text.direction).toBe(direction)
+    expect(text.align).toBe('center')
+  })
+  it('keeps old projects compatible without a direction field', () => {
+    const project = makeProject({ slideGroups: [makeSlideGroup({ layers: [makeTextLayer()] })] })
+    const restored = migrateProject(JSON.parse(JSON.stringify(project)))
+    const text = restored.slideGroups[0].layers.find((layer) => layer.type === 'text') as TextLayer
+    expect(text.direction ?? 'auto').toBe('auto')
+  })
+})

@@ -25,10 +25,10 @@ function LanguageCombobox({
 
   const filtered = useMemo(() => {
     const q = query.trim().toLowerCase()
-    if (!q) return LANGUAGES.slice(0, 20)
+    if (!q) return LANGUAGES
     return LANGUAGES.filter(
-      (l) => l.name.toLowerCase().includes(q) || l.code.includes(q),
-    ).slice(0, 20)
+      (l) => l.name.toLowerCase().includes(q) || l.nativeName?.toLowerCase().includes(q) || l.code.includes(q),
+    )
   }, [query])
 
   const customCodeValid = useMemo(() => {

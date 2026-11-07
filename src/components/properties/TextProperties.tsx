@@ -13,6 +13,7 @@ import {
   resumeTemporal,
 } from '@/components/properties/panelConstants'
 import { LayerTextToolbar } from '@/components/text/LayerTextToolbar'
+import { SegmentedControl } from '@/components/ui/SegmentedControl'
 
 // ─── FontPicker ───────────────────────────────────────────────────────────────
 
@@ -303,6 +304,19 @@ export function TextProperties({ layer }: { layer: TextLayer }) {
           // No canvas editor: show always-functional toolbar that applies to the whole text
           <LayerTextToolbar layer={layer} />
         )}
+      </div>
+
+      <div className={panelSectionCls} role="group" aria-label="Text direction">
+        <div className={labelCls}>Text direction</div>
+        <SegmentedControl
+          value={layer.direction ?? 'auto'}
+          options={[
+            { value: 'auto', label: 'Auto', title: 'Detect direction from the text' },
+            { value: 'rtl', label: 'RTL', title: 'Right-to-left paragraph direction' },
+            { value: 'ltr', label: 'LTR', title: 'Left-to-right paragraph direction' },
+          ]}
+          onChange={(direction) => upd({ direction })}
+        />
       </div>
 
       {/* ── Font ── */}

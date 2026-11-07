@@ -56,6 +56,7 @@ export function LocaleRichTextEditor({
       <button
         type="button"
         onClick={() => setEditing(true)}
+        dir={baseLayer.direction ?? 'auto'}
         title="Click to edit — select text to apply formatting"
         className="block w-full cursor-text text-left text-sm leading-6 text-[#f3f2ff] outline-none"
       >
