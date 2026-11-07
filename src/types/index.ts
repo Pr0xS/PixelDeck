@@ -386,6 +386,8 @@ export interface TextMark {
   strikethrough?: boolean;
 }
 
+export type TextDirection = 'auto' | 'rtl' | 'ltr';
+
 export interface TextLayer extends BaseLayer {
   type: 'text';
   text: string;
@@ -399,6 +401,8 @@ export interface TextLayer extends BaseLayer {
   letterSpacing: number;
   lineHeight: number;
   align: 'left' | 'center' | 'right';
+  /** Paragraph base direction, independent of alignment. Missing = auto for older projects. */
+  direction?: TextDirection;
   width?: number;   // wrapping width; undefined = auto
   /**
    * Explicit box height. undefined = auto (box grows with content).

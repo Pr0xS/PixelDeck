@@ -60,7 +60,8 @@
     "remark-gfm": "4.0.1",
     "use-image": "^1.1.4",
     "zundo": "^2.3.0",
-    "zustand": "^5.0.16"
+    "zustand": "^5.0.16",
+    "bidi-js": "^1.1.0"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",

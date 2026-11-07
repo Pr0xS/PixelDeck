@@ -13,6 +13,9 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ### Added
 
+- Text-layer Auto / RTL / LTR direction, bidirectional Hebrew rendering in styled text and PNG export, and grapheme-safe hard wrapping.
+- Hebrew language discovery by English name, native name or `he`; all language options remain available when scrolling.
+
 - `--format` option for the headless CLI export (repeatable or comma-separated). Unknown format ids fail fast with an error.
 
 ## [0.8.4](https://github.com/Pr0xS/PixelDeck/compare/v0.8.3...v0.8.4) - 2026-10-19
