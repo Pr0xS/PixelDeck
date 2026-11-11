@@ -5,6 +5,7 @@ import type { TextLayer } from '@/types'
 import { resolveFill } from '@/utils/brandColors'
 import { layerFillToKonvaProps } from '@/utils/konvaFill'
 import { DEFAULT_TEXT_WIDTH, renderSpansToCanvas, spansRenderKey } from '@/utils/textRendering'
+import { hasRtlText } from '@/utils/bidiText'
 import { useEditorStore } from '@/store'
 import { useBrandColors } from '@/hooks/useBrandColors'
 import { useLayerEffects } from '@/hooks/useLayerEffects'
@@ -102,7 +103,7 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
   }, [layer.id])
 
   // Rich text mode when the layer has marks (new) or legacy spans
-  const hasRichText = (layer.marks?.length ?? 0) > 0 || (layer.spans?.length ?? 0) > 0
+  const hasRichText = (layer.direction !== undefined && layer.direction !== 'auto') || hasRtlText(layer.text ?? '') || (layer.marks?.length ?? 0) > 0 || (layer.spans?.length ?? 0) > 0
   // Visual box height: explicit layer.height wins; otherwise the content height.
   // (In rich mode the offscreen canvas is already sized to layer.height when set.)
   const estimateTextHeight = () => {

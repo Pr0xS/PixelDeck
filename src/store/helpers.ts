@@ -144,7 +144,7 @@ export function cloneWithNewIds(layer: Layer): Layer {
 
 export const STYLE_KEYS: Partial<Record<LayerType, string[]>> = {
   background: ['fill', 'accents', 'imageRef', 'imageFit', 'imageBlur', 'imageOverlayColor', 'imageOverlayOpacity', 'noise', 'blur', 'shadow', 'opacity'],
-  text: ['fill', 'fontFamily', 'fontSize', 'fontWeight', 'italic', 'underline', 'strikethrough', 'letterSpacing', 'lineHeight', 'align', 'width', 'height', 'verticalAlign', 'blur', 'shadow', 'opacity'],
+  text: ['fill', 'fontFamily', 'fontSize', 'fontWeight', 'italic', 'underline', 'strikethrough', 'letterSpacing', 'lineHeight', 'align', 'direction', 'width', 'height', 'verticalAlign', 'blur', 'shadow', 'opacity'],
   shape: ['fill', 'stroke', 'strokeWidth', 'cornerRadius', 'shapeType', 'width', 'height', 'blur', 'shadow', 'opacity'],
   emoji: ['emoji', 'fontSize', 'blur', 'shadow', 'opacity'],
   brand: ['nameColor', 'nameFontSize', 'nameFontFamily', 'nameFontWeight', 'logoSize', 'direction', 'gap', 'blur', 'shadow', 'opacity'],

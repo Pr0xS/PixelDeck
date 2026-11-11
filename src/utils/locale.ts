@@ -259,6 +259,7 @@ export function applyLocaleManifest(project: Project, manifest: LocaleManifest):
 export interface LanguageOption {
   code: string;   // normalized, lowercase, hyphenated: 'pt-br'
   name: string;   // human-readable: 'Portuguese (Brazil)'
+  nativeName?: string;
 }
 
 /** Full list of supported languages for the locale combobox. */
@@ -307,7 +308,7 @@ export const LANGUAGES: LanguageOption[] = [
   { code: 'et',      name: 'Estonian' },
   { code: 'sl',      name: 'Slovenian' },
   { code: 'sr',      name: 'Serbian' },
-  { code: 'he',      name: 'Hebrew' },
+  { code: 'he',      name: 'Hebrew', nativeName: 'עברית' },
   { code: 'th',      name: 'Thai' },
   { code: 'vi',      name: 'Vietnamese' },
   { code: 'id',      name: 'Indonesian' },

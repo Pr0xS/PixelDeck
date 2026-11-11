@@ -1,6 +1,7 @@
 import type { TextLayer, TextMark, FillValue } from '@/types'
 import { createCanvasGradient } from '@/utils/gradients'
 import { segmentMarks } from '@/utils/richText'
+import { visualWrappedTextLines } from './bidiText'
 
 /** Default text box width (px) when a TextLayer has no explicit `width`. */
 export const DEFAULT_TEXT_WIDTH = 1000
@@ -17,6 +18,7 @@ interface ResolvedFragment {
 }
 
 interface PositionedFragment extends ResolvedFragment {
+  rtl: boolean
   x: number
   width: number
 }
@@ -57,21 +59,6 @@ export function makeMeasureCache(
     if (cache.size > maxSize) cache.delete(cache.keys().next().value!)
     return width
   }
-}
-
-function measureWidth(
-  font: string,
-  text: string,
-  letterSpacing: number,
-  measure: (font: string, text: string) => number,
-): number {
-  if (!text) return 0
-  if (letterSpacing === 0) return measure(font, text)
-  let w = 0
-  for (const char of text) {
-    w += measure(font, char) + letterSpacing
-  }
-  return Math.max(0, w - letterSpacing)
 }
 
 // ─── Marks → Fragments ────────────────────────────────────────────────────────
@@ -196,7 +183,7 @@ function sameFragStyle(a: { text: string }, b: { text: string }): boolean {
 /**
  * Word-wrap styled fragment lines to fit maxWidth.
  * Pure: measurement is injected, so this is unit-testable without a DOM.
- * - Breaks at whitespace; words longer than maxWidth are hard-broken by character.
+ * - Breaks at whitespace; words longer than maxWidth are hard-broken at grapheme boundaries.
  * - Leading whitespace on wrapped lines and trailing whitespace before a break
  *   are dropped (keeps center/right alignment correct).
  * - Adjacent pieces with the same style are merged back together.
@@ -207,6 +194,7 @@ export function wrapFragmentLines<T extends { text: string }>(
   measure: (text: string, frag: T) => number,
 ): T[][] {
   const out: T[][] = []
+  const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
   for (const line of lines) {
     let current: T[] = []
@@ -250,16 +238,16 @@ export function wrapFragmentLines<T extends { text: string }>(
 
         if (w > maxWidth) {
           // Hard-break an overlong word character by character
-          let rest = token
-          while (rest.length > 1 && measure(rest, frag) > maxWidth) {
+          let rest = [...segmenter.segment(token)].map((part) => part.segment)
+          while (rest.length > 1 && measure(rest.join(''), frag) > maxWidth) {
             let n = rest.length - 1
-            while (n > 1 && measure(rest.slice(0, n), frag) > maxWidth) n--
-            append(frag, rest.slice(0, n))
+            while (n > 1 && measure(rest.slice(0, n).join(''), frag) > maxWidth) n--
+            append(frag, rest.slice(0, n).join(''))
             pushLine()
             rest = rest.slice(n)
           }
-          append(frag, rest)
-          currentW = measure(rest, frag)
+          append(frag, rest.join(''))
+          currentW = measure(rest.join(''), frag)
           continue
         }
 
@@ -288,23 +276,28 @@ export function renderSpansToCanvas(layer: TextLayer): HTMLCanvasElement {
   // ── Measure setup ─────────────────────────────────────────────────────────
   const measureCanvas = document.createElement('canvas')
   const mc = measureCanvas.getContext('2d')!
+  mc.letterSpacing = `${letterSpacing}px`
   const measureText = makeMeasureCache((font, text) => {
     mc.font = font
     return mc.measureText(text).width
   })
   const measureFrag = (text: string, frag: ResolvedFragment) => {
     const font = buildFontString(frag.weight, frag.italic, fontSize, fontFamily)
-    return measureWidth(font, text, letterSpacing, measureText)
+    return measureText(font, text)
   }
 
   // ── Resolve lines and word-wrap them to the box width ─────────────────────
-  const lines = wrapFragmentLines(layerToLines(layer), canvasWidth, measureFrag)
+  const lines = visualWrappedTextLines(
+    layerToLines(layer),
+    (paragraph) => wrapFragmentLines([paragraph], canvasWidth, measureFrag),
+    layer.direction,
+  )
 
   const layoutLines: LayoutLine[] = lines.map((lineFragments) => {
     let x = 0
     const fragments: PositionedFragment[] = lineFragments.map((frag) => {
       const font = buildFontString(frag.weight, frag.italic, fontSize, fontFamily)
-      const w = measureWidth(font, frag.text, letterSpacing, measureText)
+      const w = measureText(font, frag.text)
       const positioned: PositionedFragment = { ...frag, x, width: w }
       x += w
       return positioned
@@ -346,15 +339,10 @@ export function renderSpansToCanvas(layer: TextLayer): HTMLCanvasElement {
 
       ctx.fillStyle = createCanvasGradient(ctx, frag.fill, fragX, fragY, frag.width, lineHeightPx)
 
-      if (letterSpacing === 0) {
-        ctx.fillText(frag.text, fragX, baseline)
-      } else {
-        let xPos = fragX
-        for (const char of frag.text) {
-          ctx.fillText(char, xPos, baseline)
-          xPos += measureText(ctx.font, char) + letterSpacing
-        }
-      }
+      ctx.direction = frag.rtl ? 'rtl' : 'ltr'
+      ctx.textAlign = frag.rtl ? 'right' : 'left'
+      ctx.letterSpacing = `${letterSpacing}px`
+      ctx.fillText(frag.text, fragX + (frag.rtl ? frag.width : 0), baseline)
 
       if (frag.underline || frag.strikethrough) {
         const solidColor =
@@ -390,9 +378,6 @@ export function renderSpansToCanvas(layer: TextLayer): HTMLCanvasElement {
  * Any change to a rendering-relevant property yields a different key.
  */
 export function spansRenderKey(layer: TextLayer): string {
-  const hasRich = (layer.marks?.length ?? 0) > 0 || (layer.spans?.length ?? 0) > 0
-  if (!hasRich) return ''
-
   const marksStr = (layer.marks ?? [])
     .map(
       (m) =>
@@ -421,6 +406,7 @@ export function spansRenderKey(layer: TextLayer): string {
     layer.height ?? 'auto',
     layer.verticalAlign ?? 'top',
     layer.align,
+    layer.direction ?? 'auto',
     layer.italic ?? false,
     layer.underline ?? false,
     layer.strikethrough ?? false,

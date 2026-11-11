@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import type { TextLayer, TextMark } from '@/types'
-import { layerToLines, makeMeasureCache, wrapFragmentLines } from './textRendering'
+import { layerToLines, makeMeasureCache, wrapFragmentLines, spansRenderKey } from './textRendering'
 
 // Mock measurement: every character is 10px wide
 const measure = (text: string) => text.length * 10
@@ -164,5 +164,26 @@ describe('makeMeasureCache', () => {
     cachedMeasure('font', 'b')
 
     expect(calls).toEqual(['font:a', 'font:b', 'font:c', 'font:b'])
+  })
+})
+
+
+describe('direction and plain RTL render cache', () => {
+  it('invalidates cached plain text after text or direction changes', () => {
+    const base = textLayer('כמה נשאר לשחרור?')
+    expect(spansRenderKey(base)).not.toBe(spansRenderKey({ ...base, text: 'טקסט מעודכן' }))
+    expect(spansRenderKey(base)).not.toBe(spansRenderKey({ ...base, direction: 'rtl' }))
+    expect(spansRenderKey({ ...base, direction: 'rtl' })).not.toBe(spansRenderKey({ ...base, direction: 'ltr' }))
+    expect(spansRenderKey(base)).toBe(spansRenderKey({ ...base, direction: 'auto' }))
+  })
+})
+
+
+describe('grapheme-safe hard wrapping', () => {
+  it.each(['שָׁ', '👨‍👩‍👧‍👦', '👍🏽', '🇮🇱'])('never breaks %s across lines even when a cluster exceeds the box', (cluster) => {
+    const segmenter = new Intl.Segmenter('he', { granularity: 'grapheme' })
+    const measureClusters = (text: string) => [...segmenter.segment(text)].length * 10
+    const lines = wrapFragmentLines([[frag(cluster + cluster + cluster)]], 5, measureClusters)
+    expect(textOf(lines)).toEqual([cluster, cluster, cluster])
   })
 })

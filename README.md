@@ -70,6 +70,7 @@ Most screenshot tools give you a fixed template: one background, one phone, one 
 | | |
 |---|---|
 | Rich text | Per-span color, gradient fill, weight, and italic within a single text layer |
+| RTL text | Auto / RTL / LTR paragraph direction, mixed Hebrew and Latin text, and grapheme-safe wrapping in editor and PNG export |
 | Fonts | 80+ curated Google Fonts (sans-serif, serif, display, monospace, handwriting) loaded on demand |
 | Gradients | Linear and radial fills on backgrounds, shapes, and text — with 12 quick-pick presets |
 | Device frames | iPhone 16 Pro, iPhone 16 Pro (No Island), Pixel 9, Pixel 9 (No Camera) |
