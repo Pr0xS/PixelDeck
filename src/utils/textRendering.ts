@@ -180,6 +180,8 @@ function sameFragStyle(a: { text: string }, b: { text: string }): boolean {
   return JSON.stringify(ka) === JSON.stringify(kb)
 }
 
+const graphemeSegmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
+
 /**
  * Word-wrap styled fragment lines to fit maxWidth.
  * Pure: measurement is injected, so this is unit-testable without a DOM.
@@ -194,7 +196,6 @@ export function wrapFragmentLines<T extends { text: string }>(
   measure: (text: string, frag: T) => number,
 ): T[][] {
   const out: T[][] = []
-  const segmenter = new Intl.Segmenter(undefined, { granularity: 'grapheme' })
 
   for (const line of lines) {
     let current: T[] = []
@@ -238,7 +239,7 @@ export function wrapFragmentLines<T extends { text: string }>(
 
         if (w > maxWidth) {
           // Hard-break an overlong word character by character
-          let rest = [...segmenter.segment(token)].map((part) => part.segment)
+          let rest = [...graphemeSegmenter.segment(token)].map((part) => part.segment)
           while (rest.length > 1 && measure(rest.join(''), frag) > maxWidth) {
             let n = rest.length - 1
             while (n > 1 && measure(rest.slice(0, n).join(''), frag) > maxWidth) n--

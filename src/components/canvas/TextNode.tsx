@@ -103,7 +103,7 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
   }, [layer.id])
 
   // Rich text mode when the layer has marks (new) or legacy spans
-  const hasRichText = (layer.direction !== undefined && layer.direction !== 'auto') || hasRtlText(layer.text ?? '') || (layer.marks?.length ?? 0) > 0 || (layer.spans?.length ?? 0) > 0
+  const hasRichText = layer.direction === 'rtl' || hasRtlText(layer.text ?? '') || (layer.marks?.length ?? 0) > 0 || (layer.spans?.length ?? 0) > 0
   // Visual box height: explicit layer.height wins; otherwise the content height.
   // (In rich mode the offscreen canvas is already sized to layer.height when set.)
   const estimateTextHeight = () => {
