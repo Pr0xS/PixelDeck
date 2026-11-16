@@ -1,7 +1,9 @@
-import type { BrandColor, Template } from '@/types'
+import type { AssetManifestEntry, BrandColor, Template } from '@/types'
 import { normalizeProjectFormats, BASE_CANVAS_FORMAT, getGroupFamilyKey } from '@/utils/canvasFormats'
-import { projectToTemplate, applyTemplate, extractInlineScreenshots } from '@/utils/templates'
-import { finalizeProjectImport, parseProjectJson } from '@/utils/projectZip'
+import {
+  projectToTemplate, applyTemplate, extractInlineScreenshots, stripUnresolvedTemplateImages,
+} from '@/utils/templates'
+import { finalizeProjectImport, parseProjectJson, type ImportAsset } from '@/utils/projectZip'
 import type { EditorStore, EditorSet, EditorGet } from '../types'
 import { useAssetStore } from '../assets'
 import {
@@ -167,10 +169,26 @@ export const createProjectSlice = (
     clearHistory()
   },
 
-  addTemplateSlideGroups: (tpl: Template) => {
+  addTemplateSlideGroups: (tpl: Template, assets: ImportAsset[] = []) => {
     const { slideGroups, settings } = applyTemplate(tpl)
-    const extracted = extractInlineScreenshots(tpl.name, slideGroups)
-    extracted.assets.forEach((asset) => useAssetStore.getState().addAsset(asset.filename, asset.dataUrl))
+    const inlineExtracted = extractInlineScreenshots(tpl.name, slideGroups)
+    const store = useAssetStore.getState()
+    inlineExtracted.assets.forEach((asset) => store.addAsset(asset.filename, asset.dataUrl))
+    // Provided bundle images keep their keys in the ACTIVE asset scope.
+    store.putAssetEntries(assets.map((a) => ({ key: a.key, name: a.name, dataUrl: a.dataUrl })))
+    const provided = new Set(assets.map((a) => a.key))
+    // Strip only keys the template promised and nobody delivered (not provided, not already stored).
+    const promised = tpl.assetManifest ?? {}
+    const resolvable = (key: string) =>
+      !(key in promised) || provided.has(key) || !!useAssetStore.getState().resolveAsset(key)
+    const extracted = {
+      ...inlineExtracted,
+      slideGroups: stripUnresolvedTemplateImages(inlineExtracted.slideGroups, resolvable),
+      manifest: { ...inlineExtracted.manifest } as Record<string, AssetManifestEntry>,
+    }
+    for (const a of assets) {
+      extracted.manifest[a.key] = tpl.assetManifest?.[a.key] ?? { name: a.name, mime: a.mime }
+    }
     set((s) => {
       // Merge template brand colors into the current palette so {brand:id}
       // tokens in the appended layers resolve. Existing ids win (never

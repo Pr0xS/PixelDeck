@@ -2,9 +2,11 @@ import { useState, useEffect, useRef } from 'react'
 import { useShallow } from 'zustand/react/shallow'
 import { useTemplatesStore, toAbsolute } from '@/store/templates'
 import { useEditorStore } from '@/store'
+import { useProjectsStore } from '@/store/projects'
 import { looksLikeTemplate } from '@/utils/templates'
 import { downloadDataUrl } from '@/utils/export'
 import type { Template } from '@/types'
+import { applyGalleryTemplate, type GalleryApplyMode } from './galleryApply'
 import { ModalShell } from '@/components/ui/ModalShell'
 import { FileUploadButton } from '@/components/ui/FileUploadButton'
 
@@ -14,7 +16,8 @@ interface TemplatesModalProps {
 }
 
 export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
-  const { manifest, loading, error, loadManifest, fetchTemplate } = useTemplatesStore()
+  const { manifest, loading, error, loadManifest, fetchTemplateBundle } = useTemplatesStore()
+  const createProjectFromTemplate = useProjectsStore((s) => s.createProjectFromTemplate)
   const { project, exportActiveAsTemplate, addTemplateSlideGroups } =
     useEditorStore(useShallow((s) => ({
       project: s.project,
@@ -35,21 +38,28 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
   useEffect(() => { if (open) loadManifest() }, [open, loadManifest])
   useEffect(() => {
     if (open) {
+      // Reopening clears a stale error. `applying` is NOT reset: an apply started before the
+      // modal was closed is still running and must keep the buttons disabled.
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+      setImportError(null)
+    }
+  }, [open])
+  useEffect(() => {
+    if (open) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
       setExportName(project.name)
     }
   }, [open, project.name])
 
-  const handleGalleryApply = async (entry: typeof manifest[0]) => {
-    setApplying(entry.slug)
-    try {
-      const tpl = await fetchTemplate(entry)
-      addTemplateSlideGroups(tpl)
-      onClose()
-    } catch {
-      setApplying(null)
-    }
-  }
+  const handleGalleryApply = (entry: typeof manifest[0], mode: GalleryApplyMode) =>
+    applyGalleryTemplate(entry, mode, {
+      fetchBundle: (e) => fetchTemplateBundle(e),
+      createProject: createProjectFromTemplate,
+      addSlides: addTemplateSlideGroups,
+      setApplying,
+      setError: setImportError,
+      onDone: onClose,
+    })
 
   const handleExport = () => {
     if (!exportName.trim()) return
@@ -570,6 +580,25 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
                       }}
                     >
                       {entry.name}
+                      {entry.tour && (
+                        <span
+                          style={{
+                            marginLeft: 6,
+                            background: 'rgba(124,110,246,0.18)',
+                            border: '1px solid rgba(124,110,246,0.3)',
+                            borderRadius: 20,
+                            color: '#c4b9fc',
+                            fontSize: 9,
+                            fontWeight: 600,
+                            letterSpacing: '0.06em',
+                            padding: '1px 6px',
+                            textTransform: 'uppercase',
+                            verticalAlign: 'middle',
+                          }}
+                        >
+                          Tour
+                        </span>
+                      )}
                     </div>
                     {entry.description && (
                       <div
@@ -584,21 +613,39 @@ export function TemplatesModal({ open, onClose }: TemplatesModalProps) {
                       </div>
                     )}
                     <button
-                      disabled={applying === entry.slug}
-                      onClick={() => handleGalleryApply(entry)}
+                      disabled={applying !== null}
+                      onClick={() => handleGalleryApply(entry, 'new')}
                       style={{
                         width: '100%',
                         background: '#7c6ef6',
                         border: 'none',
                         borderRadius: 5,
                         color: '#fff',
-                        cursor: applying === entry.slug ? 'wait' : 'pointer',
+                        cursor: applying !== null ? 'wait' : 'pointer',
                         fontSize: 11,
                         fontWeight: 600,
                         padding: '6px 0',
+                        marginBottom: 6,
                       }}
                     >
-                      {applying === entry.slug ? 'Adding…' : '+ Add slides to project'}
+                      {applying === `new:${entry.slug}` ? 'Creating…' : 'Use template'}
+                    </button>
+                    <button
+                      disabled={applying !== null}
+                      onClick={() => handleGalleryApply(entry, 'append')}
+                      style={{
+                        width: '100%',
+                        background: 'rgba(255,255,255,0.04)',
+                        border: '1px solid rgba(255,255,255,0.1)',
+                        borderRadius: 5,
+                        color: '#a0a0b0',
+                        cursor: applying !== null ? 'wait' : 'pointer',
+                        fontSize: 11,
+                        fontWeight: 500,
+                        padding: '5px 0',
+                      }}
+                    >
+                      {applying === `append:${entry.slug}` ? 'Adding…' : 'Add to this project'}
                     </button>
                   </div>
                 </div>
