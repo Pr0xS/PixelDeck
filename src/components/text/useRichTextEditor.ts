@@ -40,6 +40,7 @@ export interface RichTextEditorApi {
   /** Spread these on the contentEditable element */
   editableProps: {
     contentEditable: true
+    dir?: TextLayer['direction']
     suppressContentEditableWarning: true
     spellCheck: false
     role: 'textbox'
@@ -231,6 +232,7 @@ export function useRichTextEditor(
     clearAll,
     editableProps: {
       contentEditable: true,
+      dir: layer.direction ?? 'auto',
       suppressContentEditableWarning: true,
       spellCheck: false,
       role: 'textbox',
