@@ -41,7 +41,10 @@
 
 PixelDeck is a layer-based canvas editor built for one job: store screenshots that look designed. Device mockups, headlines, gradients, floating cards and panoramas that run across two or three screenshots.
 
-These are the five templates in the gallery. Use one as a new project, swap in your own screenshots and change the copy and colours.
+The gallery ships five complete templates. Use one as a new project, swap in your own screenshots and change the copy and colours.
+
+<details>
+<summary><b>See the five templates</b> · Health &amp; Fitness, Finance, Productivity, Education, Shopping &amp; Food</summary>
 
 **Pulse** · Health &amp; Fitness
 
@@ -62,6 +65,8 @@ These are the five templates in the gallery. Use one as a new project, swap in y
 **Basket** · Shopping &amp; Food
 
 ![Basket template: warm grocery delivery app screenshots with serif headlines](docs/media/template-basket-shopping.webp)
+
+</details>
 
 ---
 

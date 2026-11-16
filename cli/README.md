@@ -74,7 +74,7 @@ node cli/index.mjs export --project=./projects/my-app.json --output=./output \
 
 If `--format` is omitted, the CLI exports the formats active in the project. Unknown ids fail immediately with an error; `custom:*` ids are valid only if the project declares them.
 
-> Changed in v0.8.5: the CLI used to export only the base format. Projects without explicit `activeFormats` now produce both `iphone-69` and `android-phone` PNGs in per-format subfolders at the preset sizes. Pass `--format=base` to reproduce the old output. In YAML batch mode, a command-line `--format` selection applies to each job.
+> Changed in v0.9.0: the CLI used to export only the base format. Projects without explicit `activeFormats` now produce both `iphone-69` and `android-phone` PNGs in per-format subfolders at the preset sizes. Pass `--format=base` to reproduce the old output. In YAML batch mode, a command-line `--format` selection applies to each job.
 
 > Changed in v0.4.x: filenames were previously the raw slide name (`slide-1.png`). The group prefix was added because two groups with identical slide names silently overwrote each other's files. Update any automation that matches on exact filenames.
 
