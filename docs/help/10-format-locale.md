@@ -21,6 +21,8 @@ This is how PixelDeck lets you fine-tune a design for one specific platform, one
   </div>
 </div>
 
-- **Important**: layout changes don't apply while you're on Base with a non-default locale selected — switch to an actual platform format tab first to adjust position/size for that language.
+- **Base + a non-default locale**: a layout change made here belongs to that language and follows it into every format (scaled to each one). Use it when a translation needs the same tweak everywhere, for example a longer headline that must be a little smaller.
+- **A platform format + a non-default locale**: the change applies to that exact pairing only, on top of the language-wide tweak if there is one.
+- Rule of thumb: **formats pin, locales adjust**. A format tab stores an absolute position/size for that format; a locale stores a relative adjustment that is applied afterwards.
 - **Format-scope actions**: Reset format layout, Reset format visibility, Make format layers shared, Use format layout as shared (see **Formats & Families** for details).
 - **Locale+Format-scope action**: Reset pairing layout — clears position/size adjustments for that exact locale+format combination only (e.g. just German-on-Android), leaving everything else untouched.
