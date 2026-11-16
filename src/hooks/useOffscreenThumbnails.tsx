@@ -5,6 +5,7 @@ import { resolveGroupView } from '@/utils/canvasFormats'
 import { getThumbnailStageGeometry, enqueueRequests, NAV_THUMB_CAPTURE_HEIGHT_PX, stripExpensiveEffects, type ThumbnailRequest } from '@/utils/thumbnailRender'
 import { isCaptureLocked, nextFrame, waitForStage, waitForStageCaptureReady } from '@/utils/stageCapture'
 import { ThumbnailStage } from '@/components/canvas/ThumbnailStage'
+import { ensureProjectFontsLoaded } from '@/utils/fonts'
 
 export type { ThumbnailRequest } from '@/utils/thumbnailRender'
 
@@ -52,7 +53,27 @@ export function useOffscreenThumbnails(options: {
     startProjectIdRef.current = state.project.id
     inFlightRef.current = true
     setIsCapturing(true)
-    setCurrentRequest(request)
+    // Konva paints text with a fallback face while a web font is loading and never
+    // repaints, so the faces must be ready BEFORE the stage mounts (setCurrentRequest).
+    void ensureProjectFontsLoaded(state.project).catch(() => {}).then(() => {
+      const now = useEditorStore.getState()
+      const groupGone = !now.project.slideGroups.some((g) => g.id === request.groupId)
+      const cancelled = abortRef.current || now.project.id !== startProjectIdRef.current || groupGone
+      const blocked = isCaptureLocked()
+        || (now.editingTextId !== null && request.groupId === now.activeSlideGroupId)
+      if (cancelled || blocked) {
+        // Same rules as above, re-checked because time passed while fonts loaded.
+        // A deleted group can never be captured: drop it so the next request can run.
+        if (groupGone) {
+          queueRef.current = queueRef.current.filter((q) => !(q.groupId === request.groupId && q.key === request.key))
+        }
+        inFlightRef.current = false
+        setIsCapturing(false)
+        if (queueRef.current.length > 0) globalThis.setTimeout(() => kickRef.current(), blocked ? 250 : 0)
+        return
+      }
+      setCurrentRequest(request)
+    })
   }, [])
   useEffect(() => { kickRef.current = kick }, [kick])
 

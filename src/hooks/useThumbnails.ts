@@ -7,6 +7,7 @@ import { getPanoSlideX, normalizePanoCompensationPx, getEffectivePano } from '@/
 import { nextFrame, runExclusiveCapture, waitForStage, waitForStageCaptureReady, withIdentityTransform } from '@/utils/stageCapture'
 import { getGroupPreviewKey } from '@/utils/previewKey'
 import { idbStorage } from '@/store/idb-storage'
+import { ensureProjectFontsLoaded } from '@/utils/fonts'
 import { useOffscreenThumbnails } from '@/hooks/useOffscreenThumbnails'
 import type { CanvasFormatId, Project } from '@/types'
 import type { FormatFamilyKey } from '@/utils/canvasFormats'
@@ -191,6 +192,8 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     if (!stage || !group || targetGroupId !== currentState.activeSlideGroupId) return false
 
     try {
+      // A face drawn before it loads stays a fallback in the (persisted) thumbnail.
+      await ensureProjectFontsLoaded(currentState.project)
       await nextFrame()
       await nextFrame()
       await waitForStageCaptureReady(stage, { quietFrames: 1, timeoutMs: 1200 })
@@ -375,6 +378,10 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
     if (!stage) return
 
     const run = (async () => {
+      // Reset BEFORE the await: a newer call arriving while fonts load sets abort and must win.
+      previewAbortRef.current = false
+      // Before the lock and before any stage mutation: loading can take seconds.
+      await ensureProjectFontsLoaded(useEditorStore.getState().project)
       const { project, activeSlideGroupId: originalGroupId, activeCanvasFormat, activeFamily } =
         useEditorStore.getState()
       const startProjectId = project.id
@@ -389,8 +396,6 @@ export function useThumbnails(stageRef: RefObject<Konva.Stage | null>, hasComple
         gapPx: panoCompensationPx,
         compensate: panoCompensate,
       }
-
-      previewAbortRef.current = false
 
       // Check which groups need capture (cache miss)
       const previewGroups = selectFormatViewGroups(project, activeCanvasFormat, activeFamily)

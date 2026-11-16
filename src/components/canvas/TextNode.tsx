@@ -9,6 +9,7 @@ import { hasRtlText } from '@/utils/bidiText'
 import { useEditorStore } from '@/store'
 import { useBrandColors } from '@/hooks/useBrandColors'
 import { useLayerEffects } from '@/hooks/useLayerEffects'
+import { useFontsVersion, useRemeasureOnFontLoad } from '@/hooks/useFontsVersion'
 import { useLayerInteraction } from '@/hooks/useLayerInteraction'
 import { useLayerTransform } from '@/hooks/useLayerTransform'
 import { useKonvaBlur } from './effects'
@@ -117,11 +118,15 @@ export function TextNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotD
 
   // Render rich text to an offscreen canvas — recomputed only when rendering-relevant
   // props change (via stable cache key).
-  const renderKey = spansRenderKey(resolvedLayer)
+  // The key also changes when web fonts finish loading: a canvas rasterised
+  // before its face arrived holds fallback glyphs and must be drawn again.
+  const fontsVersion = useFontsVersion()
+  const renderKey = `${spansRenderKey(resolvedLayer)}|fonts:${fontsVersion}`
   // eslint-disable-next-line react-hooks/exhaustive-deps
   const spanCanvas = useMemo(() => hasRichText ? renderSpansToCanvas(resolvedLayer) : null, [renderKey])
   const shadowProps = useLayerEffects(textRef, layer, renderKey, hasRichText ? 0 : layer.blur)
   useKonvaBlur(imageRef, hasRichText ? layer.blur : 0, renderKey)
+  useRemeasureOnFontLoad(textRef, fontsVersion)
 
   const richInteractionProps = useLayerInteraction({
     nodeRef: imageRef,

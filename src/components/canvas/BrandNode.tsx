@@ -8,6 +8,7 @@ import type { BrandLayer } from '@/types'
 import { resolveBrandColor } from '@/utils/brandColors'
 import { useBrandColors } from '@/hooks/useBrandColors'
 import { useLayerEffects } from '@/hooks/useLayerEffects'
+import { useFontsVersion, useRemeasureOnFontLoad } from '@/hooks/useFontsVersion'
 import { useLayerInteraction } from '@/hooks/useLayerInteraction'
 import { useLayerTransform } from '@/hooks/useLayerTransform'
 
@@ -26,6 +27,9 @@ interface BrandNodeProps {
 
 export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNotDraggable }: BrandNodeProps) {
   const groupRef = useRef<Konva.Group>(null)
+  const nameRef = useRef<Konva.Text>(null)
+  const fontsVersion = useFontsVersion()
+  useRemeasureOnFontLoad(nameRef, fontsVersion)
   const brandColors = useBrandColors()
   const logoAsset = useAssetImage(layer.logoRef)
   const [logoImage] = useCachedImage(logoAsset.src ?? '')
@@ -44,7 +48,7 @@ export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
   const height = layer.direction === 'row'
     ? Math.max(hasLogo ? layer.logoSize : 0, layer.nameFontSize)
     : (hasLogo ? layer.logoSize + layer.gap : 0) + layer.nameFontSize
-  const shadowProps = useLayerEffects(groupRef, layer, `${layer.logoRef}:${layer.logoSize}:${layer.appName}:${layer.nameFontSize}:${layer.nameFontFamily}:${layer.nameFontWeight}:${layer.nameColor}:${layer.direction}:${layer.gap}`)
+  const shadowProps = useLayerEffects(groupRef, layer, `${layer.logoRef}:${layer.logoSize}:${layer.appName}:${layer.nameFontSize}:${layer.nameFontFamily}:${layer.nameFontWeight}:${layer.nameColor}:${layer.direction}:${layer.gap}:${fontsVersion}`)
   const interactionProps = useLayerInteraction({
     nodeRef: groupRef,
     locked: layer.locked,
@@ -93,6 +97,7 @@ export function BrandNode({ layer, onSelect, onDragEnd, onTransformEnd, forceNot
         />
       )}
       <Text
+        ref={nameRef}
         x={textX}
         y={textY}
         text={layer.appName}

@@ -18,7 +18,7 @@ import { useFontStore } from '@/store/fontStore'
 import { findUnknownFormatIds, resolveExportFormatIds } from './exportConfig'
 import { buildExportPlan, type ExportPlan, type ExportPlanBatch } from '@/utils/exportPlan'
 import { acquireCaptureLock, waitForStage, waitForStageCaptureReady } from '@/utils/stageCapture'
-import { loadGoogleFonts, registerCustomFonts } from '@/utils/fonts'
+import { ensureProjectFontsLoaded, loadGoogleFonts, registerCustomFonts } from '@/utils/fonts'
 import { LayerNode } from '@/components/canvas/LayerNode'
 import { injectExportAssets } from './exportAssets'
 import { isAssetRef } from '@/utils/projectAssets'
@@ -254,13 +254,18 @@ export function ExportApp() {
         }
       }
 
-      // Load Google Fonts stylesheet
-      loadGoogleFonts()
+      // Load the Google Fonts stylesheet and wait until its faces are registered
+      await loadGoogleFonts()
 
       // Load custom fonts from project registry
       if (config.project.customFonts?.length) {
         await registerCustomFonts(config.project.customFonts, getFont)
       }
+
+      // Web fonts only start downloading when first drawn, and the canvas is
+      // not redrawn once they arrive: load every face the project uses up front
+      // so the first slide is not captured with a fallback font.
+      await ensureProjectFontsLoaded(useEditorStore.getState().project)
 
       // Wait for all fonts (Google + custom) to be parsed and available
       try {
