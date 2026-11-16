@@ -7,6 +7,8 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
 ## [Unreleased]
 
+## [0.9.0](https://github.com/Pr0xS/PixelDeck/compare/v0.8.4...v0.9.0) - 2026-11-16
+
 ### Changed
 
 - **CLI export now targets the project's active formats by default** (previously only the base format, which skipped format-scoped slide groups). Projects without `activeFormats` now export both `iphone-69` and `android-phone` into per-format subfolders at the preset sizes. Pass `--format=base` to get the previous output.
@@ -326,7 +328,7 @@ versioning follows [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 - Preview modal: full-project filmstrip preview with high-res thumbnail capture
 - Slide navigator: thumbnail-based navigation with per-slide index
 
-[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.5.1...HEAD
+[Unreleased]: https://github.com/Pr0xS/PixelDeck/compare/v0.9.0...HEAD
 [0.2.2]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.1...v0.2.2
 [0.2.1]: https://github.com/Pr0xS/PixelDeck/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Pr0xS/PixelDeck/compare/v0.1.0...v0.2.0
