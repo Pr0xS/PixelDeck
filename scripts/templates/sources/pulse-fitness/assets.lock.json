@@ -1,0 +1,176 @@
+{
+  "home": {
+    "hash": "4b0b0336ec8623bf",
+    "file": "img_f6b11c7c7953e081ce028c11.webp",
+    "bytes": 77172,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "workout": {
+    "hash": "e8432b4649b71655",
+    "file": "img_e93a412d0654a50a58e34b00.webp",
+    "bytes": 67170,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "plan": {
+    "hash": "2cb59804950ce976",
+    "file": "img_736be26c923258439cec6c86.webp",
+    "bytes": 76770,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "stats": {
+    "hash": "6450eab0c2e1f7ea",
+    "file": "img_8f9ee20fb6dd0307bae3fa7a.webp",
+    "bytes": 63908,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "leaders": {
+    "hash": "a41395e50ae2f7b5",
+    "file": "img_e07f6ef80bf04ce99636959a.webp",
+    "bytes": 80934,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "awards": {
+    "hash": "da911e4fa981ffbd",
+    "file": "img_5b956c9db99bf20edceb2098.webp",
+    "bytes": 74230,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "prCard": {
+    "hash": "d22aab3ef099b71c",
+    "file": "img_ba32d097eb126574845e8736.webp",
+    "bytes": 12528,
+    "crop": {
+      "dx": 28,
+      "dy": 26.8,
+      "w": 324,
+      "h": 96.4
+    },
+    "shadow": {
+      "color": "#0f1123",
+      "opacity": 0.22,
+      "blur": 50,
+      "offsetX": 0,
+      "offsetY": 22
+    }
+  },
+  "heart": {
+    "hash": "38e42440607b6573",
+    "file": "img_a3e226d1cc70aed3d08b33f7.webp",
+    "bytes": 15798,
+    "crop": {
+      "dx": 28,
+      "dy": 20,
+      "w": 324,
+      "h": 190
+    },
+    "shadow": {
+      "color": "#0f1123",
+      "opacity": 0.22,
+      "blur": 50,
+      "offsetX": 0,
+      "offsetY": 22
+    }
+  },
+  "streak": {
+    "hash": "07624a8f798460b1",
+    "file": "img_3c71556ab87f006ee860fabf.webp",
+    "bytes": 17912,
+    "crop": {
+      "dx": 28,
+      "dy": 28,
+      "w": 324,
+      "h": 144
+    },
+    "shadow": {
+      "color": "#0f1123",
+      "opacity": 0.22,
+      "blur": 50,
+      "offsetX": 0,
+      "offsetY": 22
+    }
+  },
+  "goal": {
+    "hash": "5af8307d2fe42752",
+    "file": "img_47e123a0f32d3fc856755cc9.webp",
+    "bytes": 15238,
+    "crop": {
+      "dx": 28,
+      "dy": 40,
+      "w": 224,
+      "h": 250
+    },
+    "shadow": {
+      "color": "#0f1123",
+      "opacity": 0.22,
+      "blur": 50,
+      "offsetX": 0,
+      "offsetY": 22
+    }
+  },
+  "rank": {
+    "hash": "cbb89d93ec795ca5",
+    "file": "img_bf7aaccf95a0ef9f8030702a.webp",
+    "bytes": 13198,
+    "crop": {
+      "dx": 28,
+      "dy": 28,
+      "w": 324,
+      "h": 94
+    },
+    "shadow": {
+      "color": "#0f1123",
+      "opacity": 0.22,
+      "blur": 50,
+      "offsetX": 0,
+      "offsetY": 22
+    }
+  },
+  "prLime": {
+    "hash": "91d1652481f6e87e",
+    "file": "img_1e7afe2ff1dbb937daff5348.webp",
+    "bytes": 12748,
+    "crop": {
+      "dx": 28,
+      "dy": 28,
+      "w": 324,
+      "h": 94
+    },
+    "shadow": {
+      "color": "#0f1123",
+      "opacity": 0.22,
+      "blur": 50,
+      "offsetX": 0,
+      "offsetY": 22
+    }
+  }
+}

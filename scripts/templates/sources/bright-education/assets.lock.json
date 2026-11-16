@@ -1,0 +1,140 @@
+{
+  "path": {
+    "hash": "03da867e5d28c920",
+    "file": "img_3547369ff8b1809407eb5553.webp",
+    "bytes": 58764,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "lesson": {
+    "hash": "2bf97ed78954b39d",
+    "file": "img_21f858d992d5f720c2ca65d8.webp",
+    "bytes": 73616,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "streak": {
+    "hash": "4ac90f02b0bbd17a",
+    "file": "img_c1d3a1e43d1f2e750834e201.webp",
+    "bytes": 79942,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "league": {
+    "hash": "b657fd2df1a22216",
+    "file": "img_5886066987131f1f6e4d8fb6.webp",
+    "bytes": 81808,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "review": {
+    "hash": "3f2b25bb0b46eccd",
+    "file": "img_777ee4765f79064ecf03c1b9.webp",
+    "bytes": 49754,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "profile": {
+    "hash": "789989e5ceb933a4",
+    "file": "img_44419ea634c4365e7955ef0d.webp",
+    "bytes": 91840,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "xp": {
+    "hash": "f706c0bf62edcd79",
+    "file": "img_d28a79119bbaa956dafe0dbd.webp",
+    "bytes": 12710,
+    "crop": {
+      "dx": 27.6,
+      "dy": 8,
+      "w": 244.4,
+      "h": 101.2
+    },
+    "shadow": {
+      "color": "#1e0a46",
+      "opacity": 0.3,
+      "blur": 50,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  },
+  "streak30": {
+    "hash": "2e4e81a0f38759c0",
+    "file": "img_a2e466b7e4cf5e86e24340b4.webp",
+    "bytes": 11446,
+    "crop": {
+      "dx": 27.6,
+      "dy": 4,
+      "w": 234.4,
+      "h": 116
+    },
+    "shadow": {
+      "color": "#1e0a46",
+      "opacity": 0.25,
+      "blur": 50,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  },
+  "complete": {
+    "hash": "1f886014aebf2991",
+    "file": "img_e32333b50972b8f496f9988d.webp",
+    "bytes": 19350,
+    "crop": {
+      "dx": 28,
+      "dy": 18.8,
+      "w": 324,
+      "h": 149.2
+    },
+    "shadow": {
+      "color": "#1e0a46",
+      "opacity": 0.25,
+      "blur": 50,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  },
+  "bubble": {
+    "hash": "e6530b99db1666fb",
+    "file": "img_5f9242ec2d9ace3b1efd7426.webp",
+    "bytes": 11524,
+    "crop": {
+      "dx": 27.6,
+      "dy": 18,
+      "w": 284.4,
+      "h": 99.6
+    },
+    "shadow": {
+      "color": "#1e0a46",
+      "opacity": 0.25,
+      "blur": 50,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  }
+}

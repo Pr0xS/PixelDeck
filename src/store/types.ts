@@ -10,6 +10,7 @@ import type {
   PanoSettings,
 } from '@/types'
 import type { ContentSyncPlan } from '@/utils/contentSync'
+import type { ImportAsset } from '@/utils/projectZip'
 
 // ─── EditorStore interface ────────────────────────────────────────────────────
 
@@ -202,7 +203,7 @@ export interface EditorStore {
   // ─ Template actions
   exportActiveAsTemplate: (opts: { name: string; description?: string; category?: string; slideGroupIds?: string[] }) => Template
   importTemplateAsNewProject: (tpl: Template) => void
-  addTemplateSlideGroups: (tpl: Template) => void
+  addTemplateSlideGroups: (tpl: Template, assets?: ImportAsset[]) => void
 }
 
 // ─── Zustand set/get type aliases ────────────────────────────────────────────

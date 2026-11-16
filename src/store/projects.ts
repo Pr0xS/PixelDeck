@@ -1,12 +1,18 @@
 /** Project library state and async persistence. */
 
 import { create } from 'zustand'
-import type { Project } from '@/types'
+import type { Project, Template } from '@/types'
 import { buildProjectExportBundle, collectAssetKeys } from '@/utils/projectAssets'
-import { buildProjectZip, finalizeProjectImport, parseProjectFile } from '@/utils/projectZip'
+import {
+  buildProjectZip, finalizeProjectImport, parseProjectFile, type ImportAsset,
+} from '@/utils/projectZip'
+import { templateToProject } from '@/utils/templates'
+import {
+  fetchTemplateBundle, toAbsolute, type TemplateBundle, type TemplateManifestEntry,
+} from './templates'
 import { useEditorStore } from './index'
 import { newId, stripDataUrls } from './helpers'
-import { areAssetsDurable, hasPendingAssetWrites, useAssetStore } from './assets'
+import { areAssetsDurable, hasLegacyAssets, hasPendingAssetWrites, useAssetStore } from './assets'
 import { idbStorage, warnStorageFailure as warnProjectStorageFailure } from './idb-storage'
 import { isCaptureLocked } from '@/utils/stageCapture'
 import { getProjectStorage } from './storage'
@@ -150,6 +156,8 @@ interface ProjectsStore {
   exportProjectBundle: (id: string) => Promise<string>
   /** ZIP (project.json + assets/<key>) — the default export format. */
   exportProjectZip: (id: string) => Promise<Blob>
+  /** Create a NEW project from a template (+ its bundled images) and make it active. */
+  createProjectFromTemplate: (template: Template, assets: ImportAsset[]) => Promise<void>
   importProjectFromJson: (json: string) => Promise<{ missing: string[] }>
   /** Accepts .zip, JSON bundle v1/v2, raw project JSON (sniffed by magic bytes). */
   importProjectFromFile: (file: Blob | ArrayBuffer | Uint8Array) => Promise<{ missing: string[] }>
@@ -162,14 +170,18 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
 
   async initialize() {
     try {
-      const projects = await getProjectStorage().listProjects()
       const activeId = await getProjectStorage().getActiveProjectId()
+      let projects = await getProjectStorage().listProjects()
       let loaded = false
       if (activeId && projects.some((project) => project.id === activeId)) {
         loaded = await loadProjectById(activeId, { checkAbandonment: true })
       }
       if (!loaded && projects.length > 0) {
         loaded = await loadProjectById(projects[0].id, { checkAbandonment: true })
+      }
+      // First run: a new user starts in the bundled Welcome project, not a blank one.
+      if (!loaded && projects.length === 0 && await tryCreateWelcomeProject()) {
+        projects = await getProjectStorage().listProjects()
       }
 
       set({ projects })
@@ -297,12 +309,18 @@ export const useProjectsStore = create<ProjectsStore>((set, get) => ({
     return (await buildProjectZip(project, resolve, nameOf)).blob
   },
 
+  async createProjectFromTemplate(template, assets) {
+    await createFromTemplate(template, assets, get().saveCurrentProject)
+  },
+
   async importProjectFromJson(json) {
-    return importIncoming(await parseProjectFile(json), get().saveCurrentProject)
+    const { missing } = await importIncoming(await parseProjectFile(json), get().saveCurrentProject)
+    return { missing }
   },
 
   async importProjectFromFile(file) {
-    return importIncoming(await parseProjectFile(file), get().saveCurrentProject)
+    const { missing } = await importIncoming(await parseProjectFile(file), get().saveCurrentProject)
+    return { missing }
   },
 }))
 
@@ -341,13 +359,25 @@ async function loadExportSource(id: string): Promise<ExportSource> {
 async function importIncoming(
   incoming: Awaited<ReturnType<typeof parseProjectFile>>,
   saveCurrent: () => Promise<void>,
-): Promise<{ missing: string[] }> {
+  /** Last-moment veto (e.g. bootstrap abandoned while the scope switch was awaited). */
+  shouldCommit?: () => boolean,
+): Promise<{ missing: string[]; committed: boolean; projectId: string }> {
   await saveCurrent()
   const finalized = finalizeProjectImport(incoming)
   const newProjectId = newId()
   const previousScope = useAssetStore.getState().activeProjectId
   try {
     await useAssetStore.getState().setActiveProject(newProjectId)
+    // No await from here to importProject: nothing can interleave between the checks and the swap.
+    // A superseded switch returns silently without activating our scope.
+    if (useAssetStore.getState().activeProjectId !== newProjectId) {
+      throw new Error('Asset scope switch was superseded')
+    }
+    if (shouldCommit && !shouldCommit()) {
+      await useAssetStore.getState().setActiveProject(previousScope)
+      await useAssetStore.getState().clearProject(newProjectId).catch(() => {})
+      return { missing: [], committed: false, projectId: newProjectId }
+    }
     useAssetStore.getState().putAssetEntries(finalized.assets)
     useEditorStore.getState().importProject(JSON.stringify({ ...finalized.project, id: newProjectId }))
   } catch (err) {
@@ -360,7 +390,100 @@ async function importIncoming(
   await getProjectStorage().setActiveProjectId(newProjectId)
   await useAssetStore.getState().flushAssets()
   await useProjectsStore.getState().saveCurrentProject()
-  return { missing: finalized.missing }
+  return { missing: finalized.missing, committed: true, projectId: newProjectId }
+}
+
+async function createFromTemplate(
+  template: Template,
+  assets: ImportAsset[],
+  saveCurrent: () => Promise<void>,
+  shouldCommit?: () => boolean,
+): Promise<{ committed: boolean; projectId: string }> {
+  const project = templateToProject(template, assets)
+  const used = assets.filter((a) => project.assetManifest?.[a.key])
+  const { committed, projectId } = await importIncoming(
+    { project, assets: used, format: 'project' }, saveCurrent, shouldCommit,
+  )
+  return { committed, projectId }
+}
+
+/** Total budget for index + template + images on first run. */
+const WELCOME_NETWORK_TIMEOUT_MS = 4000
+
+/** Network phase only; rejects on timeout even if `fetch` ignores the abort signal. */
+async function fetchWelcomeBundle(): Promise<TemplateBundle | null> {
+  const controller = new AbortController()
+  let timer: ReturnType<typeof setTimeout> | undefined
+  const work = (async (): Promise<TemplateBundle | null> => {
+    const res = await fetch(toAbsolute('templates/index.json'), { signal: controller.signal })
+    if (!res.ok) throw new Error(`HTTP ${res.status}`)
+    const data = (await res.json()) as { templates?: TemplateManifestEntry[] }
+    const entry = data.templates?.find((t) => t.tour)
+    if (!entry) return null
+    return fetchTemplateBundle(entry, controller.signal)
+  })()
+  work.catch(() => {}) // a late rejection after the deadline must not be unhandled
+  const deadline = new Promise<never>((_, reject) => {
+    timer = setTimeout(() => {
+      controller.abort()
+      reject(new Error('timed out'))
+    }, WELCOME_NETWORK_TIMEOUT_MS)
+  })
+  try {
+    return await Promise.race([work, deadline])
+  } finally {
+    clearTimeout(timer)
+  }
+}
+
+/**
+ * First run only: create the bundled Welcome project. Returns false (after a
+ * console.warn) on ANY failure so the caller falls back to the blank project.
+ */
+async function tryCreateWelcomeProject(): Promise<boolean> {
+  if (typeof fetch !== 'function') return false
+  // No point waiting up to 4 s for a result that would be discarded.
+  if (bootstrapAbandoned) return false
+  // Legacy un-scoped assets are migrated by the FIRST scope activation. Welcome must not
+  // be that activation: a failed import would clear the scope that absorbed them.
+  try {
+    if (await hasLegacyAssets()) return false
+  } catch (err) {
+    console.warn('[PixelDeck] Could not check legacy assets; starting blank', err)
+    return false
+  }
+  let bundle: TemplateBundle | null
+  try {
+    bundle = await fetchWelcomeBundle()
+  } catch (err) {
+    console.warn('[PixelDeck] Welcome project unavailable; starting blank', err)
+    return false
+  }
+  if (!bundle) return false
+  // The UI was mounted without us: never swap the project under the user.
+  if (bootstrapAbandoned) return false
+  const blank = useEditorStore.getState().project
+  try {
+    // The blank default project must not enter the library, so skip the usual save-current.
+    const result = await createFromTemplate(
+      bundle.template, bundle.assets, async () => {}, () => !bootstrapAbandoned,
+    )
+    if (!result.committed) {
+      console.warn('[PixelDeck] Bootstrap was abandoned during Welcome import; starting blank')
+    }
+    return result.committed
+  } catch (err) {
+    const current = useEditorStore.getState().project
+    // Failure before the swap: importIncoming already rolled the asset scope back.
+    if (current.id === blank.id) {
+      console.warn('[PixelDeck] Welcome project could not be created; starting blank', err)
+      return false
+    }
+    // Failure AFTER the swap (pointer/flush/save): the editor is already on Welcome and the UI may
+    // be mounted on it, so never swap again. initialize() retries the save while the library is empty.
+    console.warn('[PixelDeck] Welcome project could not be saved yet; keeping it open', err)
+    return true
+  }
 }
 
 export async function bootstrapProjects(): Promise<void> {

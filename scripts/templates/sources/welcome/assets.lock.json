@@ -1,0 +1,163 @@
+{
+  "logo": {
+    "hash": "f9466999c4c85e83",
+    "file": "img_beb91273c467a256ebeb2d69.webp",
+    "bytes": 4202,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 136,
+      "h": 144
+    }
+  },
+  "home": {
+    "hash": "1d6b853f46fe1ff8",
+    "file": "img_36d2702fece96d97fdf125b6.webp",
+    "bytes": 69748,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "homeEs": {
+    "hash": "e5cd297d13aefb10",
+    "file": "img_9baad29211ce7fc546065dae.webp",
+    "bytes": 74904,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "photoPeak": {
+    "hash": "5697dddaa92fb37f",
+    "file": "img_62e675542bb7318d73a134a1.webp",
+    "bytes": 18184,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 300,
+      "h": 300
+    }
+  },
+  "photoSea": {
+    "hash": "a18d88a2105865b4",
+    "file": "img_26090677945474665799442d.webp",
+    "bytes": 18756,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 300,
+      "h": 300
+    }
+  },
+  "photoCity": {
+    "hash": "b55c4b84dca16720",
+    "file": "img_b2977120a99c0a1dec21fd65.webp",
+    "bytes": 23814,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 300,
+      "h": 300
+    }
+  },
+  "formats": {
+    "hash": "8e73f8600b98854f",
+    "file": "img_7696d0f72165b05ece18e5ed.webp",
+    "bytes": 46704,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 600,
+      "h": 340
+    }
+  },
+  "formatsEs": {
+    "hash": "f36035e2d27051bc",
+    "file": "img_0530a8ec69c829fe59491238.webp",
+    "bytes": 47324,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 600,
+      "h": 340
+    }
+  },
+  "tiers": {
+    "hash": "47fc5f83948b323f",
+    "file": "img_3fbe43dda33b06eac7584017.webp",
+    "bytes": 36988,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 420,
+      "h": 250
+    }
+  },
+  "tiersEs": {
+    "hash": "f85fa30f70224843",
+    "file": "img_9d791f28027b89f82ce75824.webp",
+    "bytes": 38722,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 420,
+      "h": 250
+    }
+  },
+  "table": {
+    "hash": "ff3918198b258a13",
+    "file": "img_746821b75accc8540d921742.webp",
+    "bytes": 26730,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 430,
+      "h": 262
+    }
+  },
+  "tableEs": {
+    "hash": "239054686c6768bf",
+    "file": "img_941088237360f088258b36ec.webp",
+    "bytes": 25966,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 430,
+      "h": 262
+    }
+  },
+  "gallery": {
+    "hash": "5788f9015a165a62",
+    "file": "img_4f32b75fd83b7d3878270aa2.webp",
+    "bytes": 18164,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 640,
+      "h": 250
+    },
+    "shadow": {
+      "color": "#000000",
+      "opacity": 0.35,
+      "blur": 30,
+      "offsetX": 0,
+      "offsetY": 14
+    }
+  },
+  "matrix": {
+    "hash": "b1ad745498e8c33d",
+    "file": "img_5932581e469d790980b806de.webp",
+    "bytes": 19966,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 560,
+      "h": 330
+    }
+  }
+}

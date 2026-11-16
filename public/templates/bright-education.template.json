@@ -1,0 +1,1637 @@
+{
+  "id": "tpl-bright-education",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Brightly",
+  "description": "Playful, chunky set for language and learning apps: purple, sunny yellow and coral with pressable cards.",
+  "category": "Education",
+  "author": "PixelDeck",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "Brightly",
+    "brandColors": [
+      {
+        "id": "brightpurple",
+        "name": "Primary purple",
+        "value": "#7C3AED"
+      },
+      {
+        "id": "brightsun",
+        "name": "Sun yellow",
+        "value": "#FFC93C"
+      },
+      {
+        "id": "brightcoral",
+        "name": "Coral",
+        "value": "#FF6B5E"
+      }
+    ]
+  },
+  "assetManifest": {
+    "img_21f858d992d5f720c2ca65d8.webp": {
+      "name": "lesson.webp",
+      "mime": "image/webp"
+    },
+    "img_3547369ff8b1809407eb5553.webp": {
+      "name": "path.webp",
+      "mime": "image/webp"
+    },
+    "img_44419ea634c4365e7955ef0d.webp": {
+      "name": "profile.webp",
+      "mime": "image/webp"
+    },
+    "img_5886066987131f1f6e4d8fb6.webp": {
+      "name": "league.webp",
+      "mime": "image/webp"
+    },
+    "img_5f9242ec2d9ace3b1efd7426.webp": {
+      "name": "bubble.webp",
+      "mime": "image/webp"
+    },
+    "img_777ee4765f79064ecf03c1b9.webp": {
+      "name": "review.webp",
+      "mime": "image/webp"
+    },
+    "img_a2e466b7e4cf5e86e24340b4.webp": {
+      "name": "streak30.webp",
+      "mime": "image/webp"
+    },
+    "img_c1d3a1e43d1f2e750834e201.webp": {
+      "name": "streak.webp",
+      "mime": "image/webp"
+    },
+    "img_d28a79119bbaa956dafe0dbd.webp": {
+      "name": "xp.webp",
+      "mime": "image/webp"
+    },
+    "img_e32333b50972b8f496f9988d.webp": {
+      "name": "complete.webp",
+      "mime": "image/webp"
+    }
+  },
+  "slideGroups": [
+    {
+      "name": "Hero",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 165,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#8B4CF5"
+              },
+              {
+                "offset": 0.5,
+                "color": "#7C3AED"
+              },
+              {
+                "offset": 1,
+                "color": "#5B21C9"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#FFC93C",
+              "cx": 90,
+              "cy": 38,
+              "rx": 700,
+              "ry": 600,
+              "opacity": 0.3,
+              "blur": 160
+            },
+            {
+              "color": "#FF6B5E",
+              "cx": 4,
+              "cy": 80,
+              "rx": 800,
+              "ry": 700,
+              "opacity": 0.35,
+              "blur": 180
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Blob",
+          "type": "shape",
+          "x": -160,
+          "y": 1500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "ellipse",
+          "width": 520,
+          "height": 520,
+          "fill": "rgba(255,255,255,0.07)",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l2",
+          "name": "Spark",
+          "type": "shape",
+          "x": 1020,
+          "y": 120,
+          "rotation": 10,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 120,
+          "height": 120,
+          "fill": "{brand:brightsun}",
+          "cornerRadius": 0,
+          "starPoints": 4,
+          "starInnerRatio": 0.38
+        },
+        {
+          "id": "l3",
+          "name": "Brand",
+          "type": "brand",
+          "x": 100,
+          "y": 110,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "appName": "Brightly",
+          "logoSize": 72,
+          "nameColor": "{brand:brightsun}",
+          "nameFontSize": 52,
+          "nameFontFamily": "Nunito",
+          "nameFontWeight": 800,
+          "direction": "row",
+          "gap": 18
+        },
+        {
+          "id": "l4",
+          "name": "Headline",
+          "type": "text",
+          "x": 75,
+          "y": 310,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Learn a language\nin 5 minutes a day",
+          "fontFamily": "Lilita One",
+          "fontSize": 122,
+          "fontWeight": 400,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1140,
+          "marks": [
+            {
+              "start": 20,
+              "end": 29,
+              "fill": "{brand:brightsun}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Learn a language\nin 5 minutes a day",
+              "marks": [
+                {
+                  "start": 20,
+                  "end": 29,
+                  "fill": "{brand:brightsun}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 140,
+          "y": 700,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Short daily lessons that fit your life",
+          "fontFamily": "Nunito",
+          "fontSize": 54,
+          "fontWeight": 800,
+          "fill": "rgba(255,255,255,0.88)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1010,
+          "localeContent": {
+            "en": {
+              "text": "Short daily lessons that fit your life"
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Phone",
+          "type": "phone",
+          "x": 138,
+          "y": 860,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1A0840",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 56,
+            "opacity": 0.45
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.6,
+          "screenshotPath": "img_3547369ff8b1809407eb5553.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_3547369ff8b1809407eb5553.webp"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Card",
+          "type": "image",
+          "x": 104.04402774990865,
+          "y": 1909.2217721955167,
+          "rotation": -7,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1e0a46",
+            "blur": 114.99999999999999,
+            "offsetX": 0,
+            "offsetY": 59.8,
+            "opacity": 0.25
+          },
+          "src": "img_a2e466b7e4cf5e86e24340b4.webp",
+          "width": 539.12,
+          "height": 266.79999999999995,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_a2e466b7e4cf5e86e24340b4.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-01"
+      ]
+    },
+    {
+      "name": "Lessons",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 90,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFF7E8"
+              },
+              {
+                "offset": 0.5,
+                "color": "#FFEFD0"
+              },
+              {
+                "offset": 1,
+                "color": "#FFF3DC"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#FFC93C",
+              "cx": 22,
+              "cy": 100,
+              "rx": 900,
+              "ry": 700,
+              "opacity": 0.45,
+              "blur": 160
+            },
+            {
+              "color": "#C9A6FF",
+              "cx": 85,
+              "cy": 40,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.45,
+              "blur": 180
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Blob",
+          "type": "shape",
+          "x": 1730,
+          "y": 1950,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "ellipse",
+          "width": 640,
+          "height": 640,
+          "fill": "rgba(124,58,237,0.1)",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l2",
+          "name": "Blob",
+          "type": "shape",
+          "x": -120,
+          "y": 2100,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "ellipse",
+          "width": 480,
+          "height": 480,
+          "fill": "rgba(255,201,60,0.35)",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l3",
+          "name": "Headline",
+          "type": "text",
+          "x": 145,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Bite-size\nlessons",
+          "fontFamily": "Lilita One",
+          "fontSize": 156,
+          "fontWeight": 400,
+          "fill": "#2A1259",
+          "letterSpacing": 0,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1000,
+          "marks": [
+            {
+              "start": 10,
+              "end": 17,
+              "fill": "{brand:brightpurple}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Bite-size\nlessons",
+              "marks": [
+                {
+                  "start": 10,
+                  "end": 17,
+                  "fill": "{brand:brightpurple}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 140,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Five minutes is all you need",
+          "fontFamily": "Nunito",
+          "fontSize": 54,
+          "fontWeight": 800,
+          "fill": "rgba(42,18,89,0.78)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1010,
+          "localeContent": {
+            "en": {
+              "text": "Five minutes is all you need"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Headline",
+          "type": "text",
+          "x": 1435,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "that actually\nstick",
+          "fontFamily": "Lilita One",
+          "fontSize": 156,
+          "fontWeight": 400,
+          "fill": "#2A1259",
+          "letterSpacing": 0,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1000,
+          "marks": [
+            {
+              "start": 14,
+              "end": 19,
+              "fill": "{brand:brightpurple}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "that actually\nstick",
+              "marks": [
+                {
+                  "start": 14,
+                  "end": 19,
+                  "fill": "{brand:brightpurple}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 1435,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Smart reviews bring words back",
+          "fontFamily": "Nunito",
+          "fontSize": 54,
+          "fontWeight": 800,
+          "fill": "rgba(42,18,89,0.78)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Smart reviews bring words back"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Phone",
+          "type": "phone",
+          "x": 783,
+          "y": 980,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1A0840",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 56,
+            "opacity": 0.45
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.6,
+          "screenshotPath": "img_777ee4765f79064ecf03c1b9.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_777ee4765f79064ecf03c1b9.webp"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Card",
+          "type": "image",
+          "x": 155.0815579082867,
+          "y": 1743.2102425390776,
+          "rotation": -5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1e0a46",
+            "blur": 114.99999999999999,
+            "offsetX": 0,
+            "offsetY": 59.8,
+            "opacity": 0.25
+          },
+          "src": "img_e32333b50972b8f496f9988d.webp",
+          "width": 745.1999999999999,
+          "height": 343.15999999999997,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_e32333b50972b8f496f9988d.webp"
+            }
+          }
+        },
+        {
+          "id": "l9",
+          "name": "Card",
+          "type": "image",
+          "x": 1904.6102710406801,
+          "y": 1493.0869299917586,
+          "rotation": 5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1e0a46",
+            "blur": 120,
+            "offsetX": 0,
+            "offsetY": 62.4,
+            "opacity": 0.25
+          },
+          "src": "img_5f9242ec2d9ace3b1efd7426.webp",
+          "width": 682.56,
+          "height": 239.03999999999996,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_5f9242ec2d9ace3b1efd7426.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-02",
+        "slide-03"
+      ]
+    },
+    {
+      "name": "Practice",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 170,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFD65C"
+              },
+              {
+                "offset": 0.5,
+                "color": "#FFC93C"
+              },
+              {
+                "offset": 1,
+                "color": "#FFB92E"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#FFFFFF",
+              "cx": 50,
+              "cy": 62,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.5,
+              "blur": 200
+            },
+            {
+              "color": "#FF6B5E",
+              "cx": 100,
+              "cy": 100,
+              "rx": 800,
+              "ry": 700,
+              "opacity": 0.3,
+              "blur": 180
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Blob",
+          "type": "shape",
+          "x": 900,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "ellipse",
+          "width": 280,
+          "height": 280,
+          "fill": "rgba(255,255,255,0.4)",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l2",
+          "name": "Spark",
+          "type": "shape",
+          "x": 110,
+          "y": 130,
+          "rotation": -8,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 90,
+          "height": 90,
+          "fill": "{brand:brightpurple}",
+          "cornerRadius": 0,
+          "starPoints": 4,
+          "starInnerRatio": 0.38
+        },
+        {
+          "id": "l3",
+          "name": "Headline",
+          "type": "text",
+          "x": 90,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Practice makes\nfluent",
+          "fontFamily": "Lilita One",
+          "fontSize": 156,
+          "fontWeight": 400,
+          "fill": "#2A1259",
+          "letterSpacing": 0,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1110,
+          "marks": [
+            {
+              "start": 15,
+              "end": 21,
+              "fill": "{brand:brightpurple}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Practice makes\nfluent",
+              "marks": [
+                {
+                  "start": 15,
+                  "end": 21,
+                  "fill": "{brand:brightpurple}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 140,
+          "y": 660,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Real sentences, instant feedback",
+          "fontFamily": "Nunito",
+          "fontSize": 54,
+          "fontWeight": 800,
+          "fill": "rgba(42,18,89,0.78)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1010,
+          "localeContent": {
+            "en": {
+              "text": "Real sentences, instant feedback"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Phone",
+          "type": "phone",
+          "x": -48.49999999999994,
+          "y": 1330,
+          "rotation": -7,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1A0840",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 56,
+            "opacity": 0.45
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.3,
+          "screenshotPath": "img_777ee4765f79064ecf03c1b9.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_777ee4765f79064ecf03c1b9.webp"
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Phone",
+          "type": "phone",
+          "x": 282.24999999999994,
+          "y": 960,
+          "rotation": 3,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1A0840",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 56,
+            "opacity": 0.45
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.45,
+          "screenshotPath": "img_21f858d992d5f720c2ca65d8.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_21f858d992d5f720c2ca65d8.webp"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Card",
+          "type": "image",
+          "x": 94.34801560398677,
+          "y": 878.4027243867525,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1e0a46",
+            "blur": 114.99999999999999,
+            "offsetX": 0,
+            "offsetY": 59.8,
+            "opacity": 0.3
+          },
+          "src": "img_d28a79119bbaa956dafe0dbd.webp",
+          "width": 562.12,
+          "height": 232.76,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_d28a79119bbaa956dafe0dbd.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-04"
+      ]
+    },
+    {
+      "name": "Streaks",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#3B1485"
+              },
+              {
+                "offset": 0.5,
+                "color": "#2A1259"
+              },
+              {
+                "offset": 1,
+                "color": "#1E0C45"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#FF6B5E",
+              "cx": 50,
+              "cy": 70,
+              "rx": 1000,
+              "ry": 900,
+              "opacity": 0.4,
+              "blur": 200
+            },
+            {
+              "color": "#FFC93C",
+              "cx": 6,
+              "cy": 10,
+              "rx": 700,
+              "ry": 600,
+              "opacity": 0.2,
+              "blur": 180
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Blob",
+          "type": "shape",
+          "x": 860,
+          "y": 1900,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "ellipse",
+          "width": 600,
+          "height": 600,
+          "fill": "rgba(255,255,255,0.05)",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 90,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Build a streak\nyou'll protect",
+          "fontFamily": "Lilita One",
+          "fontSize": 156,
+          "fontWeight": 400,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1110,
+          "marks": [
+            {
+              "start": 22,
+              "end": 29,
+              "fill": "{brand:brightsun}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Build a streak\nyou'll protect",
+              "marks": [
+                {
+                  "start": 22,
+                  "end": 29,
+                  "fill": "{brand:brightsun}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 700,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Goals and rewards that bring you back",
+          "fontFamily": "Nunito",
+          "fontSize": 54,
+          "fontWeight": 800,
+          "fill": "rgba(255,255,255,0.88)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Goals and rewards that bring you back"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 137.75000000000006,
+          "y": 1000,
+          "rotation": 6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 110,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.55
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.55,
+          "screenshotPath": "img_c1d3a1e43d1f2e750834e201.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_c1d3a1e43d1f2e750834e201.webp"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Card",
+          "type": "image",
+          "x": 107.14575541285575,
+          "y": 839.2028428383503,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1e0a46",
+            "blur": 120,
+            "offsetX": 0,
+            "offsetY": 62.4,
+            "opacity": 0.3
+          },
+          "src": "img_d28a79119bbaa956dafe0dbd.webp",
+          "width": 586.56,
+          "height": 242.88,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_d28a79119bbaa956dafe0dbd.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-05"
+      ]
+    },
+    {
+      "name": "Leagues",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#F3EAFF"
+              },
+              {
+                "offset": 0.5,
+                "color": "#E6D6FF"
+              },
+              {
+                "offset": 1,
+                "color": "#D9C3FF"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#FFC93C",
+              "cx": 8,
+              "cy": 60,
+              "rx": 800,
+              "ry": 700,
+              "opacity": 0.5,
+              "blur": 180
+            },
+            {
+              "color": "#7C3AED",
+              "cx": 100,
+              "cy": 90,
+              "rx": 900,
+              "ry": 700,
+              "opacity": 0.3,
+              "blur": 200
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Blob",
+          "type": "shape",
+          "x": -200,
+          "y": 1300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "ellipse",
+          "width": 640,
+          "height": 640,
+          "fill": "rgba(255,201,60,0.4)",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 100,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Compete with\nfriends",
+          "fontFamily": "Lilita One",
+          "fontSize": 156,
+          "fontWeight": 400,
+          "fill": "#2A1259",
+          "letterSpacing": 0,
+          "lineHeight": 1.02,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 13,
+              "end": 20,
+              "fill": "{brand:brightpurple}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Compete with\nfriends",
+              "marks": [
+                {
+                  "start": 13,
+                  "end": 20,
+                  "fill": "{brand:brightpurple}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 100,
+          "y": 660,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Climb weekly leagues, win the podium",
+          "fontFamily": "Nunito",
+          "fontSize": 54,
+          "fontWeight": 800,
+          "fill": "rgba(42,18,89,0.78)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Climb weekly leagues, win the podium"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 313.25,
+          "y": 1060,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1A0840",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 56,
+            "opacity": 0.45
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.65,
+          "screenshotPath": "img_5886066987131f1f6e4d8fb6.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_5886066987131f1f6e4d8fb6.webp"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Card",
+          "type": "image",
+          "x": 105.04532446377084,
+          "y": 881.3718245254298,
+          "rotation": -5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1e0a46",
+            "blur": 114.99999999999999,
+            "offsetX": 0,
+            "offsetY": 59.8,
+            "opacity": 0.25
+          },
+          "src": "img_5f9242ec2d9ace3b1efd7426.webp",
+          "width": 654.1199999999999,
+          "height": 229.07999999999996,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_5f9242ec2d9ace3b1efd7426.webp"
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Card",
+          "type": "image",
+          "x": -0.9953723243069703,
+          "y": 2014.3268716352104,
+          "rotation": 6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1e0a46",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 46.800000000000004,
+            "opacity": 0.3
+          },
+          "src": "img_d28a79119bbaa956dafe0dbd.webp",
+          "width": 439.92,
+          "height": 182.16,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_d28a79119bbaa956dafe0dbd.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-06"
+      ]
+    },
+    {
+      "name": "Closer",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 165,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#8B4CF5"
+              },
+              {
+                "offset": 0.5,
+                "color": "#7C3AED"
+              },
+              {
+                "offset": 1,
+                "color": "#5B21C9"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#FFC93C",
+              "cx": 50,
+              "cy": 18,
+              "rx": 900,
+              "ry": 600,
+              "opacity": 0.3,
+              "blur": 180
+            },
+            {
+              "color": "#FF6B5E",
+              "cx": 96,
+              "cy": 92,
+              "rx": 800,
+              "ry": 700,
+              "opacity": 0.35,
+              "blur": 180
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Star 1",
+          "type": "shape",
+          "x": 215,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#3A0F8F",
+            "blur": 0,
+            "offsetX": 0,
+            "offsetY": 8,
+            "opacity": 0.45
+          },
+          "shapeType": "star",
+          "width": 140,
+          "height": 140,
+          "fill": "{brand:brightsun}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l2",
+          "name": "Star 2",
+          "type": "shape",
+          "x": 383,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#3A0F8F",
+            "blur": 0,
+            "offsetX": 0,
+            "offsetY": 8,
+            "opacity": 0.45
+          },
+          "shapeType": "star",
+          "width": 140,
+          "height": 140,
+          "fill": "{brand:brightsun}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l3",
+          "name": "Star 3",
+          "type": "shape",
+          "x": 551,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#3A0F8F",
+            "blur": 0,
+            "offsetX": 0,
+            "offsetY": 8,
+            "opacity": 0.45
+          },
+          "shapeType": "star",
+          "width": 140,
+          "height": 140,
+          "fill": "{brand:brightsun}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l4",
+          "name": "Star 4",
+          "type": "shape",
+          "x": 719,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#3A0F8F",
+            "blur": 0,
+            "offsetX": 0,
+            "offsetY": 8,
+            "opacity": 0.45
+          },
+          "shapeType": "star",
+          "width": 140,
+          "height": 140,
+          "fill": "{brand:brightsun}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l5",
+          "name": "Star 5",
+          "type": "shape",
+          "x": 887,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#3A0F8F",
+            "blur": 0,
+            "offsetX": 0,
+            "offsetY": 8,
+            "opacity": 0.45
+          },
+          "shapeType": "star",
+          "width": 140,
+          "height": 140,
+          "fill": "{brand:brightsun}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l6",
+          "name": "Headline",
+          "type": "text",
+          "x": 90,
+          "y": 430,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Join 10M+\nlearners",
+          "fontFamily": "Lilita One",
+          "fontSize": 156,
+          "fontWeight": 400,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1110,
+          "marks": [
+            {
+              "start": 10,
+              "end": 18,
+              "fill": "{brand:brightsun}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Join 10M+\nlearners",
+              "marks": [
+                {
+                  "start": 10,
+                  "end": 18,
+                  "fill": "{brand:brightsun}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 140,
+          "y": 780,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Rated 4.9 for making habits fun",
+          "fontFamily": "Nunito",
+          "fontSize": 54,
+          "fontWeight": 800,
+          "fill": "rgba(255,255,255,0.88)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1010,
+          "localeContent": {
+            "en": {
+              "text": "Rated 4.9 for making habits fun"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "CTA",
+          "type": "shape",
+          "x": 275,
+          "y": 940,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#B07F00",
+            "blur": 0,
+            "offsetX": 0,
+            "offsetY": 14,
+            "opacity": 1
+          },
+          "shapeType": "rect",
+          "width": 740,
+          "height": 150,
+          "fill": "{brand:brightsun}",
+          "cornerRadius": 75
+        },
+        {
+          "id": "l9",
+          "name": "CTA label",
+          "type": "text",
+          "x": 275,
+          "y": 940,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Start learning free",
+          "fontFamily": "Nunito",
+          "fontSize": 56,
+          "fontWeight": 800,
+          "fill": "#2A1259",
+          "letterSpacing": 0,
+          "lineHeight": 1.15,
+          "align": "center",
+          "width": 740,
+          "height": 150,
+          "verticalAlign": "middle",
+          "localeContent": {
+            "en": {
+              "text": "Start learning free"
+            }
+          }
+        },
+        {
+          "id": "l10",
+          "name": "Phone",
+          "type": "phone",
+          "x": 157.5,
+          "y": 1330,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#1A0840",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 56,
+            "opacity": 0.45
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.5,
+          "screenshotPath": "img_44419ea634c4365e7955ef0d.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_44419ea634c4365e7955ef0d.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-07"
+      ]
+    }
+  ]
+}

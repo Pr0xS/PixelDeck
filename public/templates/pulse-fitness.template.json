@@ -1,0 +1,1475 @@
+{
+  "id": "tpl-pulse-fitness",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Pulse",
+  "description": "High-energy dark set for workout and health trackers: neon lime on black with condensed italic headlines.",
+  "category": "Health & Fitness",
+  "author": "PixelDeck",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "Pulse",
+    "brandColors": [
+      {
+        "id": "pulselime",
+        "name": "Lime",
+        "value": "#C8F53C"
+      },
+      {
+        "id": "pulseink",
+        "name": "Ink",
+        "value": "#0B0D0C"
+      },
+      {
+        "id": "pulseember",
+        "name": "Ember",
+        "value": "#FF6A2B"
+      }
+    ]
+  },
+  "assetManifest": {
+    "img_1e7afe2ff1dbb937daff5348.webp": {
+      "name": "prLime.webp",
+      "mime": "image/webp"
+    },
+    "img_3c71556ab87f006ee860fabf.webp": {
+      "name": "streak.webp",
+      "mime": "image/webp"
+    },
+    "img_47e123a0f32d3fc856755cc9.webp": {
+      "name": "goal.webp",
+      "mime": "image/webp"
+    },
+    "img_5b956c9db99bf20edceb2098.webp": {
+      "name": "awards.webp",
+      "mime": "image/webp"
+    },
+    "img_736be26c923258439cec6c86.webp": {
+      "name": "plan.webp",
+      "mime": "image/webp"
+    },
+    "img_8f9ee20fb6dd0307bae3fa7a.webp": {
+      "name": "stats.webp",
+      "mime": "image/webp"
+    },
+    "img_a3e226d1cc70aed3d08b33f7.webp": {
+      "name": "heart.webp",
+      "mime": "image/webp"
+    },
+    "img_ba32d097eb126574845e8736.webp": {
+      "name": "prCard.webp",
+      "mime": "image/webp"
+    },
+    "img_bf7aaccf95a0ef9f8030702a.webp": {
+      "name": "rank.webp",
+      "mime": "image/webp"
+    },
+    "img_e07f6ef80bf04ce99636959a.webp": {
+      "name": "leaders.webp",
+      "mime": "image/webp"
+    },
+    "img_e93a412d0654a50a58e34b00.webp": {
+      "name": "workout.webp",
+      "mime": "image/webp"
+    },
+    "img_f6b11c7c7953e081ce028c11.webp": {
+      "name": "home.webp",
+      "mime": "image/webp"
+    }
+  },
+  "slideGroups": [
+    {
+      "name": "Hero",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 170,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#0B0D0C"
+              },
+              {
+                "offset": 0.5,
+                "color": "#101512"
+              },
+              {
+                "offset": 1,
+                "color": "#0B0D0C"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#C8F53C",
+              "cx": 50,
+              "cy": 46,
+              "rx": 900,
+              "ry": 760,
+              "opacity": 0.22
+            },
+            {
+              "color": "#2BD9A8",
+              "cx": 92,
+              "cy": 96,
+              "rx": 700,
+              "ry": 700,
+              "opacity": 0.14
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Brand",
+          "type": "brand",
+          "x": 96,
+          "y": 104,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "appName": "Pulse",
+          "logoSize": 66,
+          "nameColor": "{brand:pulselime}",
+          "nameFontSize": 54,
+          "nameFontFamily": "Barlow Condensed",
+          "nameFontWeight": 800,
+          "direction": "row",
+          "gap": 18
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 80,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRAIN SMARTER.\nEVERY DAY.",
+          "fontFamily": "Barlow Condensed",
+          "fontSize": 178,
+          "fontWeight": 800,
+          "italic": true,
+          "fill": "#FFFFFF",
+          "letterSpacing": -1,
+          "lineHeight": 0.9,
+          "align": "center",
+          "width": 1130,
+          "marks": [
+            {
+              "start": 15,
+              "end": 25,
+              "fill": "{brand:pulselime}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "TRAIN SMARTER.\nEVERY DAY.",
+              "marks": [
+                {
+                  "start": 15,
+                  "end": 25,
+                  "fill": "{brand:pulselime}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 100,
+          "y": 660,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Workouts, recovery and progress in one place",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "rgba(244,247,242,0.72)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1090,
+          "localeContent": {
+            "en": {
+              "text": "Workouts, recovery and progress in one place"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 167.24999999999994,
+          "y": 860,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 110,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.6
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.45,
+          "screenshotPath": "img_f6b11c7c7953e081ce028c11.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_f6b11c7c7953e081ce028c11.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-01"
+      ]
+    },
+    {
+      "name": "Live Workout",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 100,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#0B0D0C"
+              },
+              {
+                "offset": 0.5,
+                "color": "#111713"
+              },
+              {
+                "offset": 1,
+                "color": "#0B0D0C"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#C8F53C",
+              "cx": 50,
+              "cy": 62,
+              "rx": 1300,
+              "ry": 900,
+              "opacity": 0.2
+            },
+            {
+              "color": "#2BD9A8",
+              "cx": 8,
+              "cy": 8,
+              "rx": 700,
+              "ry": 700,
+              "opacity": 0.12
+            },
+            {
+              "color": "#FF6A2B",
+              "cx": 96,
+              "cy": 90,
+              "rx": 700,
+              "ry": 600,
+              "opacity": 0.12
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 145,
+          "y": 190,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "EVERY REP\nCOUNTS.",
+          "fontFamily": "Barlow Condensed",
+          "fontSize": 178,
+          "fontWeight": 800,
+          "italic": true,
+          "fill": "#FFFFFF",
+          "letterSpacing": -1,
+          "lineHeight": 0.9,
+          "align": "center",
+          "width": 1000,
+          "marks": [
+            {
+              "start": 10,
+              "end": 17,
+              "fill": "{brand:pulselime}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "EVERY REP\nCOUNTS.",
+              "marks": [
+                {
+                  "start": 10,
+                  "end": 17,
+                  "fill": "{brand:pulselime}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 560,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Live coaching that adapts set by set",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "rgba(244,247,242,0.72)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Live coaching that adapts set by set"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Headline",
+          "type": "text",
+          "x": 1435,
+          "y": 190,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "REAL-TIME\nFEEDBACK.",
+          "fontFamily": "Barlow Condensed",
+          "fontSize": 178,
+          "fontWeight": 800,
+          "italic": true,
+          "fill": "#FFFFFF",
+          "letterSpacing": -1,
+          "lineHeight": 0.9,
+          "align": "center",
+          "width": 1000,
+          "marks": [
+            {
+              "start": 10,
+              "end": 19,
+              "fill": "{brand:pulselime}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "REAL-TIME\nFEEDBACK.",
+              "marks": [
+                {
+                  "start": 10,
+                  "end": 19,
+                  "fill": "{brand:pulselime}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 1435,
+          "y": 560,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Heart rate, pace and form at a glance",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "rgba(244,247,242,0.72)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Heart rate, pace and form at a glance"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Phone",
+          "type": "phone",
+          "x": 783,
+          "y": 800,
+          "rotation": -8,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 110,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.6
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.6,
+          "screenshotPath": "img_e93a412d0654a50a58e34b00.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_e93a412d0654a50a58e34b00.webp"
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Card",
+          "type": "image",
+          "x": 78.80000000000001,
+          "y": 1942,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#0f1123",
+            "blur": 105,
+            "offsetX": 0,
+            "offsetY": 46.2,
+            "opacity": 0.22
+          },
+          "src": "img_a3e226d1cc70aed3d08b33f7.webp",
+          "width": 680.4,
+          "height": 399,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_a3e226d1cc70aed3d08b33f7.webp"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Card",
+          "type": "image",
+          "x": 1734.4,
+          "y": 1561.64,
+          "rotation": 5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#0f1123",
+            "blur": 114.99999999999999,
+            "offsetX": 0,
+            "offsetY": 50.599999999999994,
+            "opacity": 0.22
+          },
+          "src": "img_ba32d097eb126574845e8736.webp",
+          "width": 745.1999999999999,
+          "height": 221.72,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_ba32d097eb126574845e8736.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-02",
+        "slide-03"
+      ]
+    },
+    {
+      "name": "Plan",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 200,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#0B0D0C"
+              },
+              {
+                "offset": 0.5,
+                "color": "#0F1511"
+              },
+              {
+                "offset": 1,
+                "color": "#0B0D0C"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#C8F53C",
+              "cx": 100,
+              "cy": 80,
+              "rx": 900,
+              "ry": 900,
+              "opacity": 0.2
+            },
+            {
+              "color": "#FF6A2B",
+              "cx": 0,
+              "cy": 30,
+              "rx": 700,
+              "ry": 700,
+              "opacity": 0.1
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 96,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "A PLAN BUILT\nFOR YOUR BODY",
+          "fontFamily": "Barlow Condensed",
+          "fontSize": 178,
+          "fontWeight": 800,
+          "italic": true,
+          "fill": "#FFFFFF",
+          "letterSpacing": -1,
+          "lineHeight": 0.9,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 13,
+              "end": 26,
+              "fill": "{brand:pulselime}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "A PLAN BUILT\nFOR YOUR BODY",
+              "marks": [
+                {
+                  "start": 13,
+                  "end": 26,
+                  "fill": "{brand:pulselime}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 96,
+          "y": 590,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Sessions matched to your level and goals",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "rgba(244,247,242,0.72)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Sessions matched to your level and goals"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 128,
+          "y": 960,
+          "rotation": 6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 110,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.6
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.6,
+          "screenshotPath": "img_736be26c923258439cec6c86.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_736be26c923258439cec6c86.webp"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Card",
+          "type": "image",
+          "x": 64.80000000000001,
+          "y": 744.8,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#0f1123",
+            "blur": 80,
+            "offsetX": 0,
+            "offsetY": 35.2,
+            "opacity": 0.22
+          },
+          "src": "img_3c71556ab87f006ee860fabf.webp",
+          "width": 518.4,
+          "height": 230.4,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_3c71556ab87f006ee860fabf.webp"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Card",
+          "type": "image",
+          "x": 907.8,
+          "y": 814,
+          "rotation": 6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#0f1123",
+            "blur": 67.5,
+            "offsetX": 0,
+            "offsetY": 29.700000000000003,
+            "opacity": 0.22
+          },
+          "src": "img_47e123a0f32d3fc856755cc9.webp",
+          "width": 302.40000000000003,
+          "height": 337.5,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_47e123a0f32d3fc856755cc9.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-04"
+      ]
+    },
+    {
+      "name": "Progress",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#0B0D0C"
+              },
+              {
+                "offset": 0.5,
+                "color": "#111713"
+              },
+              {
+                "offset": 1,
+                "color": "#0B0D0C"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#C8F53C",
+              "cx": 40,
+              "cy": 70,
+              "rx": 1000,
+              "ry": 900,
+              "opacity": 0.2
+            },
+            {
+              "color": "#2BD9A8",
+              "cx": 100,
+              "cy": 10,
+              "rx": 600,
+              "ry": 600,
+              "opacity": 0.12
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 80,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "WATCH YOUR\nPROGRESS CLIMB",
+          "fontFamily": "Barlow Condensed",
+          "fontSize": 178,
+          "fontWeight": 800,
+          "italic": true,
+          "fill": "#FFFFFF",
+          "letterSpacing": -1,
+          "lineHeight": 0.9,
+          "align": "center",
+          "width": 1130,
+          "marks": [
+            {
+              "start": 11,
+              "end": 25,
+              "fill": "{brand:pulselime}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "WATCH YOUR\nPROGRESS CLIMB",
+              "marks": [
+                {
+                  "start": 11,
+                  "end": 25,
+                  "fill": "{brand:pulselime}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 100,
+          "y": 590,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Every record, trend and milestone in one view",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "rgba(244,247,242,0.72)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1090,
+          "localeContent": {
+            "en": {
+              "text": "Every record, trend and milestone in one view"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 158.5,
+          "y": 880,
+          "rotation": -4,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 110,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.6
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.7,
+          "screenshotPath": "img_8f9ee20fb6dd0307bae3fa7a.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_8f9ee20fb6dd0307bae3fa7a.webp"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Card",
+          "type": "image",
+          "x": 610.4,
+          "y": 750.4,
+          "rotation": 5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#0f1123",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 39.6,
+            "opacity": 0.22
+          },
+          "src": "img_1e7afe2ff1dbb937daff5348.webp",
+          "width": 583.2,
+          "height": 169.20000000000002,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_1e7afe2ff1dbb937daff5348.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-05"
+      ]
+    },
+    {
+      "name": "Community",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 180,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#101512"
+              },
+              {
+                "offset": 0.5,
+                "color": "#0B0D0C"
+              },
+              {
+                "offset": 1,
+                "color": "#0B0D0C"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#C8F53C",
+              "cx": 50,
+              "cy": 36,
+              "rx": 950,
+              "ry": 950,
+              "opacity": 0.2
+            },
+            {
+              "color": "#FF6A2B",
+              "cx": 6,
+              "cy": 88,
+              "rx": 700,
+              "ry": 600,
+              "opacity": 0.12
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Phone",
+          "type": "phone",
+          "x": 196.50000000000006,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 110,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.6
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.3,
+          "screenshotPath": "img_e07f6ef80bf04ce99636959a.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_e07f6ef80bf04ce99636959a.webp"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Card",
+          "type": "image",
+          "x": 699.6,
+          "y": 147.60000000000002,
+          "rotation": 5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#0f1123",
+            "blur": 85,
+            "offsetX": 0,
+            "offsetY": 37.4,
+            "opacity": 0.22
+          },
+          "src": "img_bf7aaccf95a0ef9f8030702a.webp",
+          "width": 550.8,
+          "height": 159.79999999999998,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_bf7aaccf95a0ef9f8030702a.webp"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Headline",
+          "type": "text",
+          "x": 80,
+          "y": 2250,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "COMPETE WITH\nYOUR CREW",
+          "fontFamily": "Barlow Condensed",
+          "fontSize": 178,
+          "fontWeight": 800,
+          "italic": true,
+          "fill": "#FFFFFF",
+          "letterSpacing": -1,
+          "lineHeight": 0.9,
+          "align": "center",
+          "width": 1130,
+          "marks": [
+            {
+              "start": 13,
+              "end": 22,
+              "fill": "{brand:pulselime}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "COMPETE WITH\nYOUR CREW",
+              "marks": [
+                {
+                  "start": 13,
+                  "end": 22,
+                  "fill": "{brand:pulselime}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 100,
+          "y": 2610,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Join challenges and climb the leaderboard",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "rgba(244,247,242,0.72)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1090,
+          "localeContent": {
+            "en": {
+              "text": "Join challenges and climb the leaderboard"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-06"
+      ]
+    },
+    {
+      "name": "Closer",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 170,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#0B0D0C"
+              },
+              {
+                "offset": 0.5,
+                "color": "#121A12"
+              },
+              {
+                "offset": 1,
+                "color": "#0B0D0C"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#C8F53C",
+              "cx": 50,
+              "cy": 30,
+              "rx": 1000,
+              "ry": 800,
+              "opacity": 0.24
+            },
+            {
+              "color": "#FF6A2B",
+              "cx": 50,
+              "cy": 100,
+              "rx": 900,
+              "ry": 700,
+              "opacity": 0.14
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Star 1",
+          "type": "shape",
+          "x": 239,
+          "y": 250,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 140,
+          "height": 140,
+          "fill": "{brand:pulselime}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l2",
+          "name": "Star 2",
+          "type": "shape",
+          "x": 407,
+          "y": 250,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 140,
+          "height": 140,
+          "fill": "{brand:pulselime}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l3",
+          "name": "Star 3",
+          "type": "shape",
+          "x": 575,
+          "y": 250,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 140,
+          "height": 140,
+          "fill": "{brand:pulselime}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l4",
+          "name": "Star 4",
+          "type": "shape",
+          "x": 743,
+          "y": 250,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 140,
+          "height": 140,
+          "fill": "{brand:pulselime}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l5",
+          "name": "Star 5",
+          "type": "shape",
+          "x": 911,
+          "y": 250,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 140,
+          "height": 140,
+          "fill": "{brand:pulselime}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l6",
+          "name": "Headline",
+          "type": "text",
+          "x": 80,
+          "y": 470,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "JOIN 2M+\nATHLETES",
+          "fontFamily": "Barlow Condensed",
+          "fontSize": 178,
+          "fontWeight": 800,
+          "italic": true,
+          "fill": "#FFFFFF",
+          "letterSpacing": -1,
+          "lineHeight": 0.9,
+          "align": "center",
+          "width": 1130,
+          "marks": [
+            {
+              "start": 9,
+              "end": 17,
+              "fill": "{brand:pulselime}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "JOIN 2M+\nATHLETES",
+              "marks": [
+                {
+                  "start": 9,
+                  "end": 17,
+                  "fill": "{brand:pulselime}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 100,
+          "y": 830,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "4.9 average rating from 180,000 reviews",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "rgba(244,247,242,0.72)",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1090,
+          "localeContent": {
+            "en": {
+              "text": "4.9 average rating from 180,000 reviews"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "CTA",
+          "type": "shape",
+          "x": 285,
+          "y": 990,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#C8F53C",
+            "blur": 70,
+            "offsetX": 0,
+            "offsetY": 20,
+            "opacity": 0.35
+          },
+          "shapeType": "rect",
+          "width": 720,
+          "height": 150,
+          "fill": "{brand:pulselime}",
+          "cornerRadius": 75
+        },
+        {
+          "id": "l9",
+          "name": "CTA label",
+          "type": "text",
+          "x": 285,
+          "y": 990,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Start training free",
+          "fontFamily": "Inter",
+          "fontSize": 52,
+          "fontWeight": 700,
+          "fill": "{brand:pulseink}",
+          "letterSpacing": 0,
+          "lineHeight": 1.15,
+          "align": "center",
+          "width": 720,
+          "height": 150,
+          "verticalAlign": "middle",
+          "localeContent": {
+            "en": {
+              "text": "Start training free"
+            }
+          }
+        },
+        {
+          "id": "l10",
+          "name": "Phone",
+          "type": "phone",
+          "x": 157.5,
+          "y": 1400,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 110,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.6
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.5,
+          "screenshotPath": "img_5b956c9db99bf20edceb2098.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_5b956c9db99bf20edceb2098.webp"
+            }
+          }
+        },
+        {
+          "id": "l11",
+          "name": "Card",
+          "type": "image",
+          "x": 24.80000000000001,
+          "y": 1234.8,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#0f1123",
+            "blur": 80,
+            "offsetX": 0,
+            "offsetY": 35.2,
+            "opacity": 0.22
+          },
+          "src": "img_3c71556ab87f006ee860fabf.webp",
+          "width": 518.4,
+          "height": 230.4,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_3c71556ab87f006ee860fabf.webp"
+            }
+          }
+        },
+        {
+          "id": "l12",
+          "name": "Card",
+          "type": "image",
+          "x": 769.2,
+          "y": 1138,
+          "rotation": 5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#0f1123",
+            "blur": 70,
+            "offsetX": 0,
+            "offsetY": 30.799999999999997,
+            "opacity": 0.22
+          },
+          "src": "img_a3e226d1cc70aed3d08b33f7.webp",
+          "width": 453.59999999999997,
+          "height": 266,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_a3e226d1cc70aed3d08b33f7.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-07"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,205 @@
+{
+  "home": {
+    "hash": "878deb3c28775361",
+    "file": "img_2ff7ce17cacbab419dc96f29.webp",
+    "bytes": 90370,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "accounts": {
+    "hash": "73a8d4cc9f097a36",
+    "file": "img_6845930fdf38163b465f0966.webp",
+    "bytes": 91004,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "budgets": {
+    "hash": "4c06b6a5c3de920d",
+    "file": "img_5b7728e4d9c8f296e03b09b6.webp",
+    "bytes": 73744,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "spending": {
+    "hash": "a89995f0b642df2a",
+    "file": "img_d620b814489b1d76471f77e0.webp",
+    "bytes": 77748,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "invest": {
+    "hash": "d38d565ff8a4d7eb",
+    "file": "img_a69d5fe6d23f0a8b041b1517.webp",
+    "bytes": 84542,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "security": {
+    "hash": "65cf8e62120a5081",
+    "file": "img_b37d0f0c4d4f17211cf03429.webp",
+    "bytes": 83896,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "logo": {
+    "hash": "2f1299c135afdbc3",
+    "file": "img_6e364651e3e8c57e25874910.webp",
+    "bytes": 6328,
+    "crop": {
+      "dx": 4,
+      "dy": 4,
+      "w": 152,
+      "h": 152
+    }
+  },
+  "goalcard": {
+    "hash": "9a7f6eb480616a51",
+    "file": "img_fe313cb9cccdd886aca9b3f8.webp",
+    "bytes": 13016,
+    "crop": {
+      "dx": 28,
+      "dy": 28,
+      "w": 324,
+      "h": 94
+    },
+    "shadow": {
+      "color": "#030519",
+      "opacity": 0.6,
+      "blur": 60,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  },
+  "ontrack": {
+    "hash": "27a948fc3532f86e",
+    "file": "img_9cd7ecdce6ce58dbfc842c04.webp",
+    "bytes": 9290,
+    "crop": {
+      "dx": 28,
+      "dy": 26.8,
+      "w": 304,
+      "h": 76.4
+    },
+    "shadow": {
+      "color": "#030519",
+      "opacity": 0.6,
+      "blur": 60,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  },
+  "subscription": {
+    "hash": "d0fc5d1549364789",
+    "file": "img_a0a8549307e854f6a1cea50c.webp",
+    "bytes": 16486,
+    "crop": {
+      "dx": 28,
+      "dy": 36,
+      "w": 324,
+      "h": 128
+    },
+    "shadow": {
+      "color": "#030519",
+      "opacity": 0.6,
+      "blur": 60,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  },
+  "notif": {
+    "hash": "6375101aedfa8402",
+    "file": "img_3f8aa8269d2c1ae0a8a23059.webp",
+    "bytes": 15480,
+    "crop": {
+      "dx": 28,
+      "dy": 16,
+      "w": 344,
+      "h": 100
+    },
+    "shadow": {
+      "color": "#030519",
+      "opacity": 0.6,
+      "blur": 60,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  },
+  "roundup": {
+    "hash": "a27851b756f1a693",
+    "file": "img_32e6ae5a35517cc193f3b62b.webp",
+    "bytes": 21296,
+    "crop": {
+      "dx": 28,
+      "dy": 34.8,
+      "w": 324,
+      "h": 180.4
+    },
+    "shadow": {
+      "color": "#030519",
+      "opacity": 0.6,
+      "blur": 60,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  },
+  "portfolio": {
+    "hash": "8e78a1a1f6fcc8ff",
+    "file": "img_a6ff0833c53f13b52cbd3c94.webp",
+    "bytes": 12732,
+    "crop": {
+      "dx": 28,
+      "dy": 26.8,
+      "w": 284,
+      "h": 156.4
+    },
+    "shadow": {
+      "color": "#030519",
+      "opacity": 0.6,
+      "blur": 60,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  },
+  "vcard": {
+    "hash": "9f40655344dcab7b",
+    "file": "img_ff19484dc59917fa03f9c1d7.webp",
+    "bytes": 13448,
+    "crop": {
+      "dx": 34,
+      "dy": 34,
+      "w": 292,
+      "h": 172
+    },
+    "shadow": {
+      "color": "#030519",
+      "opacity": 0.65,
+      "blur": 60,
+      "offsetX": 0,
+      "offsetY": 26
+    }
+  }
+}

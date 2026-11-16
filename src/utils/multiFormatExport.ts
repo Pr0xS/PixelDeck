@@ -6,6 +6,7 @@ import { useEditorStore } from '@/store'
 import { normalizePanoCompensationPx } from './panoGeometry'
 import { useExportCaptureStore } from './renderMode'
 import { buildExportFileTarget, buildExportPlan } from './exportPlan'
+import { ensureProjectFontsLoaded } from './fonts'
 
 export interface FormatExportResult {
   formatId: CanvasFormatId
@@ -94,6 +95,27 @@ export async function exportProjectImages(
     const results: ProjectImageExportResult[] = []
     const usedRelativePaths = new Set<string>()
     total = plan.entries.length
+
+    // Slides not viewed yet this session may use fonts that were never drawn.
+    // A cancel must not wait for slow font loads: race the load against the signal.
+    const signal = options.signal
+    const onAbort = { fn: (): void => {} }
+    try {
+      await Promise.race([
+        ensureProjectFontsLoaded(project),
+        new Promise<void>((resolve) => {
+          if (!signal) return
+          if (signal.aborted) resolve()
+          else {
+            onAbort.fn = () => resolve()
+            signal.addEventListener('abort', onAbort.fn, { once: true })
+          }
+        }),
+      ])
+    } finally {
+      signal?.removeEventListener('abort', onAbort.fn)
+    }
+    if (signal?.aborted) throw new ExportCancelledError() // finally block restores state
 
     for (const batch of plan.batches) {
       if (options.signal?.aborted) break

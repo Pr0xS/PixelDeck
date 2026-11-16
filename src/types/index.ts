@@ -599,4 +599,9 @@ export interface Template {
   category?: string;
   author?: string;
   createdAt?: string;
+  /**
+   * Bundled templates only: images shipped as `assets/<key>` next to the
+   * template file. Layers reference them by these content-hash keys.
+   */
+  assetManifest?: Record<AssetRef, AssetManifestEntry>;
 }

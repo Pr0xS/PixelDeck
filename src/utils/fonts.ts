@@ -1,3 +1,7 @@
+import type { Project } from '@/types'
+import { forEachLayerTree } from '@/utils/layerTree'
+import { getPhoneSpec } from '@/assets/mockups/specs'
+
 // ─── Curated Google Fonts for PixelDeck ──────────────────────────────────────
 
 export interface FontEntry {
@@ -149,12 +153,17 @@ export async function ensureFontReady(family: string, weight: number = 400): Pro
   }
 }
 
+let _googleFontsReady: Promise<void> | null = null
+
 /**
  * Injects the Google Fonts stylesheet into the document <head>.
- * Call once on app startup.
+ * Call once on app startup. The returned promise settles once the stylesheet
+ * has been applied (or failed): only then are its faces known to
+ * document.fonts, which is what `ensureFontsLoaded` relies on.
  */
-export function loadGoogleFonts(): void {
-  if (document.getElementById('gf-pixeldeck')) return
+export function loadGoogleFonts(): Promise<void> {
+  if (_googleFontsReady) return _googleFontsReady
+  if (document.getElementById('gf-pixeldeck')) return Promise.resolve()
 
   // Build families param — include italic axis where available
   const italicFamilies = new Set([
@@ -184,7 +193,95 @@ export function loadGoogleFonts(): void {
   link.id = 'gf-pixeldeck'
   link.rel = 'stylesheet'
   link.href = `https://fonts.googleapis.com/css2?${params}&display=swap`
-  document.head.appendChild(link)
+  _googleFontsReady = new Promise<void>((resolve) => {
+    link.onload = () => resolve()
+    link.onerror = () => resolve() // fail gracefully: text falls back to system fonts
+    setTimeout(resolve, 10000) // a stalled request must never block a capture
+    document.head.appendChild(link)
+  })
+  return _googleFontsReady
+}
+
+// ─── Capture-time font readiness ──────────────────────────────────────────────
+
+export interface FontUse {
+  family: string
+  weight: number
+  italic: boolean
+  /** Characters drawn with this face; selects the right unicode-range subsets. */
+  text: string
+}
+
+/** Every font face a project's layers draw with, across locales and rich-text marks. */
+export function collectProjectFontUses(project: Pick<Project, 'slideGroups'>): FontUse[] {
+  const uses = new Map<string, FontUse>()
+  const add = (family: string, weight: number, italic: boolean, text: string) => {
+    if (!family) return
+    const key = `${family}|${weight}|${italic ? 1 : 0}`
+    const existing = uses.get(key)
+    if (existing) existing.text += text
+    else uses.set(key, { family, weight, italic, text })
+  }
+  for (const group of project.slideGroups) {
+    forEachLayerTree(group.layers, (layer) => {
+      if (layer.type === 'brand') {
+        add(layer.nameFontFamily, layer.nameFontWeight, false, layer.appName)
+        return
+      }
+      if (layer.type === 'phone') {
+        // The Android status bar clock is drawn in 'Google Sans, Roboto' bold; Google Sans is
+        // not a web font, so Roboto 700 is what actually renders. iOS uses system fonts only.
+        if (layer.showStatusBar !== false) {
+          const bar = getPhoneSpec(layer.model).statusBar
+          if (bar.height > 0 && bar.platform === 'android') add('Roboto', 700, false, '9:41')
+        }
+        return
+      }
+      if (layer.type !== 'text') return
+      const italic = Boolean(layer.italic)
+      const variants = [{ text: layer.text, marks: layer.marks }, ...Object.values(layer.localeContent ?? {})]
+      for (const variant of variants) {
+        const text = variant.text ?? layer.text
+        add(layer.fontFamily, layer.fontWeight, italic, text)
+        for (const mark of variant.marks ?? []) {
+          add(layer.fontFamily, mark.fontWeight ?? layer.fontWeight, mark.italic ?? italic, text.slice(mark.start, mark.end))
+        }
+      }
+    })
+  }
+  return [...uses.values()].map((use) => ({ ...use, text: [...new Set(use.text)].join('') }))
+}
+
+/**
+ * Wait until the given faces are usable by canvas text. Konva draws with a
+ * fallback font while a web font is still loading and nothing redraws it
+ * afterwards, so every capture path must await this before its first draw.
+ * Never rejects and never waits longer than `timeoutMs`.
+ */
+export async function ensureFontsLoaded(uses: FontUse[], timeoutMs = 8000): Promise<void> {
+  if (typeof document === 'undefined' || !document.fonts?.load || uses.length === 0) return
+  const loads = Promise.all(uses.map((use) =>
+    document.fonts
+      .load(`${use.italic ? 'italic ' : ''}${use.weight} 16px "${use.family}"`, use.text || ' ')
+      .catch(() => []),
+  ))
+  let timer: ReturnType<typeof setTimeout> | undefined
+  await Promise.race([
+    loads,
+    new Promise<void>((resolve) => { timer = setTimeout(resolve, timeoutMs) }),
+  ])
+  if (timer) clearTimeout(timer)
+}
+
+/** Load every font a project draws with. Safe to call outside a browser (no-op). */
+export async function ensureProjectFontsLoaded(
+  project: Pick<Project, 'slideGroups'>,
+  timeoutMs = 8000,
+): Promise<void> {
+  if (typeof document === 'undefined') return
+  // Faces only exist in document.fonts once the stylesheet has been applied.
+  if (_googleFontsReady) await _googleFontsReady
+  await ensureFontsLoaded(collectProjectFontUses(project), timeoutMs)
 }
 
 // ─── Per-font lazy loader ─────────────────────────────────────────────────────

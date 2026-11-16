@@ -1,0 +1,240 @@
+/*
+ * Mock UI kit for template demo screens.
+ * A phone screen is a 400×902 px document (rendered at 2.5×). Theme it by
+ * overriding the custom properties below in sources/<slug>/theme.css.
+ * Icons: <i class="ic">home</i> (Material Symbols Rounded ligatures; add .fill for solid).
+ */
+:root {
+  --bg: #f5f6fa;
+  --surface: #ffffff;
+  --surface-2: #eef0f6;
+  --text: #12131a;
+  --muted: #7a7f91;
+  --line: rgba(18, 19, 26, 0.08);
+  --primary: #5b5bf0;
+  --primary-2: #8b5cf6;
+  --on-primary: #ffffff;
+  --accent: #ff7a45;
+  --good: #1fb573;
+  --bad: #ef4d5a;
+  --radius: 22px;
+  --font: 'Inter', system-ui, sans-serif;
+  --display: var(--font);
+  --shadow: 0 10px 30px rgba(20, 22, 40, 0.08);
+}
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { width: 100%; height: 100%; }
+body {
+  font-family: var(--font);
+  color: var(--text);
+  font-size: 15px;
+  line-height: 1.35;
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+body.phone { background: var(--bg); }
+body.art { background: transparent; }
+
+/* ── Screen scaffold ─────────────────────────────────────────────────────── */
+.screen {
+  position: relative;
+  width: 400px;
+  height: 902px;
+  padding: 66px 20px 0; /* top 66px = simulated status bar drawn by the phone layer */
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  overflow: hidden;
+  background: var(--bg);
+}
+.screen.flush { padding-left: 0; padding-right: 0; }
+.pad { padding-left: 20px; padding-right: 20px; }
+.home-ind {
+  position: absolute; left: 50%; bottom: 9px; transform: translateX(-50%);
+  width: 136px; height: 5px; border-radius: 3px; background: var(--text); opacity: 0.85;
+}
+
+/* ── Layout utilities ────────────────────────────────────────────────────── */
+.row { display: flex; align-items: center; gap: 12px; }
+.col { display: flex; flex-direction: column; gap: 12px; }
+.between { justify-content: space-between; }
+.center { justify-content: center; text-align: center; }
+.start { align-items: flex-start; }
+.end { align-items: flex-end; }
+.grow { flex: 1; min-width: 0; }
+.wrap { flex-wrap: wrap; }
+.g4 { gap: 4px; } .g6 { gap: 6px; } .g8 { gap: 8px; } .g10 { gap: 10px; } .g16 { gap: 16px; } .g20 { gap: 20px; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; }
+.mt-auto { margin-top: auto; }
+.scroll-x { display: flex; gap: 12px; margin: 0 -20px; padding: 0 20px; overflow: hidden; }
+.scroll-x > * { flex: none; }
+
+/* ── Type ────────────────────────────────────────────────────────────────── */
+.display { font-family: var(--display); font-size: 34px; line-height: 1.05; font-weight: 800; letter-spacing: -0.03em; }
+.h1 { font-family: var(--display); font-size: 27px; line-height: 1.12; font-weight: 800; letter-spacing: -0.025em; }
+.h2 { font-family: var(--display); font-size: 20px; line-height: 1.2; font-weight: 700; letter-spacing: -0.015em; }
+.h3 { font-size: 16px; font-weight: 700; letter-spacing: -0.01em; }
+.body { font-size: 15px; }
+.sm { font-size: 13px; }
+.xs { font-size: 11.5px; }
+.muted { color: var(--muted); }
+.strong { font-weight: 700; }
+.semi { font-weight: 600; }
+.caps { text-transform: uppercase; letter-spacing: 0.08em; font-size: 11px; font-weight: 700; }
+.primary { color: var(--primary); }
+.accent { color: var(--accent); }
+.good { color: var(--good); }
+.bad { color: var(--bad); }
+.num { font-variant-numeric: tabular-nums; }
+.kpi { font-family: var(--display); font-size: 44px; line-height: 1; font-weight: 800; letter-spacing: -0.04em; }
+.nowrap { white-space: nowrap; }
+
+/* ── Icons ───────────────────────────────────────────────────────────────── */
+.ic {
+  font-family: 'Material Symbols Rounded'; font-style: normal; font-weight: 400; font-size: 24px; line-height: 1;
+  letter-spacing: normal; text-transform: none; white-space: nowrap; direction: ltr; display: inline-block;
+  font-variation-settings: 'FILL' 0, 'wght' 400, 'GRAD' 0, 'opsz' 24; flex: none;
+}
+.ic.fill { font-variation-settings: 'FILL' 1, 'wght' 400, 'GRAD' 0, 'opsz' 24; }
+.ic.s16 { font-size: 16px; } .ic.s18 { font-size: 18px; } .ic.s20 { font-size: 20px; } .ic.s28 { font-size: 28px; } .ic.s32 { font-size: 32px; }
+
+/* ── Surfaces ────────────────────────────────────────────────────────────── */
+.card { background: var(--surface); border-radius: var(--radius); padding: 16px; box-shadow: var(--shadow); }
+.card.flat { box-shadow: none; border: 1px solid var(--line); }
+.card.soft { background: var(--surface-2); box-shadow: none; }
+.card.hero {
+  background: linear-gradient(135deg, var(--primary), var(--primary-2)); color: var(--on-primary);
+  box-shadow: 0 16px 34px color-mix(in srgb, var(--primary) 35%, transparent);
+}
+.card.hero .muted { color: color-mix(in srgb, var(--on-primary) 72%, transparent); }
+.divider { height: 1px; background: var(--line); }
+
+/* ── Controls ────────────────────────────────────────────────────────────── */
+.btn {
+  display: inline-flex; align-items: center; justify-content: center; gap: 8px; height: 52px; padding: 0 22px;
+  border-radius: 16px; background: var(--primary); color: var(--on-primary); font-weight: 700; font-size: 16px;
+}
+.btn.block { display: flex; width: 100%; }
+.btn.ghost { background: var(--surface-2); color: var(--text); }
+.btn.sm { height: 38px; padding: 0 14px; border-radius: 12px; font-size: 13.5px; }
+.btn.round { border-radius: 999px; }
+.icon-btn {
+  width: 42px; height: 42px; border-radius: 14px; background: var(--surface); display: inline-flex;
+  align-items: center; justify-content: center; box-shadow: var(--shadow); flex: none;
+}
+.icon-btn.soft { background: var(--surface-2); box-shadow: none; }
+.fab {
+  position: absolute; right: 20px; bottom: 104px; width: 58px; height: 58px; border-radius: 20px;
+  background: var(--primary); color: var(--on-primary); display: flex; align-items: center; justify-content: center;
+  box-shadow: 0 14px 28px color-mix(in srgb, var(--primary) 45%, transparent);
+}
+.pill {
+  display: inline-flex; align-items: center; gap: 6px; height: 34px; padding: 0 14px; border-radius: 999px;
+  background: var(--surface); color: var(--text); font-size: 13.5px; font-weight: 600; white-space: nowrap;
+  box-shadow: var(--shadow);
+}
+.pill.on { background: var(--text); color: var(--bg); box-shadow: none; }
+.pill.primary { background: var(--primary); color: var(--on-primary); box-shadow: none; }
+.pill.soft { background: var(--surface-2); box-shadow: none; }
+.badge {
+  display: inline-flex; align-items: center; gap: 4px; height: 24px; padding: 0 9px; border-radius: 999px;
+  font-size: 11.5px; font-weight: 700; background: color-mix(in srgb, var(--primary) 14%, transparent); color: var(--primary);
+}
+.badge.good { background: color-mix(in srgb, var(--good) 16%, transparent); color: var(--good); }
+.badge.bad { background: color-mix(in srgb, var(--bad) 14%, transparent); color: var(--bad); }
+.badge.accent { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
+.search {
+  display: flex; align-items: center; gap: 10px; height: 48px; padding: 0 16px; border-radius: 16px;
+  background: var(--surface); color: var(--muted); font-size: 15px; box-shadow: var(--shadow);
+}
+.seg { display: flex; padding: 4px; border-radius: 14px; background: var(--surface-2); }
+.seg > * { flex: 1; text-align: center; padding: 8px 0; border-radius: 10px; font-size: 13.5px; font-weight: 600; color: var(--muted); }
+.seg > .on { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+.check {
+  width: 24px; height: 24px; border-radius: 8px; border: 2px solid var(--line); flex: none;
+  display: inline-flex; align-items: center; justify-content: center; color: transparent;
+}
+.check.on { background: var(--primary); border-color: var(--primary); color: var(--on-primary); }
+.check.round { border-radius: 50%; }
+.toggle { width: 46px; height: 28px; border-radius: 999px; background: var(--surface-2); position: relative; flex: none; }
+.toggle::after { content: ''; position: absolute; top: 3px; left: 3px; width: 22px; height: 22px; border-radius: 50%; background: #fff; box-shadow: 0 2px 6px rgba(0,0,0,.2); }
+.toggle.on { background: var(--primary); }
+.toggle.on::after { left: 21px; }
+
+/* ── Media / identity ────────────────────────────────────────────────────── */
+.tile {
+  width: 46px; height: 46px; border-radius: 15px; flex: none; display: inline-flex; align-items: center;
+  justify-content: center; font-size: 22px; background: color-mix(in srgb, var(--primary) 13%, transparent); color: var(--primary);
+}
+.tile.lg { width: 58px; height: 58px; border-radius: 18px; font-size: 28px; }
+.tile.sm { width: 36px; height: 36px; border-radius: 12px; font-size: 17px; }
+.tile.solid { background: var(--primary); color: var(--on-primary); }
+.tile.accent { background: color-mix(in srgb, var(--accent) 15%, transparent); color: var(--accent); }
+.tile.good { background: color-mix(in srgb, var(--good) 15%, transparent); color: var(--good); }
+.tile.plain { background: var(--surface-2); color: var(--text); }
+.avatar {
+  width: 40px; height: 40px; border-radius: 50%; flex: none; display: inline-flex; align-items: center; justify-content: center;
+  font-weight: 700; font-size: 15px; color: #fff; background: linear-gradient(135deg, var(--primary), var(--accent));
+}
+.avatar.sm { width: 28px; height: 28px; font-size: 11px; }
+.avatar.lg { width: 56px; height: 56px; font-size: 20px; }
+.stack { display: flex; }
+.stack > * { margin-left: -9px; border: 2px solid var(--surface); }
+.stack > *:first-child { margin-left: 0; }
+.thumb { border-radius: 18px; background: var(--surface-2); display: flex; align-items: center; justify-content: center; overflow: hidden; }
+
+/* ── Lists ───────────────────────────────────────────────────────────────── */
+.list { display: flex; flex-direction: column; }
+.list > .item { display: flex; align-items: center; gap: 12px; padding: 12px 0; border-bottom: 1px solid var(--line); }
+.list > .item:last-child { border-bottom: 0; }
+.list.cards { gap: 10px; }
+.list.cards > .item { background: var(--surface); border: 0; border-radius: 18px; padding: 12px 14px; box-shadow: var(--shadow); }
+
+/* ── Data viz ────────────────────────────────────────────────────────────── */
+.progress { height: 8px; border-radius: 999px; background: var(--surface-2); overflow: hidden; }
+.progress > i { display: block; height: 100%; width: var(--v, 50%); border-radius: inherit; background: var(--c, var(--primary)); }
+.card.hero .progress { background: color-mix(in srgb, var(--on-primary) 24%, transparent); }
+.card.hero .progress > i { background: var(--on-primary); }
+.bars { display: flex; align-items: flex-end; gap: 8px; height: var(--h, 120px); }
+.bars > i { flex: 1; height: var(--v, 50%); border-radius: 8px 8px 4px 4px; background: color-mix(in srgb, var(--primary) 22%, transparent); }
+.bars > i.on { background: var(--primary); }
+.bars.labels { height: auto; align-items: stretch; }
+.bars.labels > span { flex: 1; text-align: center; font-size: 11px; color: var(--muted); font-weight: 600; }
+/* Ring: <div class="ring" style="--v:72;--size:120px"><b>72%</b></div> */
+.ring {
+  --size: 120px; --thick: 12px; --c: var(--primary);
+  width: var(--size); height: var(--size); border-radius: 50%; flex: none; position: relative;
+  display: flex; align-items: center; justify-content: center; flex-direction: column;
+}
+/* True donut (transparent centre) so a ring works on any card background. */
+.ring::before {
+  content: ''; position: absolute; inset: 0; border-radius: 50%;
+  background: conic-gradient(var(--c) calc(var(--v) * 1%), color-mix(in srgb, var(--c) 18%, transparent) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - var(--thick)), #000 calc(100% - var(--thick) + 1px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - var(--thick)), #000 calc(100% - var(--thick) + 1px));
+}
+.ring > * { position: relative; }
+.spark { width: 100%; height: var(--h, 70px); display: block; }
+
+/* ── Navigation ──────────────────────────────────────────────────────────── */
+.tabbar {
+  position: absolute; left: 0; right: 0; bottom: 0; height: 88px; padding: 10px 14px 30px;
+  display: flex; align-items: center; justify-content: space-around;
+  background: color-mix(in srgb, var(--surface) 92%, transparent); border-top: 1px solid var(--line);
+}
+.tabbar > * { display: flex; flex-direction: column; align-items: center; gap: 3px; font-size: 10.5px; font-weight: 600; color: var(--muted); min-width: 56px; }
+.tabbar > .on { color: var(--primary); }
+.tabbar.float {
+  left: 18px; right: 18px; bottom: 26px; height: 66px; padding: 0 10px; border-radius: 24px; border: 0;
+  background: var(--surface); box-shadow: 0 16px 40px rgba(20, 22, 40, 0.16);
+}
+.topbar { display: flex; align-items: center; justify-content: space-between; min-height: 44px; }
+
+/* ── Floating art (transparent cards placed around the phone) ────────────── */
+.float-card {
+  background: var(--surface); color: var(--text); border-radius: 26px; padding: 18px 20px;
+  box-shadow: 0 22px 50px rgba(15, 17, 35, 0.22);
+}
+.art-frame { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; padding: 28px; }

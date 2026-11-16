@@ -4,7 +4,9 @@ import type {
   Template, Project, ProjectSettings,
   CanvasBackground, BackgroundLayer, AssetManifestEntry,
 } from '@/types'
-import { migrateLayerSpans } from '@/store/helpers'
+import { migrateLayerSpans, newId, newProject } from '@/store/helpers'
+import { normalizeProjectFormats } from '@/utils/canvasFormats'
+import { collectAssetKeys, isAssetRef } from '@/utils/projectAssets'
 import { extractInlineAssetsFromGroups } from '@/utils/assetMigration'
 
 // ─── ID helpers ──────────────────────────────────────────────────────────────
@@ -226,6 +228,106 @@ export function applyTemplate(tpl: Template): AppliedTemplate {
   })
 
   return { slideGroups, settings: tpl.settings }
+}
+
+// ─── Unresolved image stripping / template → project ─────────────────────────
+
+const REF_FIELDS = ['screenshotPath', 'src', 'imageRef', 'logoRef'] as const
+
+function dropUnresolvedRefs<T extends object>(
+  value: T,
+  isResolvable: (key: string) => boolean,
+  isLayer: boolean,
+): T {
+  let out: Record<string, unknown> | null = null
+  const rec = value as Record<string, unknown>
+  for (const field of REF_FIELDS) {
+    const ref = rec[field]
+    if (!isAssetRef(ref) || isResolvable(ref)) continue
+    out ??= { ...rec }
+    // ImageLayer.src is required by the domain type: keep an empty placeholder.
+    if (field === 'src' && isLayer && rec.type === 'image') out.src = ''
+    else delete out[field]
+  }
+  return (out ?? value) as T
+}
+
+function stripUnresolvedFromLayer(layer: Layer, isResolvable: (key: string) => boolean): Layer {
+  let next = dropUnresolvedRefs(layer, isResolvable, true)
+  if (next.localeContent) {
+    const lc: Record<string, unknown> = {}
+    for (const [locale, patch] of Object.entries(next.localeContent)) {
+      lc[locale] = dropUnresolvedRefs(patch, isResolvable, false)
+    }
+    next = { ...next, localeContent: lc } as Layer
+  }
+  if (next.formatOverrides) {
+    const fo: Record<string, unknown> = {}
+    for (const [format, patch] of Object.entries(next.formatOverrides)) {
+      fo[format] = patch ? dropUnresolvedRefs(patch, isResolvable, false) : patch
+    }
+    next = { ...next, formatOverrides: fo } as Layer
+  }
+  if (next.type === 'group') {
+    next = {
+      ...next,
+      children: (next as GroupLayer).children.map((c) => stripUnresolvedFromLayer(c, isResolvable)),
+    } as Layer
+  }
+  return next
+}
+
+/**
+ * Remove asset-key image refs that `isResolvable` rejects (layer fields,
+ * localeContent, formatOverrides, group children). `data:` URLs and remote
+ * URLs are left alone. Pure.
+ */
+export function stripUnresolvedTemplateImages<G extends Omit<SlideGroup, 'id'>>(
+  slideGroups: G[],
+  isResolvable: (key: string) => boolean,
+): G[] {
+  return slideGroups.map((g) => ({
+    ...g,
+    layers: g.layers.map((l) => stripUnresolvedFromLayer(l, isResolvable)),
+  }))
+}
+
+/**
+ * Build a complete Project from a template and the image assets that came with
+ * it. Refs without bytes are stripped; the manifest only lists keys that are
+ * both referenced and available. Pure: no store access.
+ */
+export function templateToProject(
+  tpl: Template,
+  assets: Array<{ key: string; name: string; mime: string }>,
+): Project {
+  const available = new Map(assets.map((a) => [a.key, a]))
+  const applied = applyTemplate(tpl)
+  // Only strip what the template promised (assetManifest) and failed to deliver; other refs
+  // (legacy filenames in hand-written files) stay so they show as visible missing images.
+  const promised = tpl.assetManifest ?? {}
+  const resolvable = (k: string) => !(k in promised) || available.has(k)
+  const slideGroups = stripUnresolvedTemplateImages(applied.slideGroups, resolvable)
+  const settings = { ...newProject().settings, ...applied.settings }
+  if (isAssetRef(settings.brandLogoRef) && !resolvable(settings.brandLogoRef)) {
+    delete settings.brandLogoRef
+  }
+  const now = new Date().toISOString()
+  const project = normalizeProjectFormats({
+    id: newId(),
+    name: tpl.name,
+    createdAt: now,
+    updatedAt: now,
+    settings,
+    slideGroups,
+  })
+  const manifest: Record<string, AssetManifestEntry> = {}
+  for (const key of collectAssetKeys(project)) {
+    const asset = available.get(key)
+    if (!asset) continue
+    manifest[key] = tpl.assetManifest?.[key] ?? { name: asset.name, mime: asset.mime }
+  }
+  return Object.keys(manifest).length ? { ...project, assetManifest: manifest } : project
 }
 
 // ─── File sniffing ────────────────────────────────────────────────────────────

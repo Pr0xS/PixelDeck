@@ -1,0 +1,6468 @@
+{
+  "id": "tpl-welcome",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Welcome to PixelDeck",
+  "description": "A hands-on tour: one feature per slide, from panoramas and layers to formats, localization and export.",
+  "category": "Tour",
+  "author": "PixelDeck",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "PixelDeck",
+    "locales": [
+      "en",
+      "es"
+    ],
+    "activeFormats": [
+      "iphone-69",
+      "android-phone"
+    ],
+    "brandColors": [
+      {
+        "id": "pdviolet",
+        "name": "Violet",
+        "value": "#8B6CF7"
+      },
+      {
+        "id": "pdpink",
+        "name": "Pink",
+        "value": "#EC4899"
+      },
+      {
+        "id": "pdaccent",
+        "name": "Accent",
+        "value": "#FF7A59"
+      }
+    ]
+  },
+  "assetManifest": {
+    "img_0530a8ec69c829fe59491238.webp": {
+      "name": "formatsEs.webp",
+      "mime": "image/webp"
+    },
+    "img_26090677945474665799442d.webp": {
+      "name": "photoSea.webp",
+      "mime": "image/webp"
+    },
+    "img_36d2702fece96d97fdf125b6.webp": {
+      "name": "home.webp",
+      "mime": "image/webp"
+    },
+    "img_3fbe43dda33b06eac7584017.webp": {
+      "name": "tiers.webp",
+      "mime": "image/webp"
+    },
+    "img_4f32b75fd83b7d3878270aa2.webp": {
+      "name": "gallery.webp",
+      "mime": "image/webp"
+    },
+    "img_5932581e469d790980b806de.webp": {
+      "name": "matrix.webp",
+      "mime": "image/webp"
+    },
+    "img_62e675542bb7318d73a134a1.webp": {
+      "name": "photoPeak.webp",
+      "mime": "image/webp"
+    },
+    "img_746821b75accc8540d921742.webp": {
+      "name": "table.webp",
+      "mime": "image/webp"
+    },
+    "img_7696d0f72165b05ece18e5ed.webp": {
+      "name": "formats.webp",
+      "mime": "image/webp"
+    },
+    "img_941088237360f088258b36ec.webp": {
+      "name": "tableEs.webp",
+      "mime": "image/webp"
+    },
+    "img_9baad29211ce7fc546065dae.webp": {
+      "name": "homeEs.webp",
+      "mime": "image/webp"
+    },
+    "img_9d791f28027b89f82ce75824.webp": {
+      "name": "tiersEs.webp",
+      "mime": "image/webp"
+    },
+    "img_b2977120a99c0a1dec21fd65.webp": {
+      "name": "photoCity.webp",
+      "mime": "image/webp"
+    },
+    "img_beb91273c467a256ebeb2d69.webp": {
+      "name": "logo.webp",
+      "mime": "image/webp"
+    }
+  },
+  "slideGroups": [
+    {
+      "name": "Welcome",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#7C5CF6",
+              "cx": 88,
+              "cy": 6,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.3
+            },
+            {
+              "color": "#EC4899",
+              "cx": 4,
+              "cy": 96,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.14
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Brand",
+          "type": "brand",
+          "x": 96,
+          "y": 92,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "appName": "PixelDeck",
+          "logoRef": "img_beb91273c467a256ebeb2d69.webp",
+          "logoSize": 76,
+          "nameColor": "#FFFFFF",
+          "nameFontSize": 46,
+          "nameFontFamily": "Sora",
+          "nameFontWeight": 700,
+          "direction": "row",
+          "gap": 20
+        },
+        {
+          "id": "l2",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 250,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "01 · WELCOME",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "01 · WELCOME"
+            },
+            "es": {
+              "text": "01 · BIENVENIDA"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 315,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Welcome to\nPixelDeck",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 11,
+              "end": 20,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Welcome to\nPixelDeck",
+              "marks": [
+                {
+                  "start": 11,
+                  "end": 20,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Te damos la\nbienvenida",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 22,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 600,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "This project is a hands-on tour.\nEach slide explains one feature.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "This project is a hands-on tour.\nEach slide explains one feature."
+            },
+            "es": {
+              "text": "Este proyecto es una visita guiada.\nCada diapositiva explica una función."
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 753.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Click anything. Move it. Edit it.\nIt is yours to break.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "Click anything. Move it. Edit it.\nIt is yours to break."
+            },
+            "es": {
+              "text": "Haz clic en lo que quieras. Muévelo.\nEdítalo. Puedes romperlo sin miedo."
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Phone",
+          "type": "phone",
+          "x": 309.6,
+          "y": 943.2,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.55
+          },
+          "model": "iphone-16-pro",
+          "scale": 1.72,
+          "screenshotPath": "img_36d2702fece96d97fdf125b6.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_36d2702fece96d97fdf125b6.webp"
+            },
+            "es": {
+              "screenshotPath": "img_9baad29211ce7fc546065dae.webp"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#A78BFA",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l8",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l9",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Open the next slide in the\nSLIDES strip at the bottom.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "Open the next slide in the\nSLIDES strip at the bottom."
+            },
+            "es": {
+              "text": "Abre la siguiente diapositiva en la\ntira SLIDES de la parte inferior."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-01"
+      ]
+    },
+    {
+      "name": "Panoramas",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#7C5CF6",
+              "cx": 50,
+              "cy": 52,
+              "rx": 1500,
+              "ry": 900,
+              "opacity": 0.3
+            },
+            {
+              "color": "#EC4899",
+              "cx": 4,
+              "cy": 96,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.14
+            },
+            {
+              "color": "#3B82F6",
+              "cx": 96,
+              "cy": 8,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.16
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "02 · PANORAMAS",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "02 · PANORAMAS"
+            },
+            "es": {
+              "text": "02 · PANORAMAS"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "One canvas,\ntwo screenshots",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 12,
+              "end": 27,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "One canvas,\ntwo screenshots",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 27,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Un lienzo,\ndos capturas",
+              "marks": [
+                {
+                  "start": 11,
+                  "end": 23,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "A pano is one wide canvas that\nexports as 2 or 3 screenshots.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "A pano is one wide canvas that\nexports as 2 or 3 screenshots."
+            },
+            "es": {
+              "text": "Un pano es un lienzo ancho que se\nexporta como 2 o 3 capturas."
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 653.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Whatever crosses the dashed seam\ncontinues on the next screenshot.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "Whatever crosses the dashed seam\ncontinues on the next screenshot."
+            },
+            "es": {
+              "text": "Lo que cruza la línea discontinua\ncontinúa en la captura siguiente."
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Title",
+          "type": "text",
+          "x": 1386,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Exported as\nseparate PNGs",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 12,
+              "end": 25,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Exported as\nseparate PNGs",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 25,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Se exporta en\nPNG separados",
+              "marks": [
+                {
+                  "start": 14,
+                  "end": 27,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Body 1",
+          "type": "text",
+          "x": 1386,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Each half is saved as its own PNG,\nso the set flows in the store.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "Each half is saved as its own PNG,\nso the set flows in the store."
+            },
+            "es": {
+              "text": "Cada mitad se guarda como un PNG\npropio y el conjunto fluye en la tienda."
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Photo left",
+          "type": "image",
+          "x": 485,
+          "y": 960,
+          "rotation": -5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 60,
+            "offsetX": 0,
+            "offsetY": 30,
+            "opacity": 0.45
+          },
+          "src": "img_62e675542bb7318d73a134a1.webp",
+          "width": 430,
+          "height": 430,
+          "cornerRadius": 48,
+          "localeContent": {
+            "en": {
+              "src": "img_62e675542bb7318d73a134a1.webp"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Photo right",
+          "type": "image",
+          "x": 1665,
+          "y": 985,
+          "rotation": 4,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 60,
+            "offsetX": 0,
+            "offsetY": 30,
+            "opacity": 0.45
+          },
+          "src": "img_b2977120a99c0a1dec21fd65.webp",
+          "width": 430,
+          "height": 430,
+          "cornerRadius": 48,
+          "localeContent": {
+            "en": {
+              "src": "img_b2977120a99c0a1dec21fd65.webp"
+            }
+          }
+        },
+        {
+          "id": "l9",
+          "name": "Photo on the seam",
+          "type": "image",
+          "x": 1075,
+          "y": 905,
+          "rotation": 3,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 60,
+            "offsetX": 0,
+            "offsetY": 30,
+            "opacity": 0.45
+          },
+          "src": "img_26090677945474665799442d.webp",
+          "width": 430,
+          "height": 430,
+          "cornerRadius": 48,
+          "localeContent": {
+            "en": {
+              "src": "img_26090677945474665799442d.webp"
+            }
+          }
+        },
+        {
+          "id": "l10",
+          "name": "Phone",
+          "type": "phone",
+          "x": 861,
+          "y": 1500,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.55
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.2,
+          "screenshotPath": "img_36d2702fece96d97fdf125b6.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_36d2702fece96d97fdf125b6.webp"
+            },
+            "es": {
+              "screenshotPath": "img_9baad29211ce7fc546065dae.webp"
+            }
+          }
+        },
+        {
+          "id": "l11",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 740,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#C9C9D8",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l12",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "GOOD TO KNOW",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#C9C9D8",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 644,
+          "localeContent": {
+            "en": {
+              "text": "GOOD TO KNOW"
+            },
+            "es": {
+              "text": "A SABER"
+            }
+          }
+        },
+        {
+          "id": "l13",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Use ×2 or ×3 in SLIDES to\nmake any slide a pano.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 644,
+          "localeContent": {
+            "en": {
+              "text": "Use ×2 or ×3 in SLIDES to\nmake any slide a pano."
+            },
+            "es": {
+              "text": "Usa ×2 o ×3 en SLIDES para\nconvertir una en pano."
+            }
+          }
+        },
+        {
+          "id": "l14",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 1790,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 694,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#A78BFA",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l15",
+          "name": "Try it label",
+          "type": "text",
+          "x": 1838,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 598,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l16",
+          "name": "Try it",
+          "type": "text",
+          "x": 1838,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Drag the phone or a photo\nacross the dashed seam.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 598,
+          "localeContent": {
+            "en": {
+              "text": "Drag the phone or a photo\nacross the dashed seam."
+            },
+            "es": {
+              "text": "Arrastra el móvil o una foto\nal otro lado de la línea."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-02",
+        "slide-03"
+      ]
+    },
+    {
+      "name": "Layers",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#7C5CF6",
+              "cx": 88,
+              "cy": 6,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.3
+            },
+            {
+              "color": "#EC4899",
+              "cx": 4,
+              "cy": 96,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.14
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "03 · LAYERS",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "03 · LAYERS"
+            },
+            "es": {
+              "text": "03 · CAPAS"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Everything\nis a layer",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 16,
+              "end": 21,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Everything\nis a layer",
+              "marks": [
+                {
+                  "start": 16,
+                  "end": 21,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Todo es\nuna capa",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 16,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "A slide is a stack of layers. There\nare 8 types, and here is one of each.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "A slide is a stack of layers. There\nare 8 types, and here is one of each."
+            },
+            "es": {
+              "text": "Una diapositiva es una pila de capas.\nHay 8 tipos; aquí tienes uno de cada."
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Label 1 · BACKGROUND",
+          "type": "text",
+          "x": 96,
+          "y": 689.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "1 · BACKGROUND",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 4,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 519,
+          "localeContent": {
+            "en": {
+              "text": "1 · BACKGROUND"
+            },
+            "es": {
+              "text": "1 · FONDO"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Background sample",
+          "type": "shape",
+          "x": 96,
+          "y": 753.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 380,
+          "height": 294.1,
+          "fill": {
+            "type": "linear",
+            "angle": 140,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#7C5CF6"
+              },
+              {
+                "offset": 0.5,
+                "color": "#EC4899"
+              },
+              {
+                "offset": 1,
+                "color": "#F59E0B"
+              }
+            ]
+          },
+          "cornerRadius": 32
+        },
+        {
+          "id": "l6",
+          "name": "Label 2 · PHONE",
+          "type": "text",
+          "x": 645,
+          "y": 689.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "2 · PHONE",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 4,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 519,
+          "localeContent": {
+            "en": {
+              "text": "2 · PHONE"
+            },
+            "es": {
+              "text": "2 · MÓVIL"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Phone sample",
+          "type": "phone",
+          "x": 675,
+          "y": 747.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 30,
+            "offsetX": 0,
+            "offsetY": 14,
+            "opacity": 0.4
+          },
+          "model": "iphone-16-pro",
+          "scale": 0.36,
+          "screenshotPath": "img_36d2702fece96d97fdf125b6.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": false,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_36d2702fece96d97fdf125b6.webp"
+            },
+            "es": {
+              "screenshotPath": "img_9baad29211ce7fc546065dae.webp"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Phone sample (Android)",
+          "type": "phone",
+          "x": 855.4,
+          "y": 747.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 30,
+            "offsetX": 0,
+            "offsetY": 14,
+            "opacity": 0.4
+          },
+          "model": "pixel-9",
+          "scale": 0.36,
+          "screenshotPath": "img_36d2702fece96d97fdf125b6.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": false,
+          "statusBarTheme": "dark",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_36d2702fece96d97fdf125b6.webp"
+            },
+            "es": {
+              "screenshotPath": "img_9baad29211ce7fc546065dae.webp"
+            }
+          }
+        },
+        {
+          "id": "l9",
+          "name": "Label 3 · TEXT",
+          "type": "text",
+          "x": 96,
+          "y": 1113.7,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "3 · TEXT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 4,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 519,
+          "localeContent": {
+            "en": {
+              "text": "3 · TEXT"
+            },
+            "es": {
+              "text": "3 · TEXTO"
+            }
+          }
+        },
+        {
+          "id": "l10",
+          "name": "Text sample",
+          "type": "text",
+          "x": 96,
+          "y": 1179.7,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Rich text,\nany style",
+          "fontFamily": "Sora",
+          "fontSize": 76,
+          "fontWeight": 700,
+          "fill": "#FFFFFF",
+          "letterSpacing": -2,
+          "lineHeight": 1.08,
+          "align": "left",
+          "width": 519,
+          "marks": [
+            {
+              "start": 5,
+              "end": 9,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            },
+            {
+              "start": 11,
+              "end": 14,
+              "italic": true,
+              "fill": "#22D3C5"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Rich text,\nany style",
+              "marks": [
+                {
+                  "start": 5,
+                  "end": 9,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "start": 11,
+                  "end": 14,
+                  "italic": true,
+                  "fill": "#22D3C5"
+                }
+              ]
+            },
+            "es": {
+              "text": "Texto rico,\nmil estilos",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 5,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                },
+                {
+                  "start": 12,
+                  "end": 15,
+                  "italic": true,
+                  "fill": "#22D3C5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l11",
+          "name": "Label 4 · IMAGE",
+          "type": "text",
+          "x": 645,
+          "y": 1113.7,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "4 · IMAGE",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 4,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 519,
+          "localeContent": {
+            "en": {
+              "text": "4 · IMAGE"
+            },
+            "es": {
+              "text": "4 · IMAGEN"
+            }
+          }
+        },
+        {
+          "id": "l12",
+          "name": "Image sample",
+          "type": "image",
+          "x": 645,
+          "y": 1175.7,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "src": "img_b2977120a99c0a1dec21fd65.webp",
+          "width": 304.1,
+          "height": 304.1,
+          "cornerRadius": 36,
+          "localeContent": {
+            "en": {
+              "src": "img_b2977120a99c0a1dec21fd65.webp"
+            }
+          }
+        },
+        {
+          "id": "l13",
+          "name": "Label 5 · SHAPE",
+          "type": "text",
+          "x": 96,
+          "y": 1537.8000000000002,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "5 · SHAPE",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 4,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 519,
+          "localeContent": {
+            "en": {
+              "text": "5 · SHAPE"
+            },
+            "es": {
+              "text": "5 · FORMA"
+            }
+          }
+        },
+        {
+          "id": "l14",
+          "name": "Shape star",
+          "type": "shape",
+          "x": 96,
+          "y": 1611.8000000000002,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 170,
+          "height": 170,
+          "fill": "#FBBF24",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l15",
+          "name": "Shape hexagon",
+          "type": "shape",
+          "x": 286,
+          "y": 1611.8000000000002,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "hexagon",
+          "width": 170,
+          "height": 170,
+          "fill": "#22D3C5",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l16",
+          "name": "Shape ellipse",
+          "type": "shape",
+          "x": 476,
+          "y": 1611.8000000000002,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "ellipse",
+          "width": 130,
+          "height": 170,
+          "fill": "#EC4899",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l17",
+          "name": "Label 6 · EMOJI",
+          "type": "text",
+          "x": 645,
+          "y": 1537.8000000000002,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "6 · EMOJI",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 4,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 519,
+          "localeContent": {
+            "en": {
+              "text": "6 · EMOJI"
+            },
+            "es": {
+              "text": "6 · EMOJI"
+            }
+          }
+        },
+        {
+          "id": "l18",
+          "name": "Emoji sample",
+          "type": "emoji",
+          "x": 645,
+          "y": 1599.8000000000002,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "🚀",
+          "fontSize": 170
+        },
+        {
+          "id": "l19",
+          "name": "Emoji sample 2",
+          "type": "emoji",
+          "x": 865,
+          "y": 1599.8000000000002,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "emoji": "✨",
+          "fontSize": 170
+        },
+        {
+          "id": "l20",
+          "name": "Label 7 · BRAND",
+          "type": "text",
+          "x": 96,
+          "y": 1961.9,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "7 · BRAND",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 4,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 519,
+          "localeContent": {
+            "en": {
+              "text": "7 · BRAND"
+            },
+            "es": {
+              "text": "7 · MARCA"
+            }
+          }
+        },
+        {
+          "id": "l21",
+          "name": "Brand sample",
+          "type": "brand",
+          "x": 96,
+          "y": 2049.9,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "appName": "PixelDeck",
+          "logoRef": "img_beb91273c467a256ebeb2d69.webp",
+          "logoSize": 110,
+          "nameColor": "#FFFFFF",
+          "nameFontSize": 60,
+          "nameFontFamily": "Sora",
+          "nameFontWeight": 700,
+          "direction": "row",
+          "gap": 24
+        },
+        {
+          "id": "l22",
+          "name": "Label 8 · GROUP",
+          "type": "text",
+          "x": 645,
+          "y": 1961.9,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "8 · GROUP",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 4,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 519,
+          "localeContent": {
+            "en": {
+              "text": "8 · GROUP"
+            },
+            "es": {
+              "text": "8 · GRUPO"
+            }
+          }
+        },
+        {
+          "id": "l23",
+          "name": "Group sample",
+          "type": "group",
+          "x": 645,
+          "y": 2029.9,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "children": [
+            {
+              "id": "l24",
+              "name": "Chip 1",
+              "type": "shape",
+              "x": 0,
+              "y": 0,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "shapeType": "rect",
+              "width": 210,
+              "height": 92,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              },
+              "cornerRadius": 46
+            },
+            {
+              "id": "l25",
+              "name": "Chip 1 label",
+              "type": "text",
+              "x": 0,
+              "y": 24,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "text": "Move",
+              "fontFamily": "Inter",
+              "fontSize": 36,
+              "fontWeight": 700,
+              "fill": "#FFFFFF",
+              "letterSpacing": 0,
+              "lineHeight": 1.15,
+              "align": "center",
+              "width": 210,
+              "localeContent": {
+                "en": {
+                  "text": "Move"
+                },
+                "es": {
+                  "text": "Mover"
+                }
+              }
+            },
+            {
+              "id": "l26",
+              "name": "Chip 2",
+              "type": "shape",
+              "x": 230,
+              "y": 0,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "shapeType": "rect",
+              "width": 210,
+              "height": 92,
+              "fill": "rgba(255,255,255,0.12)",
+              "cornerRadius": 46
+            },
+            {
+              "id": "l27",
+              "name": "Chip 2 label",
+              "type": "text",
+              "x": 230,
+              "y": 24,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "text": "Scale",
+              "fontFamily": "Inter",
+              "fontSize": 36,
+              "fontWeight": 700,
+              "fill": "#FFFFFF",
+              "letterSpacing": 0,
+              "lineHeight": 1.15,
+              "align": "center",
+              "width": 210,
+              "localeContent": {
+                "en": {
+                  "text": "Scale"
+                },
+                "es": {
+                  "text": "Escalar"
+                }
+              }
+            },
+            {
+              "id": "l28",
+              "name": "Chip 3",
+              "type": "shape",
+              "x": 115,
+              "y": 112,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "shapeType": "rect",
+              "width": 210,
+              "height": 92,
+              "fill": "rgba(255,255,255,0.12)",
+              "cornerRadius": 46
+            },
+            {
+              "id": "l29",
+              "name": "Chip 3 label",
+              "type": "text",
+              "x": 115,
+              "y": 136,
+              "rotation": 0,
+              "opacity": 1,
+              "visible": true,
+              "locked": false,
+              "text": "Rotate",
+              "fontFamily": "Inter",
+              "fontSize": 36,
+              "fontWeight": 700,
+              "fill": "#FFFFFF",
+              "letterSpacing": 0,
+              "lineHeight": 1.15,
+              "align": "center",
+              "width": 210,
+              "localeContent": {
+                "en": {
+                  "text": "Rotate"
+                },
+                "es": {
+                  "text": "Rotar"
+                }
+              }
+            }
+          ]
+        },
+        {
+          "id": "l30",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#A78BFA",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l31",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l32",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Select a layer here or in the LAYERS\npanel, then edit it in PROPERTIES.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "Select a layer here or in the LAYERS\npanel, then edit it in PROPERTIES."
+            },
+            "es": {
+              "text": "Selecciona una capa aquí o en el panel\nLAYERS y edítala en PROPERTIES."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-04"
+      ]
+    },
+    {
+      "name": "Style & Brand Kit",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#7C5CF6",
+              "cx": 88,
+              "cy": 6,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.3
+            },
+            {
+              "color": "#EC4899",
+              "cx": 4,
+              "cy": 96,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.14
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "04 · STYLE & BRAND KIT",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "04 · STYLE & BRAND KIT"
+            },
+            "es": {
+              "text": "04 · ESTILO Y BRAND KIT"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Style once,\nreuse it",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 12,
+              "end": 20,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Style once,\nreuse it",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 20,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Un estilo,\nmil usos",
+              "marks": [
+                {
+                  "start": 11,
+                  "end": 19,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "One text box can mix weights, colors\nand gradients. Select a few words\nand restyle only those.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 21,
+              "end": 28,
+              "fontWeight": 700,
+              "fill": "#FFFFFF"
+            },
+            {
+              "start": 30,
+              "end": 36,
+              "fontWeight": 500,
+              "fill": "#22D3C5"
+            },
+            {
+              "start": 41,
+              "end": 50,
+              "fontWeight": 700,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "One text box can mix weights, colors\nand gradients. Select a few words\nand restyle only those.",
+              "marks": [
+                {
+                  "start": 21,
+                  "end": 28,
+                  "fontWeight": 700,
+                  "fill": "#FFFFFF"
+                },
+                {
+                  "start": 30,
+                  "end": 36,
+                  "fontWeight": 500,
+                  "fill": "#22D3C5"
+                },
+                {
+                  "start": 41,
+                  "end": 50,
+                  "fontWeight": 700,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Una caja de texto mezcla grosores,\ncolores y degradados. Selecciona\nunas palabras y cambia solo esas.",
+              "marks": [
+                {
+                  "start": 25,
+                  "end": 33,
+                  "fontWeight": 700,
+                  "fill": "#FFFFFF"
+                },
+                {
+                  "start": 35,
+                  "end": 42,
+                  "fontWeight": 500,
+                  "fill": "#22D3C5"
+                },
+                {
+                  "start": 45,
+                  "end": 55,
+                  "fontWeight": 700,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 713.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Brand Kit colors are linked, not\ncopied: change one and every layer\nusing it updates.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 9,
+              "fontWeight": 700,
+              "fill": "#A78BFA"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Brand Kit colors are linked, not\ncopied: change one and every layer\nusing it updates.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 9,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            },
+            "es": {
+              "text": "Los colores del Brand Kit están\nenlazados, no copiados: cambia uno\ny se actualiza en todas las capas.",
+              "marks": [
+                {
+                  "start": 16,
+                  "end": 25,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Rich text sample",
+          "type": "text",
+          "x": 96,
+          "y": 1229.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Bold. Italic.\nGradient. Plain.",
+          "fontFamily": "Sora",
+          "fontSize": 100,
+          "fontWeight": 400,
+          "fill": "#C9C9D8",
+          "letterSpacing": -3,
+          "lineHeight": 1.2,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 5,
+              "fontWeight": 800,
+              "fill": "#FFFFFF"
+            },
+            {
+              "start": 6,
+              "end": 13,
+              "italic": true,
+              "fill": "#22D3C5"
+            },
+            {
+              "start": 14,
+              "end": 23,
+              "fontWeight": 800,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Bold. Italic.\nGradient. Plain.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 5,
+                  "fontWeight": 800,
+                  "fill": "#FFFFFF"
+                },
+                {
+                  "start": 6,
+                  "end": 13,
+                  "italic": true,
+                  "fill": "#22D3C5"
+                },
+                {
+                  "start": 14,
+                  "end": 23,
+                  "fontWeight": 800,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Negrita. Cursiva.\nDegradado. Normal.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 8,
+                  "fontWeight": 800,
+                  "fill": "#FFFFFF"
+                },
+                {
+                  "start": 9,
+                  "end": 17,
+                  "italic": true,
+                  "fill": "#22D3C5"
+                },
+                {
+                  "start": 18,
+                  "end": 28,
+                  "fontWeight": 800,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Brand panel",
+          "type": "shape",
+          "x": 96,
+          "y": 1539.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 560,
+          "fill": "rgba(255,255,255,0.05)",
+          "cornerRadius": 48,
+          "stroke": "rgba(255,255,255,0.14)",
+          "strokeWidth": 2
+        },
+        {
+          "id": "l7",
+          "name": "Brand caption",
+          "type": "text",
+          "x": 160,
+          "y": 1605.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Linked to Accent",
+          "fontFamily": "Sora",
+          "fontSize": 76,
+          "fontWeight": 700,
+          "fill": "#FFFFFF",
+          "letterSpacing": -2,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 970,
+          "marks": [
+            {
+              "start": 10,
+              "end": 16,
+              "fill": "{brand:pdaccent}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Linked to Accent",
+              "marks": [
+                {
+                  "start": 10,
+                  "end": 16,
+                  "fill": "{brand:pdaccent}"
+                }
+              ]
+            },
+            "es": {
+              "text": "Enlazado a Accent",
+              "marks": [
+                {
+                  "start": 11,
+                  "end": 17,
+                  "fill": "{brand:pdaccent}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Accent square",
+          "type": "shape",
+          "x": 160,
+          "y": 1765.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 250,
+          "height": 250,
+          "fill": "{brand:pdaccent}",
+          "cornerRadius": 56
+        },
+        {
+          "id": "l9",
+          "name": "Accent circle",
+          "type": "shape",
+          "x": 460,
+          "y": 1765.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "ellipse",
+          "width": 250,
+          "height": 250,
+          "fill": "{brand:pdaccent}",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l10",
+          "name": "Accent star",
+          "type": "shape",
+          "x": 760,
+          "y": 1755.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 270,
+          "height": 270,
+          "fill": "{brand:pdaccent}",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l11",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#A78BFA",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l12",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l13",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Open Brand Kit (top bar) and change\n“Accent”. All four pieces follow.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "Open Brand Kit (top bar) and change\n“Accent”. All four pieces follow."
+            },
+            "es": {
+              "text": "Abre Brand Kit (barra superior) y cambia\n«Accent». Las cuatro piezas le siguen."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-05"
+      ]
+    },
+    {
+      "name": "Formats",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#F59E0B",
+              "cx": 88,
+              "cy": 6,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.2
+            },
+            {
+              "color": "#7C5CF6",
+              "cx": 4,
+              "cy": 96,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.2
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "05 · FORMATS",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#F59E0B",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "05 · FORMATS"
+            },
+            "es": {
+              "text": "05 · FORMATOS"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "One design,\nevery size",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 12,
+              "end": 22,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "One design,\nevery size",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 22,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Un diseño,\ncada tamaño",
+              "marks": [
+                {
+                  "start": 11,
+                  "end": 22,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Base is your master canvas. You\ndesign here. It is never exported.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 4,
+              "fontWeight": 700,
+              "fill": "#A78BFA"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Base is your master canvas. You\ndesign here. It is never exported.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 4,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            },
+            "es": {
+              "text": "Base es tu lienzo maestro. Diseñas\naquí. Nunca se exporta.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 4,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 653.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "iPhone and Android are formats: the\nexact sizes each store asks for.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 6,
+              "fontWeight": 700,
+              "fill": "#F59E0B"
+            },
+            {
+              "start": 11,
+              "end": 18,
+              "fontWeight": 700,
+              "fill": "#F59E0B"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "iPhone and Android are formats: the\nexact sizes each store asks for.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 6,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                },
+                {
+                  "start": 11,
+                  "end": 18,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            },
+            "es": {
+              "text": "iPhone y Android son formatos: los\ntamaños exactos que pide cada tienda.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 6,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                },
+                {
+                  "start": 9,
+                  "end": 16,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Body 3",
+          "type": "text",
+          "x": 96,
+          "y": 807.2,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Every format scales itself from Base,\nso you only design once.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "Every format scales itself from Base,\nso you only design once."
+            },
+            "es": {
+              "text": "Cada formato se escala solo desde\nBase: solo diseñas una vez."
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Body 4",
+          "type": "text",
+          "x": 96,
+          "y": 960.8000000000001,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "The + next to the tabs adds more:\niPad, Watch, Mac, TV or a custom size.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 4,
+              "end": 5,
+              "fontWeight": 700,
+              "fill": "#F59E0B"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "The + next to the tabs adds more:\niPad, Watch, Mac, TV or a custom size.",
+              "marks": [
+                {
+                  "start": 4,
+                  "end": 5,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            },
+            "es": {
+              "text": "El + junto a las pestañas añade más:\niPad, Watch, Mac, TV o tamaño propio.",
+              "marks": [
+                {
+                  "start": 3,
+                  "end": 4,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Formats diagram",
+          "type": "image",
+          "x": 96,
+          "y": 1379.1,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "src": "img_7696d0f72165b05ece18e5ed.webp",
+          "width": 1098,
+          "height": 622.2,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_7696d0f72165b05ece18e5ed.webp"
+            },
+            "es": {
+              "src": "img_0530a8ec69c829fe59491238.webp"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Note You are on BASE · 1290 × 2796",
+          "type": "shape",
+          "x": 96,
+          "y": 2041.3,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "formatVisibility": {
+            "iphone-69": false,
+            "android-phone": false
+          },
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 96,
+          "fill": "rgba(255,255,255,0.07)",
+          "cornerRadius": 48,
+          "stroke": "#A78BFA",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l9",
+          "name": "Note text You are on BASE · 1290 × 2796",
+          "type": "text",
+          "x": 96,
+          "y": 2065.3,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "formatVisibility": {
+            "iphone-69": false,
+            "android-phone": false
+          },
+          "text": "You are on BASE · 1290 × 2796",
+          "fontFamily": "Inter",
+          "fontSize": 40,
+          "fontWeight": 700,
+          "fill": "#A78BFA",
+          "letterSpacing": 0,
+          "lineHeight": 1.15,
+          "align": "center",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "You are on BASE · 1290 × 2796"
+            },
+            "es": {
+              "text": "Estás en BASE · 1290 × 2796"
+            }
+          }
+        },
+        {
+          "id": "l10",
+          "name": "Note You are on iPHONE · 1320 × 2868",
+          "type": "shape",
+          "x": 96,
+          "y": 2041.3,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "ownerFormat": "iphone-69",
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 96,
+          "fill": "rgba(255,255,255,0.07)",
+          "cornerRadius": 48,
+          "stroke": "#F59E0B",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l11",
+          "name": "Note text You are on iPHONE · 1320 × 2868",
+          "type": "text",
+          "x": 96,
+          "y": 2065.3,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "ownerFormat": "iphone-69",
+          "text": "You are on iPHONE · 1320 × 2868",
+          "fontFamily": "Inter",
+          "fontSize": 40,
+          "fontWeight": 700,
+          "fill": "#F59E0B",
+          "letterSpacing": 0,
+          "lineHeight": 1.15,
+          "align": "center",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "You are on iPHONE · 1320 × 2868"
+            },
+            "es": {
+              "text": "Estás en iPHONE · 1320 × 2868"
+            }
+          }
+        },
+        {
+          "id": "l12",
+          "name": "Note You are on ANDROID · 1080 × 1920",
+          "type": "shape",
+          "x": 96,
+          "y": 2041.3,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "ownerFormat": "android-phone",
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 96,
+          "fill": "rgba(255,255,255,0.07)",
+          "cornerRadius": 48,
+          "stroke": "#F59E0B",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l13",
+          "name": "Note text You are on ANDROID · 1080 × 1920",
+          "type": "text",
+          "x": 96,
+          "y": 2065.3,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "ownerFormat": "android-phone",
+          "text": "You are on ANDROID · 1080 × 1920",
+          "fontFamily": "Inter",
+          "fontSize": 40,
+          "fontWeight": 700,
+          "fill": "#F59E0B",
+          "letterSpacing": 0,
+          "lineHeight": 1.15,
+          "align": "center",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "You are on ANDROID · 1080 × 1920"
+            },
+            "es": {
+              "text": "Estás en ANDROID · 1080 × 1920"
+            }
+          }
+        },
+        {
+          "id": "l14",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#F59E0B",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l15",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#F59E0B",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l16",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Click the iPhone and Android tabs\nabove the canvas. Watch the pill.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "Click the iPhone and Android tabs\nabove the canvas. Watch the pill."
+            },
+            "es": {
+              "text": "Pulsa las pestañas iPhone y Android\nsobre el lienzo. Fíjate en la etiqueta."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-06"
+      ]
+    },
+    {
+      "name": "Format adjustments",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#F59E0B",
+              "cx": 88,
+              "cy": 6,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.2
+            },
+            {
+              "color": "#7C5CF6",
+              "cx": 4,
+              "cy": 96,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.2
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "06 · FORMATS",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#F59E0B",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "06 · FORMATS"
+            },
+            "es": {
+              "text": "06 · FORMATOS"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Fine-tune\neach format",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 10,
+              "end": 21,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Fine-tune\neach format",
+              "marks": [
+                {
+                  "start": 10,
+                  "end": 21,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Ajusta\ncada formato",
+              "marks": [
+                {
+                  "start": 7,
+                  "end": 19,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Move or resize a layer while a format\ntab is active and the change is\npinned to that format only.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 70,
+              "end": 91,
+              "fontWeight": 700,
+              "fill": "#F59E0B"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Move or resize a layer while a format\ntab is active and the change is\npinned to that format only.",
+              "marks": [
+                {
+                  "start": 70,
+                  "end": 91,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            },
+            "es": {
+              "text": "Mueve o redimensiona una capa con\nuna pestaña de formato activa y el\ncambio queda fijado a ese formato.",
+              "marks": [
+                {
+                  "start": 82,
+                  "end": 102,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 713.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Base and the other formats stay put.\nText, colors and images stay shared.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "Base and the other formats stay put.\nText, colors and images stay shared."
+            },
+            "es": {
+              "text": "Base y los demás formatos no cambian.\nTexto, colores e imágenes se comparten."
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Body 3",
+          "type": "text",
+          "x": 96,
+          "y": 867,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "An amber frame means you are\nediting one format.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 3,
+              "end": 8,
+              "fontWeight": 700,
+              "fill": "#F59E0B"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "An amber frame means you are\nediting one format.",
+              "marks": [
+                {
+                  "start": 3,
+                  "end": 8,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            },
+            "es": {
+              "text": "Un marco ámbar indica que editas\nun solo formato.",
+              "marks": [
+                {
+                  "start": 9,
+                  "end": 14,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Pinned phone",
+          "type": "phone",
+          "x": 116,
+          "y": 1076.6,
+          "rotation": -5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "formatOverrides": {
+            "android-phone": {
+              "x": 542.0600858369098,
+              "y": 711.8283261802575,
+              "scale": 0.96137339055794,
+              "rotation": 6
+            }
+          },
+          "shadow": {
+            "color": "#000000",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.55
+          },
+          "model": "iphone-16-pro",
+          "scale": 1.25,
+          "screenshotPath": "img_36d2702fece96d97fdf125b6.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_36d2702fece96d97fdf125b6.webp"
+            },
+            "es": {
+              "screenshotPath": "img_9baad29211ce7fc546065dae.webp"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Base note",
+          "type": "text",
+          "x": 673.5,
+          "y": 1336.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "formatVisibility": {
+            "android-phone": false
+          },
+          "text": "On Base and iPhone this\nphone sits on the left.",
+          "fontFamily": "Inter",
+          "fontSize": 42,
+          "fontWeight": 600,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 520.5,
+          "localeContent": {
+            "en": {
+              "text": "On Base and iPhone this\nphone sits on the left."
+            },
+            "es": {
+              "text": "En Base y en iPhone este\nmóvil está a la izquierda."
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Android note",
+          "type": "text",
+          "x": 96,
+          "y": 1336.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "ownerFormat": "android-phone",
+          "text": "On Android it is pinned\nto the right, and bigger.",
+          "fontFamily": "Inter",
+          "fontSize": 42,
+          "fontWeight": 700,
+          "fill": "#F59E0B",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 560,
+          "localeContent": {
+            "en": {
+              "text": "On Android it is pinned\nto the right, and bigger."
+            },
+            "es": {
+              "text": "En Android está fijado a\nla derecha y es mayor."
+            }
+          }
+        },
+        {
+          "id": "l9",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2381,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 319,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#F59E0B",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l10",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2431,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#F59E0B",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l11",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2485,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "On Android, drag the phone. Back on\nBase it has not moved. “Reset format\nlayout” undoes it.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "On Android, drag the phone. Back on\nBase it has not moved. “Reset format\nlayout” undoes it."
+            },
+            "es": {
+              "text": "En Android, arrastra el móvil. En Base\nno se ha movido. «Reset format\nlayout» lo deshace."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-07"
+      ]
+    },
+    {
+      "name": "Locales",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#22D3C5",
+              "cx": 88,
+              "cy": 6,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.2
+            },
+            {
+              "color": "#7C5CF6",
+              "cx": 4,
+              "cy": 96,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.2
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "07 · LOCALIZATION",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#22D3C5",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "07 · LOCALIZATION"
+            },
+            "es": {
+              "text": "07 · LOCALIZACIÓN"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Speak every\nlanguage",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 12,
+              "end": 20,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Speak every\nlanguage",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 20,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Habla todos\nlos idiomas",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 23,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "A locale is a language version of\nyour project. One is the Default:\nthe source the others start from.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 2,
+              "end": 8,
+              "fontWeight": 700,
+              "fill": "#22D3C5"
+            },
+            {
+              "start": 59,
+              "end": 66,
+              "fontWeight": 700,
+              "fill": "#22D3C5"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "A locale is a language version of\nyour project. One is the Default:\nthe source the others start from.",
+              "marks": [
+                {
+                  "start": 2,
+                  "end": 8,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                },
+                {
+                  "start": 59,
+                  "end": 66,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                }
+              ]
+            },
+            "es": {
+              "text": "Un locale es una versión de tu\nproyecto en un idioma. Uno es el\nDefault: la fuente de los demás.",
+              "marks": [
+                {
+                  "start": 3,
+                  "end": 9,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                },
+                {
+                  "start": 64,
+                  "end": 71,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 713.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "This tour has English (Default) and\nSpanish. Switch, and the text and the\nscreenshot change together.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 66,
+              "end": 84,
+              "fontWeight": 700,
+              "fill": "#FFFFFF"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "This tour has English (Default) and\nSpanish. Switch, and the text and the\nscreenshot change together.",
+              "marks": [
+                {
+                  "start": 66,
+                  "end": 84,
+                  "fontWeight": 700,
+                  "fill": "#FFFFFF"
+                }
+              ]
+            },
+            "es": {
+              "text": "Esta visita tiene inglés (Default) y\nespañol. Cambia, y el texto y la\ncaptura cambian a la vez.",
+              "marks": [
+                {
+                  "start": 65,
+                  "end": 77,
+                  "fontWeight": 700,
+                  "fill": "#FFFFFF"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Localized phone",
+          "type": "phone",
+          "x": 318.4905213270142,
+          "y": 962.8,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.55
+          },
+          "model": "iphone-16-pro",
+          "scale": 1.6744075829383887,
+          "screenshotPath": "img_36d2702fece96d97fdf125b6.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_36d2702fece96d97fdf125b6.webp"
+            },
+            "es": {
+              "screenshotPath": "img_9baad29211ce7fc546065dae.webp"
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#22D3C5",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l7",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#22D3C5",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Click “Spanish” in the locale tabs,\nright of the format tabs.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "Click “Spanish” in the locale tabs,\nright of the format tabs."
+            },
+            "es": {
+              "text": "Pulsa «Default» en las pestañas de\nidioma, junto a las de formato."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-08"
+      ]
+    },
+    {
+      "name": "Translate",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#22D3C5",
+              "cx": 88,
+              "cy": 6,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.2
+            },
+            {
+              "color": "#7C5CF6",
+              "cx": 4,
+              "cy": 96,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.2
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "08 · LOCALIZATION",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#22D3C5",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "08 · LOCALIZATION"
+            },
+            "es": {
+              "text": "08 · LOCALIZACIÓN"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Translate in\none place",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 13,
+              "end": 22,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Translate in\none place",
+              "marks": [
+                {
+                  "start": 13,
+                  "end": 22,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Traduce en\nun solo lugar",
+              "marks": [
+                {
+                  "start": 11,
+                  "end": 24,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Localization (top right) is a table:\none row per text, one column per\nlanguage.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 12,
+              "fontWeight": 700,
+              "fill": "#22D3C5"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Localization (top right) is a table:\none row per text, one column per\nlanguage.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 12,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                }
+              ]
+            },
+            "es": {
+              "text": "Localization (arriba a la derecha)\nes una tabla: una fila por texto y\nuna columna por idioma.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 12,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 713.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Type or paste translations, or let\nAI translate with your own API key.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "Type or paste translations, or let\nAI translate with your own API key."
+            },
+            "es": {
+              "text": "Escribe o pega traducciones, o deja\nque la IA traduzca con tu clave API."
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Body 3",
+          "type": "text",
+          "x": 96,
+          "y": 867,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Phones and images can use a\ndifferent file per language too.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "Phones and images can use a\ndifferent file per language too."
+            },
+            "es": {
+              "text": "Los móviles y las imágenes pueden\nusar un archivo distinto por idioma."
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Body 4",
+          "type": "text",
+          "x": 96,
+          "y": 1020.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "On the canvas you edit the Default\ntext. Other languages are edited\nin Localization.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "On the canvas you edit the Default\ntext. Other languages are edited\nin Localization."
+            },
+            "es": {
+              "text": "En el lienzo editas el texto Default.\nLos demás idiomas se editan en\nLocalization."
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Localization table",
+          "type": "image",
+          "x": 96,
+          "y": 1483.493023255814,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "src": "img_746821b75accc8540d921742.webp",
+          "width": 1098,
+          "height": 669.0139534883721,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_746821b75accc8540d921742.webp"
+            },
+            "es": {
+              "src": "img_941088237360f088258b36ec.webp"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#22D3C5",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l9",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#22D3C5",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l10",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Open Localization and change\na Spanish cell.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "Open Localization and change\na Spanish cell."
+            },
+            "es": {
+              "text": "Abre Localization y cambia una\ncelda de Spanish."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-09"
+      ]
+    },
+    {
+      "name": "Format × Locale",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#F59E0B",
+              "cx": 6,
+              "cy": 8,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.18
+            },
+            {
+              "color": "#22D3C5",
+              "cx": 94,
+              "cy": 10,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.18
+            },
+            {
+              "color": "#7C5CF6",
+              "cx": 50,
+              "cy": 100,
+              "rx": 900,
+              "ry": 700,
+              "opacity": 0.18
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "09 · FORMAT × LOCALE",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#22D3C5",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "09 · FORMAT × LOCALE"
+            },
+            "es": {
+              "text": "09 · FORMATO × IDIOMA"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "localeAdjust": {
+            "es": {
+              "base": {
+                "mFontSize": 0.88
+              }
+            }
+          },
+          "text": "Adjust layout\nper language",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 14,
+              "end": 26,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Adjust layout\nper language",
+              "marks": [
+                {
+                  "start": 14,
+                  "end": 26,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Ajusta el diseño\npara cada idioma",
+              "marks": [
+                {
+                  "start": 17,
+                  "end": 33,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Translations run longer. Resize or\nmove a layer for one language and\nthe others do not change.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 52,
+              "end": 64,
+              "fontWeight": 700,
+              "fill": "#22D3C5"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Translations run longer. Resize or\nmove a layer for one language and\nthe others do not change.",
+              "marks": [
+                {
+                  "start": 52,
+                  "end": 64,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                }
+              ]
+            },
+            "es": {
+              "text": "Las traducciones ocupan más. Cambia\nuna capa para un solo idioma y los\ndemás no cambian.",
+              "marks": [
+                {
+                  "start": 50,
+                  "end": 64,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 713.4,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "On Base + Spanish, the tweak follows\nSpanish into every format.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 3,
+              "end": 7,
+              "fontWeight": 700,
+              "fill": "#A78BFA"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "On Base + Spanish, the tweak follows\nSpanish into every format.",
+              "marks": [
+                {
+                  "start": 3,
+                  "end": 7,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            },
+            "es": {
+              "text": "En Base + Spanish, el ajuste sigue\nal español en todos los formatos.",
+              "marks": [
+                {
+                  "start": 3,
+                  "end": 7,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Body 3",
+          "type": "text",
+          "x": 96,
+          "y": 867,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "On Android + Spanish, it applies\nto that pairing only.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 3,
+              "end": 10,
+              "fontWeight": 700,
+              "fill": "#F59E0B"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "On Android + Spanish, it applies\nto that pairing only.",
+              "marks": [
+                {
+                  "start": 3,
+                  "end": 10,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            },
+            "es": {
+              "text": "En Android + Spanish, se aplica\nsolo a esa combinación.",
+              "marks": [
+                {
+                  "start": 3,
+                  "end": 10,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Body 4",
+          "type": "text",
+          "x": 96,
+          "y": 1020.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Formats pin. Locales adjust on top.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 12,
+              "fontWeight": 700,
+              "fill": "#F59E0B"
+            },
+            {
+              "start": 13,
+              "end": 27,
+              "fontWeight": 700,
+              "fill": "#22D3C5"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Formats pin. Locales adjust on top.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 12,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                },
+                {
+                  "start": 13,
+                  "end": 27,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                }
+              ]
+            },
+            "es": {
+              "text": "El formato fija. El idioma ajusta.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 16,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                },
+                {
+                  "start": 17,
+                  "end": 34,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Tiers diagram",
+          "type": "image",
+          "x": 96,
+          "y": 1431.4142857142858,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "src": "img_3fbe43dda33b06eac7584017.webp",
+          "width": 1098,
+          "height": 653.5714285714286,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_3fbe43dda33b06eac7584017.webp"
+            },
+            "es": {
+              "src": "img_9d791f28027b89f82ce75824.webp"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#22D3C5",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l9",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#22D3C5",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l10",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Switch to Spanish: this headline is\n12% smaller there, and only there.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "Switch to Spanish: this headline is\n12% smaller there, and only there."
+            },
+            "es": {
+              "text": "Vuelve a Default: allí este titular\nes más grande. El ajuste es solo aquí."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-10"
+      ]
+    },
+    {
+      "name": "Templates",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#7C5CF6",
+              "cx": 88,
+              "cy": 6,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.3
+            },
+            {
+              "color": "#EC4899",
+              "cx": 4,
+              "cy": 96,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.14
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "10 · TEMPLATES & ASSETS",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "10 · TEMPLATES & ASSETS"
+            },
+            "es": {
+              "text": "10 · PLANTILLAS Y ASSETS"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Start from a\ntemplate",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 13,
+              "end": 21,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Start from a\ntemplate",
+              "marks": [
+                {
+                  "start": 13,
+                  "end": 21,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Empieza con\nuna plantilla",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 25,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Templates (top bar) has ready-made\nsets for the most popular app types.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 9,
+              "fontWeight": 700,
+              "fill": "#A78BFA"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Templates (top bar) has ready-made\nsets for the most popular app types.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 9,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            },
+            "es": {
+              "text": "Templates (barra superior) trae\nconjuntos listos para apps populares.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 9,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 653.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Use one as a new project, then drop\nyour own screenshots on the phones.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "Use one as a new project, then drop\nyour own screenshots on the phones."
+            },
+            "es": {
+              "text": "Úsalo como proyecto nuevo y suelta\ntus capturas sobre los móviles."
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Body 3",
+          "type": "text",
+          "x": 96,
+          "y": 807.2,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Assets (left) holds your images.\nDrag one onto the canvas, or select\na phone and click the image.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 6,
+              "fontWeight": 700,
+              "fill": "#A78BFA"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Assets (left) holds your images.\nDrag one onto the canvas, or select\na phone and click the image.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 6,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            },
+            "es": {
+              "text": "Assets (izquierda) guarda tus\nimágenes. Arrastra una al lienzo, o\nselecciona un móvil y haz clic en ella.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 6,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Template gallery",
+          "type": "image",
+          "x": 96,
+          "y": 1496.8468750000002,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 51.46875,
+            "offsetX": 0,
+            "offsetY": 24.01875,
+            "opacity": 0.35
+          },
+          "src": "img_4f32b75fd83b7d3878270aa2.webp",
+          "width": 1098,
+          "height": 428.90625,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_4f32b75fd83b7d3878270aa2.webp"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#A78BFA",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l8",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l9",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Open Templates and press\n“Use template”.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "Open Templates and press\n“Use template”."
+            },
+            "es": {
+              "text": "Abre Templates y pulsa\n«Use template»."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-11"
+      ]
+    },
+    {
+      "name": "Export",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#F59E0B",
+              "cx": 6,
+              "cy": 8,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.18
+            },
+            {
+              "color": "#22D3C5",
+              "cx": 94,
+              "cy": 10,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.18
+            },
+            {
+              "color": "#7C5CF6",
+              "cx": 50,
+              "cy": 100,
+              "rx": 900,
+              "ry": 700,
+              "opacity": 0.18
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "11 · EXPORT",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "11 · EXPORT"
+            },
+            "es": {
+              "text": "11 · EXPORTAR"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Export it all\nin one click",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 14,
+              "end": 26,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Export it all\nin one click",
+              "marks": [
+                {
+                  "start": 14,
+                  "end": 26,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Expórtalo todo\nen un clic",
+              "marks": [
+                {
+                  "start": 15,
+                  "end": 25,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 500,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Export renders every locale ×\nformat × slide as its own PNG.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 21,
+              "end": 27,
+              "fontWeight": 700,
+              "fill": "#22D3C5"
+            },
+            {
+              "start": 30,
+              "end": 36,
+              "fontWeight": 700,
+              "fill": "#F59E0B"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Export renders every locale ×\nformat × slide as its own PNG.",
+              "marks": [
+                {
+                  "start": 21,
+                  "end": 27,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                },
+                {
+                  "start": 30,
+                  "end": 36,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            },
+            "es": {
+              "text": "Export genera un PNG por cada\nidioma × formato × diapositiva.",
+              "marks": [
+                {
+                  "start": 30,
+                  "end": 36,
+                  "fontWeight": 700,
+                  "fill": "#22D3C5"
+                },
+                {
+                  "start": 39,
+                  "end": 46,
+                  "fontWeight": 700,
+                  "fill": "#F59E0B"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 653.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "This tour: 2 languages × 2 formats\n× 13 screenshots = 52 files.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 54,
+              "end": 62,
+              "fontWeight": 700,
+              "fill": "#FFFFFF"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "This tour: 2 languages × 2 formats\n× 13 screenshots = 52 files.",
+              "marks": [
+                {
+                  "start": 54,
+                  "end": 62,
+                  "fontWeight": 700,
+                  "fill": "#FFFFFF"
+                }
+              ]
+            },
+            "es": {
+              "text": "Esta visita: 2 idiomas × 2 formatos\n× 13 capturas = 52 archivos.",
+              "marks": [
+                {
+                  "start": 52,
+                  "end": 63,
+                  "fontWeight": 700,
+                  "fill": "#FFFFFF"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Body 3",
+          "type": "text",
+          "x": 96,
+          "y": 807.2,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Base is not exported. A pano is split\ninto one PNG per screenshot.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "Base is not exported. A pano is split\ninto one PNG per screenshot."
+            },
+            "es": {
+              "text": "Base no se exporta. Un pano se divide\nen un PNG por captura."
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Body 4",
+          "type": "text",
+          "x": 96,
+          "y": 960.8000000000001,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Download a ZIP, pick a folder, or\nautomate it with the CLI.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "localeContent": {
+            "en": {
+              "text": "Download a ZIP, pick a folder, or\nautomate it with the CLI."
+            },
+            "es": {
+              "text": "Descarga un ZIP, elige una carpeta\no automatízalo con la CLI."
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Export matrix",
+          "type": "image",
+          "x": 96,
+          "y": 1462.182142857143,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "src": "img_5932581e469d790980b806de.webp",
+          "width": 1098,
+          "height": 647.0357142857142,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_5932581e469d790980b806de.webp"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2491,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 209,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#A78BFA",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l9",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2541,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "TRY IT",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "TRY IT"
+            },
+            "es": {
+              "text": "PRUÉBALO"
+            }
+          }
+        },
+        {
+          "id": "l10",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2595,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Press Export (bottom right).",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "Press Export (bottom right)."
+            },
+            "es": {
+              "text": "Pulsa Export (abajo a la derecha)."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-12"
+      ]
+    },
+    {
+      "name": "Next steps",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#12101E"
+              },
+              {
+                "offset": 0.5,
+                "color": "#1C1929"
+              },
+              {
+                "offset": 1,
+                "color": "#0F0E1A"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#7C5CF6",
+              "cx": 50,
+              "cy": 62,
+              "rx": 1000,
+              "ry": 900,
+              "opacity": 0.36
+            },
+            {
+              "color": "#EC4899",
+              "cx": 96,
+              "cy": 96,
+              "rx": 800,
+              "ry": 760,
+              "opacity": 0.16
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Step",
+          "type": "text",
+          "x": 96,
+          "y": 150,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "12 · NEXT STEPS",
+          "fontFamily": "Inter",
+          "fontSize": 32,
+          "fontWeight": 700,
+          "fill": "#A78BFA",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "12 · NEXT STEPS"
+            },
+            "es": {
+              "text": "12 · SIGUIENTES PASOS"
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Title",
+          "type": "text",
+          "x": 96,
+          "y": 215,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "You're\nready",
+          "fontFamily": "Sora",
+          "fontSize": 112,
+          "fontWeight": 800,
+          "fill": "#FFFFFF",
+          "letterSpacing": -3,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 7,
+              "end": 12,
+              "fill": {
+                "type": "linear",
+                "angle": 90,
+                "stops": [
+                  {
+                    "offset": 0,
+                    "color": "#B49EFF"
+                  },
+                  {
+                    "offset": 1,
+                    "color": "#EC4899"
+                  }
+                ]
+              }
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "You're\nready",
+              "marks": [
+                {
+                  "start": 7,
+                  "end": 12,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            },
+            "es": {
+              "text": "Ya está\ntodo listo",
+              "marks": [
+                {
+                  "start": 8,
+                  "end": 18,
+                  "fill": {
+                    "type": "linear",
+                    "angle": 90,
+                    "stops": [
+                      {
+                        "offset": 0,
+                        "color": "#B49EFF"
+                      },
+                      {
+                        "offset": 1,
+                        "color": "#EC4899"
+                      }
+                    ]
+                  }
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Body 1",
+          "type": "text",
+          "x": 96,
+          "y": 520,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "1  Projects → New project starts\n     from a blank canvas.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 1,
+              "fontWeight": 700,
+              "fill": "#A78BFA"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "1  Projects → New project starts\n     from a blank canvas.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 1,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            },
+            "es": {
+              "text": "1  Projects → New project empieza\n     con un lienzo en blanco.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 1,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Body 2",
+          "type": "text",
+          "x": 96,
+          "y": 673.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "2  Templates → Use template starts\n     from a finished design.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 1,
+              "fontWeight": 700,
+              "fill": "#A78BFA"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "2  Templates → Use template starts\n     from a finished design.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 1,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            },
+            "es": {
+              "text": "2  Templates → Use template parte\n     de un diseño terminado.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 1,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Body 3",
+          "type": "text",
+          "x": 96,
+          "y": 827.2,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "3  Help (top right) covers every\n     panel and shortcut.",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#C9C9D8",
+          "letterSpacing": 0,
+          "lineHeight": 1.3,
+          "align": "left",
+          "width": 1098,
+          "marks": [
+            {
+              "start": 0,
+              "end": 1,
+              "fontWeight": 700,
+              "fill": "#A78BFA"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "3  Help (top right) covers every\n     panel and shortcut.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 1,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            },
+            "es": {
+              "text": "3  Help (arriba a la derecha)\n     explica cada panel y atajo.",
+              "marks": [
+                {
+                  "start": 0,
+                  "end": 1,
+                  "fontWeight": 700,
+                  "fill": "#A78BFA"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "PixelDeck mark",
+          "type": "image",
+          "x": 413.8,
+          "y": 1446.6,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#7C5CF6",
+            "blur": 120,
+            "offsetX": 0,
+            "offsetY": 0,
+            "opacity": 0.55
+          },
+          "src": "img_beb91273c467a256ebeb2d69.webp",
+          "width": 462.4,
+          "height": 489.59999999999997,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_beb91273c467a256ebeb2d69.webp"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Try it card",
+          "type": "shape",
+          "x": 96,
+          "y": 2436,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 1098,
+          "height": 264,
+          "fill": "#1E1B2E",
+          "cornerRadius": 40,
+          "stroke": "#C9C9D8",
+          "strokeWidth": 3
+        },
+        {
+          "id": "l8",
+          "name": "Try it label",
+          "type": "text",
+          "x": 144,
+          "y": 2486,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "GOOD TO KNOW",
+          "fontFamily": "Inter",
+          "fontSize": 30,
+          "fontWeight": 800,
+          "fill": "#C9C9D8",
+          "letterSpacing": 5,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "GOOD TO KNOW"
+            },
+            "es": {
+              "text": "A SABER"
+            }
+          }
+        },
+        {
+          "id": "l9",
+          "name": "Try it",
+          "type": "text",
+          "x": 144,
+          "y": 2540,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "This tour is a normal project.\nKeep it, or delete it in Projects.",
+          "fontFamily": "Inter",
+          "fontSize": 44,
+          "fontWeight": 600,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1002,
+          "localeContent": {
+            "en": {
+              "text": "This tour is a normal project.\nKeep it, or delete it in Projects."
+            },
+            "es": {
+              "text": "Esta visita es un proyecto normal.\nConsérvala o bórrala en Projects."
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-13"
+      ]
+    }
+  ]
+}

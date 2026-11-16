@@ -1,0 +1,53 @@
+<div class="screen flush" style="gap:0;padding-top:0">
+  <div class="map" style="margin:0;height:430px;flex:none">
+    <!-- blocks -->
+    <div class="block" style="left:-10px;top:60px;width:100px;height:90px"></div>
+    <div class="block" style="left:110px;top:60px;width:90px;height:90px"></div>
+    <div class="block" style="left:220px;top:60px;width:70px;height:90px"></div>
+    <div class="block" style="left:310px;top:60px;width:100px;height:90px"></div>
+    <div class="block" style="left:-10px;top:260px;width:100px;height:70px"></div>
+    <div class="block" style="left:220px;top:262px;width:70px;height:68px"></div>
+    <div class="block" style="left:310px;top:262px;width:100px;height:68px"></div>
+    <div class="park" style="left:110px;top:262px;width:90px;height:68px"></div>
+    <div class="park" style="left:-10px;top:352px;width:120px;height:90px"></div>
+    <div class="water" style="left:240px;top:360px;width:190px;height:100px;transform:rotate(-8deg)"></div>
+    <!-- roads -->
+    <div class="road" style="left:0;right:0;top:158px;height:14px"></div>
+    <div class="road" style="left:0;right:0;top:338px;height:14px"></div>
+    <div class="road" style="left:0;right:0;top:36px;height:14px"></div>
+    <div class="road" style="top:0;bottom:0;left:96px;width:14px"></div>
+    <div class="road" style="top:0;bottom:0;left:206px;width:14px"></div>
+    <div class="road" style="top:0;bottom:0;left:296px;width:14px"></div>
+    <div class="road" style="left:0;right:0;top:230px;height:22px;transform:rotate(0deg)"></div>
+    <!-- route -->
+    <svg style="position:absolute;inset:0;z-index:3" width="400" height="430" viewBox="0 0 400 430" fill="none">
+      <path d="M 303 345 L 303 241 L 103 241 L 103 165 L 213 165 L 213 43" stroke="#ffffff" stroke-width="12" stroke-linecap="round" stroke-linejoin="round"/>
+      <path d="M 303 345 L 303 241 L 103 241 L 103 165 L 213 165 L 213 43" stroke="#14532d" stroke-width="6" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="1 0"/>
+      <path d="M 213 165 L 213 43" stroke="#14532d" stroke-width="6" stroke-linecap="round" stroke-dasharray="2 12" opacity="0"/>
+    </svg>
+    <div class="pin" style="left:80px;top:180px"><i class="ic s20 fill" style="font-size:22px">two_wheeler</i></div>
+    <div class="dest" style="left:194px;top:70px"></div>
+    <div class="icon-btn" style="position:absolute;left:20px;top:66px;z-index:6;width:40px;height:40px;border-radius:50%"><i class="ic s20">arrow_back</i></div>
+    <div class="chip" style="position:absolute;right:20px;top:70px;z-index:6;height:34px;font-size:12.5px"><i class="ic s16 tomato fill">circle</i>Live</div>
+  </div>
+
+  <div class="col" style="padding:0 20px;gap:12px;margin-top:-34px;position:relative;z-index:7">
+    <div class="card" style="padding:18px;box-shadow:0 14px 34px rgba(100,70,20,.16)">
+      <div class="row between start">
+        <div class="col" style="gap:2px">
+          <div class="caps muted">Arriving in</div>
+          <div class="row" style="align-items:baseline;gap:6px"><span class="kpi" style="font-size:46px;font-family:var(--display)">12</span><span class="h3">min</span></div>
+        </div>
+        <div class="row g8"><div class="avatar" style="background:linear-gradient(135deg,#f0522b,#ffb36b)">MJ</div><div><div class="h3" style="font-size:14.5px">Maya J.</div><div class="xs muted">Your courier · ★ 4.9</div></div></div>
+      </div>
+      <div class="progress" style="margin:14px 0 4px;height:6px"><i style="--v:72%"></i></div>
+    </div>
+
+    <div class="steps" style="padding:4px 6px">
+      <div class="step done"><div class="dot"><i class="ic s16">check</i></div><div><div class="h3" style="font-size:14.5px">Order confirmed</div><div class="xs muted">5:42 PM</div></div></div>
+      <div class="step done"><div class="dot"><i class="ic s16">check</i></div><div><div class="h3" style="font-size:14.5px">Packed fresh</div><div class="xs muted">5:51 PM</div></div></div>
+      <div class="step now"><div class="dot"><i class="ic s16 fill">two_wheeler</i></div><div><div class="h3" style="font-size:14.5px">On the way</div><div class="xs muted">Maya is 0.8 km away</div></div></div>
+    </div>
+  </div>
+  <div class="home-ind"></div>
+</div>

@@ -8,6 +8,16 @@ const LEGACY_KEY = 'pixeldeck-assets'
 const assetsKey = (id: string) => `pixeldeck-assets:${id}`
 const FLUSH_MS = 300
 
+/**
+ * True when pre-scoping (un-keyed-by-project) assets still sit in IndexedDB. The first
+ * `setActiveProject` with an empty scope migrates them, so that activation must be
+ * the one the user's existing project gets. Throws if IndexedDB cannot be read.
+ */
+export async function hasLegacyAssets(): Promise<boolean> {
+  if (typeof indexedDB === 'undefined') return false
+  return (await idbStorage.getItem(LEGACY_KEY)) != null
+}
+
 export interface AssetEntry {
   /** Map key: content-hash key (`img_<hash>.<ext>`) or a legacy filename. */
   key: string

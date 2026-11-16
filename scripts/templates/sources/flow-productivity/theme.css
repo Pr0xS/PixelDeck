@@ -1,0 +1,38 @@
+:root {
+  --bg: #f8faff;
+  --surface: #ffffff;
+  --surface-2: #eef1fb;
+  --text: #0f172a;
+  --muted: #7b86a0;
+  --line: rgba(15, 23, 42, 0.07);
+  --primary: #6366f1;
+  --primary-2: #8b7cf8;
+  --on-primary: #ffffff;
+  --accent: #f59e0b;
+  --good: #10b981;
+  --bad: #ef4444;
+  --radius: 20px;
+  --font: 'Inter', system-ui, sans-serif;
+  --display: 'Space Grotesk', 'Inter', sans-serif;
+  --shadow: 0 6px 20px rgba(79, 70, 229, 0.08);
+}
+.display, .h1, .h2, .kpi { font-weight: 700; letter-spacing: -0.03em; }
+.home-ind { background: #0f172a; opacity: 0.8; }
+.tabbar { background: rgba(255, 255, 255, 0.96); }
+.task {
+  display: flex; align-items: center; gap: 12px; background: var(--surface); border-radius: 16px;
+  padding: 12px 14px; box-shadow: var(--shadow);
+}
+.task .t { font-size: 14.5px; font-weight: 600; letter-spacing: -0.01em; }
+.task .m { font-size: 12px; color: var(--muted); font-weight: 500; }
+.task.done .t { text-decoration: line-through; color: var(--muted); }
+.tag {
+  display: inline-flex; align-items: center; height: 20px; padding: 0 8px; border-radius: 6px; font-size: 10.5px;
+  font-weight: 700; background: color-mix(in srgb, var(--primary) 12%, transparent); color: var(--primary);
+}
+.tag.amber { background: color-mix(in srgb, var(--accent) 18%, transparent); color: #b45309; }
+.tag.green { background: color-mix(in srgb, var(--good) 15%, transparent); color: #047857; }
+.tag.pink { background: rgba(236, 72, 153, 0.12); color: #be185d; }
+.sec { font-size: 11px; font-weight: 700; letter-spacing: 0.08em; text-transform: uppercase; color: var(--muted); }
+.fab.amber { background: var(--accent); box-shadow: 0 14px 28px rgba(245, 158, 11, 0.4); }
+.dark-screen { background: #0f172a; color: #fff; }
