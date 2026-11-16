@@ -1,0 +1,52 @@
+:root {
+  --bg: #0a0e27;
+  --surface: #141a3d;
+  --surface-2: #1e2652;
+  --text: #f2f4ff;
+  --muted: #8f97c4;
+  --line: rgba(255, 255, 255, 0.07);
+  --primary: #7c3aed;
+  --primary-2: #3b82f6;
+  --on-primary: #ffffff;
+  --accent: #34d399;
+  --good: #34d399;
+  --bad: #fb7185;
+  --radius: 22px;
+  --font: 'Inter', system-ui, sans-serif;
+  --display: 'Sora', 'Inter', sans-serif;
+  --shadow: none;
+}
+body.phone { background: #0a0e27; }
+.screen { background: radial-gradient(120% 60% at 80% 0%, #1a1f52 0%, #0a0e27 60%); }
+.card { border: 1px solid var(--line); }
+.card.hero { border: 0; background: linear-gradient(135deg, #7c3aed 0%, #4f46e5 55%, #3b82f6 100%); }
+.pill, .icon-btn { border: 1px solid var(--line); }
+.home-ind { background: #fff; }
+.tabbar { background: rgba(10, 14, 39, 0.96); }
+.tabbar > .on { color: #a78bfa; }
+.kpi { font-size: 40px; letter-spacing: -0.035em; }
+.h1 { letter-spacing: -0.03em; }
+.tile { background: rgba(124, 58, 237, 0.2); color: #b79cff; }
+.tile.good { background: rgba(52, 211, 153, 0.15); color: var(--good); }
+.tile.accent { background: rgba(251, 191, 36, 0.14); color: #fbbf24; }
+.badge { background: rgba(124, 58, 237, 0.22); color: #c4b5fd; }
+.toggle.on { background: var(--accent); }
+.toggle { background: #2a336b; }
+.progress { background: rgba(255, 255, 255, 0.08); }
+.progress > i { background: var(--c, linear-gradient(90deg, #7c3aed, #3b82f6)); }
+.amt { font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; }
+.amt.in { color: var(--good); }
+.bank-card {
+  position: relative; border-radius: 20px; padding: 16px; color: #fff; overflow: hidden;
+  background: linear-gradient(135deg, #7c3aed 0%, #3b82f6 100%);
+  box-shadow: 0 18px 40px rgba(59, 130, 246, 0.28);
+}
+.bank-card::after {
+  content: ''; position: absolute; right: -40px; top: -60px; width: 190px; height: 190px; border-radius: 50%;
+  background: radial-gradient(circle, rgba(255,255,255,.28), transparent 65%);
+}
+.bank-card.mint { background: linear-gradient(135deg, #0f766e 0%, #34d399 100%); box-shadow: 0 18px 40px rgba(52, 211, 153, 0.22); }
+.bank-card.night { background: linear-gradient(135deg, #1e2652 0%, #3b2a8f 100%); }
+.chip-ic { width: 34px; height: 24px; border-radius: 6px; background: linear-gradient(135deg, #fde68a, #f59e0b); opacity: .9; }
+.float-card { background: #161c44; color: var(--text); border: 1px solid rgba(255, 255, 255, 0.1); box-shadow: 0 26px 60px rgba(3, 5, 25, 0.6); }
+.float-card .muted { color: var(--muted); }

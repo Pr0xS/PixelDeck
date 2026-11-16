@@ -1,0 +1,1533 @@
+{
+  "id": "tpl-flow-productivity",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Flowly",
+  "description": "Clean, airy set for task, calendar and focus apps: pale lavender backgrounds with indigo and amber.",
+  "category": "Productivity",
+  "author": "PixelDeck",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "Flowly",
+    "brandColors": [
+      {
+        "id": "flowindigo",
+        "name": "Primary",
+        "value": "#6366F1"
+      },
+      {
+        "id": "flowamber",
+        "name": "Accent",
+        "value": "#F59E0B"
+      },
+      {
+        "id": "flowink",
+        "name": "Ink",
+        "value": "#0F172A"
+      }
+    ]
+  },
+  "assetManifest": {
+    "img_02cea4565ef65f90a3e29a92.webp": {
+      "name": "calendar.webp",
+      "mime": "image/webp"
+    },
+    "img_0b81efd1f016a80bc9c1dfda.webp": {
+      "name": "calChip.webp",
+      "mime": "image/webp"
+    },
+    "img_2cb18c1b062a15b67d54e102.webp": {
+      "name": "streak.webp",
+      "mime": "image/webp"
+    },
+    "img_331db70dd871d02abe55ea72.webp": {
+      "name": "today.webp",
+      "mime": "image/webp"
+    },
+    "img_6250545a373e1c3f697ae152.webp": {
+      "name": "capture.webp",
+      "mime": "image/webp"
+    },
+    "img_676b24a5f8ffcaf69a34ba6a.webp": {
+      "name": "streaks.webp",
+      "mime": "image/webp"
+    },
+    "img_78c0c81c99e2cbbe3f1210de.webp": {
+      "name": "focus.webp",
+      "mime": "image/webp"
+    },
+    "img_81e44ed9afd0abf1363de03e.webp": {
+      "name": "done.webp",
+      "mime": "image/webp"
+    },
+    "img_9f94f824e9e02a1015f6d872.webp": {
+      "name": "reminder.webp",
+      "mime": "image/webp"
+    },
+    "img_f3492360536a3e2881c8e424.webp": {
+      "name": "session.webp",
+      "mime": "image/webp"
+    }
+  },
+  "slideGroups": [
+    {
+      "name": "Hero",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 165,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#F8FAFC"
+              },
+              {
+                "offset": 0.5,
+                "color": "#F1F4FF"
+              },
+              {
+                "offset": 1,
+                "color": "#E7EBFF"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#6366F1",
+              "cx": 50,
+              "cy": 62,
+              "rx": 800,
+              "ry": 700,
+              "opacity": 0.2
+            },
+            {
+              "color": "#F59E0B",
+              "cx": 100,
+              "cy": 12,
+              "rx": 600,
+              "ry": 520,
+              "opacity": 0.16
+            },
+            {
+              "color": "#A78BFA",
+              "cx": 0,
+              "cy": 40,
+              "rx": 600,
+              "ry": 600,
+              "opacity": 0.16
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Brand",
+          "type": "brand",
+          "x": 96,
+          "y": 110,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "appName": "Flowly",
+          "logoSize": 72,
+          "nameColor": "{brand:flowink}",
+          "nameFontSize": 56,
+          "nameFontFamily": "Space Grotesk",
+          "nameFontWeight": 700,
+          "direction": "row",
+          "gap": 18
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 90,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Get more done,\nstress less",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 152,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -4,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1110,
+          "marks": [
+            {
+              "start": 15,
+              "end": 26,
+              "fill": "{brand:flowindigo}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Get more done,\nstress less",
+              "marks": [
+                {
+                  "start": 15,
+                  "end": 26,
+                  "fill": "{brand:flowindigo}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Tasks, calendar and focus in one calm place",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#475569",
+          "letterSpacing": 0,
+          "lineHeight": 1.28,
+          "align": "center",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Tasks, calendar and focus in one calm place"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 138,
+          "y": 860,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#4F46E5",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.28
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.6,
+          "screenshotPath": "img_331db70dd871d02abe55ea72.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_331db70dd871d02abe55ea72.webp"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Reminder card",
+          "type": "image",
+          "x": 61.19999999999999,
+          "y": 1351.2,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#4f46e5",
+            "blur": 69,
+            "offsetX": 0,
+            "offsetY": 32.199999999999996,
+            "opacity": 0.2
+          },
+          "src": "img_9f94f824e9e02a1015f6d872.webp",
+          "width": 745.1999999999999,
+          "height": 216.2,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_9f94f824e9e02a1015f6d872.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-01"
+      ]
+    },
+    {
+      "name": "Schedule",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 100,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#F8FAFC"
+              },
+              {
+                "offset": 0.5,
+                "color": "#F1F4FF"
+              },
+              {
+                "offset": 1,
+                "color": "#E7EBFF"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#6366F1",
+              "cx": 50,
+              "cy": 60,
+              "rx": 1300,
+              "ry": 800,
+              "opacity": 0.22
+            },
+            {
+              "color": "#F59E0B",
+              "cx": 12,
+              "cy": 96,
+              "rx": 700,
+              "ry": 500,
+              "opacity": 0.14
+            },
+            {
+              "color": "#A78BFA",
+              "cx": 92,
+              "cy": 10,
+              "rx": 700,
+              "ry": 600,
+              "opacity": 0.18
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 145,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Your day,\nself-organized",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 140,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -4,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1000,
+          "marks": [
+            {
+              "start": 10,
+              "end": 24,
+              "fill": "{brand:flowindigo}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Your day,\nself-organized",
+              "marks": [
+                {
+                  "start": 10,
+                  "end": 24,
+                  "fill": "{brand:flowindigo}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 195,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Time blocks that fit around your life",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#475569",
+          "letterSpacing": 0,
+          "lineHeight": 1.28,
+          "align": "center",
+          "width": 900,
+          "localeContent": {
+            "en": {
+              "text": "Time blocks that fit around your life"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Headline",
+          "type": "text",
+          "x": 1435,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Focus when\nit matters",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 140,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -4,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1000,
+          "marks": [
+            {
+              "start": 14,
+              "end": 21,
+              "fill": "{brand:flowindigo}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Focus when\nit matters",
+              "marks": [
+                {
+                  "start": 14,
+                  "end": 21,
+                  "fill": "{brand:flowindigo}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 1485,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Protect your deep work",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#475569",
+          "letterSpacing": 0,
+          "lineHeight": 1.28,
+          "align": "center",
+          "width": 900,
+          "localeContent": {
+            "en": {
+              "text": "Protect your deep work"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Phone",
+          "type": "phone",
+          "x": 792.75,
+          "y": 980,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#4F46E5",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.28
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.55,
+          "screenshotPath": "img_02cea4565ef65f90a3e29a92.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_02cea4565ef65f90a3e29a92.webp"
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Card",
+          "type": "image",
+          "x": 1843.6000000000001,
+          "y": 1226,
+          "rotation": 5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#4f46e5",
+            "blur": 57,
+            "offsetX": 0,
+            "offsetY": 26.599999999999998,
+            "opacity": 0.2
+          },
+          "src": "img_0b81efd1f016a80bc9c1dfda.webp",
+          "width": 615.6,
+          "height": 193.79999999999998,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_0b81efd1f016a80bc9c1dfda.webp"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Card",
+          "type": "image",
+          "x": 315.80000000000007,
+          "y": 1959.5599999999997,
+          "rotation": -4,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#4f46e5",
+            "blur": 58.5,
+            "offsetX": 0,
+            "offsetY": 27.3,
+            "opacity": 0.2
+          },
+          "src": "img_f3492360536a3e2881c8e424.webp",
+          "width": 631.8,
+          "height": 195.78,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_f3492360536a3e2881c8e424.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-02",
+        "slide-03"
+      ]
+    },
+    {
+      "name": "Capture",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 200,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFFFFF"
+              },
+              {
+                "offset": 0.5,
+                "color": "#F1F4FF"
+              },
+              {
+                "offset": 1,
+                "color": "#E3E8FF"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#F59E0B",
+              "cx": 90,
+              "cy": 40,
+              "rx": 700,
+              "ry": 700,
+              "opacity": 0.18
+            },
+            {
+              "color": "#6366F1",
+              "cx": 20,
+              "cy": 85,
+              "rx": 800,
+              "ry": 700,
+              "opacity": 0.2
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 145,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Capture\neverything",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 152,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -4,
+          "lineHeight": 1.02,
+          "align": "left",
+          "width": 1000,
+          "marks": [
+            {
+              "start": 8,
+              "end": 18,
+              "fill": "{brand:flowindigo}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Capture\neverything",
+              "marks": [
+                {
+                  "start": 8,
+                  "end": 18,
+                  "fill": "{brand:flowindigo}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Check chip",
+          "type": "shape",
+          "x": 110,
+          "y": 702,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 64,
+          "height": 64,
+          "fill": "{brand:flowindigo}",
+          "cornerRadius": 20
+        },
+        {
+          "id": "l3",
+          "name": "Check",
+          "type": "shape",
+          "x": 124,
+          "y": 716,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "check",
+          "width": 36,
+          "height": 36,
+          "fill": "#FFFFFF",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l4",
+          "name": "Feature",
+          "type": "text",
+          "x": 206,
+          "y": 708,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Quick add from anywhere",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 600,
+          "fill": "#0F172A",
+          "letterSpacing": 0,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 900,
+          "localeContent": {
+            "en": {
+              "text": "Quick add from anywhere"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Check chip",
+          "type": "shape",
+          "x": 110,
+          "y": 802,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 64,
+          "height": 64,
+          "fill": "{brand:flowindigo}",
+          "cornerRadius": 20
+        },
+        {
+          "id": "l6",
+          "name": "Check",
+          "type": "shape",
+          "x": 124,
+          "y": 816,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "check",
+          "width": 36,
+          "height": 36,
+          "fill": "#FFFFFF",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l7",
+          "name": "Feature",
+          "type": "text",
+          "x": 206,
+          "y": 808,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Checklists, notes and voice",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 600,
+          "fill": "#0F172A",
+          "letterSpacing": 0,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 900,
+          "localeContent": {
+            "en": {
+              "text": "Checklists, notes and voice"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Check chip",
+          "type": "shape",
+          "x": 110,
+          "y": 902,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "rect",
+          "width": 64,
+          "height": 64,
+          "fill": "{brand:flowindigo}",
+          "cornerRadius": 20
+        },
+        {
+          "id": "l9",
+          "name": "Check",
+          "type": "shape",
+          "x": 124,
+          "y": 916,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "check",
+          "width": 36,
+          "height": 36,
+          "fill": "#FFFFFF",
+          "cornerRadius": 0
+        },
+        {
+          "id": "l10",
+          "name": "Feature",
+          "type": "text",
+          "x": 206,
+          "y": 908,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Smart tags and due dates",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 600,
+          "fill": "#0F172A",
+          "letterSpacing": 0,
+          "lineHeight": 1.15,
+          "align": "left",
+          "width": 900,
+          "localeContent": {
+            "en": {
+              "text": "Smart tags and due dates"
+            }
+          }
+        },
+        {
+          "id": "l11",
+          "name": "Phone",
+          "type": "phone",
+          "x": 175,
+          "y": 1140,
+          "rotation": 5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#4F46E5",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.28
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.6,
+          "screenshotPath": "img_6250545a373e1c3f697ae152.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_6250545a373e1c3f697ae152.webp"
+            }
+          }
+        },
+        {
+          "id": "l12",
+          "name": "Card",
+          "type": "image",
+          "x": 119,
+          "y": 2177,
+          "rotation": -5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#4f46e5",
+            "blur": 67.5,
+            "offsetX": 0,
+            "offsetY": 31.5,
+            "opacity": 0.2
+          },
+          "src": "img_81e44ed9afd0abf1363de03e.webp",
+          "width": 684,
+          "height": 265.5,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_81e44ed9afd0abf1363de03e.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-04"
+      ]
+    },
+    {
+      "name": "Focus",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 180,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#EEF2FF"
+              },
+              {
+                "offset": 0.5,
+                "color": "#F8FAFC"
+              },
+              {
+                "offset": 1,
+                "color": "#EEF2FF"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#6366F1",
+              "cx": 50,
+              "cy": 66,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.26
+            },
+            {
+              "color": "#F59E0B",
+              "cx": 6,
+              "cy": 18,
+              "rx": 500,
+              "ry": 500,
+              "opacity": 0.15
+            },
+            {
+              "color": "#A78BFA",
+              "cx": 96,
+              "cy": 30,
+              "rx": 500,
+              "ry": 600,
+              "opacity": 0.18
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 90,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Find your\ndeep focus",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 152,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -4,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1110,
+          "marks": [
+            {
+              "start": 10,
+              "end": 20,
+              "fill": "{brand:flowindigo}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Find your\ndeep focus",
+              "marks": [
+                {
+                  "start": 10,
+                  "end": 20,
+                  "fill": "{brand:flowindigo}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "A timer, a task and zero distractions",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#475569",
+          "letterSpacing": 0,
+          "lineHeight": 1.28,
+          "align": "center",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "A timer, a task and zero distractions"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 178.5,
+          "y": 900,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#4F46E5",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.28
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.7,
+          "screenshotPath": "img_78c0c81c99e2cbbe3f1210de.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_78c0c81c99e2cbbe3f1210de.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-05"
+      ]
+    },
+    {
+      "name": "Streaks",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 155,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFFFFF"
+              },
+              {
+                "offset": 0.5,
+                "color": "#F4F2FF"
+              },
+              {
+                "offset": 1,
+                "color": "#FEF6E4"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#F59E0B",
+              "cx": 88,
+              "cy": 92,
+              "rx": 800,
+              "ry": 700,
+              "opacity": 0.2
+            },
+            {
+              "color": "#6366F1",
+              "cx": 10,
+              "cy": 30,
+              "rx": 700,
+              "ry": 700,
+              "opacity": 0.18
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 90,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Build streaks\nthat stick",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 144,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": -4,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1110,
+          "marks": [
+            {
+              "start": 14,
+              "end": 24,
+              "fill": "{brand:flowindigo}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Build streaks\nthat stick",
+              "marks": [
+                {
+                  "start": 14,
+                  "end": 24,
+                  "fill": "{brand:flowindigo}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 620,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "See your progress grow, day after day",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "#475569",
+          "letterSpacing": 0,
+          "lineHeight": 1.28,
+          "align": "center",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "See your progress grow, day after day"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 33.5,
+          "y": 880,
+          "rotation": -4,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#4F46E5",
+            "blur": 90,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.28
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.7,
+          "screenshotPath": "img_676b24a5f8ffcaf69a34ba6a.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_676b24a5f8ffcaf69a34ba6a.webp"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Card",
+          "type": "image",
+          "x": 485.80000000000007,
+          "y": 2139.56,
+          "rotation": 6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#4f46e5",
+            "blur": 58.5,
+            "offsetX": 0,
+            "offsetY": 27.3,
+            "opacity": 0.2
+          },
+          "src": "img_2cb18c1b062a15b67d54e102.webp",
+          "width": 631.8,
+          "height": 195.78,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_2cb18c1b062a15b67d54e102.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-06"
+      ]
+    },
+    {
+      "name": "Closer",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 170,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#4F46E5"
+              },
+              {
+                "offset": 0.5,
+                "color": "#3B3FC4"
+              },
+              {
+                "offset": 1,
+                "color": "#1E1B6B"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#A78BFA",
+              "cx": 80,
+              "cy": 20,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.45
+            },
+            {
+              "color": "#F59E0B",
+              "cx": 6,
+              "cy": 92,
+              "rx": 700,
+              "ry": 600,
+              "opacity": 0.3
+            },
+            {
+              "color": "#818CF8",
+              "cx": 20,
+              "cy": 60,
+              "rx": 700,
+              "ry": 700,
+              "opacity": 0.3
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Star 1",
+          "type": "shape",
+          "x": 345,
+          "y": 270,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 96,
+          "height": 96,
+          "fill": "{brand:flowamber}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l2",
+          "name": "Star 2",
+          "type": "shape",
+          "x": 461,
+          "y": 270,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 96,
+          "height": 96,
+          "fill": "{brand:flowamber}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l3",
+          "name": "Star 3",
+          "type": "shape",
+          "x": 577,
+          "y": 270,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 96,
+          "height": 96,
+          "fill": "{brand:flowamber}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l4",
+          "name": "Star 4",
+          "type": "shape",
+          "x": 693,
+          "y": 270,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 96,
+          "height": 96,
+          "fill": "{brand:flowamber}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l5",
+          "name": "Star 5",
+          "type": "shape",
+          "x": 809,
+          "y": 270,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 96,
+          "height": 96,
+          "fill": "{brand:flowamber}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.48
+        },
+        {
+          "id": "l6",
+          "name": "Headline",
+          "type": "text",
+          "x": 90,
+          "y": 450,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Find your\nflow today",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 152,
+          "fontWeight": 700,
+          "fill": "#FFFFFF",
+          "letterSpacing": -4,
+          "lineHeight": 1.02,
+          "align": "center",
+          "width": 1110,
+          "localeContent": {
+            "en": {
+              "text": "Find your\nflow today"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 800,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Join thousands getting more done",
+          "fontFamily": "Inter",
+          "fontSize": 46,
+          "fontWeight": 500,
+          "fill": "rgba(238,242,255,0.82)",
+          "letterSpacing": 0,
+          "lineHeight": 1.28,
+          "align": "center",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Join thousands getting more done"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "CTA",
+          "type": "shape",
+          "x": 325,
+          "y": 1040,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 50,
+            "offsetX": 0,
+            "offsetY": 24,
+            "opacity": 0.3
+          },
+          "shapeType": "rect",
+          "width": 640,
+          "height": 150,
+          "fill": "{brand:flowamber}",
+          "cornerRadius": 75
+        },
+        {
+          "id": "l9",
+          "name": "CTA label",
+          "type": "text",
+          "x": 325,
+          "y": 1078,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Start free today",
+          "fontFamily": "Space Grotesk",
+          "fontSize": 58,
+          "fontWeight": 700,
+          "fill": "#0F172A",
+          "letterSpacing": 0,
+          "lineHeight": 1.15,
+          "align": "center",
+          "width": 640,
+          "localeContent": {
+            "en": {
+              "text": "Start free today"
+            }
+          }
+        },
+        {
+          "id": "l10",
+          "name": "Phone",
+          "type": "phone",
+          "x": 157.5,
+          "y": 1400,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#0B0A3A",
+            "blur": 100,
+            "offsetX": 0,
+            "offsetY": 50,
+            "opacity": 0.5
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.5,
+          "screenshotPath": "img_02cea4565ef65f90a3e29a92.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_02cea4565ef65f90a3e29a92.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-07"
+      ]
+    }
+  ]
+}

@@ -1,0 +1,62 @@
+/* Demo app inside the phones ("Aurora", a habit tracker) + tour diagrams. */
+:root {
+  --bg: #f6f4ff;
+  --surface: #ffffff;
+  --surface-2: #ece8fb;
+  --text: #17132b;
+  --muted: #7d789a;
+  --line: rgba(23, 19, 43, 0.08);
+  --primary: #7c5cf6;
+  --primary-2: #ec4899;
+  --on-primary: #ffffff;
+  --accent: #f59e0b;
+  --good: #17b287;
+  --radius: 24px;
+  --font: 'Inter', system-ui, sans-serif;
+  --display: 'Sora', 'Inter', sans-serif;
+  --shadow: 0 10px 28px rgba(60, 40, 140, 0.1);
+}
+
+/* ── Photo-like tiles used as image layers on the pano ── */
+.photo { width: 100%; height: 100%; display: flex; flex-direction: column; justify-content: flex-end; padding: 22px; color: #fff; position: relative; overflow: hidden; }
+.photo .big { position: absolute; right: 8px; top: 2px; font-size: 150px; line-height: 1; filter: drop-shadow(0 12px 18px rgba(0, 0, 0, 0.25)); }
+.photo .cap { font-family: var(--display); font-weight: 700; font-size: 26px; letter-spacing: -0.02em; position: relative; }
+.photo .sub { font-size: 15px; font-weight: 600; opacity: 0.85; position: relative; }
+
+/* ── Diagrams (transparent art placed on dark tour slides) ── */
+.dg { width: 100%; height: 100%; display: flex; align-items: center; justify-content: center; gap: 18px; font-family: var(--font); color: #fff; }
+.dg .box {
+  border-radius: 22px; background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(255, 255, 255, 0.16);
+  display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 6px; text-align: center;
+}
+.dg .name { font-family: var(--display); font-weight: 700; font-size: 22px; letter-spacing: -0.01em; }
+.dg .note { font-size: 13.5px; font-weight: 600; color: rgba(255, 255, 255, 0.62); }
+.dg .tag { font-size: 11px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; padding: 4px 9px; border-radius: 999px; }
+.dg .violet { border-color: rgba(167, 139, 250, 0.75); background: rgba(124, 92, 246, 0.2); }
+.dg .amber { border-color: rgba(245, 158, 11, 0.8); background: rgba(245, 158, 11, 0.14); }
+.dg .teal { border-color: rgba(34, 211, 197, 0.8); background: rgba(34, 211, 197, 0.13); }
+.dg .t-violet { background: rgba(124, 92, 246, 0.35); color: #d6ccff; }
+.dg .t-amber { background: rgba(245, 158, 11, 0.25); color: #fcd27a; }
+.dg .t-teal { background: rgba(34, 211, 197, 0.22); color: #8ff0e6; }
+.dg .arrow { font-family: 'Material Symbols Rounded'; font-size: 34px; color: rgba(255, 255, 255, 0.5); flex: none; }
+.dg .mini { border-radius: 9px; background: linear-gradient(160deg, #8b6cf7, #ec4899); }
+
+/* Localization table illustration */
+.tbl { width: 100%; height: 100%; padding: 14px; }
+.tbl .sheet { width: 100%; height: 100%; border-radius: 22px; background: #1b1929; border: 1.5px solid rgba(255, 255, 255, 0.14); overflow: hidden; color: #e9e8f4; display: flex; flex-direction: column; }
+.tbl .r { display: grid; grid-template-columns: 0.82fr 1fr 1fr; border-bottom: 1px solid rgba(255, 255, 255, 0.08); flex: 1; }
+.tbl .r:last-child { border-bottom: 0; }
+.tbl .r > div { padding: 0 12px; white-space: nowrap; display: flex; align-items: center; font-size: 14.5px; font-weight: 500; border-right: 1px solid rgba(255, 255, 255, 0.08); }
+.tbl .r > div:last-child { border-right: 0; }
+.tbl .head > div { font-size: 11.5px; font-weight: 800; letter-spacing: 0.1em; text-transform: uppercase; color: rgba(255, 255, 255, 0.55); background: rgba(255, 255, 255, 0.04); gap: 7px; }
+.tbl .k { color: rgba(255, 255, 255, 0.55); font-weight: 600; }
+.tbl .es { color: #8ff0e6; }
+.tbl .dot { width: 8px; height: 8px; border-radius: 50%; flex: none; }
+.tbl .ai { margin-left: auto; font-size: 10.5px; font-weight: 800; padding: 3px 7px; border-radius: 999px; background: rgba(124, 92, 246, 0.35); color: #d6ccff; }
+
+/* Export matrix illustration */
+.mx { width: 100%; height: 100%; display: grid; grid-template-columns: 86px 1fr 1fr; grid-template-rows: 44px 1fr 1fr; gap: 12px; padding: 10px; color: #fff; }
+.mx .h { display: flex; align-items: center; justify-content: center; font-size: 13px; font-weight: 800; letter-spacing: 0.08em; text-transform: uppercase; border-radius: 12px; }
+.mx .cell { border-radius: 18px; background: rgba(255, 255, 255, 0.06); border: 1.5px solid rgba(255, 255, 255, 0.14); display: flex; align-items: center; justify-content: center; gap: 7px; }
+.mx .png { width: 26px; height: 54px; border-radius: 6px; background: linear-gradient(160deg, #8b6cf7, #ec4899); }
+.mx .more { font-size: 13px; font-weight: 700; color: rgba(255, 255, 255, 0.6); }

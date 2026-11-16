@@ -101,10 +101,14 @@ jobs:
       - run: npm ci
       - run: npx playwright install chromium --with-deps
       - run: npm run build
+      # A gallery template references its images by asset key; the files in
+      # public/templates/assets are named by that key, so the CLI resolves them
+      # from the folder and fails if any image is missing.
       - name: Export sample project
         run: |
           node cli/index.mjs export \
-            --project=public/templates/ledger-dark.template.json \
+            --project=public/templates/pulse-fitness.template.json \
+            --screenshots=public/templates/assets \
             --output=/tmp/pixeldeck-smoke
       - name: Assert PNGs were produced
         run: test "$(find /tmp/pixeldeck-smoke -name '*.png' | wc -l)" -gt 0

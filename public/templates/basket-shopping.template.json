@@ -1,0 +1,1461 @@
+{
+  "id": "tpl-basket-shopping",
+  "kind": "template",
+  "schemaVersion": 1,
+  "name": "Basket",
+  "description": "Fresh, warm editorial set for grocery and food delivery apps: cream, deep green and tomato with serif headlines.",
+  "category": "Shopping & Food",
+  "author": "PixelDeck",
+  "settings": {
+    "defaultSlideWidth": 1290,
+    "defaultSlideHeight": 2796,
+    "defaultLocale": "en",
+    "brandName": "Basket",
+    "brandColors": [
+      {
+        "id": "basketgreen",
+        "name": "Primary green",
+        "value": "#14532D"
+      },
+      {
+        "id": "baskettomato",
+        "name": "Accent tomato",
+        "value": "#F0522B"
+      },
+      {
+        "id": "basketcream",
+        "name": "Cream",
+        "value": "#FFF8EE"
+      },
+      {
+        "id": "basketgold",
+        "name": "Star gold",
+        "value": "#FFC83D"
+      }
+    ]
+  },
+  "assetManifest": {
+    "img_0ba08301e8874d499120df84.webp": {
+      "name": "basket.webp",
+      "mime": "image/webp"
+    },
+    "img_11e48af8b125916cfeceb6ba.webp": {
+      "name": "cherry.webp",
+      "mime": "image/webp"
+    },
+    "img_1b27aa841e8eaf646dcc6e4c.webp": {
+      "name": "chip.webp",
+      "mime": "image/webp"
+    },
+    "img_215f4c25b2a796b698278374.webp": {
+      "name": "home.webp",
+      "mime": "image/webp"
+    },
+    "img_327dff1fe307cc37659a033d.webp": {
+      "name": "confirmed.webp",
+      "mime": "image/webp"
+    },
+    "img_3eda7937e2c86948c2f69b1f.webp": {
+      "name": "recipes.webp",
+      "mime": "image/webp"
+    },
+    "img_5161fb656ce1a1db68e2dfda.webp": {
+      "name": "track.webp",
+      "mime": "image/webp"
+    },
+    "img_77e514cdbab3f6bf51c0c4d1.webp": {
+      "name": "detail.webp",
+      "mime": "image/webp"
+    },
+    "img_81b41270a47fd32c3ae4d4cb.webp": {
+      "name": "cold.webp",
+      "mime": "image/webp"
+    },
+    "img_a66338239f27e3c7c789833f.webp": {
+      "name": "chip2.webp",
+      "mime": "image/webp"
+    },
+    "img_e3c255c1dda61bc8044ba61d.webp": {
+      "name": "free.webp",
+      "mime": "image/webp"
+    },
+    "img_f55866185dc141c1c7af094a.webp": {
+      "name": "browse.webp",
+      "mime": "image/webp"
+    }
+  },
+  "slideGroups": [
+    {
+      "name": "Hero",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 165,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFF8EE"
+              },
+              {
+                "offset": 0.5,
+                "color": "#FFEFD9"
+              },
+              {
+                "offset": 1,
+                "color": "#FFE6CC"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#FFB27A",
+              "cx": 12,
+              "cy": 70,
+              "rx": 800,
+              "ry": 800,
+              "opacity": 0.4,
+              "blur": 160
+            },
+            {
+              "color": "#BFE8CB",
+              "cx": 95,
+              "cy": 30,
+              "rx": 700,
+              "ry": 800,
+              "opacity": 0.5,
+              "blur": 160
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Brand",
+          "type": "brand",
+          "x": 96,
+          "y": 104,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "appName": "Basket",
+          "logoSize": 70,
+          "nameColor": "{brand:basketgreen}",
+          "nameFontSize": 56,
+          "nameFontFamily": "Fraunces",
+          "nameFontWeight": 700,
+          "direction": "row",
+          "gap": 18
+        },
+        {
+          "id": "l2",
+          "name": "Headline",
+          "type": "text",
+          "x": 90,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Fresh groceries\nin 20 minutes",
+          "fontFamily": "Fraunces",
+          "fontSize": 134,
+          "fontWeight": 700,
+          "fill": "{brand:basketgreen}",
+          "letterSpacing": -2,
+          "lineHeight": 1.04,
+          "align": "center",
+          "width": 1110,
+          "marks": [
+            {
+              "start": 19,
+              "end": 29,
+              "fill": "{brand:baskettomato}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Fresh groceries\nin 20 minutes",
+              "marks": [
+                {
+                  "start": 19,
+                  "end": 29,
+                  "fill": "{brand:baskettomato}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 650,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Delivered to your door, fast",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "fontWeight": 500,
+          "fill": "#55655A",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Delivered to your door, fast"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Phone",
+          "type": "phone",
+          "x": 157.5,
+          "y": 900,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 120,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.3
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.5,
+          "screenshotPath": "img_215f4c25b2a796b698278374.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_215f4c25b2a796b698278374.webp"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Card",
+          "type": "image",
+          "x": 89.76029904648931,
+          "y": 814.0964146415184,
+          "rotation": -6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 40,
+            "offsetX": 0,
+            "offsetY": 24,
+            "opacity": 0.2
+          },
+          "src": "img_e3c255c1dda61bc8044ba61d.webp",
+          "width": 536.8000000000001,
+          "height": 140.8,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_e3c255c1dda61bc8044ba61d.webp"
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Card",
+          "type": "image",
+          "x": 574.5247672897644,
+          "y": 2194.3778405890052,
+          "rotation": 5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 40,
+            "offsetX": 0,
+            "offsetY": 24,
+            "opacity": 0.2
+          },
+          "src": "img_a66338239f27e3c7c789833f.webp",
+          "width": 653.6,
+          "height": 167.96,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_a66338239f27e3c7c789833f.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-01"
+      ]
+    },
+    {
+      "name": "Browse",
+      "numSlides": 2,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 100,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFF8EE"
+              },
+              {
+                "offset": 0.5,
+                "color": "#FFF1DC"
+              },
+              {
+                "offset": 1,
+                "color": "#EAF6EB"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#FFC9A0",
+              "cx": 22,
+              "cy": 85,
+              "rx": 900,
+              "ry": 800,
+              "opacity": 0.45,
+              "blur": 160
+            },
+            {
+              "color": "#BFE8CB",
+              "cx": 80,
+              "cy": 20,
+              "rx": 1000,
+              "ry": 800,
+              "opacity": 0.5,
+              "blur": 160
+            },
+            {
+              "color": "#E6DDF9",
+              "cx": 50,
+              "cy": 55,
+              "rx": 700,
+              "ry": 600,
+              "opacity": 0.4,
+              "blur": 160
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 96,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Everything\nyou love",
+          "fontFamily": "Fraunces",
+          "fontSize": 134,
+          "fontWeight": 700,
+          "fill": "{brand:basketgreen}",
+          "letterSpacing": -2,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1000,
+          "marks": [
+            {
+              "start": 11,
+              "end": 19,
+              "fill": "{brand:baskettomato}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Everything\nyou love",
+              "marks": [
+                {
+                  "start": 11,
+                  "end": 19,
+                  "fill": "{brand:baskettomato}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 96,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Thousands of fresh picks, one tap each",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "fontWeight": 500,
+          "fill": "#55655A",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Thousands of fresh picks, one tap each"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Headline",
+          "type": "text",
+          "x": 1386,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Right at\nyour door",
+          "fontFamily": "Fraunces",
+          "fontSize": 134,
+          "fontWeight": 700,
+          "fill": "{brand:basketgreen}",
+          "letterSpacing": -2,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1000,
+          "marks": [
+            {
+              "start": 9,
+              "end": 18,
+              "fill": "{brand:baskettomato}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Right at\nyour door",
+              "marks": [
+                {
+                  "start": 9,
+                  "end": 18,
+                  "fill": "{brand:baskettomato}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 1386,
+          "y": 640,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Delivered cold and carefully packed",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "fontWeight": 500,
+          "fill": "#55655A",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Delivered cold and carefully packed"
+            }
+          }
+        },
+        {
+          "id": "l5",
+          "name": "Phone",
+          "type": "phone",
+          "x": 763.5,
+          "y": 940,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 120,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.3
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.7,
+          "screenshotPath": "img_f55866185dc141c1c7af094a.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_f55866185dc141c1c7af094a.webp"
+            }
+          }
+        },
+        {
+          "id": "l6",
+          "name": "Card",
+          "type": "image",
+          "x": 1706.3233237241247,
+          "y": 1529.5407971252237,
+          "rotation": 6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 40,
+            "offsetX": 0,
+            "offsetY": 24,
+            "opacity": 0.2
+          },
+          "src": "img_1b27aa841e8eaf646dcc6e4c.webp",
+          "width": 791.1999999999999,
+          "height": 203.32,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_1b27aa841e8eaf646dcc6e4c.webp"
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "Card",
+          "type": "image",
+          "x": 132.15760408134528,
+          "y": 1203.1371508097998,
+          "rotation": -7,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 40,
+            "offsetX": 0,
+            "offsetY": 24,
+            "opacity": 0.2
+          },
+          "src": "img_11e48af8b125916cfeceb6ba.webp",
+          "width": 469.2,
+          "height": 653.1999999999999,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_11e48af8b125916cfeceb6ba.webp"
+            }
+          }
+        },
+        {
+          "id": "l8",
+          "name": "Card",
+          "type": "image",
+          "x": 173.13394107235882,
+          "y": 2204.066973313585,
+          "rotation": 5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 40,
+            "offsetX": 0,
+            "offsetY": 24,
+            "opacity": 0.2
+          },
+          "src": "img_e3c255c1dda61bc8044ba61d.webp",
+          "width": 536.8000000000001,
+          "height": 140.8,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_e3c255c1dda61bc8044ba61d.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-02",
+        "slide-03"
+      ]
+    },
+    {
+      "name": "Deals",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 200,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFF8EE"
+              },
+              {
+                "offset": 0.5,
+                "color": "#FFF3D6"
+              },
+              {
+                "offset": 1,
+                "color": "#FFE3C8"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#FFE08A",
+              "cx": 85,
+              "cy": 55,
+              "rx": 800,
+              "ry": 800,
+              "opacity": 0.5,
+              "blur": 160
+            },
+            {
+              "color": "#FFB39A",
+              "cx": 10,
+              "cy": 92,
+              "rx": 700,
+              "ry": 700,
+              "opacity": 0.35,
+              "blur": 160
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 96,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Deals picked\nfor you",
+          "fontFamily": "Fraunces",
+          "fontSize": 134,
+          "fontWeight": 700,
+          "fill": "{brand:basketgreen}",
+          "letterSpacing": -2,
+          "lineHeight": 1.04,
+          "align": "left",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 13,
+              "end": 20,
+              "fill": "{brand:baskettomato}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Deals picked\nfor you",
+              "marks": [
+                {
+                  "start": 13,
+                  "end": 20,
+                  "fill": "{brand:baskettomato}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 96,
+          "y": 650,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Fresh savings on your favourites",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "fontWeight": 500,
+          "fill": "#55655A",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "left",
+          "width": 900,
+          "localeContent": {
+            "en": {
+              "text": "Fresh savings on your favourites"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 193,
+          "y": 1010,
+          "rotation": -7,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 120,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.3
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.6,
+          "screenshotPath": "img_77e514cdbab3f6bf51c0c4d1.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_77e514cdbab3f6bf51c0c4d1.webp"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Card",
+          "type": "image",
+          "x": 610.4633984857471,
+          "y": 1222.4766934648442,
+          "rotation": 6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 40,
+            "offsetX": 0,
+            "offsetY": 24,
+            "opacity": 0.2
+          },
+          "src": "img_1b27aa841e8eaf646dcc6e4c.webp",
+          "width": 602,
+          "height": 154.70000000000002,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_1b27aa841e8eaf646dcc6e4c.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-04"
+      ]
+    },
+    {
+      "name": "Checkout",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 160,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#FFF8EE"
+              },
+              {
+                "offset": 0.5,
+                "color": "#FFEEDC"
+              },
+              {
+                "offset": 1,
+                "color": "#F8E3D0"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#FFB27A",
+              "cx": 50,
+              "cy": 70,
+              "rx": 1000,
+              "ry": 800,
+              "opacity": 0.35,
+              "blur": 160
+            },
+            {
+              "color": "#CDEBD7",
+              "cx": 90,
+              "cy": 12,
+              "rx": 700,
+              "ry": 700,
+              "opacity": 0.5,
+              "blur": 160
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 90,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Checkout in\ntwo taps",
+          "fontFamily": "Fraunces",
+          "fontSize": 134,
+          "fontWeight": 700,
+          "fill": "{brand:basketgreen}",
+          "letterSpacing": -2,
+          "lineHeight": 1.04,
+          "align": "center",
+          "width": 1110,
+          "marks": [
+            {
+              "start": 12,
+              "end": 20,
+              "fill": "{brand:baskettomato}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Checkout in\ntwo taps",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 20,
+                  "fill": "{brand:baskettomato}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 145,
+          "y": 650,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Pick a slot, tap once, and you are done",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "fontWeight": 500,
+          "fill": "#55655A",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "center",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Pick a slot, tap once, and you are done"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 273,
+          "y": 960,
+          "rotation": 3,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 120,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.3
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.6,
+          "screenshotPath": "img_0ba08301e8874d499120df84.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_0ba08301e8874d499120df84.webp"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Card",
+          "type": "image",
+          "x": 60.98716055084873,
+          "y": 1572.5591502796917,
+          "rotation": -5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 50,
+            "offsetX": 0,
+            "offsetY": 30,
+            "opacity": 0.25
+          },
+          "src": "img_327dff1fe307cc37659a033d.webp",
+          "width": 842.4,
+          "height": 271.44,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_327dff1fe307cc37659a033d.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-05"
+      ]
+    },
+    {
+      "name": "Tracking",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 150,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#EAF6EB"
+              },
+              {
+                "offset": 0.5,
+                "color": "#FFF8EE"
+              },
+              {
+                "offset": 1,
+                "color": "#FFF1DC"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#BFE8CB",
+              "cx": 15,
+              "cy": 60,
+              "rx": 900,
+              "ry": 900,
+              "opacity": 0.55,
+              "blur": 160
+            },
+            {
+              "color": "#FFC9A0",
+              "cx": 90,
+              "cy": 90,
+              "rx": 800,
+              "ry": 700,
+              "opacity": 0.45,
+              "blur": 160
+            }
+          ],
+          "noise": 0.04
+        },
+        {
+          "id": "l1",
+          "name": "Headline",
+          "type": "text",
+          "x": 94,
+          "y": 300,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Track it to\nyour door",
+          "fontFamily": "Fraunces",
+          "fontSize": 134,
+          "fontWeight": 700,
+          "fill": "{brand:basketgreen}",
+          "letterSpacing": -2,
+          "lineHeight": 1.04,
+          "align": "right",
+          "width": 1100,
+          "marks": [
+            {
+              "start": 12,
+              "end": 21,
+              "fill": "{brand:baskettomato}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Track it to\nyour door",
+              "marks": [
+                {
+                  "start": 12,
+                  "end": 21,
+                  "fill": "{brand:baskettomato}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l2",
+          "name": "Subtitle",
+          "type": "text",
+          "x": 194,
+          "y": 650,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Follow your courier live, minute by minute",
+          "fontFamily": "Inter",
+          "fontSize": 50,
+          "fontWeight": 500,
+          "fill": "#55655A",
+          "letterSpacing": 0,
+          "lineHeight": 1.25,
+          "align": "right",
+          "width": 1000,
+          "localeContent": {
+            "en": {
+              "text": "Follow your courier live, minute by minute"
+            }
+          }
+        },
+        {
+          "id": "l3",
+          "name": "Phone",
+          "type": "phone",
+          "x": 93,
+          "y": 1000,
+          "rotation": 6,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 120,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.3
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.6,
+          "screenshotPath": "img_5161fb656ce1a1db68e2dfda.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_5161fb656ce1a1db68e2dfda.webp"
+            }
+          }
+        },
+        {
+          "id": "l4",
+          "name": "Card",
+          "type": "image",
+          "x": 571.8752327102357,
+          "y": 1519.0578405890055,
+          "rotation": -5,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#8A4B10",
+            "blur": 40,
+            "offsetX": 0,
+            "offsetY": 24,
+            "opacity": 0.2
+          },
+          "src": "img_81b41270a47fd32c3ae4d4cb.webp",
+          "width": 653.6,
+          "height": 178.6,
+          "cornerRadius": 0,
+          "localeContent": {
+            "en": {
+              "src": "img_81b41270a47fd32c3ae4d4cb.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-06"
+      ]
+    },
+    {
+      "name": "Closer",
+      "numSlides": 1,
+      "slideWidth": 1290,
+      "slideHeight": 2796,
+      "layers": [
+        {
+          "id": "l0",
+          "name": "Background",
+          "type": "background",
+          "x": 0,
+          "y": 0,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": true,
+          "fill": {
+            "type": "linear",
+            "angle": 170,
+            "stops": [
+              {
+                "offset": 0,
+                "color": "#14532D"
+              },
+              {
+                "offset": 0.5,
+                "color": "#0F4224"
+              },
+              {
+                "offset": 1,
+                "color": "#0B3319"
+              }
+            ]
+          },
+          "accents": [
+            {
+              "color": "#2F9E5B",
+              "cx": 50,
+              "cy": 38,
+              "rx": 1000,
+              "ry": 800,
+              "opacity": 0.4,
+              "blur": 180
+            },
+            {
+              "color": "#F0522B",
+              "cx": 92,
+              "cy": 92,
+              "rx": 700,
+              "ry": 700,
+              "opacity": 0.28,
+              "blur": 180
+            }
+          ],
+          "noise": 0.05
+        },
+        {
+          "id": "l1",
+          "name": "Star 1",
+          "type": "shape",
+          "x": 335,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 100,
+          "height": 100,
+          "fill": "{brand:basketgold}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l2",
+          "name": "Star 2",
+          "type": "shape",
+          "x": 455,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 100,
+          "height": 100,
+          "fill": "{brand:basketgold}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l3",
+          "name": "Star 3",
+          "type": "shape",
+          "x": 575,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 100,
+          "height": 100,
+          "fill": "{brand:basketgold}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l4",
+          "name": "Star 4",
+          "type": "shape",
+          "x": 695,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 100,
+          "height": 100,
+          "fill": "{brand:basketgold}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l5",
+          "name": "Star 5",
+          "type": "shape",
+          "x": 815,
+          "y": 230,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shapeType": "star",
+          "width": 100,
+          "height": 100,
+          "fill": "{brand:basketgold}",
+          "cornerRadius": 0,
+          "starPoints": 5,
+          "starInnerRatio": 0.45
+        },
+        {
+          "id": "l6",
+          "name": "Headline",
+          "type": "text",
+          "x": 90,
+          "y": 400,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Loved by\n1M+ shoppers",
+          "fontFamily": "Fraunces",
+          "fontSize": 134,
+          "fontWeight": 700,
+          "fill": "{brand:basketcream}",
+          "letterSpacing": -2,
+          "lineHeight": 1.04,
+          "align": "center",
+          "width": 1110,
+          "marks": [
+            {
+              "start": 9,
+              "end": 21,
+              "fill": "{brand:basketgold}"
+            }
+          ],
+          "localeContent": {
+            "en": {
+              "text": "Loved by\n1M+ shoppers",
+              "marks": [
+                {
+                  "start": 9,
+                  "end": 21,
+                  "fill": "{brand:basketgold}"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "id": "l7",
+          "name": "CTA",
+          "type": "shape",
+          "x": 325,
+          "y": 780,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 50,
+            "offsetX": 0,
+            "offsetY": 24,
+            "opacity": 0.3
+          },
+          "shapeType": "rect",
+          "width": 640,
+          "height": 132,
+          "fill": "{brand:baskettomato}",
+          "cornerRadius": 66
+        },
+        {
+          "id": "l8",
+          "name": "CTA label",
+          "type": "text",
+          "x": 325,
+          "y": 780,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "text": "Start shopping",
+          "fontFamily": "Inter",
+          "fontSize": 54,
+          "fontWeight": 700,
+          "fill": "#FFFFFF",
+          "letterSpacing": 0,
+          "lineHeight": 1.15,
+          "align": "center",
+          "width": 640,
+          "height": 132,
+          "verticalAlign": "middle",
+          "localeContent": {
+            "en": {
+              "text": "Start shopping"
+            }
+          }
+        },
+        {
+          "id": "l9",
+          "name": "Phone",
+          "type": "phone",
+          "x": 157.5,
+          "y": 1130,
+          "rotation": 0,
+          "opacity": 1,
+          "visible": true,
+          "locked": false,
+          "shadow": {
+            "color": "#000000",
+            "blur": 120,
+            "offsetX": 0,
+            "offsetY": 60,
+            "opacity": 0.45
+          },
+          "model": "iphone-16-pro",
+          "scale": 2.5,
+          "screenshotPath": "img_3eda7937e2c86948c2f69b1f.webp",
+          "screenshotFit": "cover",
+          "screenshotOffsetX": 0,
+          "screenshotOffsetY": 0,
+          "showStatusBar": true,
+          "statusBarTheme": "light",
+          "statusBarBg": "transparent",
+          "statusBarColor": "#000000",
+          "localeContent": {
+            "en": {
+              "screenshotPath": "img_3eda7937e2c86948c2f69b1f.webp"
+            }
+          }
+        }
+      ],
+      "slideNames": [
+        "slide-07"
+      ]
+    }
+  ]
+}

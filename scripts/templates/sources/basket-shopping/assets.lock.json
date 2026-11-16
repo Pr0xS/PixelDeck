@@ -1,0 +1,176 @@
+{
+  "home": {
+    "hash": "efc9aa71b0ee3d54",
+    "file": "img_215f4c25b2a796b698278374.webp",
+    "bytes": 111684,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "browse": {
+    "hash": "bc3ae6506bba5c6e",
+    "file": "img_f55866185dc141c1c7af094a.webp",
+    "bytes": 91968,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "detail": {
+    "hash": "4865cd536fcdb107",
+    "file": "img_77e514cdbab3f6bf51c0c4d1.webp",
+    "bytes": 67284,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "basket": {
+    "hash": "55114f39c84e9af0",
+    "file": "img_0ba08301e8874d499120df84.webp",
+    "bytes": 76810,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "track": {
+    "hash": "daef711b822ea350",
+    "file": "img_5161fb656ce1a1db68e2dfda.webp",
+    "bytes": 45700,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "recipes": {
+    "hash": "01b827594cf4bf04",
+    "file": "img_3eda7937e2c86948c2f69b1f.webp",
+    "bytes": 86510,
+    "crop": {
+      "dx": 0,
+      "dy": 0,
+      "w": 400,
+      "h": 902
+    }
+  },
+  "cold": {
+    "hash": "2a920fc7424af56f",
+    "file": "img_81b41270a47fd32c3ae4d4cb.webp",
+    "bytes": 12772,
+    "crop": {
+      "dx": 28,
+      "dy": 10,
+      "w": 344,
+      "h": 94
+    },
+    "shadow": {
+      "color": "#785014",
+      "opacity": 0.22,
+      "blur": 40,
+      "offsetX": 0,
+      "offsetY": 18
+    }
+  },
+  "chip": {
+    "hash": "b57ba35d7803d62b",
+    "file": "img_1b27aa841e8eaf646dcc6e4c.webp",
+    "bytes": 12386,
+    "crop": {
+      "dx": 28,
+      "dy": 12.8,
+      "w": 344,
+      "h": 88.4
+    },
+    "shadow": {
+      "color": "#785014",
+      "opacity": 0.22,
+      "blur": 40,
+      "offsetX": 0,
+      "offsetY": 18
+    }
+  },
+  "chip2": {
+    "hash": "0419a6d444c938a9",
+    "file": "img_a66338239f27e3c7c789833f.webp",
+    "bytes": 11006,
+    "crop": {
+      "dx": 28,
+      "dy": 12.8,
+      "w": 344,
+      "h": 88.4
+    },
+    "shadow": {
+      "color": "#785014",
+      "opacity": 0.22,
+      "blur": 40,
+      "offsetX": 0,
+      "offsetY": 18
+    }
+  },
+  "free": {
+    "hash": "681fc1a0b0f5482e",
+    "file": "img_e3c255c1dda61bc8044ba61d.webp",
+    "bytes": 9258,
+    "crop": {
+      "dx": 28,
+      "dy": 20,
+      "w": 244,
+      "h": 64
+    },
+    "shadow": {
+      "color": "#f0522b",
+      "opacity": 0.38,
+      "blur": 34,
+      "offsetX": 0,
+      "offsetY": 16
+    }
+  },
+  "confirmed": {
+    "hash": "244230f36bcad637",
+    "file": "img_327dff1fe307cc37659a033d.webp",
+    "bytes": 12374,
+    "crop": {
+      "dx": 28,
+      "dy": 4.8,
+      "w": 324,
+      "h": 104.4
+    },
+    "shadow": {
+      "color": "#785014",
+      "opacity": 0.22,
+      "blur": 40,
+      "offsetX": 0,
+      "offsetY": 18
+    }
+  },
+  "cherry": {
+    "hash": "edcfba068dea15f9",
+    "file": "img_11e48af8b125916cfeceb6ba.webp",
+    "bytes": 19474,
+    "crop": {
+      "dx": 28,
+      "dy": 10,
+      "w": 204,
+      "h": 284
+    },
+    "shadow": {
+      "color": "#785014",
+      "opacity": 0.22,
+      "blur": 40,
+      "offsetX": 0,
+      "offsetY": 18
+    }
+  }
+}
