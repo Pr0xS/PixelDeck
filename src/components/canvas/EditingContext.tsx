@@ -343,7 +343,7 @@ export function EditingContextBar() {
       onClick={() => selectFormat(baseFormat)}
       data-tab-key={baseFormat}
       className={tabClass(activeCanvasFormat === baseFormat)}
-      title="Base — shared authoring canvas. Not exported directly."
+      title="Base — shared authoring canvas. When no export formats are active, unpinned groups export at their base size."
     >
       Base
     </button>
