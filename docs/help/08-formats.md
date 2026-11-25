@@ -18,7 +18,7 @@ PixelDeck adapts one design along two independent axes: **format families** (whi
 ## Formats within a family
 
 - A **format** is the canvas size/profile you're designing for within a family: **Base** (that family's shared authoring canvas), a built-in platform preset (e.g. iPhone / Android for Phone; iPad / Android Tablet for Tablet), or a **custom size** you define.
-- Base is your source of truth for that family. Activate platform formats to fine-tune how a design looks on that specific device size — only formats you've activated get exported (Base itself is never exported directly).
+- Design on Base, then activate platform formats to fine-tune your design for specific device sizes. If your active export list is empty, groups without a pinned format export at their Base size.
 - Moving or resizing something while on a platform format tab (not Base) saves that change **only for that format** — Base and other formats are untouched. Switching formats auto-scales your Base layout to fit the new size, then layers any format-specific tweaks on top.
 - **Ways to reset/restore a format-specific change:**
   - **Reset format layout** — wipes all position/size tweaks made for this format, reverting it to the auto-scaled Base layout. Use when a platform version has drifted too far and you want a clean slate.

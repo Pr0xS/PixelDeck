@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import type { Layer, Project, SlideGroup, TextLayer } from '@/types'
+import { getExportTargets } from './canvasFormats'
 import { buildExportFileTarget, buildExportPlan, safeExportSegment } from './exportPlan'
 
 const group = (id: string, name: string, slideNames: string[], layers: Layer[] = []): SlideGroup => ({
@@ -87,9 +88,22 @@ describe('buildExportPlan', () => {
     ])
   })
 
-  it('exports only unpinned groups when explicitly requested to export base', () => {
-    const plan = buildExportPlan({ ...project, slideGroups: [group('legacy', 'Legacy', ['Legacy']), { ...group('watch', 'Watch', ['Watch']), formats: ['apple-watch'] }] }, { locales: ['en'], formatIds: ['base'] })
-    expect(plan.batches.map((batch) => batch.group.id)).toEqual(['legacy'])
+  it('falls back to Base and exports only unpinned groups when no formats are active', () => {
+    const baseOnlyProject: Project = {
+      ...project,
+      settings: { ...project.settings, activeFormats: [] },
+      slideGroups: [
+        group('legacy', 'Legacy', ['Legacy']),
+        { ...group('watch', 'Watch', ['Watch']), formats: ['apple-watch'] },
+      ],
+    }
+
+    const plan = buildExportPlan(baseOnlyProject, {
+      locales: ['en'],
+      formatIds: getExportTargets(baseOnlyProject),
+    })
+
+    expect(plan.batches.map((batch) => [batch.formatId, batch.group.id])).toEqual([['base', 'legacy']])
   })
 
   it('enumerates every slide in pano groups and supports a single whole-pano target', () => {
